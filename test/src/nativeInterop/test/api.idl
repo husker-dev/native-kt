@@ -1,0 +1,8 @@
+namespace global {
+
+    long testFunc(long arg, DOMString arg2);
+};
+
+dictionary myStruct {
+    long field1;
+};

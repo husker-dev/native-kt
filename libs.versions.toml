@@ -1,0 +1,14 @@
+[versions]
+
+kotlin = "2.3.0"
+android_plugin = "9.1.0-alpha02"
+
+[libraries]
+
+kotlin-gradle-plugin    = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+
+[plugins]
+
+kotlin-jvm              = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-multiplatform    = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlin-android          = { id = "com.android.kotlin.multiplatform.library", version.ref = "android_plugin" }
