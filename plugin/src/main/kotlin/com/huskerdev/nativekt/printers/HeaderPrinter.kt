@@ -1,11 +1,8 @@
 package com.huskerdev.nativekt.printers
 
-import com.huskerdev.webidl.resolver.BuiltinIdlDeclaration
 import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlNamespace
 import com.huskerdev.webidl.resolver.ResolvedIdlOperation
-import com.huskerdev.webidl.resolver.ResolvedIdlType
-import com.huskerdev.webidl.resolver.WebIDLBuiltinKind
 import java.io.File
 
 class HeaderPrinter(
@@ -27,7 +24,7 @@ class HeaderPrinter(
         }
 
         builder.append("#include <stdint.h>\n")
-        builder.append("#include <uchar.h>\n")
+        builder.append("#include <stddef.h>\n")
         builder.append("\n")
 
         idl.namespaces.values.forEach { printNamespace(builder, it) }

@@ -14,8 +14,9 @@ fun NativeModule.dir(project: Project): File =
 fun NativeModule.idl(project: Project): IdlResolver =
     WebIDL.resolve(File(dir(project), "api.idl").reader().iterator())
 
-fun Project.exec(command: String, workingDir: File? = null){
-    println(project.providers.exec {
+fun Project.exec(command: String, workingDir: File? = null): String {
+    return project.providers.exec {
+        isIgnoreExitValue = true
         if(workingDir != null)
             this.workingDir = workingDir
 
@@ -23,15 +24,28 @@ fun Project.exec(command: String, workingDir: File? = null){
             commandLine("/bin/bash", "-c", command)
         else
             commandLine("cmd.exe", "/c", command)
-    }.standardOutput.asText.get().trim())
+    }.run {
+        val output = standardOutput.asText.get()
+        println(output)
+        if(result.get().exitValue != 0)
+            throw Exception("Failed to execute command (code=${result.get().exitValue}): \n$command\nError:\n${standardError.asText.get()}")
+        output.trim()
+    }
 }
 
-fun currentCompilationTargetName() = when {
-    Os.isFamily(Os.FAMILY_WINDOWS) -> "mingwX64"
-    Os.isFamily(Os.FAMILY_MAC) -> "macosX64"
-    Os.isFamily(Os.FAMILY_UNIX) -> "linuxX64"
-    else -> "unknown"
+fun currentTargetType(): TargetType = when {
+    Os.isFamily(Os.FAMILY_WINDOWS) -> TargetType.MINGW_X64
+    Os.isFamily(Os.FAMILY_MAC) -> when {
+        Os.isArch("aarch64") -> TargetType.MACOS_ARM64
+        else -> TargetType.MACOS_X64
+    }
+    Os.isFamily(Os.FAMILY_UNIX) -> when {
+        Os.isArch("aarch64") -> TargetType.LINUX_ARM64
+        else -> TargetType.LINUX_X64
+    }
+    else -> throw UnsupportedOperationException()
 }
+
 
 fun cmakeGenerator() = when {
     Os.isFamily(Os.FAMILY_WINDOWS) -> "MinGW Makefiles"

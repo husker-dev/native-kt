@@ -4,14 +4,14 @@ import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlNamespace
 import com.huskerdev.webidl.resolver.ResolvedIdlOperation
 import com.huskerdev.webidl.resolver.ResolvedIdlType
-import org.gradle.internal.extensions.stdlib.capitalized
 import java.io.File
 
 class KotlinCommonPrinter(
     idl: IdlResolver,
     target: File,
     classPath: String,
-    moduleName: String
+    moduleName: String,
+    useCoroutines: Boolean
 ) {
     init {
         val builder = StringBuilder()
@@ -19,8 +19,12 @@ class KotlinCommonPrinter(
         builder.append("package $classPath\n")
         builder.append("\n")
 
-        builder.append("expect fun loadLib${moduleName.capitalized()}()\n")
-        builder.append("expect suspend fun loadLib${moduleName.capitalized()}Async()\n")
+        builder.append("@Throws(UnsupportedOperationException::class)\n")
+        builder.append("expect fun ${syncFunctionName(moduleName)}()\n")
+        builder.append("expect fun ${asyncFunctionName(moduleName)}(onReady: () -> Unit)\n")
+
+        if(useCoroutines)
+            builder.append("expect suspend fun ${asyncFunctionName(moduleName)}()\n")
 
         idl.namespaces.values.forEach { printNamespace(builder, it) }
 

@@ -5,6 +5,13 @@ import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlOperation
 import com.huskerdev.webidl.resolver.ResolvedIdlType
 import com.huskerdev.webidl.resolver.WebIDLBuiltinKind
+import org.gradle.internal.extensions.stdlib.capitalized
+
+fun asyncFunctionName(moduleName: String) =
+    "loadLib${moduleName.capitalized()}"
+
+fun syncFunctionName(moduleName: String) =
+    "loadLib${moduleName.capitalized()}Sync"
 
 fun ResolvedIdlType.toKotlinType(): String = when(this) {
     is ResolvedIdlType.Union -> throw UnsupportedOperationException("Union type are not unsupported")
@@ -50,10 +57,38 @@ fun ResolvedIdlType.toCType(): String = when(this) {
                 WebIDLBuiltinKind.UNSIGNED_LONG -> "uint32_t"
                 WebIDLBuiltinKind.UNRESTRICTED_FLOAT -> "float"
                 WebIDLBuiltinKind.UNRESTRICTED_DOUBLE -> "double"
-                WebIDLBuiltinKind.STRING -> "char*"
+                WebIDLBuiltinKind.STRING -> "const char*"
                 else -> throw UnsupportedOperationException()
             }
             else -> declaration.name
+        })
+        if(parameters.isNotEmpty())
+            throw UnsupportedOperationException("Parameters are not null")
+    }
+}
+
+
+fun ResolvedIdlType.toJNIType(): String = when(this) {
+    is ResolvedIdlType.Union -> throw UnsupportedOperationException("Union type are not unsupported")
+    is ResolvedIdlType.Void -> "void"
+    is ResolvedIdlType.Default -> buildString {
+        append(when(declaration) {
+            is BuiltinIdlDeclaration -> when((declaration as BuiltinIdlDeclaration).kind) {
+                WebIDLBuiltinKind.BOOLEAN -> "jboolean"
+                WebIDLBuiltinKind.BYTE -> "jbyte"
+                WebIDLBuiltinKind.UNSIGNED_BYTE -> "jbyte"
+                WebIDLBuiltinKind.SHORT -> "jshort"
+                WebIDLBuiltinKind.UNSIGNED_SHORT -> "jshort"
+                WebIDLBuiltinKind.INT -> "jint"
+                WebIDLBuiltinKind.UNSIGNED_INT -> "jint"
+                WebIDLBuiltinKind.LONG -> "jlong"
+                WebIDLBuiltinKind.UNSIGNED_LONG -> "jlong"
+                WebIDLBuiltinKind.UNRESTRICTED_FLOAT -> "jfloat"
+                WebIDLBuiltinKind.UNRESTRICTED_DOUBLE -> "jdouble"
+                WebIDLBuiltinKind.STRING -> "jobject"
+                else -> throw UnsupportedOperationException()
+            }
+            else -> "jobject"
         })
         if(parameters.isNotEmpty())
             throw UnsupportedOperationException("Parameters are not null")
@@ -73,9 +108,10 @@ fun functionHeader(
     function: ResolvedIdlOperation,
     isOverride: Boolean = false,
     isActual: Boolean = false,
-    isExternal: Boolean = false
+    isExternal: Boolean = false,
+    name: String = function.name
 ) = StringBuilder().apply {
-    printFunctionHeader(this, function, isOverride, isActual, isExternal)
+    printFunctionHeader(this, function, isOverride, isActual, isExternal, name)
 }.toString()
 
 fun printFunctionHeader(
@@ -83,14 +119,15 @@ fun printFunctionHeader(
     function: ResolvedIdlOperation,
     isOverride: Boolean = false,
     isActual: Boolean = false,
-    isExternal: Boolean = false
+    isExternal: Boolean = false,
+    name: String = function.name
 ) = builder.apply {
     if(isActual) append("actual ")
     if(isExternal) append("external ")
     if(isOverride) append("override ")
 
     append("fun ")
-    append(function.name)
+    append(name)
     append("(")
 
     function.args.forEachIndexed { index, arg ->

@@ -1,19 +1,22 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import com.huskerdev.nativekt.plugin.*
+import org.jetbrains.kotlin.gradle.dsl.*
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlin.android)
 
     id("native-kt")
+    id("maven-publish")
 }
 
 group = "com.huskerdev"
 version = "1.0.0"
 
 native {
-    create("test")
-}
+    ndkVersion = "29.0.14206865"
 
+    create("test", Multiplatform::class)
+}
 
 kotlin {
     jvm {
@@ -23,41 +26,34 @@ kotlin {
             }
         }
     }
-    /*
+
     js {
         browser()
         nodejs()
+
+        compilerOptions {
+            target = "es2015"
+            moduleKind = JsModuleKind.MODULE_COMMONJS
+            main = JsMainFunctionExecutionMode.NO_CALL
+        }
     }
-     */
 
     android {
         namespace = group.toString()
+        minSdk = 25
         compileSdk {
-            version = release(36)
+            version = release(32)
         }
+        withDeviceTest { }
     }
 
+    mingwX64()
 
-    mingwX64 {
-        binaries {
-            executable {
-                entryPoint = "main"
-            }
-        }
-    }
-
-    linuxX64 {
-        binaries {
-            executable {
-                entryPoint = "main"
-            }
-        }
-    }
-    /*
-    linuxArm64()
-
-    macosX64()
     macosArm64()
+    macosX64()
+
+    linuxX64()
+    linuxArm64()
 
     iosX64()
     iosArm64()
@@ -78,10 +74,22 @@ kotlin {
     androidNativeArm32()
     androidNativeArm64()
 
-    */
-
+    sourceSets.commonMain.dependencies {
+        implementation(libs.kotlinx.coroutines)
+    }
     sourceSets.commonTest.dependencies {
         implementation(kotlin("test"))
+        implementation(libs.kotlinx.coroutines.test)
+    }
+    sourceSets.getByName("androidDeviceTest").dependencies {
+        implementation(kotlin("test"))
+        implementation(libs.kotlinx.coroutines.test)
+        implementation(libs.androidx.test.runner)
     }
 }
 
+tasks.withType<Test>().configureEach {
+    if (name.contains("jvm", ignoreCase = true)) {
+        jvmArgs = listOf("--enable-native-access=ALL-UNNAMED")
+    }
+}

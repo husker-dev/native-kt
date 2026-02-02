@@ -1,5 +1,10 @@
-package com.huskerdev.nativekt.printers
+package com.huskerdev.nativekt.printers.kn
 
+import com.huskerdev.nativekt.printers.asyncFunctionName
+import com.huskerdev.nativekt.printers.globalOperators
+import com.huskerdev.nativekt.printers.isString
+import com.huskerdev.nativekt.printers.printFunctionHeader
+import com.huskerdev.nativekt.printers.syncFunctionName
 import com.huskerdev.webidl.resolver.BuiltinIdlDeclaration
 import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlCallbackFunction
@@ -12,14 +17,15 @@ import com.huskerdev.webidl.resolver.ResolvedIdlOperation
 import com.huskerdev.webidl.resolver.ResolvedIdlType
 import com.huskerdev.webidl.resolver.ResolvedIdlTypeDef
 import com.huskerdev.webidl.resolver.WebIDLBuiltinKind
-import org.gradle.internal.extensions.stdlib.capitalized
 import java.io.File
 
 class KotlinNativePrinter(
     idl: IdlResolver,
     target: File,
     classPath: String,
-    moduleName: String
+    moduleName: String,
+    useCoroutines: Boolean,
+    val isX32: Boolean
 ) {
     val cinteropPath = "cinterop.$classPath"
 
@@ -28,42 +34,22 @@ class KotlinNativePrinter(
         builder.append("@file:OptIn(ExperimentalForeignApi::class)\n\n")
         builder.append("package $classPath\n\n")
         builder.append("import kotlinx.cinterop.*\n")
-        builder.append("\n")
-        builder.append("actual fun loadLib${moduleName.capitalized()}() = Unit\n")
-        builder.append("actual suspend fun loadLib${moduleName.capitalized()}Async() = Unit\n")
+        builder.append("\n@Throws(UnsupportedOperationException::class)\n")
+        builder.append("actual fun ${syncFunctionName(moduleName)}() = Unit\n")
+        builder.append("actual fun ${asyncFunctionName(moduleName)}(onReady: () -> Unit) = onReady()\n")
+        if(useCoroutines)
+            builder.append("actual suspend fun ${asyncFunctionName(moduleName)}() = Unit\n")
 
-        idl.namespaces.values.forEach { printNamespace(builder, it) }
+        idl.globalOperators().forEach { printFunction(builder, it) }
 
         target.parentFile.mkdirs()
         target.writeText(builder.toString())
     }
 
-    private fun printNamespace(builder: StringBuilder, namespace: ResolvedIdlNamespace){
-        namespace.operations.forEach {
-            printFunction(builder, it)
-        }
-    }
-
     private fun printFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
-        append("\nactual fun ")
-        append(function.name)
-        append("(")
-
-        function.args.forEachIndexed { index, arg ->
-            append(arg.name)
-            append(": ")
-            append(arg.type.toKotlinType())
-
-            if(index != function.args.lastIndex)
-                append(", ")
-        }
-        append(")")
-
-        if(function.type !is ResolvedIdlType.Void) {
-            append(": ")
-            append(function.type.toKotlinType())
-        }
-        append(" = ")
+        append('\n')
+        printFunctionHeader(builder, function, isActual = true)
+        append(" = \n\t")
 
         val func = "$cinteropPath.${function.name}"
         append(castFromNative(function.type, "$func(${castArgs(function.args)})"))
@@ -73,9 +59,9 @@ class KotlinNativePrinter(
 
     private fun castArgs(args: List<ResolvedIdlField.Argument>): String {
         return args.flatMap { arg ->
-            if(arg.type.isString()) {
-                listOf(castToNative(arg.type, arg.name), "${arg.name}.length.toULong()")
-            } else
+            if(arg.type.isString())
+                listOf(castToNative(arg.type, arg.name), if(isX32) "${arg.name}.length.toUInt()" else "${arg.name}.length.toULong()")
+            else
                 listOf(castToNative(arg.type, arg.name))
         }.joinToString()
     }
@@ -158,9 +144,8 @@ class KotlinNativePrinter(
                 WebIDLBuiltinKind.UNSIGNED_SHORT,
                 WebIDLBuiltinKind.LONG,
                 WebIDLBuiltinKind.UNSIGNED_LONG,
-                WebIDLBuiltinKind.INT -> content
-
-                WebIDLBuiltinKind.STRING -> "$content.cstr"
+                WebIDLBuiltinKind.INT,
+                WebIDLBuiltinKind.STRING -> content
             }
         }
     }
