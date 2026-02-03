@@ -1,14 +1,14 @@
 package com.huskerdev.nativekt.configurators
 
 import com.android.build.api.dsl.KotlinMultiplatformAndroidLibraryExtension
-import com.android.build.api.variant.Component
 import com.android.build.api.variant.KotlinMultiplatformAndroidComponentsExtension
 import com.huskerdev.nativekt.plugin.NativeKtExtension
 import com.huskerdev.nativekt.plugin.NativeModule
-import com.huskerdev.nativekt.plugin.dir
 import com.huskerdev.nativekt.printers.HeaderPrinter
 import com.huskerdev.nativekt.printers.KotlinAndroidPrinter
 import com.huskerdev.nativekt.printers.jvm.CppJniPrinter
+import com.huskerdev.nativekt.utils.cmakeBuild
+import com.huskerdev.nativekt.utils.dir
 import com.huskerdev.webidl.resolver.IdlResolver
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
@@ -27,7 +27,8 @@ internal fun configureAndroid(
     module: NativeModule,
     sourceSet: KotlinSourceSet,
     srcGenDir: File,
-    cmakeRootDir: File
+    cmakeRootDir: File,
+    expectActual: Boolean
 ) {
     val androidComponents = project.the<KotlinMultiplatformAndroidComponentsExtension>()
 
@@ -71,7 +72,8 @@ internal fun configureAndroid(
         target = File(classPathFile, "${module.name}.kt"),
         classPath = module.classPath,
         moduleName = module.name,
-        useCoroutines = extension.useCoroutines
+        useCoroutines = extension.useCoroutines,
+        expectActual = expectActual
     )
 
     CppJniPrinter(
@@ -121,18 +123,10 @@ internal fun configureAndroid(
     }
 
     androidComponents.onVariants {
-        val targets = arrayListOf<Component?>()
-        targets += it
-        //targets += it.androidTest
-        //targets += it.hostTests.map(Map.Entry<String, HostTest>::value)
-        //targets += it.deviceTests.map(Map.Entry<String, DeviceTest>::value)
-
-        targets.forEach { target ->
-            target?.sources?.jniLibs?.addGeneratedSourceDirectory(
-                task,
-                CompileTask::outputFolder
-            )
-        }
+        it.sources.jniLibs?.addGeneratedSourceDirectory(
+            task,
+            CompileTask::outputFolder
+        )
     }
 }
 

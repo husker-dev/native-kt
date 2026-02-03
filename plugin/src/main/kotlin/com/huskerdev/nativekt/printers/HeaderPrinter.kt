@@ -1,5 +1,7 @@
 package com.huskerdev.nativekt.printers
 
+import com.huskerdev.nativekt.utils.isString
+import com.huskerdev.nativekt.utils.toCType
 import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlNamespace
 import com.huskerdev.webidl.resolver.ResolvedIdlOperation
@@ -54,9 +56,9 @@ class HeaderPrinter(
             append(arg.name)
 
             if(arg.type.isString()) {
-                append(", size_t ")
+                append(", int32_t __")
                 append(arg.name)
-                append("_len")
+                append("Len")
             }
             if(index != function.args.lastIndex)
                 append(", ")

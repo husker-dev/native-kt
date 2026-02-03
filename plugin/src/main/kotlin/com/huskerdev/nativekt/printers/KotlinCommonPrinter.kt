@@ -1,9 +1,10 @@
 package com.huskerdev.nativekt.printers
 
+import com.huskerdev.nativekt.utils.asyncFunctionName
+import com.huskerdev.nativekt.utils.globalOperators
+import com.huskerdev.nativekt.utils.printFunctionHeader
+import com.huskerdev.nativekt.utils.syncFunctionName
 import com.huskerdev.webidl.resolver.IdlResolver
-import com.huskerdev.webidl.resolver.ResolvedIdlNamespace
-import com.huskerdev.webidl.resolver.ResolvedIdlOperation
-import com.huskerdev.webidl.resolver.ResolvedIdlType
 import java.io.File
 
 class KotlinCommonPrinter(
@@ -16,47 +17,81 @@ class KotlinCommonPrinter(
     init {
         val builder = StringBuilder()
 
-        builder.append("package $classPath\n")
-        builder.append("\n")
-
-        builder.append("@Throws(UnsupportedOperationException::class)\n")
-        builder.append("expect fun ${syncFunctionName(moduleName)}()\n")
-        builder.append("expect fun ${asyncFunctionName(moduleName)}(onReady: () -> Unit)\n")
-
+        builder.append("""
+            package $classPath
+            
+            /**
+             * Initializes the native library `${moduleName}` synchronously.
+             *
+             * ##### Kotlin/JVM + Android
+             * Loads dynamic library from resources using `System.load(...)`.
+             *
+             * ##### Kotlin/JS
+             * Synchronous loading is not supported!
+             *
+             * ##### Kotlin/Native
+             * Does nothing (yet).
+             *
+             * @throws UnsupportedOperationException When called in Kotlin/JS
+             */
+            @Throws(UnsupportedOperationException::class)
+            expect fun ${syncFunctionName(moduleName)}()
+            
+            /**
+             * Initializes the native library `${moduleName}` asynchronously.
+             *
+             * ##### Kotlin/JVM + Android
+             * Loads dynamic library from resources using `System.load(...)`.
+             *
+             * ##### Kotlin/JS
+             * Loads the `.wasm` file.
+             *
+             * ##### Kotlin/Native
+             * Does nothing (yet).
+             *
+             * @param onReady Invoked when the native library is loaded.
+             */
+            expect fun ${asyncFunctionName(moduleName)}(onReady: () -> Unit)
+            
+        """.trimIndent())
         if(useCoroutines)
-            builder.append("expect suspend fun ${asyncFunctionName(moduleName)}()\n")
+            builder.append("""
+                
+                /**
+                 * Initializes the native library `${moduleName}` asynchronously.
+                 *
+                 * ##### Kotlin/JVM + Android
+                 * Loads dynamic library from resources using `System.load(...)`.
+                 *
+                 * ##### Kotlin/JS
+                 * Loads the `.wasm` file.
+                 *
+                 * ##### Kotlin/Native
+                 * Does nothing (yet).
+                 */
+                expect suspend fun ${asyncFunctionName(moduleName)}()
+                
+            """.trimIndent())
 
-        idl.namespaces.values.forEach { printNamespace(builder, it) }
+        builder.append("""
+            
+            /**
+             * Indicates when library `test` is loaded
+             */
+            expect val isLibTestLoaded: Boolean
+            
+            /* ================== *\
+                    Functions
+            \* ================== */
+            
+        """.trimIndent())
+
+        idl.globalOperators().forEach {
+            builder.append("\n")
+            printFunctionHeader(builder, it, isExpect = true)
+        }
 
         target.parentFile.mkdirs()
         target.writeText(builder.toString())
-    }
-
-    private fun printNamespace(builder: StringBuilder, namespace: ResolvedIdlNamespace){
-        namespace.operations.forEach {
-            printFunction(builder, it)
-        }
-    }
-
-    private fun printFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
-        append("\nexpect fun ")
-        append(function.name)
-        append("(")
-
-        function.args.forEachIndexed { index, arg ->
-            append(arg.name)
-            append(": ")
-            append(arg.type.toKotlinType())
-
-            if(index != function.args.lastIndex)
-                append(", ")
-        }
-        append(")")
-
-        if(function.type !is ResolvedIdlType.Void) {
-            append(": ")
-            append(function.type.toKotlinType())
-        }
-        append("\n")
     }
 }

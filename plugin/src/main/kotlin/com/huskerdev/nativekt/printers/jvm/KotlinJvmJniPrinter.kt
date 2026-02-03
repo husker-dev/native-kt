@@ -1,7 +1,7 @@
 package com.huskerdev.nativekt.printers.jvm
 
-import com.huskerdev.nativekt.printers.globalOperators
-import com.huskerdev.nativekt.printers.printFunctionHeader
+import com.huskerdev.nativekt.utils.globalOperators
+import com.huskerdev.nativekt.utils.printFunctionHeader
 import com.huskerdev.webidl.resolver.IdlResolver
 
 class KotlinJvmJniPrinter(

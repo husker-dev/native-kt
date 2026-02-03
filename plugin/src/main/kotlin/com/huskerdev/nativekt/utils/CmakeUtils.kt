@@ -1,8 +1,6 @@
-package com.huskerdev.nativekt.configurators
+package com.huskerdev.nativekt.utils
 
 import com.huskerdev.nativekt.plugin.LibBuildType
-import com.huskerdev.nativekt.plugin.cmakeGenerator
-import com.huskerdev.nativekt.plugin.exec
 import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.api.Project
 import java.io.File

@@ -16,6 +16,7 @@ native {
     ndkVersion = "29.0.14206865"
 
     create("test", Multiplatform::class)
+    create("jvmNatives", SinglePlatform::class)
 }
 
 kotlin {

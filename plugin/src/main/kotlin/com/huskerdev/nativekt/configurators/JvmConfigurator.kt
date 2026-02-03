@@ -2,29 +2,45 @@ package com.huskerdev.nativekt.configurators
 
 import com.huskerdev.nativekt.plugin.NativeKtExtension
 import com.huskerdev.nativekt.plugin.NativeModule
-import com.huskerdev.nativekt.plugin.currentTargetType
-import com.huskerdev.nativekt.plugin.dir
 import com.huskerdev.nativekt.printers.HeaderPrinter
 import com.huskerdev.nativekt.printers.jvm.CppJniPrinter
 import com.huskerdev.nativekt.printers.jvm.KotlinJvmPrinter
+import com.huskerdev.nativekt.utils.cmakeBuild
+import com.huskerdev.nativekt.utils.currentTargetType
+import com.huskerdev.nativekt.utils.dir
+import com.huskerdev.nativekt.utils.libExtension
 import com.huskerdev.webidl.resolver.IdlResolver
 import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.api.Project
 import org.gradle.internal.extensions.stdlib.capitalized
 import org.gradle.jvm.tasks.Jar
-import org.gradle.kotlin.dsl.dependencies
+import org.gradle.kotlin.dsl.get
 import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
 import java.io.File
 
+private const val LOCAL_RUN_CONFIGURATION = "_localNativeJvmRun"
+
 internal fun configureJvm(
     project: Project,
-    configuration: NativeKtExtension,
+    extension: NativeKtExtension,
     idl: IdlResolver,
     module: NativeModule,
     sourceSet: KotlinSourceSet,
     srcGenDir: File,
-    cmakeRootDir: File
+    cmakeRootDir: File,
+    expectActual: Boolean
 ) {
+    if(project.configurations.findByName(LOCAL_RUN_CONFIGURATION) == null) {
+        project.configurations.create(LOCAL_RUN_CONFIGURATION) {
+            isCanBeConsumed = false
+            isCanBeResolved = true
+        }.apply {
+            project.configurations["jvmRuntimeClasspath"].extendsFrom(this)
+            project.configurations["jvmTestRuntimeClasspath"].extendsFrom(this)
+            project.configurations["jvmMainRuntimeClasspath"].extendsFrom(this)
+        }
+    }
+
     val jvmGenDir = File(srcGenDir, "jvm/src")
     jvmGenDir.mkdirs()
 
@@ -61,8 +77,8 @@ internal fun configureJvm(
         Os.isArch("aarch64") -> "arm64"
         else -> "x86"
     }
-    val libOutFileName = "liblib_${module.name}.$libExtension"
-    val libFullFileName = "lib${module.name}-$libArch.$libExtension"
+    val libOutFileName = "liblib_${module.name}.${libExtension}"
+    val libFullFileName = "lib${module.name}-$libArch.${libExtension}"
     val targetLibFile = File(libsGenDir, libFullFileName)
 
     sourceSet.kotlin.srcDir(jvmGenDir)
@@ -86,7 +102,8 @@ internal fun configureJvm(
         target = File(classPathFile, "${module.name}.kt"),
         classPath = module.classPath,
         moduleName = module.name,
-        useCoroutines = configuration.useCoroutines
+        useCoroutines = extension.useCoroutines,
+        expectActual = expectActual
     )
 
     CppJniPrinter(
@@ -122,15 +139,15 @@ internal fun configureJvm(
         }
     }
 
-    val packNativeJar = project.tasks.register("jarNatives${module.name.capitalized()}", Jar::class.java) {
-        group = "native"
-        dependsOn(compileTask)
-        from(targetLibFile)
-        archiveAppendix.set("jvm")
-        archiveClassifier.set("$platformName-$libArch")
-    }
+    val packNativeJar = project.tasks.findByName("allNativesJar") as Jar?
+        ?: project.tasks.register("allNativesJar", Jar::class.java) {
+            group = "native"
+            archiveAppendix.set("jvm")
+            archiveClassifier.set("$platformName-$libArch")
 
-    project.dependencies {
-        add("localNativeJvmRun", project.files(packNativeJar))
-    }
+            project.dependencies.add(LOCAL_RUN_CONFIGURATION, project.files(this@register))
+        }.get()
+
+    packNativeJar.dependsOn(compileTask)
+    packNativeJar.from(targetLibFile)
 }

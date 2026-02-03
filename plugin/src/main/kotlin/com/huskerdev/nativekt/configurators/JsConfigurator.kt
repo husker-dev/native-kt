@@ -2,9 +2,10 @@ package com.huskerdev.nativekt.configurators
 
 import com.huskerdev.nativekt.plugin.NativeKtExtension
 import com.huskerdev.nativekt.plugin.NativeModule
-import com.huskerdev.nativekt.plugin.dir
+import com.huskerdev.nativekt.utils.dir
 import com.huskerdev.nativekt.printers.KotlinJsPrinter
-import com.huskerdev.nativekt.printers.globalOperators
+import com.huskerdev.nativekt.utils.cmakeBuild
+import com.huskerdev.nativekt.utils.globalOperators
 import com.huskerdev.webidl.resolver.IdlResolver
 import org.gradle.api.Project
 import org.gradle.internal.extensions.stdlib.capitalized
@@ -13,12 +14,13 @@ import java.io.File
 
 internal fun configureJs(
     project: Project,
-    configuration: NativeKtExtension,
+    extension: NativeKtExtension,
     idl: IdlResolver,
     module: NativeModule,
     sourceSet: KotlinSourceSet,
     srcGenDir: File,
-    cmakeRootDir: File
+    cmakeRootDir: File,
+    expectActual: Boolean
 ) {
     val jsGenDir = File(srcGenDir, "js/src")
     jsGenDir.mkdirs()
@@ -65,7 +67,8 @@ internal fun configureJs(
         target = File(classPathFile, "${module.name}.kt"),
         classPath = module.classPath,
         moduleName = module.name,
-        useCoroutines = configuration.useCoroutines
+        useCoroutines = extension.useCoroutines,
+        expectActual = expectActual
     )
 
     // Compilation task

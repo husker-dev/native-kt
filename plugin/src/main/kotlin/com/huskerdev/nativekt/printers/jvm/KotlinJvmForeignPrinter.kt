@@ -1,9 +1,9 @@
 package com.huskerdev.nativekt.printers.jvm
 
-import com.huskerdev.nativekt.printers.globalOperators
-import com.huskerdev.nativekt.printers.isString
-import com.huskerdev.nativekt.printers.printFunctionHeader
-import com.huskerdev.nativekt.printers.toKotlinType
+import com.huskerdev.nativekt.utils.globalOperators
+import com.huskerdev.nativekt.utils.isString
+import com.huskerdev.nativekt.utils.printFunctionHeader
+import com.huskerdev.nativekt.utils.toKotlinType
 import com.huskerdev.webidl.resolver.BuiltinIdlDeclaration
 import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlField

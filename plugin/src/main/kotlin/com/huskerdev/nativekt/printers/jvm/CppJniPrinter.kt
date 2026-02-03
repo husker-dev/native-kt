@@ -1,8 +1,8 @@
 package com.huskerdev.nativekt.printers.jvm
 
-import com.huskerdev.nativekt.printers.globalOperators
-import com.huskerdev.nativekt.printers.isString
-import com.huskerdev.nativekt.printers.toJNIType
+import com.huskerdev.nativekt.utils.globalOperators
+import com.huskerdev.nativekt.utils.isString
+import com.huskerdev.nativekt.utils.toJNIType
 import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlField
 import com.huskerdev.webidl.resolver.ResolvedIdlOperation
