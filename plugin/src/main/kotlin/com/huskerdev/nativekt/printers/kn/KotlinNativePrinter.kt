@@ -1,10 +1,10 @@
 package com.huskerdev.nativekt.printers.kn
 
-import com.huskerdev.nativekt.printers.asyncFunctionName
-import com.huskerdev.nativekt.printers.globalOperators
-import com.huskerdev.nativekt.printers.isString
-import com.huskerdev.nativekt.printers.printFunctionHeader
-import com.huskerdev.nativekt.printers.syncFunctionName
+import com.huskerdev.nativekt.utils.asyncFunctionName
+import com.huskerdev.nativekt.utils.globalOperators
+import com.huskerdev.nativekt.utils.isString
+import com.huskerdev.nativekt.utils.printFunctionHeader
+import com.huskerdev.nativekt.utils.syncFunctionName
 import com.huskerdev.webidl.resolver.BuiltinIdlDeclaration
 import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlCallbackFunction
@@ -25,20 +25,30 @@ class KotlinNativePrinter(
     classPath: String,
     moduleName: String,
     useCoroutines: Boolean,
-    val isX32: Boolean
+    val expectActual: Boolean
 ) {
     val cinteropPath = "cinterop.$classPath"
 
     init {
+        val actual = if(expectActual) "actual " else ""
+
         val builder = StringBuilder()
-        builder.append("@file:OptIn(ExperimentalForeignApi::class)\n\n")
-        builder.append("package $classPath\n\n")
-        builder.append("import kotlinx.cinterop.*\n")
-        builder.append("\n@Throws(UnsupportedOperationException::class)\n")
-        builder.append("actual fun ${syncFunctionName(moduleName)}() = Unit\n")
-        builder.append("actual fun ${asyncFunctionName(moduleName)}(onReady: () -> Unit) = onReady()\n")
+        builder.append("""
+            @file:OptIn(ExperimentalForeignApi::class)
+            
+            package $classPath
+            
+            import kotlinx.cinterop.*
+            
+            ${actual}val isLibTestLoaded: Boolean = true
+            
+            @Throws(UnsupportedOperationException::class)
+            ${actual}fun ${syncFunctionName(moduleName)}() = Unit
+            ${actual}fun ${asyncFunctionName(moduleName)}(onReady: () -> Unit) = onReady()
+            
+        """.trimIndent())
         if(useCoroutines)
-            builder.append("actual suspend fun ${asyncFunctionName(moduleName)}() = Unit\n")
+            builder.append("${actual}suspend fun ${asyncFunctionName(moduleName)}() = Unit\n")
 
         idl.globalOperators().forEach { printFunction(builder, it) }
 
@@ -48,7 +58,7 @@ class KotlinNativePrinter(
 
     private fun printFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
         append('\n')
-        printFunctionHeader(builder, function, isActual = true)
+        printFunctionHeader(builder, function, isActual = expectActual)
         append(" = \n\t")
 
         val func = "$cinteropPath.${function.name}"
@@ -60,7 +70,7 @@ class KotlinNativePrinter(
     private fun castArgs(args: List<ResolvedIdlField.Argument>): String {
         return args.flatMap { arg ->
             if(arg.type.isString())
-                listOf(castToNative(arg.type, arg.name), if(isX32) "${arg.name}.length.toUInt()" else "${arg.name}.length.toULong()")
+                listOf(castToNative(arg.type, arg.name), "${arg.name}.length")
             else
                 listOf(castToNative(arg.type, arg.name))
         }.joinToString()

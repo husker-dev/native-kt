@@ -1,10 +1,10 @@
 package com.huskerdev.nativekt.printers.jvm
 
-import com.huskerdev.nativekt.printers.asyncFunctionName
-import com.huskerdev.nativekt.printers.functionHeader
-import com.huskerdev.nativekt.printers.globalOperators
-import com.huskerdev.nativekt.printers.printFunctionHeader
-import com.huskerdev.nativekt.printers.syncFunctionName
+import com.huskerdev.nativekt.utils.asyncFunctionName
+import com.huskerdev.nativekt.utils.functionHeader
+import com.huskerdev.nativekt.utils.globalOperators
+import com.huskerdev.nativekt.utils.printFunctionHeader
+import com.huskerdev.nativekt.utils.syncFunctionName
 import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlOperation
 import java.io.File
@@ -14,24 +14,31 @@ class KotlinJvmPrinter(
     target: File,
     classPath: String,
     moduleName: String,
-    useCoroutines: Boolean
+    useCoroutines: Boolean,
+    val expectActual: Boolean
 ) {
 
     init {
         val builder = StringBuilder()
-        builder.append("package $classPath\n\n")
-        builder.append("import java.lang.foreign.*\n")
-        builder.append("import java.lang.invoke.*\n")
-        builder.append("import java.io.File\n")
-        builder.append("import java.nio.file.*\n")
+        val actual = if (expectActual) "actual " else ""
 
-        builder.append("\n\n")
         builder.append($$"""
-            |private var isLoaded = false
+            |package $$classPath
             |
-            |actual fun $${syncFunctionName(moduleName)}() {
-            |    if(isLoaded) return
-            |    isLoaded = true
+            |import java.lang.foreign.*
+            |import java.lang.invoke.*
+            |import java.io.File
+            |import java.nio.file.*
+            |
+            |private var _isLibTestLoaded = false
+            |
+            |$${actual}val isLibTestLoaded: Boolean
+            |    get() = _isLibTestLoaded
+            |
+            |@Throws(UnsupportedOperationException::class)
+            |$${actual}fun $${syncFunctionName(moduleName)}() {
+            |    if(_isLibTestLoaded) return
+            |    _isLibTestLoaded = true
             |    
             |    val macos   = 1
             |    val windows = 2
@@ -74,7 +81,9 @@ class KotlinJvmPrinter(
             |    (Thread.currentThread().contextClassLoader ?: ClassLoader.getSystemClassLoader())
             |       .getResourceAsStream(fileName)
             |       .use { input ->
-            |           Files.copy(input!!, libPath.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            |           if(input == null)
+            |               throw NullPointerException("File '$fileName' was not found in resources")
+            |           Files.copy(input, libPath.toPath(), StandardCopyOption.REPLACE_EXISTING)
             |       }
             |
             |    // Load library
@@ -91,13 +100,13 @@ class KotlinJvmPrinter(
             |}
             |
             |@Suppress("unused")
-            |actual fun $${asyncFunctionName(moduleName)}(onReady: () -> Unit) {
+            |$${actual}fun $${asyncFunctionName(moduleName)}(onReady: () -> Unit) {
             |    $${syncFunctionName(moduleName)}()
             |    onReady()
             |}
             |$${
                 if(useCoroutines) """
-                    |actual suspend fun ${asyncFunctionName(moduleName)}() =
+                    |${actual}suspend fun ${asyncFunctionName(moduleName)}() =
                     |    ${syncFunctionName(moduleName)}()
                 """ else ""
             }
@@ -128,7 +137,7 @@ class KotlinJvmPrinter(
 
     private fun printFunctionProxy(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
         append('\n')
-        printFunctionHeader(builder, function, isActual = true)
+        printFunctionHeader(builder, function, isActual = expectActual)
         append(" = \n\timpl._")
         append(function.name)
         function.args.joinTo(this, prefix = "(", postfix = ")\n") { it.name }

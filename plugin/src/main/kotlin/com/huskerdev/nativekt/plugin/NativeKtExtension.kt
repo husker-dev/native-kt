@@ -85,7 +85,6 @@ open class Multiplatform @Inject constructor(
         TARGET_ANDROID_NATIVE_X86,
         TARGET_ANDROID_NATIVE_ARM32,
         TARGET_ANDROID_NATIVE_ARM64
-         
     )
 }
 
@@ -99,6 +98,7 @@ open class SinglePlatform @Inject constructor(
     var targetSourceSet: Pair<String, TargetType> = TARGET_JVM
 }
 
+@Suppress("unused")
 enum class LibBuildType(
     val cmakeName: String
 ) {

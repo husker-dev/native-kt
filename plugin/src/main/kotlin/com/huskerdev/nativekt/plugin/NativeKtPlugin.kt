@@ -1,15 +1,14 @@
 package com.huskerdev.nativekt.plugin
 
 import com.android.build.api.variant.KotlinMultiplatformAndroidComponentsExtension
-import com.huskerdev.nativekt.configurators.configureAndroid
-import com.huskerdev.nativekt.configurators.configureCommon
-import com.huskerdev.nativekt.configurators.configureJs
-import com.huskerdev.nativekt.configurators.configureJvm
-import com.huskerdev.nativekt.configurators.configureNative
+import com.huskerdev.nativekt.configurators.*
+import com.huskerdev.nativekt.printers.HeaderPrinter
+import com.huskerdev.nativekt.utils.dir
+import com.huskerdev.nativekt.utils.idl
 import com.huskerdev.webidl.resolver.IdlResolver
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.kotlin.dsl.get
+import org.gradle.internal.extensions.stdlib.capitalized
 import org.gradle.kotlin.dsl.the
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
@@ -42,15 +41,7 @@ class NativeKtPlugin: Plugin<Project> {
         cmakeDir: File,
         srcGenDir: File
     ){
-        val localNativeJvmRun = project.configurations.create("localNativeJvmRun") {
-            isCanBeConsumed = false
-            isCanBeResolved = true
-        }
-
         project.afterEvaluate {
-            project.configurations["jvmRuntimeClasspath"].extendsFrom(localNativeJvmRun)
-            project.configurations["jvmTestRuntimeClasspath"].extendsFrom(localNativeJvmRun)
-
             extension.forEach { module ->
                 val idl = module.idl(project)
                 val cmakeModuleDir = File(cmakeDir, module.name)
@@ -58,8 +49,17 @@ class NativeKtPlugin: Plugin<Project> {
 
                 when(module) {
                     is Multiplatform -> configureMultiplatform(idl, cmakeModuleDir, srcGenModuleDir, module)
-                    is SinglePlatform -> {
-                        // TODO
+                    is SinglePlatform -> configureSinglePlatform(idl, cmakeModuleDir, srcGenModuleDir, module)
+                }
+
+                project.tasks.register("generateHeader${module.name.capitalized()}") {
+                    group = "native"
+                    doLast {
+                        HeaderPrinter(
+                            idl = idl,
+                            target = File(module.dir(project), "api.h"),
+                            guardName = module.name.uppercase()
+                        )
                     }
                 }
             }
@@ -83,20 +83,39 @@ class NativeKtPlugin: Plugin<Project> {
                     is Multiplatform -> {
                         module.getActiveSourceSets(kotlin).forEach {
                             if(it.value == TargetType.ANDROID)
-                                configureAndroid(project, extension, androidExtension, idl, module, it.key, srcGenModuleDir, cmakeModuleDir)
+                                configureAndroid(project, extension, androidExtension, idl, module, it.key, srcGenModuleDir, cmakeModuleDir, true)
                         }
                     }
                     is SinglePlatform -> {
-                        // TODO
+                        if(module.targetSourceSet.second == TargetType.ANDROID) {
+                            val sourceSet = kotlin.sourceSets.findByName(module.targetSourceSet.first)
+                                ?: throw Exception("Source set '${module.targetSourceSet.first}' was not found")
+
+                            configureAndroid(project, extension, androidExtension, idl, module, sourceSet, srcGenModuleDir, cmakeModuleDir, false)
+                        }
                     }
                 }
             }
         }
     }
 
+    private fun configureSinglePlatform(
+        idl: IdlResolver,
+        cmakeRootDir: File,
+        srcGenDir: File,
+        module: SinglePlatform
+    ){
+        val kotlin = project.the<KotlinMultiplatformExtension>()
+
+        val sourceSet = kotlin.sourceSets.findByName(module.targetSourceSet.first)
+            ?: throw Exception("Source set '${module.targetSourceSet.first}' was not found")
+
+        configureSourceSet(idl, cmakeRootDir, srcGenDir, module, sourceSet to module.targetSourceSet.second, false)
+    }
+
     private fun configureMultiplatform(
         idl: IdlResolver,
-        cmakeDir: File,
+        cmakeRootDir: File,
         srcGenDir: File,
         module: Multiplatform
     ){
@@ -106,7 +125,6 @@ class NativeKtPlugin: Plugin<Project> {
         val stubSourceSets = module.getActiveStubs(kotlin)
 
         configureCommon(
-            project = project,
             configuration = extension,
             idl = idl,
             module = module,
@@ -116,13 +134,26 @@ class NativeKtPlugin: Plugin<Project> {
         )
 
         targetSourceSets.forEach {
-            when(it.value) {
-                TargetType.JVM -> configureJvm(project, extension, idl, module, it.key, srcGenDir, cmakeDir)
-                TargetType.JS -> configureJs(project, extension, idl, module, it.key, srcGenDir, cmakeDir)
-                TargetType.WASM -> { }
-                else -> configureNative(project, kotlin, extension, idl, module, it, srcGenDir, cmakeDir)
-            }
+            configureSourceSet(idl, cmakeRootDir, srcGenDir, module, it.toPair(), true)
         }
+
+        stubSourceSets.forEach {
+            configureStub(extension, idl, module, it, srcGenDir)
+        }
+    }
+
+    private fun configureSourceSet(
+        idl: IdlResolver,
+        cmakeRootDir: File,
+        srcGenDir: File,
+        module: NativeModule,
+        sourceSet: Pair<KotlinSourceSet, TargetType>,
+        expectActual: Boolean
+    ) = when(sourceSet.second) {
+        TargetType.JVM -> configureJvm(project, extension, idl, module, sourceSet.first, srcGenDir, cmakeRootDir, expectActual)
+        TargetType.JS -> configureJs(project, extension, idl, module, sourceSet.first, srcGenDir, cmakeRootDir, expectActual)
+        TargetType.WASM -> { }
+        else -> configureNative(project, extension, idl, module, sourceSet, srcGenDir, cmakeRootDir, expectActual)
     }
 
     private fun Multiplatform.getActiveSourceSets(kotlin: KotlinMultiplatformExtension): Map<KotlinSourceSet, TargetType> {

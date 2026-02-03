@@ -1,4 +1,4 @@
-package com.huskerdev.nativekt.printers
+package com.huskerdev.nativekt.utils
 
 import com.huskerdev.webidl.resolver.BuiltinIdlDeclaration
 import com.huskerdev.webidl.resolver.IdlResolver
@@ -21,13 +21,13 @@ fun ResolvedIdlType.toKotlinType(): String = when(this) {
             is BuiltinIdlDeclaration -> when((declaration as BuiltinIdlDeclaration).kind) {
                 WebIDLBuiltinKind.BOOLEAN -> "Boolean"
                 WebIDLBuiltinKind.BYTE -> "Byte"
-                WebIDLBuiltinKind.UNSIGNED_BYTE -> "UByte"
+                WebIDLBuiltinKind.UNSIGNED_BYTE -> "Byte"
                 WebIDLBuiltinKind.SHORT -> "Short"
-                WebIDLBuiltinKind.UNSIGNED_SHORT -> "UShort"
+                WebIDLBuiltinKind.UNSIGNED_SHORT -> "Short"
                 WebIDLBuiltinKind.INT -> "Int"
-                WebIDLBuiltinKind.UNSIGNED_INT -> "UInt"
+                WebIDLBuiltinKind.UNSIGNED_INT -> "Int"
                 WebIDLBuiltinKind.LONG -> "Long"
-                WebIDLBuiltinKind.UNSIGNED_LONG -> "ULong"
+                WebIDLBuiltinKind.UNSIGNED_LONG -> "Long"
                 WebIDLBuiltinKind.UNRESTRICTED_FLOAT -> "Float"
                 WebIDLBuiltinKind.UNRESTRICTED_DOUBLE -> "Double"
                 WebIDLBuiltinKind.STRING -> "String"
@@ -109,9 +109,10 @@ fun functionHeader(
     isOverride: Boolean = false,
     isActual: Boolean = false,
     isExternal: Boolean = false,
+    isExpect: Boolean = false,
     name: String = function.name
 ) = StringBuilder().apply {
-    printFunctionHeader(this, function, isOverride, isActual, isExternal, name)
+    printFunctionHeader(this, function, isOverride, isActual, isExternal, isExpect, name)
 }.toString()
 
 fun printFunctionHeader(
@@ -120,9 +121,11 @@ fun printFunctionHeader(
     isOverride: Boolean = false,
     isActual: Boolean = false,
     isExternal: Boolean = false,
+    isExpect: Boolean = false,
     name: String = function.name
 ) = builder.apply {
     if(isActual) append("actual ")
+    if(isExpect) append("expect ")
     if(isExternal) append("external ")
     if(isOverride) append("override ")
 

@@ -3,15 +3,17 @@ package com.huskerdev.nativekt.configurators
 import com.huskerdev.nativekt.plugin.NativeKtExtension
 import com.huskerdev.nativekt.plugin.NativeModule
 import com.huskerdev.nativekt.plugin.TargetType
-import com.huskerdev.nativekt.plugin.currentTargetType
-import com.huskerdev.nativekt.plugin.dir
-import com.huskerdev.nativekt.plugin.exec
+import com.huskerdev.nativekt.utils.currentTargetType
+import com.huskerdev.nativekt.utils.dir
+import com.huskerdev.nativekt.utils.exec
 import com.huskerdev.nativekt.printers.kn.DefPrinter
 import com.huskerdev.nativekt.printers.HeaderPrinter
 import com.huskerdev.nativekt.printers.kn.KotlinNativePrinter
+import com.huskerdev.nativekt.utils.cmakeBuild
 import com.huskerdev.webidl.resolver.IdlResolver
 import org.gradle.api.Project
 import org.gradle.internal.extensions.stdlib.capitalized
+import org.gradle.kotlin.dsl.the
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
@@ -19,19 +21,21 @@ import java.io.File
 
 internal fun configureNative(
     project: Project,
-    kotlin: KotlinMultiplatformExtension,
-    configuration: NativeKtExtension,
+    extension: NativeKtExtension,
     idl: IdlResolver,
     module: NativeModule,
-    sourceSet: Map.Entry<KotlinSourceSet, TargetType>,
+    sourceSet: Pair<KotlinSourceSet, TargetType>,
     srcGenDir: File,
-    cmakeRootDir: File
+    cmakeRootDir: File,
+    expectActual: Boolean
 ) {
-    if(sourceSet.value.kotlinTarget !in currentTargetType().compiles)
+    if(sourceSet.second.kotlinTarget !in currentTargetType().compiles)
         return
 
-    val targetName = sourceSet.value.kotlinTarget
-    val sourceSetName = sourceSet.key.name
+    val kotlin = project.the<KotlinMultiplatformExtension>()
+
+    val targetName = sourceSet.second.kotlinTarget
+    val sourceSetName = sourceSet.first.name
 
     val nativeGenDir = File(srcGenDir, "native/$sourceSetName")
     nativeGenDir.mkdirs()
@@ -53,7 +57,7 @@ internal fun configureNative(
     val commonCmakeBuildDir = File(cmakeRootDir, "common")
     commonCmakeBuildDir.mkdirs()
 
-    sourceSet.key.kotlin.srcDir(nativeGenDir)
+    sourceSet.first.kotlin.srcDir(nativeGenDir)
 
 
     File(cmakeDir, "CMakeLists.txt").writeText($$"""
@@ -75,8 +79,8 @@ internal fun configureNative(
         target = File(classPathFile, "${module.name}.kt"),
         classPath = module.classPath,
         moduleName = module.name,
-        useCoroutines = configuration.useCoroutines,
-        isX32 = sourceSet.value in setOf(TargetType.WATCHOS_ARM32, TargetType.WATCHOS_ARM64)
+        useCoroutines = extension.useCoroutines,
+        expectActual = expectActual
     )
 
     HeaderPrinter(
@@ -118,16 +122,16 @@ internal fun configureNative(
                 "-DCMAKE_CXX_FLAGS=\"${flags.joinToString(" ")}\""
             )
             fun xcSdkVersion(sdk: String) =
-                project.exec("xcrun --sdk $sdk --show-sdk-platform-version")
+                project.exec("xcrun --sdk $sdk --show-sdk-platform-version", silent = true)
             fun xcSdkSysroot(sdk: String) =
-                project.exec("xcrun --sdk $sdk --show-sdk-path")
+                project.exec("xcrun --sdk $sdk --show-sdk-path", silent = true)
 
 
             val args = hashSetOf(
                 "-DCMAKE_C_COMPILER=clang",
                 "-DCMAKE_CXX_COMPILER=clang++"
             )
-            args += when(sourceSet.value) {
+            args += when(sourceSet.second) {
                 TargetType.IOS_SIMULATOR_ARM64 -> flags(
                     "-arch arm64",
                     "-target arm64-apple-ios${xcSdkVersion("iphonesimulator")}-simulator",

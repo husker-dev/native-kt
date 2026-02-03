@@ -5,7 +5,7 @@ import natives.test.testFunc
 import kotlin.test.Test
 
 
-class Tests {
+class JvmTests {
 
     private fun withLib(block: suspend () -> Unit) = runTest {
         loadLibTest()

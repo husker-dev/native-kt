@@ -1,5 +1,7 @@
-package com.huskerdev.nativekt.plugin
+package com.huskerdev.nativekt.utils
 
+import com.huskerdev.nativekt.plugin.NativeModule
+import com.huskerdev.nativekt.plugin.TargetType
 import com.huskerdev.webidl.WebIDL
 import com.huskerdev.webidl.jvm.iterator
 import com.huskerdev.webidl.resolver.IdlResolver
@@ -14,7 +16,7 @@ fun NativeModule.dir(project: Project): File =
 fun NativeModule.idl(project: Project): IdlResolver =
     WebIDL.resolve(File(dir(project), "api.idl").reader().iterator())
 
-fun Project.exec(command: String, workingDir: File? = null): String {
+fun Project.exec(command: String, workingDir: File? = null, silent: Boolean = false): String {
     return project.providers.exec {
         isIgnoreExitValue = true
         if(workingDir != null)
@@ -26,7 +28,8 @@ fun Project.exec(command: String, workingDir: File? = null): String {
             commandLine("cmd.exe", "/c", command)
     }.run {
         val output = standardOutput.asText.get()
-        println(output)
+        if(!silent)
+            println(output)
         if(result.get().exitValue != 0)
             throw Exception("Failed to execute command (code=${result.get().exitValue}): \n$command\nError:\n${standardError.asText.get()}")
         output.trim()
