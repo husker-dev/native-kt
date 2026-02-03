@@ -92,10 +92,9 @@ class KotlinJvmPrinter(
             |    // Set invoker implementation
             |    impl = try {
             |        Class.forName("java.lang.foreign.SymbolLookup")
-            |        JNI()
-            |        
-            |    } catch (_: Exception) {
             |        Foreign()
+            |    } catch (_: Exception) {
+            |        JNI()
             |    }
             |}
             |
