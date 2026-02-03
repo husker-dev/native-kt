@@ -44,12 +44,14 @@ This C-header needs to be included and implemented in your code.
 Example: 
 ```c
 // api.h
+
 // ...
 void helloWorld();
 // ...
 ```
 ```c
 // myLib.c
+
 #include "api.h"
 #include <stdio.h>
 
