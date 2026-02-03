@@ -1,5 +1,5 @@
-namespace global {
 
+namespace global {
     long testFunc(long arg, DOMString arg2);
 };
 

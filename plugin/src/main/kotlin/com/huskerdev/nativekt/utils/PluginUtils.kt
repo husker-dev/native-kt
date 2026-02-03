@@ -13,8 +13,11 @@ import kotlin.text.trim
 fun NativeModule.dir(project: Project): File =
     project.file("src/nativeInterop/$name")
 
+fun NativeModule.idlFile(project: Project): File =
+    File(dir(project), "api.idl")
+
 fun NativeModule.idl(project: Project): IdlResolver =
-    WebIDL.resolve(File(dir(project), "api.idl").reader().iterator())
+    WebIDL.resolve(idlFile(project).reader().iterator())
 
 fun Project.exec(command: String, workingDir: File? = null, silent: Boolean = false): String {
     return project.providers.exec {

@@ -5,6 +5,7 @@ import com.huskerdev.nativekt.configurators.*
 import com.huskerdev.nativekt.printers.HeaderPrinter
 import com.huskerdev.nativekt.utils.dir
 import com.huskerdev.nativekt.utils.idl
+import com.huskerdev.nativekt.utils.idlFile
 import com.huskerdev.webidl.resolver.IdlResolver
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -43,6 +44,58 @@ class NativeKtPlugin: Plugin<Project> {
     ){
         project.afterEvaluate {
             extension.forEach { module ->
+
+                val initTask = project.tasks.register("cmakeInit${module.name.capitalized()}") {
+                    group = "native"
+                    doLast {
+                        val dir = module.dir(project)
+                        dir.mkdirs()
+                        if(dir.list()!!.isNotEmpty()) {
+                            project.logger.error("Can not init module: directory '${dir}' is not empty.")
+                            return@doLast
+                        }
+
+                        File(dir, "CMakeLists.txt").writeText($$"""
+                            cmake_minimum_required(VERSION 3.15)
+
+                            project("$${module.name}")
+                            
+                            add_library(${PROJECT_NAME} OBJECT $${module.name}.c)
+                        """.trimIndent())
+                        File(dir, "api.idl").writeText("""
+                            
+                            namespace global {
+                                void helloWorld();
+                            };
+                        """.trimIndent())
+                        File(dir, "${module.name}.c").writeText("""
+                            #include "api.h"
+                            #include <stdio.h>
+                            
+                            void helloWorld() {
+                                printf("Hello, World!\n");
+                                fflush(stdout);
+                            }
+                        """.trimIndent())
+                        HeaderPrinter(
+                            idl = module.idl(project),
+                            target = File(module.dir(project), "api.h"),
+                            guardName = module.name.uppercase()
+                        )
+                    }
+                }
+
+                if(!module.idlFile(project).exists()) {
+                    project.logger.error("""
+                        Native module '${module.name}' is not loaded:
+                          'api.idl' file not found.
+                        
+                        Possible solution: 
+                          run './gradlew :${initTask.name}'
+                    """.trimIndent())
+                    return@forEach
+                }
+
                 val idl = module.idl(project)
                 val cmakeModuleDir = File(cmakeDir, module.name)
                 val srcGenModuleDir = File(srcGenDir, module.name)
@@ -52,16 +105,11 @@ class NativeKtPlugin: Plugin<Project> {
                     is SinglePlatform -> configureSinglePlatform(idl, cmakeModuleDir, srcGenModuleDir, module)
                 }
 
-                project.tasks.register("generateHeader${module.name.capitalized()}") {
-                    group = "native"
-                    doLast {
-                        HeaderPrinter(
-                            idl = idl,
-                            target = File(module.dir(project), "api.h"),
-                            guardName = module.name.uppercase()
-                        )
-                    }
-                }
+                HeaderPrinter(
+                    idl = idl,
+                    target = File(module.dir(project), "api.h"),
+                    guardName = module.name.uppercase()
+                )
             }
         }
     }
@@ -75,6 +123,9 @@ class NativeKtPlugin: Plugin<Project> {
 
         androidComponents.finalizeDsl { androidExtension ->
             extension.forEach { module ->
+                if(!module.idlFile(project).exists())
+                    return@forEach
+
                 val idl = module.idl(project)
                 val cmakeModuleDir = File(cmakeDir, module.name)
                 val srcGenModuleDir = File(srcGenDir, module.name)

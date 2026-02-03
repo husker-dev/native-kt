@@ -1,5 +1,5 @@
-namespace global {
 
+namespace global {
     long jvmOnlyFunc(long arg, DOMString arg2);
 };
 
