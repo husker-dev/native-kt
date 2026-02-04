@@ -11,7 +11,7 @@
 <a href="LICENSE"><img src="https://img.shields.io/github/license/husker-dev/native-kt?style=flat-square"></a>
 <a href="https://github.com/husker-dev/native-kt/releases/latest"><img src="https://img.shields.io/github/v/release/husker-dev/native-kt?style=flat-square"></a>
 
-## Initialization
+## How to use
    
 Apply plugin:
 ```kotlin
@@ -19,7 +19,7 @@ plugins {
    id("com.huskerdev.native-kt") version "1.0.0"
 }
 ```
-Then add native module:
+Then add native project (CMake project):
 
 ```kotlin
 native {
@@ -27,17 +27,18 @@ native {
 }
 ```
 
-By default, all modules are stored in `src/nativeInterop/`.
+By default, all native projects are stored in `src/nativeInterop/[name]`. 
+You can change it using property `projectDir`.
 
-Each module requires these files: 
-- `CMakeLists.txt` - CMake project file
+Each project requires these files: 
+- `CMakeLists.txt` - CMake configuration file
 - `api.idl` - API description
 
-Call `:cmakeInitMyLib` to generate basic project for you.
+> Call `:cmakeInitMyLib` to generate basic project for you.
 
 ## Usage in native
 
-When Gradle project is loaded, it generates header `api.h` based on `api.idl` in module directory. 
+When Gradle project is loaded, it generates header `api.h` based on `api.idl` in native project directory. 
 
 This C-header needs to be included and implemented in your code.
 
@@ -60,6 +61,11 @@ void helloWorld() {
     fflush(stdout);
 }
 ```
+
+### CMake tips 
+- Do not specify the compiler type in your CMake configuration - it may break the whole compilation.
+- It is not recommended to use compiler-specific arguments without checking for the compiler type.
+  The default compiler is clang, but emscripten can also be used, where the arguments won't work.
 
 ## Usage in Kotlin
 
@@ -89,6 +95,9 @@ suspend fun main() {
     helloWorld()    // Call native function
 }
 ```
+
+### Windows
+mingw64 is needed for compilations using `clang`. It is important to set clang binaries to Path variable.
 
 ## Single source set
 
