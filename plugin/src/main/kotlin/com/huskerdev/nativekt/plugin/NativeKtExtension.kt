@@ -2,6 +2,7 @@ package com.huskerdev.nativekt.plugin
 
 import org.gradle.api.ExtensiblePolymorphicDomainObjectContainer
 import org.gradle.api.Named
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import javax.inject.Inject
 
@@ -32,8 +33,25 @@ sealed class NativeModule @Inject constructor(
 ): Named {
     override fun getName(): String = name
 
+    /**
+     * Directory with CMake project.
+     *
+     * Default value: `src/nativeInterop/[name]`
+     */
+    var projectDir: RegularFileProperty? = null
+
+    /**
+     * CMake build type.
+     *
+     * Default value: `RELEASE`
+     */
     var buildType: LibBuildType = LibBuildType.RELEASE
 
+    /**
+     * Classpath where bindings will be generated.
+     *
+     * Default value: `natives.[name]`
+     */
     var classPath: String = "natives.$name"
 }
 
@@ -42,7 +60,7 @@ open class Multiplatform @Inject constructor(
 ): NativeModule(name) {
 
     /**
-     * SourceSet that will have 'expect' interface
+     * SourceSet that will have 'expect' api
      */
     var commonSourceSet: String = "commonMain"
 
@@ -84,7 +102,7 @@ open class Multiplatform @Inject constructor(
         TARGET_ANDROID_NATIVE_X64,
         TARGET_ANDROID_NATIVE_X86,
         TARGET_ANDROID_NATIVE_ARM32,
-        TARGET_ANDROID_NATIVE_ARM64
+        TARGET_ANDROID_NATIVE_ARM64,
     )
 }
 

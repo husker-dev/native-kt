@@ -96,8 +96,10 @@ suspend fun main() {
 }
 ```
 
+## Compilation
+
 ### Windows
-mingw64 is needed for compilations using `clang`. It is important to set clang binaries to Path variable.
+mingw64 is needed for compilations using `clang`. It is important to set clang directory to PATH.
 
 ## Single source set
 

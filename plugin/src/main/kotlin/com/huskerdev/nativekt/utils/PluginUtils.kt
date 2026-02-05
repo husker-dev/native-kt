@@ -11,7 +11,8 @@ import java.io.File
 import kotlin.text.trim
 
 fun NativeModule.dir(project: Project): File =
-    project.file("src/nativeInterop/$name")
+    projectDir?.get()?.asFile
+        ?: project.file("src/nativeInterop/$name")
 
 fun NativeModule.idlFile(project: Project): File =
     File(dir(project), "api.idl")
