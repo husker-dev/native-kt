@@ -39,7 +39,7 @@ internal fun configureJs(
     val commonCmakeBuildDir = File(cmakeRootDir, "common")
     commonCmakeBuildDir.mkdirs()
 
-    val exportedFunctions = idl.globalOperators().joinToString(",") { "\\\"_${it.name}\\\"" }
+    val exportedFunctions = idl.globalOperators().joinToString(",") { "_${it.name}" }
 
     sourceSet.kotlin.srcDir(jsGenDir)
     sourceSet.resources.srcDir(rcsGenDir)
@@ -58,7 +58,7 @@ internal fun configureJs(
 
         add_executable(lib$${module.name} $<TARGET_OBJECTS:$${module.name}>)
         
-        set_target_properties(libtest PROPERTIES LINK_FLAGS "-s --no-entry -s MODULARIZE=1 -s EXPORT_ES6=1 -s EXPORTED_FUNCTIONS='[$$exportedFunctions]'")
+        set_target_properties(libtest PROPERTIES LINK_FLAGS "-s --no-entry -s MODULARIZE=1 -s EXPORT_ES6=1 -s EXPORTED_FUNCTIONS=$$exportedFunctions")
     """.trimIndent())
 
     // Create Kotlin/JS bindings

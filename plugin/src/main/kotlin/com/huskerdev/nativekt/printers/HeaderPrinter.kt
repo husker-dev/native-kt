@@ -44,7 +44,7 @@ class HeaderPrinter(
         if(guardName != null)
             builder.append("\n\n#endif // $defName")
 
-        target.writeText(builder.toString())
+        target.writeText(builder.toString().replace("\n", System.lineSeparator()))
     }
 
     private fun printNamespace(builder: StringBuilder, namespace: ResolvedIdlNamespace){

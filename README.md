@@ -36,6 +36,25 @@ Each project requires these files:
 
 > Call `:cmakeInitMyLib` to generate basic project for you.
 
+## Requirements
+
+- **macOS**: `Xcode Command Line Tools`
+- **Windows**`mingw64` ([MSYS2](https://www.msys2.org/)) <br>It is important to set `msys64/clang64/bin` directory to PATH.
+- **Linux**: It is required to have `clang`. Please follow your own distributive instructions.
+
+[CMake](https://cmake.org/) is required to configure your projects.
+
+### Compilation for Android
+It is important to have **Android SDK** installed, as well as **NDK** with specified version. 
+<br>`ANDROID_HOME` is required to locate the SDK.
+<br>You can simply install [Android Studio](https://developer.android.com/studio) and set up [NDK](https://developer.android.com/studio/projects/install-ndk) in UI.
+
+### Compilation for Kotlin/JS
+[Emscripten](https://emscripten.org/docs/getting_started/downloads.html) is required to be installed.
+<br>`EMSDK` is required to locate the SDK.
+
+
+
 ## Usage in native
 
 When Gradle project is loaded, it generates header `api.h` based on `api.idl` in native project directory. 
@@ -95,11 +114,6 @@ suspend fun main() {
     helloWorld()    // Call native function
 }
 ```
-
-## Compilation
-
-### Windows
-mingw64 is needed for compilations using `clang`. It is important to set clang directory to PATH.
 
 ## Single source set
 
