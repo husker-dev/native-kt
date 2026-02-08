@@ -2,10 +2,9 @@ import com.huskerdev.nativekt.plugin.Multiplatform
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.kotlinx.benchmark)
 
-    id("org.jetbrains.kotlinx.benchmark") version "0.4.16"
-
-    id("native-kt")
+    id("com.huskerdev.native-kt")
     id("maven-publish")
 }
 
@@ -23,7 +22,7 @@ kotlin {
     jvm()
 
     sourceSets.commonMain.dependencies {
-        implementation("org.jetbrains.kotlinx:kotlinx-benchmark-runtime:0.4.16")
+        implementation(libs.kotlinx.benchmark)
     }
 }
 

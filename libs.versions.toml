@@ -2,19 +2,31 @@
 
 kotlin = "2.3.0"
 coroutines = "1.10.2"
+benchmark = "0.4.16"
+
 android_plugin = "9.1.0-alpha07"
 android_test_runner = "1.7.0"
+
+webidl = "1.0.1"
+
+plugin_publish = "2.0.0"
 
 [libraries]
 
 kotlin-gradle-plugin    = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 android-tools           = { module = "com.android.tools.build:gradle", version.ref = "android_plugin" }
+webidl                  = { module = "com.huskerdev:webidl-kt", version.ref = "webidl" }
 
 kotlinx-coroutines      = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
+kotlinx-benchmark       = { module = "org.jetbrains.kotlinx:kotlinx-benchmark-runtime", version.ref = "benchmark" }
+
 androidx-test-runner    = { module = "androidx.test:runner", version.ref = "android_test_runner" }
 
 [plugins]
 
 kotlin-multiplatform    = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlin-android          = { id = "com.android.kotlin.multiplatform.library", version.ref = "android_plugin" }
+kotlinx-benchmark       = { id = "org.jetbrains.kotlinx.benchmark", version.ref = "benchmark" }
+
+plugin-publish          = { id = "com.gradle.plugin-publish", version.ref = "plugin_publish" }

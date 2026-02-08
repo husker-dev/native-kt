@@ -3,7 +3,7 @@ import com.huskerdev.nativekt.plugin.Multiplatform
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
 
-    id("native-kt")
+    id("com.huskerdev.native-kt")
     id("maven-publish")
 }
 

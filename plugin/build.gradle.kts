@@ -1,9 +1,10 @@
 
 plugins {
+    alias(libs.plugins.plugin.publish)
     `kotlin-dsl`
-    `java-gradle-plugin`
 }
 
+version = "1.0.0"
 group = "com.huskerdev"
 
 repositories {
@@ -14,14 +15,19 @@ repositories {
 dependencies {
     implementation(libs.kotlin.gradle.plugin)
     implementation(libs.android.tools)
-    implementation("com.huskerdev:webidl-kt:1.0.1")
+    implementation(libs.webidl)
 }
 
 gradlePlugin {
+    website = "https://github.com/husker-dev/native-kt"
+    vcsUrl = "https://github.com/husker-dev/native-kt"
     plugins {
-        plugins.create("native-kt") {
-            id = name
+        create("native-kt") {
+            id = "com.huskerdev.native-kt"
             implementationClass = "com.huskerdev.nativekt.plugin.NativeKtPlugin"
+            displayName = "native-kt"
+            description = "Gradle plugin for convenient C/C++ integration into a Kotlin Multiplatform project."
+            tags.set(listOf("kotlin", "multiplatform", "native"))
         }
     }
 }

@@ -5,7 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlin.android)
 
-    id("native-kt")
+    id("com.huskerdev.native-kt")
     id("maven-publish")
 }
 
