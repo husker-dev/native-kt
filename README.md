@@ -92,7 +92,7 @@ When Gradle project is loaded, it generates functions based on your `api.idl`.
 
 Before you can call your native function, you must initialize the library.
 You can do it synchronously or asynchronously. 
-> (!) Note that synchronous initialization will not work in `Kotlin/JS`.
+> ⚠️ Note that synchronous initialization will not work in `Kotlin/JS`.
 
 ```kotlin
 
