@@ -23,8 +23,8 @@ class CArenaPrinter(
             };
             
             struct Arena {
-                JNIEnv *env;
-                Arena *last;
+                JNIEnv* env;
+                ArenaNode* last;
             };
             
             

@@ -17,6 +17,7 @@ class CForeignPrinter(
         val builder = StringBuilder()
         builder.append("""
             #include "api.h"
+            #include <jni.h>
             
         """.trimIndent())
 
@@ -26,7 +27,7 @@ class CForeignPrinter(
     }
 
     private fun printFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
-        append("\n__declspec(dllexport) ")
+        append("\nJNIEXPORT ")
         append(function.type.toCType())
         append(" Foreign_")
         append(classPath.replace(".", "_"))

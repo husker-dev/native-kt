@@ -33,7 +33,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 
-class JvmTests {
+class CommonTests {
 
     fun withLib(block: () -> Unit) = runTest {
         loadLibTest()

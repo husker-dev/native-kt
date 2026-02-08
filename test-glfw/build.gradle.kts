@@ -26,9 +26,11 @@ kotlin {
     ).forEach {
         it.binaries {
             executable {
-                linkerOpts += "-mwindows"
+                if(it == mingwX64())
+                    linkerOpts += "-mwindows"
                 entryPoint = "main"
             }
         }
     }
+
 }

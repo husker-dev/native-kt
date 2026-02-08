@@ -202,19 +202,47 @@ internal fun configureNative(
             // Configure Kotlin linker options (copy from CMake)
             target.binaries {
                 all {
-                    // This module uses some sort of "hack" to get all arguments needed for linker.
-                    // `linkLibs.rsp` generates only with executable or shared libraries, so our CMakeLists.txt contains `SHARED` target
-                    val args = File(
+                    // arguments generates only with executable or shared libraries, so our CMakeLists.txt contains `SHARED` target
+                    val args = arrayListOf<String>()
+
+                    val linkLibs = File(
                         cmakeBuildDir,
                         "CMakeFiles/lib_${module.name}.dir/linkLibs.rsp"
-                    ).readText()
-                        .splitRespectingQuotes()
-                        .map {
-                            if(!it.startsWith("-l") && !File(it).isAbsolute)
-                                File(cmakeBuildDir, it).absolutePath
-                            else it
+                    )
+                    val link = File(
+                        cmakeBuildDir,
+                        "CMakeFiles/lib_${module.name}.dir/link.txt"
+                    )
+
+                    if(linkLibs.exists()) {
+                        args += linkLibs.readText()
+                            .splitRespectingQuotes()
+                            .map {
+                                if(!it.startsWith("-l") && !File(it).isAbsolute)
+                                    File(cmakeBuildDir, it).absolutePath
+                                else it
+                            }
+                            .filter { it !in setOf("-lpthread") }
+                    } else if(link.exists()) {
+                        val parts = link.readText()
+                            .splitRespectingQuotes()
+
+                        var i = 0
+                        while(i < parts.size) {
+                            val part = parts[i]
+                            if(part.endsWith(".a")) {
+                                val path = if(!File(part).isAbsolute)
+                                    File(cmakeBuildDir, part).absolutePath
+                                else part
+                                args += path
+                            }
+                            if(part == "-framework") {
+                                args += part
+                                args += parts[++i]
+                            }
+                            i++
                         }
-                        .filter { it !in setOf("-lpthread") }
+                    }
 
                     linkerOpts(args +
                         "-L${cmakeBuildDir.absolutePath.replace("\\", "/")}" +
