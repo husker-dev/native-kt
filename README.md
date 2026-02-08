@@ -1,4 +1,5 @@
 <div>
+  <img width="140" src="./.github/icon.webp" alt="logo" align="left">
   <div>
         <h3>native-kt</h3>
         Gradle plugin for convenient C/C++ integration into Kotlin Multiplatform project. 
