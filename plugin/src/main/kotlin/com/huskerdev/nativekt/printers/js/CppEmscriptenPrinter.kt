@@ -1,67 +1,71 @@
-package com.huskerdev.nativekt.printers.kn
+package com.huskerdev.nativekt.printers.js
 
-import com.huskerdev.nativekt.utils.asyncFunctionName
 import com.huskerdev.nativekt.utils.globalOperators
-import com.huskerdev.nativekt.utils.printFunctionHeader
-import com.huskerdev.nativekt.utils.syncFunctionName
-import com.huskerdev.webidl.resolver.*
+import com.huskerdev.nativekt.utils.toCType
+import com.huskerdev.webidl.resolver.BuiltinIdlDeclaration
+import com.huskerdev.webidl.resolver.IdlResolver
+import com.huskerdev.webidl.resolver.ResolvedIdlCallbackFunction
+import com.huskerdev.webidl.resolver.ResolvedIdlDictionary
+import com.huskerdev.webidl.resolver.ResolvedIdlEnum
+import com.huskerdev.webidl.resolver.ResolvedIdlInterface
+import com.huskerdev.webidl.resolver.ResolvedIdlNamespace
+import com.huskerdev.webidl.resolver.ResolvedIdlOperation
+import com.huskerdev.webidl.resolver.ResolvedIdlType
+import com.huskerdev.webidl.resolver.ResolvedIdlTypeDef
+import com.huskerdev.webidl.resolver.WebIDLBuiltinKind
 import java.io.File
 
-class KotlinNativePrinter(
-    idl: IdlResolver,
-    target: File,
-    classPath: String,
-    moduleName: String,
-    useCoroutines: Boolean,
-    val expectActual: Boolean
+class CppEmscriptenPrinter(
+    val idl: IdlResolver,
+    target: File
 ) {
-    val cinteropPath = "cinterop.$classPath"
-
     init {
-        val actual = if(expectActual) "actual " else ""
-
         val builder = StringBuilder()
         builder.append("""
-            @file:OptIn(ExperimentalForeignApi::class)
+            #include "api.h"
+            #include <stdlib.h>
             
-            package $classPath
+            int64_t* __emWrapLong(int64_t value) {
+                int64_t* ptr = (int64_t*)malloc(sizeof(int64_t));
+                *ptr = value;
+                return ptr;
+            }
             
-            import kotlinx.cinterop.*
-            
-            ${actual}val isLibTestLoaded: Boolean = true
-            
-            @Throws(UnsupportedOperationException::class)
-            ${actual}fun ${syncFunctionName(moduleName)}() = Unit
-            ${actual}fun ${asyncFunctionName(moduleName)}(onReady: () -> Unit) = onReady()
+            int64_t __emUnwrapLong(int64_t* value) {
+                int64_t result = *value;
+                free(value);
+                return result;
+            }
             
         """.trimIndent())
-        if(useCoroutines)
-            builder.append("${actual}suspend fun ${asyncFunctionName(moduleName)}() = Unit\n")
 
         idl.globalOperators().forEach { printFunction(builder, it) }
 
-        target.parentFile.mkdirs()
         target.writeText(builder.toString())
     }
 
     private fun printFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
-        append('\n')
-        printFunctionHeader(builder, function, isActual = expectActual)
-        append(" = \n\t")
-
-        val func = "$cinteropPath.${function.name}"
-        append(castFromNative(function.type, "$func(${castArgs(function.args)})"))
-
         append("\n")
-    }
-
-    private fun castArgs(args: List<ResolvedIdlField.Argument>): String {
-        return args.joinToString { arg ->
-            castToNative(arg.type, arg.name)
+        append(function.type.toCType(longPtr = true))
+        append(" _")
+        append(function.name)
+        append("(")
+        function.args.joinTo(this) {
+            "${it.type.toCType(longPtr = true)} ${it.name}"
         }
+        append(") {\n\t")
+
+        if(function.type !is ResolvedIdlType.Void)
+            append("return ")
+
+        // == Function call ==
+        val call = "${function.name}(${function.args.joinToString { castFromJS(it.type, it.name) }})"
+        append(castToJS(function.type, call))
+        append(";\n}\n")
     }
 
-    private fun castFromNative(type: ResolvedIdlType, content: String): String = when(type) {
+
+    private fun castFromJS(type: ResolvedIdlType, content: String): String = when(type) {
         is ResolvedIdlType.Union -> throw UnsupportedOperationException()
         is ResolvedIdlType.Void -> content
         is ResolvedIdlType.Default -> when(val decl = type.declaration) {
@@ -84,6 +88,8 @@ class KotlinNativePrinter(
                 WebIDLBuiltinKind.BYTE_SEQUENCE -> TODO()
 
                 WebIDLBuiltinKind.BOOLEAN,
+                WebIDLBuiltinKind.STRING,
+                WebIDLBuiltinKind.CHAR,
                 WebIDLBuiltinKind.UNSIGNED_INT,
                 WebIDLBuiltinKind.FLOAT,
                 WebIDLBuiltinKind.UNRESTRICTED_FLOAT,
@@ -93,20 +99,17 @@ class KotlinNativePrinter(
                 WebIDLBuiltinKind.UNSIGNED_BYTE,
                 WebIDLBuiltinKind.SHORT,
                 WebIDLBuiltinKind.UNSIGNED_SHORT,
-                WebIDLBuiltinKind.LONG,
-                WebIDLBuiltinKind.UNSIGNED_LONG,
                 WebIDLBuiltinKind.INT -> content
 
-                WebIDLBuiltinKind.CHAR -> "$content.toInt().toChar()"
-                WebIDLBuiltinKind.STRING -> "$content!!.toKString()"
+                WebIDLBuiltinKind.LONG,
+                WebIDLBuiltinKind.UNSIGNED_LONG -> "__emUnwrapLong($content)"
             }
         }
     }
 
-
-    private fun castToNative(type: ResolvedIdlType, content: String): String = when(type) {
+    private fun castToJS(type: ResolvedIdlType, content: String): String = when(type) {
         is ResolvedIdlType.Union -> throw UnsupportedOperationException()
-        is ResolvedIdlType.Void -> "Unit"
+        is ResolvedIdlType.Void -> content
         is ResolvedIdlType.Default -> when(val decl = type.declaration) {
             is ResolvedIdlCallbackFunction -> TODO()
             is ResolvedIdlDictionary -> TODO()
@@ -126,7 +129,9 @@ class KotlinNativePrinter(
                 WebIDLBuiltinKind.BIG_INT -> TODO()
                 WebIDLBuiltinKind.BYTE_SEQUENCE -> TODO()
 
+                WebIDLBuiltinKind.STRING,
                 WebIDLBuiltinKind.BOOLEAN,
+                WebIDLBuiltinKind.CHAR,
                 WebIDLBuiltinKind.UNSIGNED_INT,
                 WebIDLBuiltinKind.FLOAT,
                 WebIDLBuiltinKind.UNRESTRICTED_FLOAT,
@@ -136,12 +141,10 @@ class KotlinNativePrinter(
                 WebIDLBuiltinKind.UNSIGNED_BYTE,
                 WebIDLBuiltinKind.SHORT,
                 WebIDLBuiltinKind.UNSIGNED_SHORT,
-                WebIDLBuiltinKind.LONG,
-                WebIDLBuiltinKind.UNSIGNED_LONG,
-                WebIDLBuiltinKind.INT,
-                WebIDLBuiltinKind.STRING -> content
+                WebIDLBuiltinKind.INT -> content
 
-                WebIDLBuiltinKind.CHAR -> "$content.code.toUShort()"
+                WebIDLBuiltinKind.LONG,
+                WebIDLBuiltinKind.UNSIGNED_LONG -> "__emWrapLong($content)"
             }
         }
     }

@@ -1,118 +1,185 @@
 package com.huskerdev.nativekt.printers.jvm
 
-import com.huskerdev.nativekt.utils.globalOperators
-import com.huskerdev.nativekt.utils.isString
-import com.huskerdev.nativekt.utils.printFunctionHeader
-import com.huskerdev.nativekt.utils.toKotlinType
-import com.huskerdev.webidl.resolver.BuiltinIdlDeclaration
-import com.huskerdev.webidl.resolver.IdlResolver
-import com.huskerdev.webidl.resolver.ResolvedIdlField
-import com.huskerdev.webidl.resolver.ResolvedIdlOperation
-import com.huskerdev.webidl.resolver.ResolvedIdlType
-import com.huskerdev.webidl.resolver.WebIDLBuiltinKind
+import com.huskerdev.nativekt.utils.*
+import com.huskerdev.webidl.resolver.*
 import org.gradle.internal.extensions.stdlib.capitalized
 
-class KotlinJvmForeignPrinter(idl: IdlResolver, builder: StringBuilder) {
+class KotlinJvmForeignPrinter(
+    idl: IdlResolver,
+    builder: StringBuilder,
+    val classPath: String,
+    name: String = "Foreign",
+    parentClass: String? = null,
+    val indent: String = ""
+) {
     init {
-        builder.append("""
-            private class Foreign: NativeInvoker {
-                private val lookup = SymbolLookup.loaderLookup()
+        builder.append("${indent}private class ")
+        builder.append(name)
+        if(parentClass != null)
+            builder.append(": $parentClass")
+        builder.append(" {\n")
+
+        printArena(builder, indent + "\t")
+        builder.append("\n\n")
+
+        builder.append($$"""
+            private val lookup = SymbolLookup.loaderLookup()
+            private val linker = Linker.nativeLinker()
+
+            private fun lookup(name: String, isCritical: Boolean, retType: ValueLayout?, vararg argTypes: ValueLayout): MethodHandle {
+                val function = if(retType == null)
+                    FunctionDescriptor.ofVoid(*argTypes)
+                else FunctionDescriptor.of(retType, *argTypes)
                 
-                private val _char = type("char")
-                private val _int = type("int")
-                private val _longlong = type("long long")
-                private val _pointer = (type("void*") as AddressLayout)
-                    .withTargetLayout(MemoryLayout.sequenceLayout(Long.MAX_VALUE, _char))
-            
-                private fun type(name: String) =
-                    Linker.nativeLinker().canonicalLayouts()[name] as ValueLayout
-            
-                private fun _lookup(name: String, retType: ValueLayout, vararg argTypes: ValueLayout): MethodHandle {
-                    return Linker.nativeLinker().downcallHandle(
-                        lookup.findOrThrow(name),
-                        FunctionDescriptor.of(retType, *argTypes)
-                    )
-                }
+                val options = if(isCritical)
+                    arrayOf(Linker.Option.critical(true))
+                else emptyArray()
                 
+                val address = lookup.findOrThrow("Foreign_$${classPath.replace(".", "_")}_$${name}_${name}")
+                
+                return linker.downcallHandle(address, function, *options)
+            }
             
-            """.trimIndent())
+            private fun MemorySegment.getString(arena: Arena, dealloc: Boolean) = if(dealloc) {
+                reinterpret(Long.MAX_VALUE, arena) {
+                     println(this@getString.isMapped)
+                    if(this@getString.isMapped)
+                        this@getString.unload()
+                    else
+                        freeHandle.invoke(this@getString)
+                }.getString(0)
+            } else
+                reinterpret(Long.MAX_VALUE).getString(0)
+        
+            private val freeHandle = linker.downcallHandle(
+                linker.defaultLookup().find("free").get(),
+                FunctionDescriptor.ofVoid(ValueLayout.ADDRESS)
+            )
+            
+            """.replaceIndent(indent + "\t"))
+
+        builder.append("\n")
         idl.globalOperators().forEach {
             printFunctionHandle(builder, it)
         }
-        builder.append("\n")
         idl.globalOperators().forEach {
             printFunctionCall(builder, it)
         }
-        builder.append("}")
+        builder.append("${indent}}")
+    }
+
+    private fun printArena(builder: StringBuilder, indent: String){
+        builder.append("""
+            
+            private class CustomArena: AutoCloseable {
+            	companion object {
+            		fun <T> use(block: CustomArena.() -> T) =
+            			CustomArena().use { block(it) }
+            	}
+
+            	private val linker = Linker.nativeLinker()
+            	private val freeHandle = linker.downcallHandle(
+            		linker.defaultLookup().find("free").get(),
+            		FunctionDescriptor.ofVoid(ValueLayout.ADDRESS)
+            	)
+
+            	private val arena = Arena.ofConfined()
+            	private val allocated = hashMapOf<Long, MemorySegment>()
+
+            	fun String.cstr(): MemorySegment =
+            		arena.allocateFrom(this).also { allocated[it.address()] = it }
+
+            	fun MemorySegment.asString(dealloc: Boolean): String {
+            		val result = reinterpret(Long.MAX_VALUE).getString(0)
+            		if(dealloc && address() !in allocated)
+            			freeHandle.invoke(this)
+            		return result
+            	}
+
+            	override fun close() = arena.close()
+            }
+        """.replaceIndent(indent))
     }
 
     private fun printFunctionHandle(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
-        append("\tprivate val handle")
+        append("${indent}\tprivate val handle")
         append(function.name.capitalized())
-        append(" = _lookup(\"")
+        append(" = lookup(\"")
         append(function.name)
         append("\", ")
-        append(function.type.toForeignType())
+        append(function.isCritical())
         append(", ")
-        function.args.flatMap {
-            if(it.type.isString())
-                listOf("_pointer", "_longlong")
-            else listOf(it.type.toForeignType())
-        }.joinTo(builder)
+
+        val args = arrayListOf(function.type.toForeignType())
+        args += function.args.map {
+            it.type.toForeignType()
+        }
+        args.joinTo(builder)
         append(")\n")
     }
 
     private fun printFunctionCall(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
-        append("\t")
-        printFunctionHeader(builder, function, isOverride = true, name = "_${function.name}")
+        append("\n${indent}\t")
+        printFunctionHeader(builder, function,
+            isOverride = true,
+            name = "_${function.name}",
+            forcePrintVoid = true
+        )
         append(" = ")
 
-        val useArena = function.args.any {
-            it.type.isString()
-        }
+        val useArena = function.args.any { it.type.isString() } || function.type.isString()
+
         if(useArena)
-            append("Arena.ofConfined().use {\n\t\t")
+            append("CustomArena.use { \n\t\t")
+        else append("\n${indent}\t\t")
 
         val type = if(function.type.isString())
-            ""
+            "MemorySegment"
         else function.type.toKotlinType()
 
-        val call = "handle${function.name.capitalized()}.invokeExact(${castArgs(function.args)}) as $type"
-        append(call)
+        val args = function.args.joinToString { castToNative(it.type, it.name) }
+        val call = "(handle${function.name.capitalized()}.invokeExact($args) as $type)"
+        append(castFromNative(function.type, call, function.isDealloc()))
 
         if(useArena)
             append("\n\t}")
         append("\n")
     }
 
-    private fun castArgs(args: List<ResolvedIdlField.Argument>): String {
-        return args.flatMap { arg ->
-            if(arg.type.isString()) {
-                listOf("it.allocateFrom(${arg.name})", "${arg.name}.length.toLong()")
-            } else
-                listOf(arg.name)
-        }.joinToString()
+    private fun castFromNative(type: ResolvedIdlType, content: String, dealloc: Boolean): String {
+        return if(type.isString())
+            "$content.asString($dealloc)"
+        else content
+    }
+
+    private fun castToNative(type: ResolvedIdlType, content: String): String {
+        return if(type.isString())
+            "$content.cstr()"
+        else content
     }
 
     fun ResolvedIdlType.toForeignType(): String = when(this) {
         is ResolvedIdlType.Union -> throw UnsupportedOperationException("Union type are not unsupported")
-        is ResolvedIdlType.Void -> "void"
+        is ResolvedIdlType.Void -> "null"
         is ResolvedIdlType.Default -> buildString {
             append(when(declaration) {
-                is BuiltinIdlDeclaration -> when((declaration as BuiltinIdlDeclaration).kind) {
-                    WebIDLBuiltinKind.BOOLEAN -> "bool"
-                    WebIDLBuiltinKind.BYTE -> "int8_t"
-                    WebIDLBuiltinKind.UNSIGNED_BYTE -> "uint8_t"
-                    WebIDLBuiltinKind.SHORT -> "int16_t"
-                    WebIDLBuiltinKind.UNSIGNED_SHORT -> "uint16_t"
-                    WebIDLBuiltinKind.INT -> "_int"
-                    WebIDLBuiltinKind.UNSIGNED_INT -> "uint32_t"
-                    WebIDLBuiltinKind.LONG -> "int64_t"
-                    WebIDLBuiltinKind.UNSIGNED_LONG -> "uint32_t"
-                    WebIDLBuiltinKind.UNRESTRICTED_FLOAT -> "float"
-                    WebIDLBuiltinKind.UNRESTRICTED_DOUBLE -> "double"
-                    WebIDLBuiltinKind.STRING -> "char*"
-                    else -> throw UnsupportedOperationException()
+                is BuiltinIdlDeclaration -> when(val a = (declaration as BuiltinIdlDeclaration).kind) {
+                    WebIDLBuiltinKind.CHAR -> "ValueLayout.JAVA_CHAR"
+                    WebIDLBuiltinKind.BOOLEAN -> "ValueLayout.JAVA_BOOLEAN"
+                    WebIDLBuiltinKind.BYTE,
+                    WebIDLBuiltinKind.UNSIGNED_BYTE -> "ValueLayout.JAVA_BYTE"
+                    WebIDLBuiltinKind.SHORT,
+                    WebIDLBuiltinKind.UNSIGNED_SHORT -> "ValueLayout.JAVA_SHORT"
+                    WebIDLBuiltinKind.INT,
+                    WebIDLBuiltinKind.UNSIGNED_INT -> "ValueLayout.JAVA_INT"
+                    WebIDLBuiltinKind.LONG,
+                    WebIDLBuiltinKind.UNSIGNED_LONG -> "ValueLayout.JAVA_LONG"
+                    WebIDLBuiltinKind.FLOAT,
+                    WebIDLBuiltinKind.UNRESTRICTED_FLOAT -> "ValueLayout.JAVA_FLOAT"
+                    WebIDLBuiltinKind.DOUBLE,
+                    WebIDLBuiltinKind.UNRESTRICTED_DOUBLE -> "ValueLayout.JAVA_DOUBLE"
+                    WebIDLBuiltinKind.STRING -> "ValueLayout.ADDRESS"
+                    else -> throw UnsupportedOperationException(a.toString())
                 }
                 else -> declaration.name
             })

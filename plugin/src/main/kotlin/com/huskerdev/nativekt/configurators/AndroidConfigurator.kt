@@ -6,9 +6,12 @@ import com.huskerdev.nativekt.plugin.NativeKtExtension
 import com.huskerdev.nativekt.plugin.NativeModule
 import com.huskerdev.nativekt.printers.HeaderPrinter
 import com.huskerdev.nativekt.printers.KotlinAndroidPrinter
-import com.huskerdev.nativekt.printers.jvm.CppJniPrinter
+import com.huskerdev.nativekt.printers.jvm.CArenaPrinter
+import com.huskerdev.nativekt.printers.jvm.CJniPrinter
 import com.huskerdev.nativekt.utils.cmakeBuild
+import com.huskerdev.nativekt.utils.cmakeGen
 import com.huskerdev.nativekt.utils.dir
+import com.huskerdev.nativekt.utils.fresh
 import com.huskerdev.webidl.resolver.IdlResolver
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
@@ -32,13 +35,23 @@ internal fun configureAndroid(
 ) {
     val androidComponents = project.the<KotlinMultiplatformAndroidComponentsExtension>()
 
+    if (extension.ndkVersion == null)
+        throw Exception("NDK version is not specified in 'native { ... }'")
+
+    val ndkDir = File(androidComponents.sdkComponents.sdkDirectory.get().asFile,
+        "ndk/${extension.ndkVersion}")
+    if (!ndkDir.exists())
+        throw Exception("NDK ${extension.ndkVersion} is not installed")
+
+    val toolchain = File(ndkDir, "build/cmake/android.toolchain.cmake")
+
     val androidGenDir = File(srcGenDir, "android/src")
-    androidGenDir.mkdirs()
+    androidGenDir.fresh()
 
     val classPathFile = File(androidGenDir, module.classPath.replace(".", "/"))
 
     val jniLibsDir = File(srcGenDir, "android/jniLibs")
-    jniLibsDir.mkdirs()
+    jniLibsDir.fresh()
 
     val cmakeDir = File(cmakeRootDir, "android")
     cmakeDir.mkdirs()
@@ -76,10 +89,14 @@ internal fun configureAndroid(
         expectActual = expectActual
     )
 
-    CppJniPrinter(
+    CJniPrinter(
         idl = idl,
         target = File(cmakeDir, "jni_bindings.c"),
         classPath = module.classPath
+    )
+
+    CArenaPrinter(
+        target = File(cmakeDir, "jni_arena.h"),
     )
 
     HeaderPrinter(
@@ -93,26 +110,20 @@ internal fun configureAndroid(
         outputFolder.set(jniLibsDir)
 
         doLast {
-            if (extension.ndkVersion == null)
-                throw Exception("NDK version is not specified in 'native { ... }'")
-
-            val ndkDir = File(androidComponents.sdkComponents.sdkDirectory.get().asFile,
-                "ndk/${extension.ndkVersion}")
-            if (!ndkDir.exists())
-                throw Exception("NDK ${extension.ndkVersion} is not installed")
-
-            val toolchain = File(ndkDir, "build/cmake/android.toolchain.cmake")
-
             extension.androidTargets.forEach { abi ->
                 val targetBuildDir = File(cmakeBuildDir, abi)
-                cmakeBuild(
-                    project, cmakeDir, targetBuildDir, module.buildType,
+
+                // Generate CMake build
+                cmakeGen(project, cmakeDir, targetBuildDir, module.buildType,
                     args = setOf(
                         "-DCMAKE_TOOLCHAIN_FILE=\"$toolchain\"",
                         "-DANDROID_ABI=$abi",
                         "-DANDROID_PLATFORM=android-${androidExtension.compileSdk}"
                     )
                 )
+
+                // Build
+                cmakeBuild(project, targetBuildDir)
 
                 // Copy library to jniLibs dir
                 File(targetBuildDir, "liblib${module.name}.so").copyTo(

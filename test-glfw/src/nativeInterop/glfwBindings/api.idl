@@ -1,0 +1,7 @@
+
+namespace global {
+    void run();
+
+    [Critical]
+    void glfwInit();
+};

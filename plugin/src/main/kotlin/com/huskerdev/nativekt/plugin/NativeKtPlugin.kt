@@ -27,7 +27,6 @@ class NativeKtPlugin: Plugin<Project> {
         val buildDir = project.layout.buildDirectory.get().asFile
         val cmakeDir = File(buildDir, "cmake")
         val srcGenDir = File(buildDir, "generated/natives")
-        srcGenDir.deleteRecursively()
 
         project.plugins.withId("com.android.kotlin.multiplatform.library") {
             initAndroid(cmakeDir, srcGenDir)
@@ -60,7 +59,7 @@ class NativeKtPlugin: Plugin<Project> {
 
                             project("$${module.name}")
                             
-                            add_library(${PROJECT_NAME} OBJECT $${module.name}.c)
+                            add_library(${PROJECT_NAME} STATIC $${module.name}.c)
                         """.trimIndent())
                         File(dir, "api.idl").writeText("""
                             

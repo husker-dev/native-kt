@@ -3,6 +3,7 @@ package com.huskerdev.nativekt.configurators
 import com.huskerdev.nativekt.plugin.Multiplatform
 import com.huskerdev.nativekt.plugin.NativeKtExtension
 import com.huskerdev.nativekt.printers.KotlinCommonPrinter
+import com.huskerdev.nativekt.utils.fresh
 import com.huskerdev.webidl.resolver.IdlResolver
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
@@ -17,7 +18,7 @@ internal fun configureCommon(
     srcGenDir: File
 ) {
     val commonGenDir = File(srcGenDir, "common")
-    commonGenDir.mkdirs()
+    commonGenDir.fresh()
 
     val classPathFile = File(commonGenDir, module.classPath.replace(".", "/"))
 

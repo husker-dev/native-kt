@@ -1,9 +1,8 @@
 package com.huskerdev.nativekt.printers
 
-import com.huskerdev.nativekt.utils.isString
+import com.huskerdev.nativekt.utils.globalOperators
 import com.huskerdev.nativekt.utils.toCType
 import com.huskerdev.webidl.resolver.IdlResolver
-import com.huskerdev.webidl.resolver.ResolvedIdlNamespace
 import com.huskerdev.webidl.resolver.ResolvedIdlOperation
 import java.io.File
 
@@ -27,30 +26,40 @@ class HeaderPrinter(
              * the project is built.
              */
              
-            
+
         """.trimIndent())
 
         if(guardName != null) {
             builder.append("#ifndef $defName\n")
-            builder.append("#define $defName\n\n")
+            builder.append("#define $defName\n")
         }
 
-        builder.append("#include <stdint.h>\n")
-        builder.append("#include <stddef.h>\n")
-        builder.append("\n")
+        builder.append("""
+            
+            #include <stddef.h>
+            #include <stdint.h>
+            #include <stdbool.h>
+            
+            #ifdef __cplusplus
+            extern "C" {
+            #endif
+            
+        """.trimIndent())
 
-        idl.namespaces.values.forEach { printNamespace(builder, it) }
+        idl.globalOperators().forEach { printFunction(builder, it) }
+
+        builder.append("""
+            
+            
+            #ifdef __cplusplus
+            }
+            #endif
+        """.trimIndent())
 
         if(guardName != null)
             builder.append("\n\n#endif // $defName")
 
         target.writeText(builder.toString().replace("\n", System.lineSeparator()))
-    }
-
-    private fun printNamespace(builder: StringBuilder, namespace: ResolvedIdlNamespace){
-        namespace.operations.forEach {
-            printFunction(builder, it)
-        }
     }
 
     private fun printFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
@@ -60,23 +69,10 @@ class HeaderPrinter(
         append(function.name)
         append("(")
 
-        function.args.forEachIndexed { index, arg ->
-            append(arg.type.toCType())
-            append(" ")
-            append(arg.name)
-
-            if(arg.type.isString()) {
-                append(", int32_t __")
-                append(arg.name)
-                append("Len")
-            }
-            if(index != function.args.lastIndex)
-                append(", ")
+        function.args.joinTo(builder) {
+            "${it.type.toCType()} ${it.name}"
         }
+
         append(");")
     }
-
-
-
-
 }

@@ -53,8 +53,7 @@ fun currentTargetType(): TargetType = when {
     else -> throw UnsupportedOperationException()
 }
 
-
-fun cmakeGenerator() = when {
-    Os.isFamily(Os.FAMILY_WINDOWS) -> "MinGW Makefiles"
-    else -> "Unix Makefiles"
+fun File.fresh(){
+    deleteRecursively()
+    mkdirs()
 }

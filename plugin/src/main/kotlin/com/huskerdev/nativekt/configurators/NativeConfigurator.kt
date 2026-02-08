@@ -10,6 +10,8 @@ import com.huskerdev.nativekt.printers.kn.DefPrinter
 import com.huskerdev.nativekt.printers.HeaderPrinter
 import com.huskerdev.nativekt.printers.kn.KotlinNativePrinter
 import com.huskerdev.nativekt.utils.cmakeBuild
+import com.huskerdev.nativekt.utils.cmakeGen
+import com.huskerdev.nativekt.utils.fresh
 import com.huskerdev.webidl.resolver.IdlResolver
 import org.gradle.api.Project
 import org.gradle.internal.extensions.stdlib.capitalized
@@ -38,7 +40,7 @@ internal fun configureNative(
     val sourceSetName = sourceSet.first.name
 
     val nativeGenDir = File(srcGenDir, "native/$sourceSetName")
-    nativeGenDir.mkdirs()
+    nativeGenDir.fresh()
 
     val cinteropGenDir = File(srcGenDir, "cinterop")
     cinteropGenDir.mkdirs()
@@ -59,21 +61,7 @@ internal fun configureNative(
 
     sourceSet.first.kotlin.srcDir(nativeGenDir)
 
-
-    File(cmakeDir, "CMakeLists.txt").writeText($$"""
-        cmake_minimum_required(VERSION 3.15)
-
-        project("$${module.name}")
-
-        add_subdirectory("$${
-            module.dir(project).absolutePath.replace("\\", "/")
-        }" "$${
-            commonCmakeBuildDir.absolutePath.replace("\\", "/")
-        }")
-
-        add_library(lib_$${module.name} STATIC $<TARGET_OBJECTS:$${module.name}>)
-    """.trimIndent())
-
+    // Generate Kotlin files
     KotlinNativePrinter(
         idl = idl,
         target = File(classPathFile, "${module.name}.kt"),
@@ -82,7 +70,6 @@ internal fun configureNative(
         useCoroutines = extension.useCoroutines,
         expectActual = expectActual
     )
-
     HeaderPrinter(
         idl = idl,
         target = cinteropHeaderFile,
@@ -94,21 +81,33 @@ internal fun configureNative(
         classPath = module.classPath
     )
 
+    // Create CMake file
+    File(cmakeDir, "CMakeLists.txt").writeText($$"""
+        cmake_minimum_required(VERSION 3.15)
 
+        project("$${module.name}")
+
+        add_subdirectory("$${
+            module.dir(project).absolutePath.replace("\\", "/")
+        }" "$${
+            commonCmakeBuildDir.absolutePath.replace("\\", "/")
+        }")
+
+        add_library(lib_$${module.name} SHARED stub.c)
+        target_link_libraries(lib_$${module.name} PUBLIC $${module.name})
+        
+        add_library(libstatic_$${module.name} STATIC stub.c)
+        target_link_libraries(libstatic_$${module.name} PUBLIC $${module.name})
+    """.trimIndent())
+
+    File(cmakeDir, "stub.c").writeText("")
+
+    // Configure Kotlin cinterop
     val target = kotlin.targets.findByName(targetName) as? KotlinNativeTarget
         ?: throw UnsupportedOperationException()
 
     val compilation = target.compilations.findByName("main")
         ?: throw UnsupportedOperationException()
-
-    target.binaries {
-        all {
-            linkerOpts(
-                "-L${cmakeBuildDir.absolutePath.replace("\\", "/")}",
-                "-llib_${module.name}"
-            )
-        }
-    }
 
     compilation.cinterops {
         create("natives_${module.name}").definitionFile.set(cinteropDefFile)
@@ -117,82 +116,112 @@ internal fun configureNative(
     val task = project.tasks.register("compileNatives${module.name.capitalized()}Native${targetName.capitalized()}") {
         group = "native"
         doLast {
-            fun flags(vararg flags: String) = setOf(
-                "-DCMAKE_C_FLAGS=\"${flags.joinToString(" ")}\"",
-                "-DCMAKE_CXX_FLAGS=\"${flags.joinToString(" ")}\""
-            )
-            fun xcSdkVersion(sdk: String) =
-                project.exec("xcrun --sdk $sdk --show-sdk-platform-version", silent = true)
-            fun xcSdkSysroot(sdk: String) =
-                project.exec("xcrun --sdk $sdk --show-sdk-path", silent = true)
+            // Generate CMake build
+            run {
+                fun flags(vararg flags: String) = setOf(
+                    "-DCMAKE_C_FLAGS=\"${flags.joinToString(" ")}\"",
+                    "-DCMAKE_CXX_FLAGS=\"${flags.joinToString(" ")}\""
+                )
+                fun xcSdkVersion(sdk: String) =
+                    project.exec("xcrun --sdk $sdk --show-sdk-platform-version", silent = true)
+                fun xcSdkSysroot(sdk: String) =
+                    project.exec("xcrun --sdk $sdk --show-sdk-path", silent = true)
 
 
-            val args = hashSetOf(
-                "-DCMAKE_C_COMPILER=clang",
-                "-DCMAKE_CXX_COMPILER=clang++"
-            )
-            args += when(sourceSet.second) {
-                TargetType.IOS_SIMULATOR_ARM64 -> flags(
-                    "-arch arm64",
-                    "-target arm64-apple-ios${xcSdkVersion("iphonesimulator")}-simulator",
-                    "-isysroot ${xcSdkSysroot("iphonesimulator")}"
+                val args = hashSetOf(
+                    "-DCMAKE_C_COMPILER=clang",
+                    "-DCMAKE_CXX_COMPILER=clang++",
                 )
-                TargetType.IOS_X64 -> flags(
-                    "-arch x86_64",
-                    "-target x86_64-apple-ios${xcSdkVersion("iphonesimulator")}-simulator",
-                    "-isysroot ${xcSdkSysroot("iphonesimulator")}"
-                )
-                TargetType.IOS_ARM64 -> flags(
-                    "-arch arm64",
-                    "-target arm64-apple-ios${xcSdkVersion("iphoneos")}",
-                    "-isysroot ${xcSdkSysroot("iphoneos")}"
-                )
-                TargetType.TVOS_ARM64 -> flags(
-                    "-arch arm64",
-                    "-target arm64-apple-tvos${xcSdkVersion("appletvos")}",
-                    "-isysroot ${xcSdkSysroot("appletvos")}"
-                )
-                TargetType.TVOS_SIMULATOR_ARM64 -> flags(
-                    "-arch arm64",
-                    "-target arm64-apple-tvos${xcSdkVersion("appletvsimulator")}-simulator",
-                    "-isysroot ${xcSdkSysroot("appletvsimulator")}"
-                )
-                TargetType.TVOS_X64 -> flags(
-                    "-arch x86_64",
-                    "-target x86_64-apple-tvos${xcSdkVersion("appletvsimulator")}-simulator",
-                    "-isysroot ${xcSdkSysroot("appletvsimulator")}"
-                )
-                TargetType.WATCHOS_ARM32 -> flags(
-                    "-arch armv7k",
-                    "-target armv7k-apple-watchos${xcSdkVersion("watchos")}",
-                    "-isysroot ${xcSdkSysroot("watchos")}"
-                )
-                TargetType.WATCHOS_ARM64 -> flags(
-                    "-arch arm64_32",
-                    "-target arm64-apple-watchos${xcSdkVersion("watchos")}",
-                    "-isysroot ${xcSdkSysroot("watchos")}"
-                )
-                TargetType.WATCHOS_DEVICE_ARM64 -> flags(
-                    "-arch arm64",
-                    "-target arm64-apple-watchos${xcSdkVersion("watchos")}",
-                    "-isysroot ${xcSdkSysroot("watchos")}"
-                )
-                TargetType.WATCHOS_SIMULATOR_ARM64 -> flags(
-                    "-arch arm64",
-                    "-target arm64-apple-watchos${xcSdkVersion("watchsimulator")}-simulator",
-                    "-isysroot ${xcSdkSysroot("watchsimulator")}"
-                )
-                TargetType.WATCHOS_X64 -> flags(
-                    "-arch x86_64",
-                    "-target x86_64-apple-watchos${xcSdkVersion("watchsimulator")}-simulator",
-                    "-isysroot ${xcSdkSysroot("watchsimulator")}"
-                )
-                TargetType.MACOS_ARM64 -> flags("-arch arm64")
-                TargetType.MACOS_X64 -> flags("-arch x86_64")
-                else -> emptySet()
+                args += when(sourceSet.second) {
+                    TargetType.IOS_SIMULATOR_ARM64 -> flags(
+                        "-arch arm64",
+                        "-target arm64-apple-ios${xcSdkVersion("iphonesimulator")}-simulator",
+                        "-isysroot ${xcSdkSysroot("iphonesimulator")}"
+                    )
+                    TargetType.IOS_X64 -> flags(
+                        "-arch x86_64",
+                        "-target x86_64-apple-ios${xcSdkVersion("iphonesimulator")}-simulator",
+                        "-isysroot ${xcSdkSysroot("iphonesimulator")}"
+                    )
+                    TargetType.IOS_ARM64 -> flags(
+                        "-arch arm64",
+                        "-target arm64-apple-ios${xcSdkVersion("iphoneos")}",
+                        "-isysroot ${xcSdkSysroot("iphoneos")}"
+                    )
+                    TargetType.TVOS_ARM64 -> flags(
+                        "-arch arm64",
+                        "-target arm64-apple-tvos${xcSdkVersion("appletvos")}",
+                        "-isysroot ${xcSdkSysroot("appletvos")}"
+                    )
+                    TargetType.TVOS_SIMULATOR_ARM64 -> flags(
+                        "-arch arm64",
+                        "-target arm64-apple-tvos${xcSdkVersion("appletvsimulator")}-simulator",
+                        "-isysroot ${xcSdkSysroot("appletvsimulator")}"
+                    )
+                    TargetType.TVOS_X64 -> flags(
+                        "-arch x86_64",
+                        "-target x86_64-apple-tvos${xcSdkVersion("appletvsimulator")}-simulator",
+                        "-isysroot ${xcSdkSysroot("appletvsimulator")}"
+                    )
+                    TargetType.WATCHOS_ARM32 -> flags(
+                        "-arch armv7k",
+                        "-target armv7k-apple-watchos${xcSdkVersion("watchos")}",
+                        "-isysroot ${xcSdkSysroot("watchos")}"
+                    )
+                    TargetType.WATCHOS_ARM64 -> flags(
+                        "-arch arm64_32",
+                        "-target arm64-apple-watchos${xcSdkVersion("watchos")}",
+                        "-isysroot ${xcSdkSysroot("watchos")}"
+                    )
+                    TargetType.WATCHOS_DEVICE_ARM64 -> flags(
+                        "-arch arm64",
+                        "-target arm64-apple-watchos${xcSdkVersion("watchos")}",
+                        "-isysroot ${xcSdkSysroot("watchos")}"
+                    )
+                    TargetType.WATCHOS_SIMULATOR_ARM64 -> flags(
+                        "-arch arm64",
+                        "-target arm64-apple-watchos${xcSdkVersion("watchsimulator")}-simulator",
+                        "-isysroot ${xcSdkSysroot("watchsimulator")}"
+                    )
+                    TargetType.WATCHOS_X64 -> flags(
+                        "-arch x86_64",
+                        "-target x86_64-apple-watchos${xcSdkVersion("watchsimulator")}-simulator",
+                        "-isysroot ${xcSdkSysroot("watchsimulator")}"
+                    )
+                    TargetType.MACOS_ARM64 -> flags("-arch arm64")
+                    TargetType.MACOS_X64 -> flags("-arch x86_64")
+                    else -> emptySet()
+                }
+
+                cmakeGen(project, cmakeDir, cmakeBuildDir, module.buildType, args)
             }
 
-            cmakeBuild(project, cmakeDir, cmakeBuildDir, module.buildType, args)
+            // Build
+            cmakeBuild(project, cmakeBuildDir)
+
+            // Configure Kotlin linker options (copy from CMake)
+            target.binaries {
+                all {
+                    // This module uses some sort of "hack" to get all arguments needed for linker.
+                    // `linkLibs.rsp` generates only with executable or shared libraries, so our CMakeLists.txt contains `SHARED` target
+                    val args = File(
+                        cmakeBuildDir,
+                        "CMakeFiles/lib_${module.name}.dir/linkLibs.rsp"
+                    ).readText()
+                        .splitRespectingQuotes()
+                        .map {
+                            if(!it.startsWith("-l") && !File(it).isAbsolute)
+                                File(cmakeBuildDir, it).absolutePath
+                            else it
+                        }
+                        .filter { it !in setOf("-lpthread") }
+
+                    linkerOpts(args +
+                        "-L${cmakeBuildDir.absolutePath.replace("\\", "/")}" +
+                        "-llibstatic_${module.name}"
+                    )
+                }
+            }
         }
     }
 
@@ -200,3 +229,9 @@ internal fun configureNative(
         it.dependsOn(task)
     }
 }
+
+private fun String.splitRespectingQuotes(): List<String> =
+    """[^\s"']+|"([^"]*)"|'([^']*)'""".toRegex()
+        .findAll(this)
+        .map { it.value.trim('"', '\'') }
+        .toList()

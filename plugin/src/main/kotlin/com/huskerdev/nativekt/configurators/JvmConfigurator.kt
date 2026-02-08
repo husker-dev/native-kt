@@ -3,11 +3,15 @@ package com.huskerdev.nativekt.configurators
 import com.huskerdev.nativekt.plugin.NativeKtExtension
 import com.huskerdev.nativekt.plugin.NativeModule
 import com.huskerdev.nativekt.printers.HeaderPrinter
-import com.huskerdev.nativekt.printers.jvm.CppJniPrinter
+import com.huskerdev.nativekt.printers.jvm.CArenaPrinter
+import com.huskerdev.nativekt.printers.jvm.CForeignPrinter
+import com.huskerdev.nativekt.printers.jvm.CJniPrinter
 import com.huskerdev.nativekt.printers.jvm.KotlinJvmPrinter
 import com.huskerdev.nativekt.utils.cmakeBuild
+import com.huskerdev.nativekt.utils.cmakeGen
 import com.huskerdev.nativekt.utils.currentTargetType
 import com.huskerdev.nativekt.utils.dir
+import com.huskerdev.nativekt.utils.fresh
 import com.huskerdev.nativekt.utils.libExtension
 import com.huskerdev.webidl.resolver.IdlResolver
 import org.apache.tools.ant.taskdefs.condition.Os
@@ -42,13 +46,13 @@ internal fun configureJvm(
     }
 
     val jvmGenDir = File(srcGenDir, "jvm/src")
-    jvmGenDir.mkdirs()
+    jvmGenDir.fresh()
 
     val libsGenDir = File(srcGenDir, "jvm/libs")
-    libsGenDir.mkdirs()
+    libsGenDir.fresh()
 
     val cmakeDir = File(cmakeRootDir, "jvm")
-    cmakeDir.mkdirs()
+    cmakeDir.fresh()
 
     val commonCmakeDir = File(cmakeRootDir, "common")
     commonCmakeDir.mkdirs()
@@ -75,6 +79,7 @@ internal fun configureJvm(
     val libArch = when {
         Os.isFamily(Os.FAMILY_MAC) -> "universal"
         Os.isArch("aarch64") -> "arm64"
+        Os.isArch("amd64") -> "x64"
         else -> "x86"
     }
     val libOutFileName = "liblib_${module.name}.${libExtension}"
@@ -91,7 +96,9 @@ internal fun configureJvm(
 
         add_subdirectory("$${module.dir(project).absolutePath.replace("\\", "/")}" "$${commonCmakeDir.absolutePath.replace("\\", "/")}")
 
-        add_library(lib_$${module.name} SHARED $<TARGET_OBJECTS:$${module.name}> jni_bindings.c)
+        add_library(lib_$${module.name} SHARED jni_bindings.c foreign_bindings.c)
+        
+        target_link_libraries(lib_$${module.name} PRIVATE $${module.name})
         
         target_include_directories(lib_$${module.name} PRIVATE "$${jdkPath}/include")
         target_include_directories(lib_$${module.name} PRIVATE "$${jdkPath}/include/$$jdkPlatformName")
@@ -105,11 +112,22 @@ internal fun configureJvm(
         useCoroutines = extension.useCoroutines,
         expectActual = expectActual
     )
-
-    CppJniPrinter(
+    CJniPrinter(
         idl = idl,
         target = File(cmakeDir, "jni_bindings.c"),
-        classPath = module.classPath
+        classPath = module.classPath,
+        name = "${module.name.capitalized()}JNI"
+    )
+
+    CArenaPrinter(
+        target = File(cmakeDir, "jni_arena.h"),
+    )
+
+    CForeignPrinter(
+        idl = idl,
+        target = File(cmakeDir, "foreign_bindings.c"),
+        classPath = module.classPath,
+        name = "${module.name.capitalized()}Foreign"
     )
 
     HeaderPrinter(
@@ -120,6 +138,7 @@ internal fun configureJvm(
     val compileTask = project.tasks.register("compileNatives${module.name.capitalized()}Jvm") {
         group = "native"
         doLast {
+            // Generate CMake build
             val args = hashSetOf(
                 "-DCMAKE_C_COMPILER=clang",
                 "-DCMAKE_CXX_COMPILER=clang++"
@@ -130,8 +149,10 @@ internal fun configureJvm(
                     "-DCMAKE_CXX_FLAGS=\"-arch x86_64 -arch arm64\""
                 )
             }
+            cmakeGen(project, cmakeDir, cmakeBuildDir, module.buildType, args)
 
-            cmakeBuild(project, cmakeDir, cmakeBuildDir, module.buildType, args)
+            // Build
+            cmakeBuild(project, cmakeBuildDir)
 
             cmakeBuildDir.listFiles()!!.first {
                 it.name == libOutFileName

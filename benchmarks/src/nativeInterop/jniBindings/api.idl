@@ -1,0 +1,5 @@
+
+namespace global {
+    long callJni();
+    [Critical] long callJniCritical();
+};

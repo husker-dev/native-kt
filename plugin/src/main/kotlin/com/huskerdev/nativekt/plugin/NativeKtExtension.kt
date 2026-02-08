@@ -45,7 +45,7 @@ sealed class NativeModule @Inject constructor(
      *
      * Default value: `RELEASE`
      */
-    var buildType: LibBuildType = LibBuildType.RELEASE
+    var buildType: CMakeBuildType = CMakeBuildType.RELEASE
 
     /**
      * Classpath where bindings will be generated.
@@ -117,7 +117,7 @@ open class SinglePlatform @Inject constructor(
 }
 
 @Suppress("unused")
-enum class LibBuildType(
+enum class CMakeBuildType(
     val cmakeName: String
 ) {
     DEBUG("Debug"),

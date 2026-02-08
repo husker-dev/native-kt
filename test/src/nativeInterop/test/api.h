@@ -9,10 +9,44 @@
 #ifndef KOTLIN_NATIVE_TEST_H
 #define KOTLIN_NATIVE_TEST_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
+#include <stdbool.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-int32_t testFunc(int32_t arg, const char* arg2, int32_t __arg2Len);
+bool consume();
+bool consumeInt(int32_t arg);
+bool consumeLong(int64_t arg);
+bool consumeFloat(float arg);
+bool consumeDouble(double arg);
+bool consumeByte(int8_t arg);
+bool consumeBoolean(bool arg);
+bool consumeChar(uint16_t arg);
+bool consumeString(const char* arg);
+void get();
+int32_t getInt();
+int64_t getLong();
+float getFloat();
+double getDouble();
+int8_t getByte();
+bool getBoolean();
+uint16_t getChar();
+const char* getStringLiteral();
+const char* getString();
+int32_t pingInt(int32_t arg);
+int64_t pingLong(int64_t arg);
+float pingFloat(float arg);
+double pingDouble(double arg);
+int8_t pingByte(int8_t arg);
+bool pingBoolean(bool arg);
+uint16_t pingChar(uint16_t arg);
+const char* pingString(const char* arg);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // KOTLIN_NATIVE_TEST_H

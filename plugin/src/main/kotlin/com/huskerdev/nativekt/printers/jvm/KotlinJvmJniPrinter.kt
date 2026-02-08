@@ -7,45 +7,63 @@ import com.huskerdev.webidl.resolver.IdlResolver
 class KotlinJvmJniPrinter(
     idl: IdlResolver,
     builder: StringBuilder,
+    name: String = "JNI",
     parentClass: String? = null,
-    instanceMethods: Boolean = false
+    instanceMethods: Boolean = false,
+    isPrivate: Boolean = true,
+    indent: String = ""
 ) {
     init {
-        builder.append("private class JNI")
+        builder.append(indent)
+        if(isPrivate)
+            builder.append("private ")
+
+        builder.append("class ")
+        builder.append(name)
         if(parentClass != null)
             builder.append(": $parentClass")
         builder.append(" {\n")
 
         // Static functions
-        builder.append("\tcompanion object {\n")
+        builder.append("${indent}\tcompanion object {\n")
+        builder.append("${indent}\t\t@JvmStatic external fun register()\n")
+
         idl.globalOperators().forEach { function ->
-            builder.append("\t\t@JvmStatic ")
+            builder.append("${indent}\t\t@JvmStatic ")
             printFunctionHeader(
                 builder, function,
                 isExternal = true
             )
             builder.append("\n")
         }
-        builder.append("\t}\n")
+        builder.append("${indent}\t}\n")
+
+        builder.append("""
+            
+            init {
+                register()
+            }
+            
+        """.replaceIndent(indent + "\t"))
 
         // Instance methods
         if(instanceMethods) {
-            builder.append("\n")
             idl.globalOperators().forEach { function ->
-                builder.append("\t")
+                builder.append("\n${indent}\t")
                 printFunctionHeader(
                     builder, function,
                     isExternal = false,
                     isOverride = parentClass != null,
-                    name = "_${function.name}"
+                    name = "_${function.name}",
+                    forcePrintVoid = true
                 )
-                builder.append(" = \n\t\t")
+                builder.append(" = \n${indent}\t\t")
                 builder.append(function.name)
                 builder.append("(")
                 function.args.joinTo(builder) { it.name }
                 builder.append(")\n")
             }
         }
-        builder.append("}")
+        builder.append("${indent}}")
     }
 }

@@ -1,9 +1,0 @@
-
-namespace global {
-    long jvmOnlyFunc(long arg, DOMString arg2);
-};
-
-// Is not supported (yet)
-dictionary myStruct {
-    long field1;
-};

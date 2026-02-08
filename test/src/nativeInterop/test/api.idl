@@ -1,6 +1,37 @@
 
 namespace global {
-    long testFunc(long arg, DOMString arg2);
+    // Consume
+    boolean consume();
+    boolean consumeInt(long arg);
+    boolean consumeLong(long long arg);
+    boolean consumeFloat(float arg);
+    boolean consumeDouble(double arg);
+    boolean consumeByte(byte arg);
+    boolean consumeBoolean(boolean arg);
+    boolean consumeChar(symbol arg);
+    boolean consumeString(DOMString arg);
+
+    // Get
+    void get();
+    long getInt();
+    long long getLong();
+    float getFloat();
+    double getDouble();
+    byte getByte();
+    boolean getBoolean();
+    symbol getChar();
+    DOMString getStringLiteral();
+    [Dealloc] DOMString getString();
+
+    // Ping
+    long pingInt(long arg);
+    long long pingLong(long long arg);
+    float pingFloat(float arg);
+    double pingDouble(double arg);
+    byte pingByte(byte arg);
+    boolean pingBoolean(boolean arg);
+    symbol pingChar(symbol arg);
+    [Dealloc] DOMString pingString(DOMString arg);
 };
 
 // Is not supported (yet)
