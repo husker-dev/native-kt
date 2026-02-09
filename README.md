@@ -51,10 +51,6 @@ native {
 > with `CMakeLists.txt`, `api.idl`, and example source files.<br>
 > This task is optional but recommended for getting started.
 
-By default, all native projects are stored in `src/nativeInterop/[name]`.
-You can change it using property `projectDir`.
-
-
 
 ## Requirements
 
@@ -64,12 +60,12 @@ You can change it using property `projectDir`.
 
 [CMake](https://cmake.org/) is required to configure your projects.
 
-### Compilation for Android
+#### Compilation for Android
 It is important to have **Android SDK** installed, as well as **NDK** with specified version. 
 <br>`ANDROID_HOME` is required to locate the SDK.
 <br>You can simply install [Android Studio](https://developer.android.com/studio) and set up [NDK](https://developer.android.com/studio/projects/install-ndk) in UI.
 
-### Compilation for Kotlin/JS
+#### Compilation for Kotlin/JS
 [Emscripten](https://emscripten.org/docs/getting_started/downloads.html) is required to be installed.
 <br>`EMSDK` is required to locate the SDK.
 
@@ -81,8 +77,8 @@ The [`WebIDL`](https://webidl.spec.whatwg.org/) format is used to describe the i
 All functions **must** be declared inside the `global` namespace.
 Other namespaces will be ignored.
 
-Example:
 ```webidl
+// Example
 namespace global {
     void helloWorld();
 }
@@ -106,7 +102,10 @@ namespace global {
 
 ## Usage in native
 
-When Gradle project is loaded, it generates header `api.h` based on `api.idl` in native project directory. 
+By default, all native projects are stored in `src/nativeInterop/[name]`.<br>
+You can change it in `build.gradle` using property `projectDir`.
+
+When Gradle project is loaded, it generates header `api.h` based on `api.idl`. 
 
 This C-header should be included and **must** be implemented in your code.
 > For C++, make sure the functions are exported with `extern "C"`.
@@ -131,19 +130,38 @@ void helloWorld() {
 }
 ```
 
-### CMake tips 
-- Do not specify the compiler type in your CMake configuration - it may break the whole compilation.
-- It is not recommended to use compiler-specific arguments without checking for the compiler type.
-  The default compiler is clang, but emscripten can also be used, where the arguments won't work.
+### Memory lifecycle
+There is no API for manual memory management, but it is important to understand the memory lifecycle.
+
+#### ➡️ Incoming pointers
+
+All pointer variables from function arguments (strings, arrays, ...) , **must not** be freed or stored outside this function.<br>
+Before function execution, actual Kotlin String/Array data is copied to the pointers, and freed after completion.
+
+In other words, if you want to store the string in native code, you **must** copy it to your own allocated memory.
+
+> This behavior may be modified in the future.
+
+#### ⬅️ Outcoming pointer
+
+When you return a pointer, it will not be used "as is" in Kotlin variables. <br>
+Data will be **copied** to actual Kotlin objects, but pointer will not be freed.
+
+However, you can add `[Dealloc]` annotation to the function in the `api.idl` file - it will free the pointer after execution.
+
+It's also important to consider string literals.<br>
+If you have a statement like `return "my literal"`, you **must not** use `[Dealloc]` annotation.
 
 ## Usage in Kotlin
 
 When Gradle project is loaded, it generates functions based on your `api.idl`.
 
-Before you can call your native function, you must initialize the library.
-You can do it synchronously or asynchronously. 
+By default, all code is generated in `natives.[name]` classpath.<br>
+It can be changed when declaring a module in `build.gradle` using the `classPath` option.
 
-Initialization is required once per process before calling any native functions.
+Before you can call your native function, you must load the library.<br>
+You can do it synchronously or asynchronously.
+
 > ⚠️ Note that synchronous initialization will not work in `Kotlin/JS`.
 
 ```kotlin
@@ -169,8 +187,7 @@ suspend fun main() {
 
 ## Critical native calls
 
-JVM and Android have a `critical` method for calling native functions. 
-
+JVM and Android have a `critical` way for calling native functions. <br>
 These functions should be fast, use only primitive types, and must not perform blocking operations or callbacks.
 
 To declare a critical function, add the `[Critical]` annotation in `api.idl` before declaration: 
@@ -181,9 +198,8 @@ namespace global {
 }
 ```
 
-> Currently, this is only implemented for the `Foreign Function API` in JVM.<br>
-> Support for Android will be coming in the future.<br>
-> Support for JNI on the JVM will likely not be implemented due to its deprecation.
+> Currently, this is only implemented for the `Foreign Function & Memory API` in JVM.<br>
+> Support for JNI and Android will be coming in the future.<br>
 
 ## Single source set
 
