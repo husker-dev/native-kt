@@ -36,6 +36,7 @@ plugins {
 ```
 
 Then declare a native project in the `native {}` block:
+
 ```kotlin
 native {
     create("mylib") {
