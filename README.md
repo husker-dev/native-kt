@@ -45,7 +45,10 @@ native {
 }
 ```
 
-You can run `./gradlew :cmakeInitMyLib` to generate a minimal CMake project.<br>
+By default, all native projects are stored in `src/nativeInterop/[name]`.<br>
+Location can be changed using property `projectDir`.
+
+You can run `./gradlew :cmakeInit[Name]` to generate a minimal CMake project.<br>
 This task is optional but recommended for getting started.
 
 For an example, you can look at the [test-glfw](https://github.com/husker-dev/native-kt/tree/master/test-glfw) module.
@@ -102,9 +105,6 @@ namespace global {
 | `void`      | Unit    | void        |
 
 ## Usage in native
-
-By default, all native projects are stored in `src/nativeInterop/[name]`.<br>
-You can change it in `build.gradle` using property `projectDir`.
 
 When Gradle project is loaded, it generates header `api.h` based on `api.idl`. 
 
