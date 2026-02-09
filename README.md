@@ -33,7 +33,7 @@
 Apply plugin in your `build.gradle.kts`:
 ```kotlin
 plugins {
-   id("com.huskerdev.native-kt") version "1.0.0"
+   id("com.huskerdev.native-kt") version "1.0.1"
 }
 ```
 
