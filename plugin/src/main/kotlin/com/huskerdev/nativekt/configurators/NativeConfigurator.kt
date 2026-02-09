@@ -73,7 +73,8 @@ internal fun configureNative(
     HeaderPrinter(
         idl = idl,
         target = cinteropHeaderFile,
-        guardName = module.name.uppercase()
+        guardName = module.name.uppercase(),
+        constChar = false
     )
     DefPrinter(
         target = cinteropDefFile,

@@ -45,7 +45,8 @@ fun ResolvedIdlType.toKotlinType(): String = when(this) {
 }
 
 fun ResolvedIdlType.toCType(
-    longPtr: Boolean = false
+    longPtr: Boolean = false,
+    constChar: Boolean = true
 ): String = when(this) {
     is ResolvedIdlType.Union -> throw UnsupportedOperationException("Union type are not unsupported")
     is ResolvedIdlType.Void -> "void"
@@ -66,7 +67,7 @@ fun ResolvedIdlType.toCType(
                 WebIDLBuiltinKind.UNRESTRICTED_FLOAT -> "float"
                 WebIDLBuiltinKind.DOUBLE,
                 WebIDLBuiltinKind.UNRESTRICTED_DOUBLE -> "double"
-                WebIDLBuiltinKind.STRING -> "const char*"
+                WebIDLBuiltinKind.STRING -> "${if(constChar) "const " else ""}char*"
                 else -> throw UnsupportedOperationException()
             }
             else -> declaration.name

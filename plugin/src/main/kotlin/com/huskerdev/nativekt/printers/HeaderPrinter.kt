@@ -9,7 +9,8 @@ import java.io.File
 class HeaderPrinter(
     idl: IdlResolver,
     target: File,
-    guardName: String? = null
+    guardName: String? = null,
+    val constChar: Boolean = true
 ) {
     private val defName = "KOTLIN_NATIVE_${guardName}_H"
 
@@ -64,13 +65,13 @@ class HeaderPrinter(
 
     private fun printFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
         append("\n")
-        append(function.type.toCType())
+        append(function.type.toCType(constChar = constChar))
         append(" ")
         append(function.name)
         append("(")
 
         function.args.joinTo(builder) {
-            "${it.type.toCType()} ${it.name}"
+            "${it.type.toCType(constChar = constChar)} ${it.name}"
         }
 
         append(");")
