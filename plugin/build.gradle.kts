@@ -4,7 +4,7 @@ plugins {
     `kotlin-dsl`
 }
 
-version = "1.0.0"
+version = "1.0.1"
 group = "com.huskerdev"
 
 repositories {
@@ -14,7 +14,7 @@ repositories {
 
 dependencies {
     implementation(libs.kotlin.gradle.plugin)
-    implementation(libs.android.tools)
+    compileOnly(libs.android.tools)
     implementation(libs.webidl)
 }
 

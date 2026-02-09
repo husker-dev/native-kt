@@ -1,5 +1,5 @@
 
-rootProject.name = "native-kt"
+rootProject.name = "native-kt-project"
 
 include("test")
 include("test-glfw")

@@ -1,3 +1,5 @@
+rootProject.name = "native-kt"
+
 dependencyResolutionManagement {
     versionCatalogs {
         create("libs") {
