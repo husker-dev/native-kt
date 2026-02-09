@@ -192,6 +192,7 @@ suspend fun main() {
 ## Critical native calls
 
 JVM and Android have a `critical` way for calling native functions. <br>
+This means that there will be minimal overhead costs.<br>
 These functions should be fast, use only primitive types, and must not perform blocking operations or callbacks.
 
 To declare a critical function, add the `[Critical]` annotation in `api.idl` before declaration: 
