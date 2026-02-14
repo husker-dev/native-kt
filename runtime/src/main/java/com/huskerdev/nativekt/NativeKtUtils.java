@@ -45,7 +45,7 @@ public class NativeKtUtils {
             String archName = System.getProperty("os.arch").toLowerCase();
             if(archName.contains("riscv"))
                 return Arch.RISCV64;
-            if(archName.equals("aarch") || archName.contains("arm"))
+            if(archName.contains("aarch") || archName.contains("arm"))
                 return Arch.ARM64;
             else if(archName.equals("amd64"))
                 return Arch.X64;
@@ -115,7 +115,7 @@ public class NativeKtUtils {
 
     public static void addExports(String forModule, String ofModule, String[] paths){
         Optional<Module> forModuleOpt = ModuleLayer.boot().findModule(forModule);
-        if(forModuleOpt.isEmpty())
+        if(!forModuleOpt.isPresent())
             throw new NullPointerException("Module '" + forModule + "' is not presented");
         addExports(forModuleOpt.get(), ofModule, paths);
     }
@@ -123,7 +123,7 @@ public class NativeKtUtils {
     public static void addExports(Module forModule, String ofModule, String[] paths){
         try {
             Optional<Module> moduleOpt = ModuleLayer.boot().findModule(ofModule);
-            if(moduleOpt.isEmpty())
+            if(!moduleOpt.isPresent())
                 throw new NullPointerException("Module '" + ofModule + "' is not presented");
 
             Method addOpensMethodImpl = Module.class.getDeclaredMethod("implAddExports", String.class, Module.class);

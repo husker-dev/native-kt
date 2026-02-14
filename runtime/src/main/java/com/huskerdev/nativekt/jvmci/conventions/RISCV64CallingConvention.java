@@ -4,9 +4,18 @@ import com.huskerdev.nativekt.jvmci.Buffer;
 import com.huskerdev.nativekt.jvmci.CallingConvention;
 import jdk.vm.ci.code.RegisterValue;
 import jdk.vm.ci.code.StackSlot;
+import jdk.vm.ci.code.site.DataPatch;
+import jdk.vm.ci.code.site.DataSectionReference;
+import jdk.vm.ci.code.site.Mark;
+import jdk.vm.ci.code.site.Site;
+import jdk.vm.ci.hotspot.HotSpotCompiledCode;
+import jdk.vm.ci.hotspot.HotSpotCompiledNmethod;
 import jdk.vm.ci.hotspot.HotSpotResolvedJavaMethod;
 import jdk.vm.ci.meta.AllocatableValue;
+import jdk.vm.ci.meta.Assumptions;
+import jdk.vm.ci.meta.ResolvedJavaMethod;
 import jdk.vm.ci.meta.Value;
+import jdk.vm.ci.runtime.JVMCICompiler;
 
 import java.lang.reflect.Method;
 
@@ -17,7 +26,34 @@ public class RISCV64CallingConvention extends CallingConvention {
     }
 
     @Override
-    protected void emitEpilogue(Buffer buf) {
+    public HotSpotCompiledNmethod createNMethod(String name, byte[] code, HotSpotResolvedJavaMethod resolvedMethod) {
+        DataSectionReference a = new DataSectionReference();
+        a.setOffset(0);
+
+        return new HotSpotCompiledNmethod(
+                name,
+                code,
+                code.length,
+                new Site[] { new Mark(4, ENTRY_BARRIER_PATCH), new DataPatch(4, a) },
+                new Assumptions.Assumption[0],
+                new ResolvedJavaMethod[0],
+                new HotSpotCompiledCode.Comment[0],
+                new byte[] { 0, 0, 0, 0 },
+                1,
+                new DataPatch[0],
+                true,
+                0,
+                null,
+                resolvedMethod,
+                JVMCICompiler.INVOCATION_ENTRY_BCI,
+                1,
+                0,
+                false
+        );
+    }
+
+    @Override
+    protected void emitEpilogue(Buffer buf, Method method) {
         // nmethod entry barrier simulation:
 
         // auipc t0, 0
@@ -117,7 +153,7 @@ public class RISCV64CallingConvention extends CallingConvention {
             emitStackToReg(buf, (StackSlot) from, (RegisterValue) to, type);
         } else if (from instanceof StackSlot && to instanceof StackSlot) {
             // stack → temporary register → stack
-            if (isFloat(type)) {
+            if (isFloatingPointType(type)) {
                 // Используем ft11 (f31) как временный регистр
                 emitStackToFloat(buf, (StackSlot) from, 31, isDouble(type));
                 emitFloatToStack(buf, 31, (StackSlot) to, isDouble(type));
@@ -144,7 +180,7 @@ public class RISCV64CallingConvention extends CallingConvention {
         int srcReg = from.getRegister().encoding;
         int dstReg = to.getRegister().encoding;
 
-        if (isFloat(type)) {
+        if (isFloatingPointType(type)) {
             emitFloatToFloat(buf, srcReg, dstReg, isDouble(type));
             return;
         }
@@ -169,7 +205,7 @@ public class RISCV64CallingConvention extends CallingConvention {
     ) {
         int srcReg = from.getRegister().encoding;
 
-        if (isFloat(type)) {
+        if (isFloatingPointType(type)) {
             emitFloatToStack(buf, srcReg, to, isDouble(type));
             return;
         }
@@ -202,7 +238,7 @@ public class RISCV64CallingConvention extends CallingConvention {
     ) {
         int dstReg = to.getRegister().encoding;
 
-        if (isFloat(type)) {
+        if (isFloatingPointType(type)) {
             emitStackToFloat(buf, from, dstReg, isDouble(type));
             return;
         }

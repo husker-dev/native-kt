@@ -21,14 +21,12 @@ class KotlinJvmCIPrinter(
                 	parent: $$parentClass
                 ): $$parentClass by parent {
                     companion object {
-                        @JvmStatic external fun getLibraryHandle(name: String): Long
-                        @JvmStatic external fun getFunctionAddress(libHandle: Long, funcName: String): Long
-                        @JvmStatic external fun freeLibHandle(libHandle: Long)
+                        @JvmStatic external fun getFunctionAddress(funcName: String): Long
                         
-                        private fun linkFunction(lib: Long, name: String, vararg types: Class<*>) {
+                        private fun linkFunction(name: String, vararg types: Class<*>) {
                             JVMCIUtils.linkNativeCall(
                                 $$name::class.java.getDeclaredMethod(name, *types),
-                                getFunctionAddress(lib, "EXPORTED_$${classPath.replace(".", "_")}_$name")
+                                getFunctionAddress("EXPORTED_$${classPath.replace(".", "_")}_$name")
                             )
                         }
                         
@@ -41,14 +39,13 @@ class KotlinJvmCIPrinter(
             append("\n\t}\n\n")
             append($$"""
                 init {
-                    val lib = getLibraryHandle(fileName)
             """.replaceIndent("\t"))
 
             operators.forEach {
                 printFunctionBinding(builder, it)
             }
 
-            append("\n\t\tfreeLibHandle(lib)\n\t}\n")
+            append("\n\t}\n")
 
             operators.forEach {
                 printFunctionCall(builder, it)
@@ -64,7 +61,7 @@ class KotlinJvmCIPrinter(
                     "${it.type.toKotlinType(stringAsBytes = true)}::class.java"
                 }
 
-        append("\n\t\tlinkFunction(lib, ${args.joinToString()})")
+        append("\n\t\tlinkFunction(${args.joinToString()})")
     }
 
     private fun printFunctionCall(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {

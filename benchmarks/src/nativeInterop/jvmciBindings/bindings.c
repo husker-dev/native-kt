@@ -1,5 +1,4 @@
 #include "api.h"
-#include <stdio.h>
 
 
 int callCriticalJVMCI() {

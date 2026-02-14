@@ -6,8 +6,7 @@ import com.huskerdev.nativekt.jvmci.conventions.ARM64CallingConvention;
 import com.huskerdev.nativekt.jvmci.conventions.RISCV64CallingConvention;
 import jdk.vm.ci.code.CodeCacheProvider;
 import jdk.vm.ci.code.ValueKindFactory;
-import jdk.vm.ci.hotspot.HotSpotCallingConventionType;
-import jdk.vm.ci.hotspot.HotSpotResolvedJavaMethod;
+import jdk.vm.ci.hotspot.*;
 import jdk.vm.ci.meta.JavaKind;
 import jdk.vm.ci.meta.MetaAccessProvider;
 import jdk.vm.ci.meta.PlatformKind;
@@ -32,11 +31,14 @@ abstract public class CallingConvention {
     protected final JVMCIBackend jvmci = JVMCI.getRuntime().getHostJVMCIBackend();
     protected final CodeCacheProvider codeCache = jvmci.getCodeCache();
     protected final MetaAccessProvider meta = jvmci.getMetaAccess();
+    protected final HotSpotVMConfigAccess config = new HotSpotVMConfigAccess(HotSpotJVMCIRuntime.runtime().getConfigStore());
+
+    protected final int ENTRY_BARRIER_PATCH = config.getConstant("CodeInstaller::ENTRY_BARRIER_PATCH", Integer.class);
 
     public byte[] createNativeCall(Method method, long address) {
         Buffer buf = new Buffer();
 
-        emitEpilogue(buf);
+        emitEpilogue(buf, method);
         emitConversion(buf, method);
         emitCall(buf, method, address);
         emitPrologue(buf, method);
@@ -44,7 +46,13 @@ abstract public class CallingConvention {
         return buf.finish();
     }
 
-    abstract protected void emitEpilogue(Buffer buf);
+    abstract public HotSpotCompiledNmethod createNMethod(
+            String name,
+            byte[] code,
+            HotSpotResolvedJavaMethod resolvedMethod
+    );
+
+    abstract protected void emitEpilogue(Buffer buf, Method method);
 
     abstract protected void emitConversion(Buffer buf, Method method);
 
@@ -79,11 +87,18 @@ abstract public class CallingConvention {
         return meta.getArrayBaseOffset(elementKind);
     }
 
-    protected boolean isFloat(Class<?> type) {
+    protected static boolean isFloatingPointType(Class<?> type) {
         return type == float.class || type == double.class;
     }
 
-    protected boolean isDouble(Class<?> type) {
+    protected static boolean isIntegerType(Class<?> type) {
+        return type == byte.class || type == short.class ||
+                type == int.class || type == long.class ||
+                type == boolean.class || type == char.class ||
+                !type.isPrimitive();
+    }
+
+    protected static boolean isDouble(Class<?> type) {
         return type == double.class;
     }
 
