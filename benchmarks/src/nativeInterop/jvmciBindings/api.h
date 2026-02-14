@@ -6,8 +6,8 @@
  * the project is built.
  */
  
-#ifndef KOTLIN_NATIVE_JNIBINDINGS_H
-#define KOTLIN_NATIVE_JNIBINDINGS_H
+#ifndef KOTLIN_NATIVE_JVMCIBINDINGS_H
+#define KOTLIN_NATIVE_JVMCIBINDINGS_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -17,14 +17,12 @@
 extern "C" {
 #endif
 
-int32_t callJni();
-int32_t callJniAdd(int32_t a, int32_t b);
-int32_t callJniString(const char* arg);
-int32_t callCriticalJni();
-int32_t callCriticalJniString(const char* arg);
+int32_t callCriticalJVMCI();
+int32_t callCriticalJVMCIAdd(int32_t a, int32_t b);
+int32_t callCriticalJVMCIString(const char* arg);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // KOTLIN_NATIVE_JNIBINDINGS_H
+#endif // KOTLIN_NATIVE_JVMCIBINDINGS_H

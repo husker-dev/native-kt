@@ -7,11 +7,10 @@ import com.huskerdev.webidl.resolver.ResolvedIdlOperation
 import com.huskerdev.webidl.resolver.ResolvedIdlType
 import java.io.File
 
-class CForeignPrinter(
+class CExportedPrinter(
     idl: IdlResolver,
     target: File,
     val classPath: String,
-    val name: String = "JNI"
 ) {
     init {
         val builder = StringBuilder()
@@ -29,10 +28,8 @@ class CForeignPrinter(
     private fun printFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
         append("\nJNIEXPORT ")
         append(function.type.toCType())
-        append(" Foreign_")
+        append(" EXPORTED_")
         append(classPath.replace(".", "_"))
-        append("_")
-        append(name)
         append("_")
         append(function.name)
         append("(")

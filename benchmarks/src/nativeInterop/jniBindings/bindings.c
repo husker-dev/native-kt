@@ -5,6 +5,18 @@ int callJni() {
     return 10;
 }
 
-int callJniCritical() {
+int callJniAdd(int a, int b) {
+    return a + b;
+}
+
+int callJniString(const char* arg) {
+    return 10;
+}
+
+int callCriticalJni() {
+    return 10;
+}
+
+int callCriticalJniString(const char* arg) {
     return 10;
 }

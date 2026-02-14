@@ -1,5 +1,10 @@
 
 namespace global {
     long callForeign();
-    [Critical] long callForeignCritical();
+    long callForeignAdd(long a, long b);
+    long callForeignString(DOMString arg);
+
+    [Critical] long callCriticalForeign();
+    [Critical] long callCriticalForeignAdd(long a, long b);
+    [Critical] long callCriticalForeignString(DOMString arg);
 };

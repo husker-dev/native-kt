@@ -18,7 +18,11 @@ extern "C" {
 #endif
 
 int32_t callForeign();
-int32_t callForeignCritical();
+int32_t callForeignAdd(int32_t a, int32_t b);
+int32_t callForeignString(const char* arg);
+int32_t callCriticalForeign();
+int32_t callCriticalForeignAdd(int32_t a, int32_t b);
+int32_t callCriticalForeignString(const char* arg);
 
 #ifdef __cplusplus
 }

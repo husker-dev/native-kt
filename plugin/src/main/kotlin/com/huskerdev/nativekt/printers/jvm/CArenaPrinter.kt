@@ -81,6 +81,23 @@ class CArenaPrinter(
                 return result;
             }
             
+            // String critical
+            
+            void ArenaNode__freeStringCritical(ArenaNode* node){
+                JNIEnv *env = node->arena->env;
+                (*env)->ReleaseStringCritical(env, node->obj, (const jchar*)node->ptr);
+                free((void*)node);
+            }
+            
+            const char* Arena__unwrapStringCritical(Arena* arena, jobject str) {
+                JNIEnv *env = arena->env;
+                return (const char*) Arena__push(arena,
+                    str,
+                    (void*)(*env)->GetStringCritical(env, str, 0),
+                    ArenaNode__freeStringCritical
+                );
+            }
+            
             // new/free
             
             void Arena__free(Arena* arena) {

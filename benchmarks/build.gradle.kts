@@ -13,9 +13,11 @@ version = "1.0.0"
 
 native {
     useCoroutines = false
+    useJVMCI = true
 
     create("jniBindings", Multiplatform::class)
     create("foreignBindings", Multiplatform::class)
+    create("jvmciBindings", Multiplatform::class)
 }
 
 kotlin {
@@ -24,10 +26,22 @@ kotlin {
     sourceSets.commonMain.dependencies {
         implementation(libs.kotlinx.benchmark)
     }
+    sourceSets.jvmMain.dependencies {
+        implementation(project(":runtime"))
+    }
 }
 
 benchmark {
     targets {
         register("jvm")
+    }
+    configurations {
+        named("main") {
+            warmups = 2
+            iterationTime = 5L * 1000000000 // 5 sec
+            iterationTimeUnit = "ns"
+            outputTimeUnit = "ns"
+            mode = "avgt"
+        }
     }
 }

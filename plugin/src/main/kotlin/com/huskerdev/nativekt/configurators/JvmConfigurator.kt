@@ -4,8 +4,9 @@ import com.huskerdev.nativekt.plugin.NativeKtExtension
 import com.huskerdev.nativekt.plugin.NativeModule
 import com.huskerdev.nativekt.printers.HeaderPrinter
 import com.huskerdev.nativekt.printers.jvm.CArenaPrinter
-import com.huskerdev.nativekt.printers.jvm.CForeignPrinter
+import com.huskerdev.nativekt.printers.jvm.CExportedPrinter
 import com.huskerdev.nativekt.printers.jvm.CJniPrinter
+import com.huskerdev.nativekt.printers.jvm.CJvmciPrinter
 import com.huskerdev.nativekt.printers.jvm.KotlinJvmPrinter
 import com.huskerdev.nativekt.utils.cmakeBuild
 import com.huskerdev.nativekt.utils.cmakeGen
@@ -96,7 +97,7 @@ internal fun configureJvm(
 
         add_subdirectory("$${module.dir(project).absolutePath.replace("\\", "/")}" "$${commonCmakeDir.absolutePath.replace("\\", "/")}")
 
-        add_library(lib_$${module.name} SHARED jni_bindings.c foreign_bindings.c)
+        add_library(lib_$${module.name} SHARED jni_bindings.c $${if(extension.useForeignApi || extension.useJVMCI) "externals.c" else ""} $${if(extension.useJVMCI) "jvmci.c" else ""})
         
         target_link_libraries(lib_$${module.name} PRIVATE $${module.name})
         
@@ -110,8 +111,12 @@ internal fun configureJvm(
         classPath = module.classPath,
         moduleName = module.name,
         useCoroutines = extension.useCoroutines,
-        expectActual = expectActual
+        expectActual = expectActual,
+        useForeignApi = extension.useForeignApi,
+        useJVMCI = extension.useJVMCI,
+        useUniversalMacOSLib = extension.useUniversalMacOSLib
     )
+
     CJniPrinter(
         idl = idl,
         target = File(cmakeDir, "jni_bindings.c"),
@@ -123,12 +128,21 @@ internal fun configureJvm(
         target = File(cmakeDir, "jni_arena.h"),
     )
 
-    CForeignPrinter(
-        idl = idl,
-        target = File(cmakeDir, "foreign_bindings.c"),
-        classPath = module.classPath,
-        name = "${module.name.capitalized()}Foreign"
-    )
+    if(extension.useForeignApi || extension.useJVMCI) {
+        CExportedPrinter(
+            idl = idl,
+            target = File(cmakeDir, "externals.c"),
+            classPath = module.classPath
+        )
+    }
+
+    if(extension.useJVMCI) {
+        CJvmciPrinter(
+            target = File(cmakeDir, "jvmci.c"),
+            classPath = module.classPath,
+            name = "${module.name.capitalized()}JVMCI"
+        )
+    }
 
     HeaderPrinter(
         idl = idl,

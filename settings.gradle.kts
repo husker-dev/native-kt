@@ -6,6 +6,8 @@ include("test-glfw")
 
 include("benchmarks")
 
+include("runtime")
+
 pluginManagement {
     includeBuild("plugin")
 

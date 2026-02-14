@@ -1,5 +1,9 @@
 
 namespace global {
     long callJni();
-    [Critical] long callJniCritical();
+    long callJniAdd(long a, long b);
+    long callJniString(DOMString arg);
+
+    [Critical] long callCriticalJni();
+    [Critical] long callCriticalJniString(DOMString arg);
 };

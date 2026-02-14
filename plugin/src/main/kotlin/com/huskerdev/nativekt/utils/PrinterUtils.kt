@@ -14,7 +14,9 @@ fun asyncFunctionName(moduleName: String) =
 fun syncFunctionName(moduleName: String) =
     "loadLib${moduleName.capitalized()}Sync"
 
-fun ResolvedIdlType.toKotlinType(): String = when(this) {
+fun ResolvedIdlType.toKotlinType(
+    stringAsBytes: Boolean = false
+): String = when(this) {
     is ResolvedIdlType.Union -> throw UnsupportedOperationException("Union type are not unsupported")
     is ResolvedIdlType.Void -> "Unit"
     is ResolvedIdlType.Default -> buildString {
@@ -34,7 +36,7 @@ fun ResolvedIdlType.toKotlinType(): String = when(this) {
                 WebIDLBuiltinKind.UNRESTRICTED_FLOAT -> "Float"
                 WebIDLBuiltinKind.DOUBLE,
                 WebIDLBuiltinKind.UNRESTRICTED_DOUBLE -> "Double"
-                WebIDLBuiltinKind.STRING -> "String"
+                WebIDLBuiltinKind.STRING -> if(stringAsBytes) "ByteArray" else "String"
                 else -> throw UnsupportedOperationException(a.toString())
             }
             else -> declaration.name
@@ -134,9 +136,10 @@ fun functionHeader(
     isExternal: Boolean = false,
     isExpect: Boolean = false,
     name: String = function.name,
-    forceVoid: Boolean = false
+    forceVoid: Boolean = false,
+    stringAsBytes: Boolean = false
 ) = StringBuilder().apply {
-    printFunctionHeader(this, function, isOverride, isActual, isExternal, isExpect, name, forceVoid)
+    printFunctionHeader(this, function, isOverride, isActual, isExternal, isExpect, name, forceVoid, stringAsBytes)
 }.toString()
 
 fun printFunctionHeader(
@@ -147,7 +150,8 @@ fun printFunctionHeader(
     isExternal: Boolean = false,
     isExpect: Boolean = false,
     name: String = function.name,
-    forcePrintVoid: Boolean = false
+    forcePrintVoid: Boolean = false,
+    stringAsBytes: Boolean = false
 ) = builder.apply {
     if(isActual) append("actual ")
     if(isExpect) append("expect ")
@@ -161,7 +165,7 @@ fun printFunctionHeader(
     function.args.forEachIndexed { index, arg ->
         append(arg.name)
         append(": ")
-        append(arg.type.toKotlinType())
+        append(arg.type.toKotlinType(stringAsBytes))
 
         if(index != function.args.lastIndex)
             append(", ")

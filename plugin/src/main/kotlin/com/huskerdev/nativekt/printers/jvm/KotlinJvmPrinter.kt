@@ -18,21 +18,38 @@ class KotlinJvmPrinter(
     classPath: String,
     moduleName: String,
     useCoroutines: Boolean,
-    val expectActual: Boolean
+    val expectActual: Boolean,
+    useForeignApi: Boolean,
+    useJVMCI: Boolean,
+    useUniversalMacOSLib: Boolean
 ) {
     init {
         val builder = StringBuilder()
         val actual = if (expectActual) "actual " else ""
         val nativeInvoker = "${moduleName.capitalized()}NativeInvoker"
 
+        fun invokerChooser(indent: String) = if(useForeignApi) """
+            impl = when(System.getProperties()["$FORCE_INVOKER_PROPERTY"]) {
+                "foreign" -> ${moduleName.capitalized()}Foreign()
+                "jni"     -> ${moduleName.capitalized()}JNI()
+                else -> if(NativeKtUtils.isForeignAvailable())
+                    ${moduleName.capitalized()}Foreign()
+                else 
+                    ${moduleName.capitalized()}JNI()
+            } 
+            """.replaceIndent(indent)
+        else """
+            impl = ${moduleName.capitalized()}JNI()
+            """.replaceIndent(indent)
+
         builder.append($$"""
             @file:Suppress("unused")
             package $$classPath
             
-            import java.lang.foreign.*
-            import java.lang.invoke.*
-            import java.io.File
-            import java.nio.file.*
+            $${if(useJVMCI) "import com.huskerdev.nativekt.jvmci.*" else ""}
+            $${if(useForeignApi) "import com.huskerdev.nativekt.foreign.*" else ""}
+            import com.huskerdev.nativekt.*
+            
             
             private var isLibTestLoaded_ = false
             
@@ -44,71 +61,25 @@ class KotlinJvmPrinter(
                 if(isLibTestLoaded_) return
                 isLibTestLoaded_ = true
                 
-                val macos   = 1
-                val windows = 2
-                val linux   = 3
+                $${if(useJVMCI) "val fileName = " else ""}NativeKtUtils.loadLibrary("$$moduleName", $$useUniversalMacOSLib)
+
+
+        """.trimIndent())
+
+        builder.append(invokerChooser("\t"))
+        if(useJVMCI) {
+            builder.append("""
                 
-                // Detect OS
-                val osName = System.getProperty("os.name", "generic").lowercase()
-                val os = when {
-                    "mac" in osName || "darwin" in osName -> macos
-                    "win" in osName -> windows
-                    "nux" in osName -> linux
-                    else -> throw UnsupportedOperationException("Unsupported OS")
-                }
-                
-                // Get lib extension
-                val extension = when(os) {
-                    macos   -> "dylib"
-                    windows -> "dll"
-                    else    -> "so"
-                }
-                
-                // Get lib arch
-                val archName = System.getProperty("os.arch").lowercase()
-                val arch = when {
-                    os == macos           -> "universal"
-                    archName == "aarch64" -> "arm64"
-                    archName == "amd64"   -> "x64"
-                    else                  -> "x86"
-                }
-                
-                // Construct file name
-                val fileName = "lib$${moduleName}-$arch.$extension"
+                if(System.getProperty("nativekt.jvm.disableJVMCI", "false") != "true" && NativeKtUtils.isJvmciAvailable()) 
+                    impl = ${moduleName.capitalized()}JVMCI(fileName, impl)
+            """.replaceIndent("\t"))
+        }
+        builder.append("""
             
-                // Create tmp dir
-                val tempDir = Files.createTempDirectory("natives-kt").toFile()
-                val libPath = File(tempDir, fileName)
-                libPath.deleteOnExit()
-                tempDir.deleteOnExit()
-            
-                // Copy lib from resources
-                (Thread.currentThread().contextClassLoader ?: ClassLoader.getSystemClassLoader())
-                   .getResourceAsStream(fileName)
-                   .use { input ->
-                       if(input == null)
-                           throw NullPointerException("File '$fileName' was not found in resources")
-                       Files.copy(input, libPath.toPath(), StandardCopyOption.REPLACE_EXISTING)
-                   }
-            
-                // Load library
-                System.load(libPath.absolutePath.toString())
-            
-                // Set invoker implementation
-                impl = when(System.getProperties()["$$FORCE_INVOKER_PROPERTY"]) {
-                    "foreign" -> $${moduleName.capitalized()}Foreign()
-                    "jni"     -> $${moduleName.capitalized()}JNI()
-                    else -> try {
-                        Class.forName("java.lang.foreign.Linker")
-                        $${moduleName.capitalized()}Foreign()
-                    } catch (_: ClassNotFoundException) {
-                        $${moduleName.capitalized()}JNI()
-                    }
-                } 
             }
             
-            $${actual}fun $${asyncFunctionName(moduleName)}(onReady: () -> Unit) {
-                $${syncFunctionName(moduleName)}()
+            ${actual}fun ${asyncFunctionName(moduleName)}(onReady: () -> Unit) {
+                ${syncFunctionName(moduleName)}()
                 onReady()
             }
         """.trimIndent())
@@ -138,14 +109,6 @@ class KotlinJvmPrinter(
         }
         builder.append("\n}")
 
-        // Foreign
-        builder.append("\n\n")
-        KotlinJvmForeignPrinter(idl, builder,
-            classPath = classPath,
-            name = "${moduleName.capitalized()}Foreign",
-            parentClass = nativeInvoker,
-        )
-
         // JNI
         builder.append("\n\n")
         KotlinJvmJniPrinter(idl, builder,
@@ -153,6 +116,28 @@ class KotlinJvmPrinter(
             parentClass = nativeInvoker,
             instanceMethods = true,
         )
+
+        // Foreign
+        if(useForeignApi) {
+            builder.append("\n\n")
+            KotlinJvmForeignPrinter(
+                idl, builder,
+                classPath = classPath,
+                name = "${moduleName.capitalized()}Foreign",
+                parentClass = nativeInvoker,
+            )
+        }
+
+        // JVMCI
+        if(useJVMCI) {
+            builder.append("\n\n")
+            KotlinJvmCIPrinter(
+                idl, builder,
+                classPath = classPath,
+                name = "${moduleName.capitalized()}JVMCI",
+                parentClass = nativeInvoker,
+            )
+        }
 
 
         target.parentFile.mkdirs()

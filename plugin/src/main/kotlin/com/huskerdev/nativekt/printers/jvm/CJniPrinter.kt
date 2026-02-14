@@ -1,6 +1,7 @@
 package com.huskerdev.nativekt.printers.jvm
 
 import com.huskerdev.nativekt.utils.globalOperators
+import com.huskerdev.nativekt.utils.isCritical
 import com.huskerdev.nativekt.utils.isDealloc
 import com.huskerdev.nativekt.utils.isString
 import com.huskerdev.nativekt.utils.toJNIType
@@ -51,7 +52,7 @@ class CJniPrinter(
             append("\t\t{\"")
             append(function.name)
             append("\", \"(")
-            function.args.joinTo(builder) { it.type.toJavaDesc() }
+            function.args.joinTo(builder, "") { it.type.toJavaDesc() }
             append(")")
             append(function.type.toJavaDesc())
             append("\", (void*)&Java_")
@@ -72,7 +73,7 @@ class CJniPrinter(
     }
 
     private fun printFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
-        // JNIEXPORT void JNICALL Java_nativelib_AwesomeLib_hello(JNIEnv *env, jobject
+        // void Java_nativelib_AwesomeLib_hello(JNIEnv *env, jobject
 
         append("\n")
         append(function.type.toJNIType())
@@ -107,7 +108,7 @@ class CJniPrinter(
         }
 
         // == Function call ==
-        val args = function.args.joinToString { castFromJava(it.type, it.name) }
+        val args = function.args.joinToString { castFromJava(it.type, it.name, function.isCritical()) }
         val call = "${function.name}($args)"
         append(castToJava(function.type, call, function.isDealloc()))
         append(";\n")
@@ -127,10 +128,13 @@ class CJniPrinter(
         else content
     }
 
-    fun castFromJava(type: ResolvedIdlType, content: String): String {
-        return if(type.isString())
-            "Arena__unwrapString(arena, $content)"
-        else content
+    fun castFromJava(type: ResolvedIdlType, content: String, critical: Boolean): String {
+        return if(type.isString()) {
+            if(critical)
+                "Arena__unwrapStringCritical(arena, $content)"
+            else
+                "Arena__unwrapString(arena, $content)"
+        } else content
     }
 
     fun ResolvedIdlType.toJavaDesc(): String = when(this) {
