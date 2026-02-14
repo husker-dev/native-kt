@@ -22,11 +22,9 @@
 - **CMake-based native builds** with existing toolchains
 
 ## Current limitations
-- Only primitive types are supported
 - No structs, arrays, or callbacks yet
 - Kotlin 2.0+
-
-> ⚠️ This project is under active development. APIs may change between minor versions.
+> ⚠️ This project is under active development.
 
 ## How to use
    
@@ -38,19 +36,22 @@ plugins {
 ```
 
 Then declare a native project in the `native {}` block:
+
 ```kotlin
 native {
-   create("mylib", Multiplatform::class)
+    create("mylib") {
+        // ...
+    }
 }
 ```
 
-- `Multiplatform` - generates bindings for all enabled KMP targets
-- `SingleModule` - generates bindings for a single source set only (see [Single source set](#single-source-set))
+By default, all native projects are stored in `src/nativeInterop/[name]`.<br>
+Location can be changed using property `projectDir`.
 
-> Run `./gradlew :cmakeInitMyLib` to generate a minimal CMake native project
-> with `CMakeLists.txt`, `api.idl`, and example source files.<br>
-> This task is optional but recommended for getting started.
+You can run `./gradlew :cmakeInit[Name]` to generate a minimal CMake project.<br>
+This task is optional but recommended for getting started.
 
+For an example, you can look at the [test-glfw](https://github.com/husker-dev/native-kt/tree/master/test-glfw) module.
 
 ## Requirements
 
@@ -72,7 +73,10 @@ It is important to have **Android SDK** installed, as well as **NDK** with speci
 
 ## IDL file
 
-The [`WebIDL`](https://webidl.spec.whatwg.org/) format is used to describe the interface of C functions. 
+The [`WebIDL`](https://webidl.spec.whatwg.org/) format is used to describe the interface of C functions in `api.idl`.
+
+It should be located in the root of the native project.<br>
+By default: `src/nativeInterop/[name]/api.idl`
 
 All functions **must** be declared inside the `global` namespace.
 Other namespaces will be ignored.
@@ -101,9 +105,6 @@ namespace global {
 | `void`      | Unit    | void        |
 
 ## Usage in native
-
-By default, all native projects are stored in `src/nativeInterop/[name]`.<br>
-You can change it in `build.gradle` using property `projectDir`.
 
 When Gradle project is loaded, it generates header `api.h` based on `api.idl`. 
 
@@ -156,8 +157,11 @@ If you have a statement like `return "my literal"`, you **must not** use `[Deall
 
 When Gradle project is loaded, it generates functions based on your `api.idl`.
 
-By default, all code is generated in `natives.[name]` classpath.<br>
+By default, API is generated in `natives.[name]` classpath.<br>
 It can be changed when declaring a module in `build.gradle` using the `classPath` option.
+
+> If you have restarted a Gradle, but IntelliJ IDEA does not see the functions,<br>
+> then right-click at the `build` directory and select `Reload from Disk`
 
 Before you can call your native function, you must load the library.<br>
 You can do it synchronously or asynchronously.
@@ -188,6 +192,7 @@ suspend fun main() {
 ## Critical native calls
 
 JVM and Android have a `critical` way for calling native functions. <br>
+This means that there will be minimal overhead costs.<br>
 These functions should be fast, use only primitive types, and must not perform blocking operations or callbacks.
 
 To declare a critical function, add the `[Critical]` annotation in `api.idl` before declaration: 
