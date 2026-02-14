@@ -56,7 +56,7 @@ public class AMD64CallingConvention extends CallingConvention {
     }
 
     @Override
-    protected void emitEpilogue(Buffer buf, Method method) {
+    protected void emitPrologue(Buffer buf, Method method) {
         // nmethod entry barrier simulation:
         // cmp dword ptr 0, 0x00000000
         buf.emitByte(0x41);
@@ -106,7 +106,7 @@ public class AMD64CallingConvention extends CallingConvention {
     }
 
     @Override
-    protected void emitPrologue(Buffer buf, Method method) {
+    protected void emitEpilogue(Buffer buf, Method method) {
         if(method.getParameterCount() > 4) {
             emitAddRsp(buf, getAlignedStack(resolveJavaMethod(method)));
             buf.emitByte(0xC3);

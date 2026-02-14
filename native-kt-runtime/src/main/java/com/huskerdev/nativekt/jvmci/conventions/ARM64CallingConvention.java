@@ -78,7 +78,7 @@ public class ARM64CallingConvention extends CallingConvention {
     }
 
     @Override
-    protected void emitEpilogue(Buffer buf, Method method) {
+    protected void emitPrologue(Buffer buf, Method method) {
         HotSpotResolvedJavaMethod resolvedMethod = resolveJavaMethod(method);
 
         int alignedStack = getAlignedStack(resolvedMethod);
@@ -125,7 +125,7 @@ public class ARM64CallingConvention extends CallingConvention {
     }
 
     @Override
-    protected void emitPrologue(Buffer buf, Method method) {
+    protected void emitEpilogue(Buffer buf, Method method) {
         HotSpotResolvedJavaMethod resolvedMethod = resolveJavaMethod(method);
 
         int alignedStack = getAlignedStack(resolvedMethod);
