@@ -1,15 +1,14 @@
 
-rootProject.name = "native-kt-project"
+rootProject.name = "native-kt"
+
+include("native-kt-runtime")
 
 include("test")
 include("test-glfw")
-
 include("benchmarks")
 
-include("runtime")
-
 pluginManagement {
-    includeBuild("plugin")
+    includeBuild("native-kt-plugin")
 
     repositories {
         gradlePluginPortal()

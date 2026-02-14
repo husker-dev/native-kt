@@ -4,7 +4,7 @@ plugins {
     `kotlin-dsl`
 }
 
-version = "1.0.1"
+version = projectDir.parentFile.resolve("VERSION").readText()
 group = "com.huskerdev"
 
 repositories {
@@ -16,6 +16,10 @@ dependencies {
     implementation(libs.kotlin.gradle.plugin)
     compileOnly(libs.android.tools)
     implementation(libs.webidl)
+}
+
+tasks.jar {
+    archiveBaseName = "native-kt-plugin"
 }
 
 gradlePlugin {

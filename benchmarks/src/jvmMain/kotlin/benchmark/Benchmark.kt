@@ -20,6 +20,10 @@ import natives.jvmciBindings.callCriticalJVMCIString
 import natives.jvmciBindings.loadLibJvmciBindingsSync
 import java.util.concurrent.ThreadLocalRandom
 
+fun main() {
+    loadLibJvmciBindingsSync()
+    callCriticalJVMCIAdd(2, 6)
+}
 
 @State(Scope.Benchmark)
 @Suppress("unused")

@@ -10,7 +10,7 @@ plugins {
 }
 
 group = "com.huskerdev"
-version = "1.0.0"
+version = projectDir.parentFile.resolve("VERSION").readText()
 
 native {
     ndkVersion = "29.0.14206865"
@@ -80,6 +80,9 @@ kotlin {
     sourceSets.commonTest.dependencies {
         implementation(kotlin("test"))
         implementation(libs.kotlinx.coroutines.test)
+    }
+    sourceSets.jvmMain.dependencies {
+        implementation(project(":native-kt-runtime"))
     }
     sourceSets.getByName("androidDeviceTest").dependencies {
         implementation(kotlin("test"))

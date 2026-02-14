@@ -1,4 +1,4 @@
-rootProject.name = "native-kt"
+rootProject.name = "native-kt-plugin"
 
 dependencyResolutionManagement {
     versionCatalogs {

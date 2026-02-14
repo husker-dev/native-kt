@@ -1,4 +1,7 @@
+@file:OptIn(ExperimentalKotlinGradlePluginApi::class)
+
 import com.huskerdev.nativekt.plugin.Multiplatform
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -8,16 +11,24 @@ plugins {
 }
 
 group = "com.huskerdev"
-version = "1.0.0"
+version = projectDir.parentFile.resolve("VERSION").readText()
 
 native {
     useCoroutines = false
+    useUniversalMacOSLib = false
+    useJVMCI = true
 
     create("glfwBindings", Multiplatform::class)
 }
 
 kotlin {
-    jvm()
+    jvm {
+        binaries {
+            executable {
+                mainClass = "MainKt"
+            }
+        }
+    }
 
     setOf(
         mingwX64(),
@@ -33,4 +44,7 @@ kotlin {
         }
     }
 
+    sourceSets.jvmMain.dependencies {
+        implementation(project(":native-kt-runtime"))
+    }
 }

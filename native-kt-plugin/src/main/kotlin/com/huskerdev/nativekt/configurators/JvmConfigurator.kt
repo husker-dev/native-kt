@@ -157,7 +157,7 @@ internal fun configureJvm(
                 "-DCMAKE_C_COMPILER=clang",
                 "-DCMAKE_CXX_COMPILER=clang++"
             )
-            if(Os.isFamily(Os.FAMILY_MAC)) {
+            if(Os.isFamily(Os.FAMILY_MAC) && extension.useUniversalMacOSLib) {
                 args += setOf(
                     "-DCMAKE_C_FLAGS=\"-arch x86_64 -arch arm64\"",
                     "-DCMAKE_CXX_FLAGS=\"-arch x86_64 -arch arm64\""

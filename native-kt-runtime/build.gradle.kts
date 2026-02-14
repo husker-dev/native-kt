@@ -4,11 +4,15 @@ plugins {
 }
 
 group = "com.huskerdev"
-version = "1.0.0"
+version = projectDir.parentFile.resolve("VERSION").readText()
 
 java {
     sourceCompatibility = JavaVersion.VERSION_1_9
     targetCompatibility = JavaVersion.VERSION_1_9
+}
+
+tasks.jar {
+    archiveBaseName = "native-kt-runtime"
 }
 
 tasks.withType<JavaCompile>().configureEach {

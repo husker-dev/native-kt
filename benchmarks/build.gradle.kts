@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "com.huskerdev"
-version = "1.0.0"
+version = projectDir.parentFile.resolve("VERSION").readText()
 
 native {
     useCoroutines = false
@@ -27,7 +27,7 @@ kotlin {
         implementation(libs.kotlinx.benchmark)
     }
     sourceSets.jvmMain.dependencies {
-        implementation(project(":runtime"))
+        implementation(project(":native-kt-runtime"))
     }
 }
 
