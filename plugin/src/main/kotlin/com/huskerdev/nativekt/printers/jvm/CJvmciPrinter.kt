@@ -20,10 +20,12 @@ class CJvmciPrinter(
             #endif
             
             
-            JNIEXPORT jlong JNICALL Java_${fullPath}_getFunctionAddress(JNIEnv *env, jclass cls, jstring _funcName) {
+            JNIEXPORT jlong JNICALL Java_${fullPath}_getFunctionAddress(JNIEnv *env, jclass cls, jstring _libName, jstring _funcName) {
                 const char* funcName = (*env)->GetStringUTFChars(env, _funcName, NULL);
             #ifdef _WIN32
-                jlong result = (jlong) GetProcAddress(GetModuleHandle(NULL), funcName);
+                const char* libName = (*env)->GetStringUTFChars(env, _libName, NULL);
+                jlong result = (jlong) GetProcAddress(GetModuleHandle(libName), funcName);
+                (*env)->ReleaseStringUTFChars(env, _libName, libName);
             #else
                 jlong result = (jlong) dlsym(RTLD_DEFAULT, funcName);
             #endif

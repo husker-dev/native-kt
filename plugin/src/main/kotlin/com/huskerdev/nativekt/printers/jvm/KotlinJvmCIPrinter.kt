@@ -21,12 +21,12 @@ class KotlinJvmCIPrinter(
                 	parent: $$parentClass
                 ): $$parentClass by parent {
                     companion object {
-                        @JvmStatic external fun getFunctionAddress(funcName: String): Long
+                        @JvmStatic external fun getFunctionAddress(libName: String, funcName: String): Long
                         
-                        private fun linkFunction(name: String, vararg types: Class<*>) {
+                        private fun linkFunction(lib: String, name: String, vararg types: Class<*>) {
                             JVMCIUtils.linkNativeCall(
                                 $$name::class.java.getDeclaredMethod(name, *types),
-                                getFunctionAddress("EXPORTED_$${classPath.replace(".", "_")}_$name")
+                                getFunctionAddress(lib, "EXPORTED_$${classPath.replace(".", "_")}_$name")
                             )
                         }
                         
@@ -61,7 +61,7 @@ class KotlinJvmCIPrinter(
                     "${it.type.toKotlinType(stringAsBytes = true)}::class.java"
                 }
 
-        append("\n\t\tlinkFunction(${args.joinToString()})")
+        append("\n\t\tlinkFunction(fileName, ${args.joinToString()})")
     }
 
     private fun printFunctionCall(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
