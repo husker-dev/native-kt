@@ -4,7 +4,7 @@ rootProject.name = "native-kt"
 include("native-kt-runtime")
 
 include("test")
-include("test-glfw")
+include("example-glfw")
 include("benchmarks")
 
 pluginManagement {

@@ -7,6 +7,7 @@ import java.lang.invoke.MethodHandle;
 public class ForeignUtils {
 
     public static ValueLayout C_CHAR = ValueLayout.JAVA_CHAR;
+    public static ValueLayout C_BYTE = ValueLayout.JAVA_BYTE;
     public static ValueLayout C_BOOLEAN = ValueLayout.JAVA_BOOLEAN;
     public static ValueLayout C_SHORT = ValueLayout.JAVA_SHORT;
     public static ValueLayout C_INT = ValueLayout.JAVA_INT;

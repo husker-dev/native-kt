@@ -64,7 +64,7 @@ class KotlinJvmForeignPrinter(
         else append("\n${indent}\t\t")
 
         val type = if(function.type.isString())
-            "MemorySegment"
+            "java.lang.foreign.MemorySegment"
         else function.type.toKotlinType()
 
         val args = function.args.joinToString { castToNative(it.type, it.name, function.isCritical()) }

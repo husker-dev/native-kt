@@ -44,6 +44,21 @@ int8_t pingByte(int8_t arg);
 bool pingBoolean(bool arg);
 uint16_t pingChar(uint16_t arg);
 const char* pingString(const char* arg);
+bool jvmci1();
+bool jvmci2(int32_t a1);
+bool jvmci3(int32_t a1, int32_t a2);
+bool jvmci4(int32_t a1, int32_t a2, int32_t a3, int32_t a4, int32_t a5, int32_t a6, int32_t a7, int32_t a8, int32_t a9);
+bool jvmci5(int32_t a1, int64_t a2, int32_t a3, int64_t a4, int32_t a5, int64_t a6, int32_t a7, int32_t a8, int64_t a9);
+bool jvmci6(float a1, float a2, float a3, float a4, float a5, float a6, float a7, float a8, float a9, int32_t a10, int32_t a11, int32_t a12, int32_t a13);
+bool jvmci7(float a1, double a2, float a3, double a4, float a5, double a6, float a7, float a8, double a9);
+bool jvmci8(int32_t a1, double a2, float a3, int64_t a4);
+bool jvmci9(int32_t a1, double a2, float a3, int64_t a4, int64_t a5, double a6, float a7, float a8, int32_t a9);
+bool jvmci10(const char* a1, double a2, float a3, int64_t a4, int64_t a5, double a6, const char* a7, float a8, int32_t a9);
+bool jvmci11(float a1, int32_t a2, float a3, int32_t a4, float a5, int32_t a6, float a7, int32_t a8, float a9, int32_t a10, float a11, int32_t a12, float a13, int32_t a14, float a15, int32_t a16, float a17);
+int32_t jvmci12();
+int64_t jvmci13();
+float jvmci14();
+double jvmci15();
 
 #ifdef __cplusplus
 }

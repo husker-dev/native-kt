@@ -32,6 +32,23 @@ namespace global {
     boolean pingBoolean(boolean arg);
     symbol pingChar(symbol arg);
     [Dealloc] DOMString pingString(DOMString arg);
+
+    // JVMCI
+    [Critical] boolean jvmci1();
+    [Critical] boolean jvmci2(long a1);
+    [Critical] boolean jvmci3(long a1, long a2);
+    [Critical] boolean jvmci4(long a1, long a2, long a3, long a4, long a5, long a6, long a7, long a8, long a9);
+    [Critical] boolean jvmci5(long a1, long long a2, long a3, long long a4, long a5, long long a6, long a7, long a8, long long a9);
+    [Critical] boolean jvmci6(float a1, float a2, float a3, float a4, float a5, float a6, float a7, float a8, float a9, long a10, long a11, long a12, long a13);
+    [Critical] boolean jvmci7(float a1, double a2, float a3, double a4, float a5, double a6, float a7, float a8, double a9);
+    [Critical] boolean jvmci8(long a1, double a2, float a3, long long a4);
+    [Critical] boolean jvmci9(long a1, double a2, float a3, long long a4, long long a5, double a6, float a7, float a8, long a9);
+    [Critical] boolean jvmci10(DOMString a1, double a2, float a3, long long a4, long long a5, double a6, DOMString a7, float a8, long a9);
+    [Critical] boolean jvmci11(float a1, long a2, float a3, long a4, float a5, long a6, float a7, long a8, float a9, long a10, float a11, long a12, float a13, long a14, float a15, long a16, float a17);
+    [Critical] long jvmci12();
+    [Critical] long long jvmci13();
+    [Critical] float jvmci14();
+    [Critical] double jvmci15();
 };
 
 // Is not supported (yet)
