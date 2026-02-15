@@ -78,9 +78,10 @@ internal fun configureJvm(
         else -> throw UnsupportedOperationException()
     }
     val libArch = when {
-        Os.isFamily(Os.FAMILY_MAC) -> "universal"
+        Os.isFamily(Os.FAMILY_MAC) && extension.useUniversalMacOSLib -> "universal"
         Os.isArch("aarch64") -> "arm64"
         Os.isArch("amd64") -> "x64"
+        Os.isArch("riscv") -> "riscv"
         else -> "x86"
     }
     val libOutFileName = "liblib_${module.name}.${libExtension}"
