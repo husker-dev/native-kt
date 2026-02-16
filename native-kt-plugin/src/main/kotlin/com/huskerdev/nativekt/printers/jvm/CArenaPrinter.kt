@@ -16,15 +16,14 @@ class CArenaPrinter(
             struct ArenaNode {
                 jobject obj;
                 void* ptr;
-                Arena* arena;
-                ArenaNode* prev;
             
-                void (*free)(ArenaNode*);
+                void (*free)(Arena*, ArenaNode*);
             };
             
             struct Arena {
                 JNIEnv* env;
-                ArenaNode* last;
+                ArenaNode nodes[12];
+                uint32_t count;
             };
             
             
@@ -32,35 +31,29 @@ class CArenaPrinter(
                 Arena* arena,
                 jobject obj,
                 void* ptr,
-                void (*free)(ArenaNode*)
+                void (*free)(Arena*, ArenaNode*)
             ) {
-                ArenaNode* node = (ArenaNode*)malloc(sizeof(ArenaNode));
+                ArenaNode* node = &arena->nodes[arena->count++];
                 node->obj = obj;
                 node->ptr = ptr;
-                node->arena = arena;
-                node->prev = arena->last;
                 node->free = free;
-            
-                arena->last = node;
                 return ptr;
             }
             
             bool Arena__contains(Arena* arena, void* ptr) {
-                ArenaNode* node = arena->last;
-                while(node != NULL) {
-                    if(node->ptr == ptr)
+                for(int i = 0; i < arena->count; i++) {
+                    ArenaNode node = arena->nodes[i];
+                    if(node.ptr == ptr)
                         return true;
-                    node = node->prev;
                 }
                 return false;
             }
             
             // String
             
-            void ArenaNode__freeString(ArenaNode* node){
-                JNIEnv *env = node->arena->env;
+            void ArenaNode__freeString(Arena* arena, ArenaNode* node){
+                JNIEnv *env = arena->env;
                 (*env)->ReleaseStringUTFChars(env, node->obj, (const char*)node->ptr);
-                free((void*)node);
             }
             
             const char* Arena__unwrapString(Arena* arena, jobject str) {
@@ -83,10 +76,9 @@ class CArenaPrinter(
             
             // String critical
             
-            void ArenaNode__freeStringCritical(ArenaNode* node){
-                JNIEnv *env = node->arena->env;
+            void ArenaNode__freeStringCritical(Arena* arena, ArenaNode* node){
+                JNIEnv *env = arena->env;
                 (*env)->ReleaseStringCritical(env, node->obj, (const jchar*)node->ptr);
-                free((void*)node);
             }
             
             const char* Arena__unwrapStringCritical(Arena* arena, jobject str) {
@@ -101,22 +93,15 @@ class CArenaPrinter(
             // new/free
             
             void Arena__free(Arena* arena) {
-                JNIEnv *env = arena->env;
-                ArenaNode* node = arena->last;
-            
-                while(node != NULL) {
-                    ArenaNode* prev = node->prev;
-                    node->free(node);
-                    node = prev;
+                for(int i = 0; i < arena->count; i++) {
+                    ArenaNode node = arena->nodes[i];
+                    node.free(arena, &node);
                 }
-                free((void*)arena);
             }
             
-            Arena* Arena__new(JNIEnv *env) {
-                Arena* arena = (Arena*)malloc(sizeof(Arena));
-                arena->last = NULL;
+            void Arena__init(Arena* arena, JNIEnv *env) {
                 arena->env = env;
-                return arena;
+                arena->count = 0;
             }
         """.trimIndent())
     }

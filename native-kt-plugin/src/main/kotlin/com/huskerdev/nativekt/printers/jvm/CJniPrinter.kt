@@ -96,8 +96,10 @@ class CJniPrinter(
 
         val useArena = function.args.any { it.type.isString() } || function.type.isString()
 
-        if(useArena)
-            append("\tArena* arena = Arena__new(env);\n")
+        if(useArena) {
+            append("\tArena arena;\n")
+            append("\tArena__init(&arena, env);\n")
+        }
 
         append("\t")
         if(function.type !is ResolvedIdlType.Void) {
@@ -114,7 +116,7 @@ class CJniPrinter(
         append(";\n")
 
         if(useArena) {
-            append("\tArena__free(arena);\n")
+            append("\tArena__free(&arena);\n")
             if(function.type !is ResolvedIdlType.Void)
                 append("\treturn __result;\n")
         }
@@ -124,16 +126,16 @@ class CJniPrinter(
 
     fun castToJava(type: ResolvedIdlType, content: String, dealloc: Boolean): String {
         return if(type.isString())
-            "Arena__wrapString(arena, $content, $dealloc)"
+            "Arena__wrapString(&arena, $content, $dealloc)"
         else content
     }
 
     fun castFromJava(type: ResolvedIdlType, content: String, critical: Boolean): String {
         return if(type.isString()) {
             if(critical)
-                "Arena__unwrapStringCritical(arena, $content)"
+                "Arena__unwrapStringCritical(&arena, $content)"
             else
-                "Arena__unwrapString(arena, $content)"
+                "Arena__unwrapString(&arena, $content)"
         } else content
     }
 
