@@ -36,7 +36,7 @@ class KotlinJvmPrinter(
                     ${moduleName.capitalized()}Foreign()
                 else 
                     ${moduleName.capitalized()}JNI()
-            } 
+            }
             """.replaceIndent(indent)
         else """
             impl = ${moduleName.capitalized()}JNI()
@@ -71,7 +71,7 @@ class KotlinJvmPrinter(
             builder.append("""
                 
                 if(System.getProperty("nativekt.jvm.disableJVMCI", "false") != "true" && NativeKtUtils.isJvmciAvailable()) 
-                    impl = ${moduleName.capitalized()}JVMCI(fileName, impl)
+                    impl = ${moduleName.capitalized()}JVMCI(fileName, impl!!)
             """.replaceIndent("\t"))
         }
         builder.append("""
@@ -98,7 +98,7 @@ class KotlinJvmPrinter(
         // Implementation
         builder.append("\n\n// === Implementation ===\n\n")
         builder.append("""
-            private lateinit var impl: $nativeInvoker
+            private var impl: $nativeInvoker? = null
             
             private sealed interface $nativeInvoker {
                 
@@ -147,7 +147,7 @@ class KotlinJvmPrinter(
     private fun printFunctionProxy(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
         append('\n')
         printFunctionHeader(builder, function, isActual = expectActual, forcePrintVoid = true)
-        append(" = \n\timpl._")
+        append(" = \n\timpl!!._")
         append(function.name)
         function.args.joinTo(this, prefix = "(", postfix = ")\n") { it.name }
     }

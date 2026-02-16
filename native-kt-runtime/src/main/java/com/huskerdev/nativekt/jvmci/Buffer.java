@@ -33,6 +33,10 @@ public class Buffer {
         data.putLong(b);
     }
 
+    public int position() {
+        return data.position();
+    }
+
     public byte[] finish() {
         return Arrays.copyOf(data.array(), data.position());
     }

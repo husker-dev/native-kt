@@ -43,7 +43,7 @@ public class AMD64CallingConvention extends CallingConvention {
                 name,
                 code,
                 code.length,
-                new Site[] { new Mark(0, ENTRY_BARRIER_PATCH) },
+                new Site[] { new Mark(code.length - 8, ENTRY_BARRIER_PATCH) },
                 new Assumptions.Assumption[0],
                 new ResolvedJavaMethod[0],
                 new HotSpotCompiledCode.Comment[0],
@@ -63,13 +63,7 @@ public class AMD64CallingConvention extends CallingConvention {
 
     @Override
     protected void emitPrologue(Buffer buf, Method method) {
-        // nmethod entry barrier simulation:
-        // cmp dword ptr 0, 0x00000000
-        buf.emitByte(0x41);
-        buf.emitByte(0x81);
-        buf.emitByte(0x7f);
-        buf.emitByte(0);
-        buf.emitInt(0);
+
     }
 
     @Override
@@ -160,10 +154,12 @@ public class AMD64CallingConvention extends CallingConvention {
         void emit(Buffer buf){
             if (type.isArray())
                 emitLea(buf, to, from, getArrayOffset(type));
-            else if (isFloatingPointType(type))
-                emitMovXmm(buf, from, to, type);
-            else
-                emitMov(buf, from, to);
+            else if(from != to) {
+                if (isFloatingPointType(type))
+                    emitMovXmm(buf, from, to, type);
+                else
+                    emitMov(buf, from, to);
+            }
         }
     }
 
@@ -181,10 +177,12 @@ public class AMD64CallingConvention extends CallingConvention {
             if (type.isArray()) {
                 emitLea(buf, 0, from, getArrayOffset(type));
                 emitRegToStack(buf, 0, to);
-            } else if (isFloatingPointType(type))
-                emitXmmToStack(buf, from, to, isDouble(type));
-             else
-                emitRegToStack(buf, from, to);
+            } else if(from != to) {
+                if (isFloatingPointType(type))
+                    emitXmmToStack(buf, from, to, isDouble(type));
+                else
+                    emitRegToStack(buf, from, to);
+            }
         }
     }
 
@@ -253,6 +251,18 @@ public class AMD64CallingConvention extends CallingConvention {
             emitAddRsp(buf, getAlignedStack(resolveJavaMethod(method)));
             buf.emitByte(0xC3);
         }
+
+        // align to 4
+        while(buf.position() % 4 != 0)
+            buf.emitByte(0x90);
+
+        // nmethod entry barrier simulation:
+        // cmp dword ptr 0, 0x00000000
+        buf.emitByte(0x41);
+        buf.emitByte(0x81);
+        buf.emitByte(0x7f);
+        buf.emitByte(0);
+        buf.emitInt(0);
     }
 
     // ==========================================================
