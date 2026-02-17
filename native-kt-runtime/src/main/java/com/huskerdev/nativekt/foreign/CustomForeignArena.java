@@ -33,8 +33,8 @@ public class CustomForeignArena implements Closeable {
 
     public String asString(MemorySegment segment, boolean dealloc) throws Throwable {
         String result = segment.reinterpret(Long.MAX_VALUE).getString(0);
-        if(dealloc && contains(segment.address()))
-            freeHandle.invoke(this);
+        if(dealloc && !contains(segment.address()))
+            freeHandle.invoke(segment);
         return result;
     }
 

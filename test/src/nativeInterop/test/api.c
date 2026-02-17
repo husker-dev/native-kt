@@ -121,6 +121,7 @@ const char* pingString(const char* arg) {
 // JVMCI
 
 bool jvmci1() {
+    printf("jvmci1\n");
     return true;
 }
 
