@@ -6,7 +6,7 @@ import java.lang.invoke.MethodHandle;
 import java.util.ArrayList;
 
 @SuppressWarnings("unused")
-public class CustomForeignArena implements Closeable {
+public class ForeignArena implements Closeable {
 
     private final Arena arena = Arena.ofConfined();
     private final ArrayList<MemorySegment> allocated = new ArrayList<>();

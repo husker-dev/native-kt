@@ -60,7 +60,7 @@ class KotlinJvmForeignPrinter(
         val useArena = !function.isCritical() && (function.args.any { it.type.isString() } || function.type.isString())
 
         if(useArena)
-            append("CustomForeignArena().use { arena ->\n\t\t")
+            append("ForeignArena().use { arena ->\n\t\t")
         else append("\n${indent}\t\t")
 
         val type = if(function.type.isString())
