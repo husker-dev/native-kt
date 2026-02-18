@@ -1,6 +1,5 @@
 package com.huskerdev.nativekt.jvmci.conventions;
 
-import com.huskerdev.nativekt.NativeKtUtils;
 import com.huskerdev.nativekt.jvmci.Buffer;
 import com.huskerdev.nativekt.jvmci.CallingConvention;
 import jdk.vm.ci.code.site.DataPatch;
@@ -16,7 +15,7 @@ import jdk.vm.ci.runtime.JVMCICompiler;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 
-public class AMD64CallingConvention extends CallingConvention {
+public class AMD64WindowsCallingConvention extends CallingConvention {
 
     private static final int RAX = 0, RCX = 1, RDX = 2, R8 = 8, R9 = 9, RDI = 7, RSI = 6;
     private static final int XMM0 = 0, XMM1 = 1, XMM2 = 2, XMM3 = 3, XMM4 = 4, XMM5 = 5, XMM6 = 6, XMM7 = 7, XMM15 = 15;
@@ -29,12 +28,9 @@ public class AMD64CallingConvention extends CallingConvention {
 
     private static final int WINDOWS_SHADOW_SPACE = 32;
 
-    private int getAlignedStack(HotSpotResolvedJavaMethod resolvedMethod){
-        int stackSize = getNativeCC(resolvedMethod).getStackSize() +
-                (NativeKtUtils.Os.current() == NativeKtUtils.Os.WINDOWS ? WINDOWS_SHADOW_SPACE : 0);
-
-        return align16(stackSize) +
-                (NativeKtUtils.Os.current() == NativeKtUtils.Os.WINDOWS ? 8 : 0);
+    private int getAlignedStack(Method method){
+        // Don't know why +8
+        return WINDOWS_SHADOW_SPACE + align16((method.getParameterCount() - 4) * 8) + 8;
     }
 
     @Override
@@ -62,9 +58,7 @@ public class AMD64CallingConvention extends CallingConvention {
     }
 
     @Override
-    protected void emitPrologue(Buffer buf, Method method) {
-
-    }
+    protected void emitPrologue(Buffer buf, Method method) { }
 
     @Override
     protected void emitConversion(Buffer buf, Method method) {
@@ -73,9 +67,11 @@ public class AMD64CallingConvention extends CallingConvention {
 
         int stackShift = 0;
         if(method.getParameterCount() > 4) {
-            stackShift = getAlignedStack(resolveJavaMethod(method));
+            stackShift = getAlignedStack(method);
             emitSubRsp(buf, stackShift);
-            stackShift += 8; // TODO: Only on windows?
+
+            // Don't know why +8
+            stackShift += 8;
         }
 
         // Collect move actions
@@ -248,7 +244,7 @@ public class AMD64CallingConvention extends CallingConvention {
     @Override
     protected void emitEpilogue(Buffer buf, Method method) {
         if(method.getParameterCount() > 4) {
-            emitAddRsp(buf, getAlignedStack(resolveJavaMethod(method)));
+            emitAddRsp(buf, getAlignedStack(method));
             buf.emitByte(0xC3);
         }
 

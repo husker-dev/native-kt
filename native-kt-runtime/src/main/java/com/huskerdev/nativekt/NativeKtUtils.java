@@ -70,7 +70,8 @@ public class NativeKtUtils {
     public static boolean isJvmciAvailable(){
         try {
             Class.forName("jdk.vm.ci.runtime.JVMCI");
-            return Arch.current() != Arch.X86;
+            Arch arch = Arch.current();
+            return arch != Arch.X86 && arch != Arch.RISCV64;
         } catch (ClassNotFoundException e) {}
         return false;
     }
