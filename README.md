@@ -51,7 +51,7 @@ Location can be changed using property `projectDir`.
 You can run `./gradlew :cmakeInit[Name]` to generate a minimal CMake project.<br>
 This task is optional but recommended for getting started.
 
-For an example, you can look at the [test-glfw](https://github.com/husker-dev/native-kt/tree/master/test-glfw) module.
+For an example, you can look at the [example-glfw](https://github.com/husker-dev/native-kt/tree/master/example-glfw) module.
 
 ## Requirements
 
