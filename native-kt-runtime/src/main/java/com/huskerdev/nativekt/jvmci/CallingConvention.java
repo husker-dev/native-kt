@@ -17,7 +17,7 @@ abstract public class CallingConvention {
         switch (NativeKtUtils.Arch.current()) {
             case ARM64: return new ARM64CallingConvention();
             case X64: {
-                if(NativeKtUtils.Os.current() == NativeKtUtils.Os.WINDOWS)
+                if(NativeKtUtils.OS.current() == NativeKtUtils.OS.WINDOWS)
                     return new AMD64WindowsCallingConvention();
             }
             default: throw new UnsupportedOperationException("Unsupported CPU architecture");

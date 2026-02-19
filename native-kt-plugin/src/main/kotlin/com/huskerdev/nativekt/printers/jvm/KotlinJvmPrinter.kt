@@ -10,7 +10,6 @@ import com.huskerdev.webidl.resolver.ResolvedIdlOperation
 import org.gradle.internal.extensions.stdlib.capitalized
 import java.io.File
 
-private const val FORCE_INVOKER_PROPERTY = "nativekt.jvm.forceInvoker"
 
 class KotlinJvmPrinter(
     idl: IdlResolver,
@@ -27,19 +26,16 @@ class KotlinJvmPrinter(
         val builder = StringBuilder()
         val actual = if (expectActual) "actual " else ""
         val nativeInvoker = "${moduleName.capitalized()}NativeInvoker"
+        val implName = "${moduleName}Impl"
 
         fun invokerChooser(indent: String) = if(useForeignApi) """
-            impl = when(System.getProperties()["$FORCE_INVOKER_PROPERTY"]) {
-                "foreign" -> ${moduleName.capitalized()}Foreign()
-                "jni"     -> ${moduleName.capitalized()}JNI()
-                else -> if(NativeKtUtils.isForeignAvailable())
-                    ${moduleName.capitalized()}Foreign()
-                else 
-                    ${moduleName.capitalized()}JNI()
+            $implName = when(NativeKtUtils.getInvoker()) {
+                NativeKtUtils.Invoker.FOREIGN -> ${moduleName.capitalized()}Foreign()
+                NativeKtUtils.Invoker.JNI     -> ${moduleName.capitalized()}JNI()
             }
             """.replaceIndent(indent)
         else """
-            impl = ${moduleName.capitalized()}JNI()
+            $implName = ${moduleName.capitalized()}JNI()
             """.replaceIndent(indent)
 
         builder.append($$"""
@@ -70,8 +66,8 @@ class KotlinJvmPrinter(
         if(useJVMCI) {
             builder.append("""
                 
-                if(System.getProperty("nativekt.jvm.disableJVMCI", "false") != "true" && NativeKtUtils.isJvmciAvailable()) 
-                    impl = ${moduleName.capitalized()}JVMCI(fileName, impl!!)
+                if(NativeKtUtils.isJvmciAvailable()) 
+                    $implName = ${moduleName.capitalized()}JVMCI(fileName, $implName!!)
             """.replaceIndent("\t"))
         }
         builder.append("""
@@ -93,12 +89,12 @@ class KotlinJvmPrinter(
 
         // Functions
         builder.append("\n\n// === Functions ===\n")
-        idl.globalOperators().forEach { printFunctionProxy(builder, it) }
+        idl.globalOperators().forEach { printFunctionProxy(builder, it, implName) }
 
         // Implementation
         builder.append("\n\n// === Implementation ===\n\n")
         builder.append("""
-            private var impl: $nativeInvoker? = null
+            private var $implName: $nativeInvoker? = null
             
             private sealed interface $nativeInvoker {
                 
@@ -144,10 +140,10 @@ class KotlinJvmPrinter(
         target.writeText(builder.toString())
     }
 
-    private fun printFunctionProxy(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
+    private fun printFunctionProxy(builder: StringBuilder, function: ResolvedIdlOperation, implName: String) = builder.apply {
         append('\n')
         printFunctionHeader(builder, function, isActual = expectActual, forcePrintVoid = true)
-        append(" = \n\timpl!!._")
+        append(" = \n\t$implName!!._")
         append(function.name)
         function.args.joinTo(this, prefix = "(", postfix = ")\n") { it.name }
     }
