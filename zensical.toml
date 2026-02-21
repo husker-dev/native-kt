@@ -6,7 +6,6 @@ site_author = "Nikita Shtengauer"
 repo_url = "https://github.com/husker-dev/native-kt"
 repo_name = "husker-dev/native-kt"
 
-[project]
 nav = [
   {"Home" = "index.md"},
   {"About" = "about.md"}
