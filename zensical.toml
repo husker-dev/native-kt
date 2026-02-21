@@ -5,7 +5,6 @@ site_description = "Gradle plugin for convenient C/C++ integration into a Kotlin
 site_author = "Nikita Shtengauer"
 repo_url = "https://github.com/husker-dev/native-kt"
 repo_name = "husker-dev/native-kt"
-
 nav = [
   {"Home" = "index.md"},
   {"About" = "about.md"}
@@ -33,7 +32,7 @@ toggle.name = "Switch to dark mode"
 media = "(prefers-color-scheme: dark)"
 scheme = "slate"
 toggle.icon = "lucide/moon"
-toggle.name = "Switch to light mode"
+toggle.name = "Switch to system preference"
 
 # Theme colors
 [project.theme]
