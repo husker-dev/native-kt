@@ -10,15 +10,9 @@ nav = [
   {"About" = "about.md"}
 ]
 
-# Default theme
-[project.theme.palette]
-scheme = "slate"
-
 # Theme colors
 [project.theme]
 language = "en"
-palette.primary = "deep purple"
-palette.accent = "deep purple"
 features = [
     "navigation.instant",
     "navigation.instant.prefetch",
@@ -28,3 +22,9 @@ features = [
     "navigation.path",
     "toc.integrate"
 ]
+
+# Default theme
+[project.theme.palette]
+scheme = "slate"
+primary = "deep purple"
+accent = "deep purple"
