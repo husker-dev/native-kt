@@ -4,7 +4,9 @@ import com.huskerdev.nativekt.utils.asyncFunctionName
 import com.huskerdev.nativekt.utils.globalOperators
 import com.huskerdev.nativekt.utils.printFunctionHeader
 import com.huskerdev.nativekt.utils.syncFunctionName
+import com.huskerdev.nativekt.utils.toKotlinType
 import com.huskerdev.webidl.resolver.IdlResolver
+import com.huskerdev.webidl.resolver.ResolvedIdlCallbackFunction
 import java.io.File
 
 class KotlinCommonPrinter(
@@ -80,6 +82,22 @@ class KotlinCommonPrinter(
              */
             expect val isLibTestLoaded: Boolean
             
+        """.trimIndent())
+
+        if(idl.callbacks.isNotEmpty()) {
+            builder.append("""
+            
+                /* ================== *\
+                        Callbacks
+                \* ================== */
+                
+            """.trimIndent())
+
+            idl.callbacks.values.forEach { printCallback(builder, it) }
+        }
+
+        builder.append("""
+            
             /* ================== *\
                     Functions
             \* ================== */
@@ -93,5 +111,20 @@ class KotlinCommonPrinter(
 
         target.parentFile.mkdirs()
         target.writeText(builder.toString())
+    }
+
+    private fun printCallback(builder: StringBuilder, callbackFunction: ResolvedIdlCallbackFunction) = builder.apply {
+        // typealias TestCallback = (status: Int) -> Unit
+
+        append("\ntypealias ")
+        append(callbackFunction.name)
+        append(" = (")
+
+        callbackFunction.args.joinTo(builder) {
+            "${it.name}: ${it.type.toKotlinType()}"
+        }
+        append(") -> ")
+        append(callbackFunction.type.toKotlinType())
+        append("\n")
     }
 }

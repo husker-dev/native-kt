@@ -17,6 +17,44 @@
 extern "C" {
 #endif
 
+#ifndef INVOKE
+#define INVOKE(callback, ...) callback->invoke(callback, ##__VA_ARGS__)
+#endif // INVOKE
+
+#ifndef FREE_CALLBACK
+#define FREE_CALLBACK(callback) callback->free(callback)
+#endif // FREE_CALLBACK
+
+typedef struct SimpleCallback SimpleCallback;
+typedef struct StringCallback StringCallback;
+typedef struct StringPingCallback StringPingCallback;
+
+/* =================== *\
+        Callbacks
+\* =================== */
+
+struct SimpleCallback {
+	void *m;
+	void (*invoke)(SimpleCallback* _, int32_t status);
+	void (*free)(SimpleCallback* _);
+};
+
+struct StringCallback {
+	void *m;
+	const char* (*invoke)(StringCallback* _);
+	void (*free)(StringCallback* _);
+};
+
+struct StringPingCallback {
+	void *m;
+	const char* (*invoke)(StringPingCallback* _, const char* text);
+	void (*free)(StringPingCallback* _);
+};
+
+/* =================== *\
+        Functions
+\* =================== */
+
 bool consume();
 bool consumeInt(int32_t arg);
 bool consumeLong(int64_t arg);
@@ -44,6 +82,10 @@ int8_t pingByte(int8_t arg);
 bool pingBoolean(bool arg);
 uint16_t pingChar(uint16_t arg);
 const char* pingString(const char* arg);
+void simpleCallback(SimpleCallback* callback);
+SimpleCallback* callbackReturn(SimpleCallback* callback);
+bool callbackReturnString(StringCallback* callback);
+bool callbackPingString(StringPingCallback* callback);
 bool jvmci1();
 bool jvmci2(int32_t a1);
 bool jvmci3(int32_t a1, int32_t a2);

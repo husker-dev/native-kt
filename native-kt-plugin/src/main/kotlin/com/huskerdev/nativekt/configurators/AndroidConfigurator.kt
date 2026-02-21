@@ -6,7 +6,7 @@ import com.huskerdev.nativekt.plugin.NativeKtExtension
 import com.huskerdev.nativekt.plugin.NativeModule
 import com.huskerdev.nativekt.printers.HeaderPrinter
 import com.huskerdev.nativekt.printers.KotlinAndroidPrinter
-import com.huskerdev.nativekt.printers.jvm.CArenaPrinter
+import com.huskerdev.nativekt.printers.jvm.CJniArenaPrinter
 import com.huskerdev.nativekt.printers.jvm.CJniPrinter
 import com.huskerdev.nativekt.utils.cmakeBuild
 import com.huskerdev.nativekt.utils.cmakeGen
@@ -95,8 +95,9 @@ internal fun configureAndroid(
         classPath = module.classPath
     )
 
-    CArenaPrinter(
+    CJniArenaPrinter(
         target = File(cmakeDir, "jni_arena.h"),
+        callbacks = idl.callbacks.isNotEmpty()
     )
 
     HeaderPrinter(

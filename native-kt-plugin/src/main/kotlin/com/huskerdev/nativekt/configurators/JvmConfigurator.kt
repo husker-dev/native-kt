@@ -3,9 +3,10 @@ package com.huskerdev.nativekt.configurators
 import com.huskerdev.nativekt.plugin.NativeKtExtension
 import com.huskerdev.nativekt.plugin.NativeModule
 import com.huskerdev.nativekt.printers.HeaderPrinter
-import com.huskerdev.nativekt.printers.jvm.CArenaPrinter
 import com.huskerdev.nativekt.printers.jvm.CExportedPrinter
+import com.huskerdev.nativekt.printers.jvm.CJniArenaPrinter
 import com.huskerdev.nativekt.printers.jvm.CJniPrinter
+import com.huskerdev.nativekt.printers.jvm.CJniUtilsPrinter
 import com.huskerdev.nativekt.printers.jvm.CJvmciPrinter
 import com.huskerdev.nativekt.printers.jvm.KotlinJvmPrinter
 import com.huskerdev.nativekt.utils.cmakeBuild
@@ -108,7 +109,7 @@ internal fun configureJvm(
 
     KotlinJvmPrinter(
         idl = idl,
-        target = File(classPathFile, "${module.name}.kt"),
+        target = File(classPathFile, "${module.name}_jvm.kt"),
         classPath = module.classPath,
         moduleName = module.name,
         useCoroutines = extension.useCoroutines,
@@ -118,6 +119,13 @@ internal fun configureJvm(
         useUniversalMacOSLib = extension.useUniversalMacOSLib
     )
 
+    CJniUtilsPrinter(
+        idl = idl,
+        target = File(cmakeDir, "jni_utils.h"),
+        classPath = module.classPath,
+        name = "${module.name.capitalized()}JNI"
+    )
+
     CJniPrinter(
         idl = idl,
         target = File(cmakeDir, "jni_bindings.c"),
@@ -125,8 +133,9 @@ internal fun configureJvm(
         name = "${module.name.capitalized()}JNI"
     )
 
-    CArenaPrinter(
+    CJniArenaPrinter(
         target = File(cmakeDir, "jni_arena.h"),
+        callbacks = idl.callbacks.isNotEmpty()
     )
 
     if(extension.useForeignApi || extension.useJVMCI) {

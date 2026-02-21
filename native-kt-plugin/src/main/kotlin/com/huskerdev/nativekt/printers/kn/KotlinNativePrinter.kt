@@ -151,7 +151,7 @@ class KotlinNativePrinter(
         is ResolvedIdlType.Union -> throw UnsupportedOperationException()
         is ResolvedIdlType.Void -> "Unit"
         is ResolvedIdlType.Default -> when(val decl = type.declaration) {
-            is ResolvedIdlCallbackFunction -> TODO()
+            is ResolvedIdlCallbackFunction -> content
             is ResolvedIdlDictionary -> TODO()
             is ResolvedIdlEnum -> TODO()
             is ResolvedIdlInterface -> TODO()

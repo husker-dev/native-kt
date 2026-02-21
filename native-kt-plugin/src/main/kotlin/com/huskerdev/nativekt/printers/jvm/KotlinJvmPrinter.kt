@@ -38,12 +38,25 @@ class KotlinJvmPrinter(
             $implName = ${moduleName.capitalized()}JNI()
             """.replaceIndent(indent)
 
-        builder.append($$"""
-            @file:Suppress("unused")
-            package $$classPath
+        builder.append("""
+            @file:Suppress("unused", "unchecked_cast")
+            package $classPath
             
-            $${if(useJVMCI) "import com.huskerdev.nativekt.jvmci.*" else ""}
-            $${if(useForeignApi) "import com.huskerdev.nativekt.foreign.*" else ""}
+            
+        """.trimIndent())
+
+        if(useJVMCI)
+            builder.append("import com.huskerdev.nativekt.jvmci.*")
+        if(useForeignApi)
+            builder.append("""
+                
+                import com.huskerdev.nativekt.foreign.*
+                import java.lang.foreign.*
+                import java.lang.invoke.*
+                
+            """.trimIndent())
+
+        builder.append($$"""
             import com.huskerdev.nativekt.*
             
             

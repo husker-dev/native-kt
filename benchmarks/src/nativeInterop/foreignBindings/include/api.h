@@ -17,6 +17,10 @@
 extern "C" {
 #endif
 
+/* =================== *\
+        Functions
+\* =================== */
+
 int32_t callForeign();
 int32_t callForeignAdd(int32_t a, int32_t b);
 int32_t callForeignString(const char* arg);

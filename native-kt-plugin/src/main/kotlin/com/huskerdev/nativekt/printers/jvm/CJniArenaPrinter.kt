@@ -2,13 +2,14 @@ package com.huskerdev.nativekt.printers.jvm
 
 import java.io.File
 
-class CArenaPrinter(
+class CJniArenaPrinter(
     target: File,
+    callbacks: Boolean
 ) {
     init {
-        target.writeText("""
-            #include <jni.h>
-            #include <stdlib.h>
+        val builder = StringBuilder()
+        builder.append("""
+            #include "jni_utils.h"
             
             typedef struct Arena Arena;
             typedef struct ArenaNode ArenaNode;
@@ -104,5 +105,27 @@ class CArenaPrinter(
                 arena->count = 0;
             }
         """.trimIndent())
+
+        if(callbacks) builder.append("""
+            
+            
+            // Callback
+
+            void ArenaNode__freeCallback(Arena* arena, ArenaNode* node){
+                JNI_CALLBACK_free((JNI_Callback*)node->ptr);
+            }
+
+            JNI_Callback* Arena__callback(Arena* arena, JNI_Callback* callback) {
+                Arena__push(arena,
+                    NULL,
+                    (void*)callback,
+                    ArenaNode__freeCallback
+                );
+                return callback;
+            }
+            
+        """.trimIndent())
+
+        target.writeText(builder.toString())
     }
 }

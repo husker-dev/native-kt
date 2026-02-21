@@ -1,15 +1,7 @@
 package com.huskerdev.nativekt.printers.jvm
 
-import com.huskerdev.nativekt.utils.globalOperators
-import com.huskerdev.nativekt.utils.isCritical
-import com.huskerdev.nativekt.utils.isDealloc
-import com.huskerdev.nativekt.utils.isString
-import com.huskerdev.nativekt.utils.toJNIType
-import com.huskerdev.webidl.resolver.BuiltinIdlDeclaration
-import com.huskerdev.webidl.resolver.IdlResolver
-import com.huskerdev.webidl.resolver.ResolvedIdlOperation
-import com.huskerdev.webidl.resolver.ResolvedIdlType
-import com.huskerdev.webidl.resolver.WebIDLBuiltinKind
+import com.huskerdev.nativekt.utils.*
+import com.huskerdev.webidl.resolver.*
 import java.io.File
 
 class CJniPrinter(
@@ -21,30 +13,28 @@ class CJniPrinter(
     init {
         val builder = StringBuilder()
         builder.append("""
-            #include <jni.h>
-            #include "api.h"
             #include "jni_arena.h"
             
         """.trimIndent())
 
-
         idl.globalOperators().forEach { printFunction(builder, it) }
 
-        builder.append("\n")
         printRegisterFunction(builder)
-
 
         target.writeText(builder.toString())
     }
 
     private fun printRegisterFunction(builder: StringBuilder) = builder.apply {
-        append("JNIEXPORT void JNICALL Java_")
-        append(classPath.replace(".", "_"))
-        append("_")
-        append(name)
-        append("_register")
-        append("(JNIEnv *env, jclass cls) {\n\t")
-        append("JNINativeMethod methods[] = {\n")
+        append("""
+            
+            /* =================== *\
+                      Load
+            \* =================== */
+            
+            JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
+                JNINativeMethod methods[] = {
+            
+        """.trimIndent())
 
         // {"run", "()V", (void *)&Java_natives_glfwBindings_GlfwBindingsJNI_glfwInit},
         val operators = idl.globalOperators()
@@ -68,14 +58,17 @@ class CJniPrinter(
         }
 
         append("\t};\n\t")
-        append("(*env)->RegisterNatives(env, cls, methods, sizeof(methods)/sizeof(methods[0]));\n")
-        append("}")
+
+        // Get env
+        append("""
+            
+                return JNI_Init(vm, methods, ${idl.globalOperators().size});
+            }
+        """.trimIndent())
     }
 
     private fun printFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
-        // void Java_nativelib_AwesomeLib_hello(JNIEnv *env, jobject
-
-        append("\n")
+        append("\nstatic ")
         append(function.type.toJNIType())
         append(" Java_")
         append(classPath.replace(".", "_"))
@@ -89,12 +82,12 @@ class CJniPrinter(
             append(", ")
 
         function.args.joinTo(this) {
-            "${it.type.toJNIType()} ${it.name}"
+            "${it.type.toJNIType()} __arg_${it.name}"
         }
 
         append(") {\n")
 
-        val useArena = function.args.any { it.type.isString() } || function.type.isString()
+        val useArena = function.args.any { it.type.isString() || it.isDealloc() }
 
         if(useArena) {
             append("\tArena arena;\n")
@@ -110,9 +103,9 @@ class CJniPrinter(
         }
 
         // == Function call ==
-        val args = function.args.joinToString { castFromJava(it.type, it.name, function.isCritical()) }
+        val args = function.args.joinToString { castJavaToJNI(it.type, "__arg_${it.name}", function.isCritical(), it.isDealloc(), useArena) }
         val call = "${function.name}($args)"
-        append(castToJava(function.type, call, function.isDealloc()))
+        append(castJniToJava(function.type, call, function.isDealloc(), useArena))
         append(";\n")
 
         if(useArena) {
@@ -124,49 +117,6 @@ class CJniPrinter(
         append("}\n")
     }
 
-    fun castToJava(type: ResolvedIdlType, content: String, dealloc: Boolean): String {
-        return if(type.isString())
-            "Arena__wrapString(&arena, $content, $dealloc)"
-        else content
-    }
 
-    fun castFromJava(type: ResolvedIdlType, content: String, critical: Boolean): String {
-        return if(type.isString()) {
-            if(critical)
-                "Arena__unwrapStringCritical(&arena, $content)"
-            else
-                "Arena__unwrapString(&arena, $content)"
-        } else content
-    }
-
-    fun ResolvedIdlType.toJavaDesc(): String = when(this) {
-        is ResolvedIdlType.Union -> throw UnsupportedOperationException("Union type are not unsupported")
-        is ResolvedIdlType.Void -> "V"
-        is ResolvedIdlType.Default -> buildString {
-            append(when(declaration) {
-                is BuiltinIdlDeclaration -> when(val a = (declaration as BuiltinIdlDeclaration).kind) {
-                    WebIDLBuiltinKind.CHAR -> "C"
-                    WebIDLBuiltinKind.BOOLEAN -> "Z"
-                    WebIDLBuiltinKind.BYTE,
-                    WebIDLBuiltinKind.UNSIGNED_BYTE -> "B"
-                    WebIDLBuiltinKind.SHORT,
-                    WebIDLBuiltinKind.UNSIGNED_SHORT -> "S"
-                    WebIDLBuiltinKind.INT,
-                    WebIDLBuiltinKind.UNSIGNED_INT -> "I"
-                    WebIDLBuiltinKind.LONG,
-                    WebIDLBuiltinKind.UNSIGNED_LONG -> "J"
-                    WebIDLBuiltinKind.FLOAT,
-                    WebIDLBuiltinKind.UNRESTRICTED_FLOAT -> "F"
-                    WebIDLBuiltinKind.DOUBLE,
-                    WebIDLBuiltinKind.UNRESTRICTED_DOUBLE -> "D"
-                    WebIDLBuiltinKind.STRING -> "Ljava/lang/String;"
-                    else -> throw UnsupportedOperationException(a.toString())
-                }
-                else -> "Ljava/lang/Object;"
-            })
-            if(parameters.isNotEmpty())
-                throw UnsupportedOperationException("Parameters are not null")
-        }
-    }
 
 }

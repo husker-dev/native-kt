@@ -30,13 +30,17 @@ fun NativeKtPlugin.configure(
                         project.logger.error("Can not init module: directory '${dir}' is not empty.")
                         return@doLast
                     }
+                    File(dir, "src").mkdirs()
+                    File(dir, "include").mkdirs()
 
                     File(dir, "CMakeLists.txt").writeText($$"""
                             cmake_minimum_required(VERSION 3.15)
 
                             project("$${module.name}")
                             
-                            add_library(${PROJECT_NAME} STATIC $${module.name}.c)
+                            add_library(${PROJECT_NAME} STATIC src/$${module.name}.c)
+                            
+                            target_include_directories(${PROJECT_NAME} PRIVATE include)
                         """.trimIndent())
                     File(dir, "api.idl").writeText("""
                             
@@ -44,8 +48,8 @@ fun NativeKtPlugin.configure(
                                 void helloWorld();
                             };
                         """.trimIndent())
-                    File(dir, "${module.name}.c").writeText("""
-                            #include "api.h"
+                    File(dir, "src/${module.name}.c").writeText("""
+                            #include <api.h>
                             #include <stdio.h>
                             
                             void helloWorld() {
@@ -55,7 +59,7 @@ fun NativeKtPlugin.configure(
                         """.trimIndent())
                     HeaderPrinter(
                         idl = module.idl(project),
-                        target = File(module.dir(project), "api.h"),
+                        target = File(module.dir(project), "include/api.h"),
                         guardName = module.name.uppercase()
                     )
                 }
@@ -83,7 +87,7 @@ fun NativeKtPlugin.configure(
 
             HeaderPrinter(
                 idl = idl,
-                target = File(module.dir(project), "api.h"),
+                target = File(module.dir(project), "include/api.h"),
                 guardName = module.name.uppercase()
             )
         }

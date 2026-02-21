@@ -16,5 +16,6 @@ FetchContent_MakeAvailable(glfw)
 FetchContent_MakeAvailable(glad)
 
 # Setup
-add_library(${PROJECT_NAME} STATIC glfw.c)
+add_library(${PROJECT_NAME} STATIC src/glfw.c)
 target_link_libraries(${PROJECT_NAME} PUBLIC glad glfw)
+target_include_directories(${PROJECT_NAME} PRIVATE include)

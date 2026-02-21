@@ -3,6 +3,7 @@ package com.huskerdev.nativekt.printers
 import com.huskerdev.nativekt.utils.globalOperators
 import com.huskerdev.nativekt.utils.toCType
 import com.huskerdev.webidl.resolver.IdlResolver
+import com.huskerdev.webidl.resolver.ResolvedIdlCallbackFunction
 import com.huskerdev.webidl.resolver.ResolvedIdlOperation
 import java.io.File
 
@@ -47,6 +48,38 @@ class HeaderPrinter(
             
         """.trimIndent())
 
+        if(idl.callbacks.isNotEmpty()) {
+            builder.append("""
+                
+                #ifndef INVOKE
+                #define INVOKE(callback, ...) callback->invoke(callback, ##__VA_ARGS__)
+                #endif // INVOKE
+
+                #ifndef FREE_CALLBACK
+                #define FREE_CALLBACK(callback) callback->free(callback)
+                #endif // FREE_CALLBACK
+                
+            """.trimIndent())
+            idl.callbacks.values.forEach { printCallbackTypedef(builder, it) }
+            builder.append("""
+                
+                
+                /* =================== *\
+                        Callbacks
+                \* =================== */
+                
+            """.trimIndent())
+            idl.callbacks.values.forEach { printCallback(builder, it) }
+        }
+
+        builder.append("""
+            
+            /* =================== *\
+                    Functions
+            \* =================== */
+            
+        """.trimIndent())
+
         idl.globalOperators().forEach { printFunction(builder, it) }
 
         builder.append("""
@@ -75,5 +108,30 @@ class HeaderPrinter(
         }
 
         append(");")
+    }
+
+    private fun printCallbackTypedef(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
+        append("\ntypedef struct ")
+        append(callback.name)
+        append(" ")
+        append(callback.name)
+        append(";")
+    }
+
+    private fun printCallback(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
+        append("\nstruct ")
+        append(callback.name)
+        append(" {\n")
+        append("\tvoid *m;\n\t")
+        append(callback.type.toCType())
+        append(" (*invoke)(")
+
+        (arrayListOf("${callback.name}* _") + callback.args.map { "${it.type.toCType()} ${it.name}" })
+            .joinTo(builder)
+        append(");\n")
+
+        append("\tvoid (*free)(")
+        append(callback.name)
+        append("* _);\n};\n")
     }
 }

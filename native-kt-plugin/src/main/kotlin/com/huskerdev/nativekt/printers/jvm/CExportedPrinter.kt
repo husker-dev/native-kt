@@ -34,7 +34,7 @@ class CExportedPrinter(
         append(function.name)
         append("(")
         function.args.joinTo(this) {
-            "${it.type.toCType()} ${it.name}"
+            "${it.type.toCType()} __arg_${it.name}"
         }
         append(") {\n")
 
@@ -45,7 +45,7 @@ class CExportedPrinter(
 
         append(function.name)
         append("(")
-        function.args.joinTo(builder) { it.name }
+        function.args.joinTo(builder) { "__arg_${it.name}" }
         append(");\n}\n")
     }
 

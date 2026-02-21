@@ -33,6 +33,12 @@ namespace global {
     symbol pingChar(symbol arg);
     [Dealloc] DOMString pingString(DOMString arg);
 
+    // Callback
+    void simpleCallback([Dealloc] SimpleCallback callback);
+    SimpleCallback callbackReturn([Dealloc] SimpleCallback callback);
+    boolean callbackReturnString([Dealloc] StringCallback callback);
+    boolean callbackPingString([Dealloc] StringPingCallback callback);
+
     // JVMCI
     [Critical] boolean jvmci1();
     [Critical] boolean jvmci2(long a1);
@@ -50,6 +56,10 @@ namespace global {
     [Critical] float jvmci14();
     [Critical] double jvmci15();
 };
+
+callback SimpleCallback = void (long status);
+callback StringCallback = DOMString ();
+callback StringPingCallback = DOMString (DOMString text);
 
 // Is not supported (yet)
 dictionary myStruct {
