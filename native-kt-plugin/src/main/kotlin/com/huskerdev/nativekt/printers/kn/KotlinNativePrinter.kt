@@ -66,12 +66,11 @@ class KotlinNativePrinter(
         append(").asCPointer()\n\t\t")
 
         // invoke =
-        val args = listOf("callback: CPointer<$cinteropPath.${callback.name}>?") +
-                callback.args.map { "${it.name}: ${it.type.toKotlinNativeType()}" }
+        val args = listOf("callback") + callback.args.map { it.name }
 
-        val args1 = callback.args.joinToString { castFromNative(it.type, it.name, it.isDealloc(), false) }
+        val castedArgs = callback.args.joinToString { castFromNative(it.type, it.name, it.isDealloc(), false) }
 
-        val call = "callback!!.pointed.m!!.asStableRef<${callback.name}>().get()($args1)"
+        val call = "callback!!.pointed.m!!.asStableRef<${callback.name}>().get()($castedArgs)"
 
         append("struct.invoke = staticCFunction { ")
         args.joinTo(builder)
