@@ -6,8 +6,12 @@ site_author = "Nikita Shtengauer"
 repo_url = "https://github.com/husker-dev/native-kt"
 repo_name = "husker-dev/native-kt"
 nav = [
-  {"Home" = "index.md"},
-  {"About" = "about.md"}
+    {"Home" = "index.md"},
+    {"Documentation" = [
+        {"Basics" = "basics.md"},
+        {"Gradle setup" = "gradle.md"},
+        {"Internals" = "internals.md"},
+    ]}
 ]
 
 # Theme colors
@@ -20,11 +24,12 @@ features = [
     "navigation.tabs",
     "navigation.tabs.sticky",
     "navigation.path",
-    "toc.integrate"
+    "toc.follow",
+    "content.code.copy"
 ]
 
 # Default theme
 [project.theme.palette]
 scheme = "slate"
-primary = "deep purple"
-accent = "deep purple"
+primary = "indigo"
+accent = "amber"
