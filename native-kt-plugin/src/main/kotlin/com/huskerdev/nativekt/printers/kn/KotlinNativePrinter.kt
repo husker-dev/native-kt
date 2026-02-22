@@ -1,13 +1,7 @@
 package com.huskerdev.nativekt.printers.kn
 
-import com.huskerdev.nativekt.utils.asyncFunctionName
-import com.huskerdev.nativekt.utils.globalOperators
-import com.huskerdev.nativekt.utils.isDealloc
-import com.huskerdev.nativekt.utils.isString
-import com.huskerdev.nativekt.utils.printFunctionHeader
-import com.huskerdev.nativekt.utils.syncFunctionName
+import com.huskerdev.nativekt.utils.*
 import com.huskerdev.webidl.resolver.*
-import org.gradle.internal.extensions.stdlib.capitalized
 import java.io.File
 
 class KotlinNativePrinter(
@@ -30,7 +24,7 @@ class KotlinNativePrinter(
             package $classPath
             
             import kotlinx.cinterop.*
-            import platform.posix.free
+            import com.huskerdev.nativekt.kn.*
             
             ${actual}val isLibTestLoaded: Boolean = true
             
@@ -42,7 +36,7 @@ class KotlinNativePrinter(
         if(useCoroutines)
             builder.append("${actual}suspend fun ${asyncFunctionName(moduleName)}() = Unit\n")
 
-        printArena(builder)
+        idl.callbacks.values.forEach { printCallbackWrap(builder, it) }
 
         idl.globalOperators().forEach { printFunction(builder, it) }
 
@@ -50,32 +44,43 @@ class KotlinNativePrinter(
         target.writeText(builder.toString())
     }
 
-    private fun printArena(builder: StringBuilder){
-        val arenaName = "${moduleName.capitalized()}Arena"
-        builder.append("""
-            
-            private class $arenaName(
-            	val memScope: MemScope
-            ) {
-            	companion object {
-            		fun <T> use(block: $arenaName.() -> T) = memScoped {
-            			$arenaName(this).run { block(this) }
-            		}
-            	}
-            	private val allocated = hashSetOf<Long>()
+    private fun printCallbackWrap(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
+        // header
+        append("\nprivate fun ")
+        append(callback.name)
+        append(".wrap")
+        append(callback.name)
+        append("() =\n\t")
 
-            	fun String.wrap() =
-            		cstr.getPointer(memScope).also { allocated += it.rawValue.toLong() }
+        // body
+        append("allocStruct<")
+        append(cinteropPath)
+        append(".")
+        append(callback.name)
+        append(">().apply {\n\t\t")
+        append("val struct = pointed\n\t\t")
 
-            	fun CPointer<ByteVar>.unwrap(dealloc: Boolean): String {
-            		val result = toKString()
-            		if(dealloc && rawValue.toLong() !in allocated)
-            			free(this)
-            		return result
-            	}
-            }
-            
-        """.trimIndent())
+        // m =
+        append("struct.m = StableRef.create(this@wrap")
+        append(callback.name)
+        append(").asCPointer()\n\t\t")
+
+        // invoke =
+        val args = listOf("callback: CPointer<$cinteropPath.${callback.name}>?") +
+                callback.args.map { "${it.name}: ${it.type.toKotlinNativeType()}" }
+
+        val args1 = callback.args.joinToString { castFromNative(it.type, it.name, it.isDealloc(), false) }
+
+        val call = "callback!!.pointed.m!!.asStableRef<${callback.name}>().get()($args1)"
+
+        append("struct.invoke = staticCFunction { ")
+        args.joinTo(builder)
+        append(" ->\n\t\t\t")
+        append(castToNative(callback.type, call, dealloc = false, useArena = false))
+        append("\n\t\t}\n\t\t")
+
+        // free =
+        append("struct.free = freeCallbackFunction.reinterpret()\n\t}\n")
     }
 
     private fun printFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
@@ -83,14 +88,18 @@ class KotlinNativePrinter(
         printFunctionHeader(builder, function, isActual = expectActual)
         append(" = ")
 
-        val useArena = function.args.any { it.type.isString() } || function.type.isString()
+        val useArena = function.args.any { it.type.isString() || it.isDealloc() }
 
         if(useArena)
-            append("${moduleName.capitalized()}Arena.use {")
+            append("NativeArena.use { arena ->")
         append("\n\t")
 
-        val func = "$cinteropPath.${function.name}"
-        append(castFromNative(function.type, "$func(${castArgs(function.args)})", function.isDealloc()))
+        val args = function.args.joinToString { arg ->
+            castToNative(arg.type, arg.name, arg.isDealloc(), useArena)
+        }
+
+        val call = "$cinteropPath.${function.name}($args)"
+        append(castFromNative(function.type, call, function.isDealloc(), useArena))
 
         if(useArena)
             append("\n}")
@@ -98,95 +107,39 @@ class KotlinNativePrinter(
         append("\n")
     }
 
-    private fun castArgs(args: List<ResolvedIdlField.Argument>): String {
-        return args.joinToString { arg ->
-            castToNative(arg.type, arg.name)
-        }
-    }
-
-    private fun castFromNative(type: ResolvedIdlType, content: String, dealloc: Boolean): String = when(type) {
-        is ResolvedIdlType.Union -> throw UnsupportedOperationException()
+    private fun castFromNative(type: ResolvedIdlType, content: String, dealloc: Boolean, useArena: Boolean): String = when(type) {
         is ResolvedIdlType.Void -> content
         is ResolvedIdlType.Default -> when(val decl = type.declaration) {
-            is ResolvedIdlCallbackFunction -> TODO()
-            is ResolvedIdlDictionary -> TODO()
-            is ResolvedIdlEnum -> TODO()
-            is ResolvedIdlInterface -> TODO()
-            is ResolvedIdlNamespace -> TODO()
-            is ResolvedIdlTypeDef -> TODO()
             is BuiltinIdlDeclaration -> when(decl.kind) {
-                WebIDLBuiltinKind.ANY -> TODO()
-                WebIDLBuiltinKind.OBJECT -> TODO()
-                WebIDLBuiltinKind.VOID -> TODO()
-                WebIDLBuiltinKind.LIST -> TODO()
-                WebIDLBuiltinKind.MUTABLE_LIST -> TODO()
-                WebIDLBuiltinKind.MAP -> TODO()
-                WebIDLBuiltinKind.PROMISE -> TODO()
-                WebIDLBuiltinKind.USV_STRING -> TODO()
-                WebIDLBuiltinKind.BIG_INT -> TODO()
-                WebIDLBuiltinKind.BYTE_SEQUENCE -> TODO()
-
-                WebIDLBuiltinKind.BOOLEAN,
-                WebIDLBuiltinKind.UNSIGNED_INT,
-                WebIDLBuiltinKind.FLOAT,
-                WebIDLBuiltinKind.UNRESTRICTED_FLOAT,
-                WebIDLBuiltinKind.DOUBLE,
-                WebIDLBuiltinKind.UNRESTRICTED_DOUBLE,
-                WebIDLBuiltinKind.BYTE,
-                WebIDLBuiltinKind.UNSIGNED_BYTE,
-                WebIDLBuiltinKind.SHORT,
-                WebIDLBuiltinKind.UNSIGNED_SHORT,
-                WebIDLBuiltinKind.LONG,
-                WebIDLBuiltinKind.UNSIGNED_LONG,
-                WebIDLBuiltinKind.INT -> content
-
                 WebIDLBuiltinKind.CHAR -> "$content.toInt().toChar()"
-                WebIDLBuiltinKind.STRING -> "$content!!.unwrap($dealloc)"
+                WebIDLBuiltinKind.STRING ->
+                    if(useArena) "arena.unwrapCStr($content!!, $dealloc)"
+                    else "$content!!.unwrapCStr($dealloc)"
+                else -> content
             }
+            is ResolvedIdlCallbackFunction ->
+                if(useArena) "arena.unwrapCallback<${decl.name}>($content!!.reinterpret(), $dealloc)"
+                else "unwrapCallback<${decl.name}>($content!!.reinterpret(), $dealloc)"
+            else -> throw UnsupportedOperationException(type.toString())
         }
+        else -> throw UnsupportedOperationException(type.toString())
     }
 
-
-    private fun castToNative(type: ResolvedIdlType, content: String): String = when(type) {
-        is ResolvedIdlType.Union -> throw UnsupportedOperationException()
-        is ResolvedIdlType.Void -> "Unit"
+    private fun castToNative(type: ResolvedIdlType, content: String, dealloc: Boolean, useArena: Boolean): String = when(type) {
+        is ResolvedIdlType.Void -> content
         is ResolvedIdlType.Default -> when(val decl = type.declaration) {
-            is ResolvedIdlCallbackFunction -> content
-            is ResolvedIdlDictionary -> TODO()
-            is ResolvedIdlEnum -> TODO()
-            is ResolvedIdlInterface -> TODO()
-            is ResolvedIdlNamespace -> TODO()
-            is ResolvedIdlTypeDef -> TODO()
             is BuiltinIdlDeclaration -> when(decl.kind) {
-                WebIDLBuiltinKind.ANY -> TODO()
-                WebIDLBuiltinKind.OBJECT -> TODO()
-                WebIDLBuiltinKind.VOID -> TODO()
-                WebIDLBuiltinKind.LIST -> TODO()
-                WebIDLBuiltinKind.MUTABLE_LIST -> TODO()
-                WebIDLBuiltinKind.MAP -> TODO()
-                WebIDLBuiltinKind.PROMISE -> TODO()
-                WebIDLBuiltinKind.USV_STRING -> TODO()
-                WebIDLBuiltinKind.BIG_INT -> TODO()
-                WebIDLBuiltinKind.BYTE_SEQUENCE -> TODO()
-
-                WebIDLBuiltinKind.BOOLEAN,
-                WebIDLBuiltinKind.UNSIGNED_INT,
-                WebIDLBuiltinKind.FLOAT,
-                WebIDLBuiltinKind.UNRESTRICTED_FLOAT,
-                WebIDLBuiltinKind.DOUBLE,
-                WebIDLBuiltinKind.UNRESTRICTED_DOUBLE,
-                WebIDLBuiltinKind.BYTE,
-                WebIDLBuiltinKind.UNSIGNED_BYTE,
-                WebIDLBuiltinKind.SHORT,
-                WebIDLBuiltinKind.UNSIGNED_SHORT,
-                WebIDLBuiltinKind.LONG,
-                WebIDLBuiltinKind.UNSIGNED_LONG,
-                WebIDLBuiltinKind.INT -> content
-
-                WebIDLBuiltinKind.STRING -> "$content.wrap()"
-
+                WebIDLBuiltinKind.STRING ->
+                    if(useArena) "arena.allocCStr($content)"
+                    else "$content.allocCStr()"
                 WebIDLBuiltinKind.CHAR -> "$content.code.toUShort()"
+                else -> content
             }
+            is ResolvedIdlCallbackFunction ->
+                if(dealloc) "arena.callback($content.wrap${decl.name}())"
+                else "$content.wrap${decl.name}()"
+            else -> throw UnsupportedOperationException(type.toString())
         }
+        else -> throw UnsupportedOperationException(type.toString())
     }
 }

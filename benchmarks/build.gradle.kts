@@ -25,8 +25,6 @@ kotlin {
 
     sourceSets.commonMain.dependencies {
         implementation(libs.kotlinx.benchmark)
-    }
-    sourceSets.jvmMain.dependencies {
         implementation(project(":native-kt-runtime"))
     }
 }

@@ -2,6 +2,7 @@
 rootProject.name = "native-kt"
 
 include("native-kt-runtime")
+include("native-kt-runtime-jvm")
 
 include("test")
 include("example-glfw")

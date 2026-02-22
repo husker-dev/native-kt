@@ -44,7 +44,7 @@ kotlin {
         }
     }
 
-    sourceSets.jvmMain.dependencies {
+    sourceSets.commonMain.dependencies {
         implementation(project(":native-kt-runtime"))
     }
 }

@@ -22,6 +22,12 @@ fun ResolvedIdlType.toKotlinForeignType(): String {
     else toKotlinType()
 }
 
+fun ResolvedIdlType.toKotlinNativeType(): String {
+    return if(isString())
+        "CPointer<ByteVarOf<Byte>>?"
+    else toKotlinType()
+}
+
 fun ResolvedIdlType.toKotlinType(
     stringAsBytes: Boolean = false,
     callbackAsAny: Boolean = false
