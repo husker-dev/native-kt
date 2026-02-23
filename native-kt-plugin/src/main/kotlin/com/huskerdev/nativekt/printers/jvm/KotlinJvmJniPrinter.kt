@@ -42,18 +42,23 @@ class KotlinJvmJniPrinter(
 
         idl.callbacks.values.forEach { callback ->
             val args = listOf("obj: Any") +
-                    callback.args.map { "${it.name}: ${it.type.toKotlinType()}" }
+                    callback.args.map { "${it.name}: ${it.type.toKotlinType(callbackAsAny = true)}" }
 
             builder.append("\n\t\t@Suppress(\"unchecked_cast\")\n")
             builder.append("\t\t@JvmStatic fun callback")
             builder.append(callback.name)
-            builder.append("(${args.joinToString()}) = \n")
-            builder.append("\t\t\t(obj as (")
+            builder.append("(${args.joinToString()}): ")
+            builder.append(callback.type.toKotlinType(callbackAsAny = true))
+            builder.append(" =\n\t\t\t(obj as (")
             callback.args.joinTo(builder) { it.type.toKotlinType() }
             builder.append(") -> ")
             builder.append(callback.type.toKotlinType())
             builder.append(")(")
-            callback.args.joinTo(builder) { it.name }
+            callback.args.joinTo(builder) {
+                if(it.type.isCallback())
+                    "${it.name} as ${(it.type as ResolvedIdlType.Default).declaration.name}"
+                else it.name
+            }
             builder.append(")\n")
         }
         builder.append("${indent}\t}\n")

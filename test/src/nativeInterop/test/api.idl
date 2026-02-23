@@ -38,6 +38,7 @@ namespace global {
     SimpleCallback callbackReturn([Dealloc] SimpleCallback callback);
     boolean callbackReturnString([Dealloc] StringCallback callback);
     boolean callbackPingString([Dealloc] StringPingCallback callback);
+    SimpleCallback callbackPingCallback([Dealloc] CallbackPingCallback callback, [Dealloc] SimpleCallback item);
 
     // JVMCI
     [Critical] boolean jvmci1();
@@ -60,6 +61,7 @@ namespace global {
 callback SimpleCallback = void (long status);
 callback StringCallback = DOMString ();
 callback StringPingCallback = DOMString (DOMString text);
+callback CallbackPingCallback = SimpleCallback (SimpleCallback callback);
 
 // Is not supported (yet)
 dictionary myStruct {

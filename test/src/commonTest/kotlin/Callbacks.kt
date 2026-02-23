@@ -33,4 +33,11 @@ class Callbacks {
     fun callbackPingString() = withLib {
         assertTrue(natives.test.callbackPingString { it })
     }
+
+    @Test
+    fun callbackPingCallback() = withLib {
+        val item = { _: Int -> }
+        val response = natives.test.callbackPingCallback({ it }, item)
+        assertEquals(item, response)
+    }
 }

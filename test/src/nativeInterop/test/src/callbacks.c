@@ -22,3 +22,7 @@ bool callbackReturnString(StringCallback* callback) {
 bool callbackPingString(StringPingCallback* callback) {
     return strcmp(INVOKE(callback, "test"), "test") == 0;
 }
+
+SimpleCallback* callbackPingCallback(CallbackPingCallback* callback, SimpleCallback* item) {
+    return INVOKE(callback, item);
+}

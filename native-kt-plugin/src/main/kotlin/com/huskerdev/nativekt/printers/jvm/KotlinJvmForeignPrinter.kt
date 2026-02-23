@@ -87,7 +87,7 @@ class KotlinJvmForeignPrinter(
     }
 
     private fun printCallbackInvoke(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
-        val args = listOf("callback: MemorySegment") +
+        val args = listOf("_callback: MemorySegment") +
                 callback.args.map { "${it.name}: ${it.type.toKotlinForeignType()}" }
 
         val lambdaArgTypes = callback.args.map { it.type.toKotlinType() }
@@ -105,7 +105,7 @@ class KotlinJvmForeignPrinter(
 
         // body
         val call = StringBuilder().apply {
-            append("(ForeignUtils.callbacks[callback.address()] as (")
+            append("(ForeignUtils.callbacks[_callback.address()] as (")
             lambdaArgTypes.joinTo(this)
             append(") -> ")
             append(callback.type.toKotlinType())

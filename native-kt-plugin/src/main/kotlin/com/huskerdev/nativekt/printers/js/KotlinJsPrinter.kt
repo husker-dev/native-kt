@@ -205,7 +205,7 @@ class KotlinJsPrinter(
             }
             is ResolvedIdlCallbackFunction ->
                 if(useArena) "arena.unwrapCallback<${decl.name}>($content, $dealloc)"
-                else "unwrapCallback${decl.name}>(_module, $content, $dealloc)"
+                else "unwrapCallback<${decl.name}>(_module, $content, $dealloc)"
             else -> throw UnsupportedOperationException(type.toString())
         }
         else -> throw UnsupportedOperationException(type.toString())

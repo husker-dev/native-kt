@@ -1,4 +1,5 @@
 import com.huskerdev.nativekt.plugin.*
+import org.apache.tools.ant.taskdefs.condition.Os
 import org.jetbrains.kotlin.gradle.dsl.*
 
 plugins {
@@ -15,6 +16,7 @@ version = projectDir.parentFile.resolve("VERSION").readText()
 native {
     ndkVersion = "29.0.14206865"
     useJVMCI = true
+    useForeignApi = false
 
     create("test", Multiplatform::class)
 }
@@ -48,27 +50,34 @@ kotlin {
         withDeviceTest { }
     }
 
-    mingwX64()
+    when {
+        Os.isFamily(Os.FAMILY_WINDOWS) -> {
+            mingwX64()
+        }
+        Os.isFamily(Os.FAMILY_MAC) -> {
+            macosArm64()
+            macosX64()
 
-    macosArm64()
-    macosX64()
+            iosX64()
+            iosArm64()
+            iosSimulatorArm64()
 
-    linuxX64()
-    linuxArm64()
+            watchosX64()
+            watchosArm32()
+            watchosArm64()
+            watchosDeviceArm64()
+            watchosSimulatorArm64()
 
-    iosX64()
-    iosArm64()
-    iosSimulatorArm64()
-
-    watchosX64()
-    watchosArm32()
-    watchosArm64()
-    watchosDeviceArm64()
-    watchosSimulatorArm64()
-
-    tvosX64()
-    tvosArm64()
-    tvosSimulatorArm64()
+            tvosX64()
+            tvosArm64()
+            tvosSimulatorArm64()
+        }
+        Os.isFamily(Os.FAMILY_UNIX) -> {
+            if(Os.isArch("amd64"))
+                linuxX64()
+            else linuxArm64()
+        }
+    }
 
     androidNativeX64()
     androidNativeX86()

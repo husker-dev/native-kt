@@ -124,10 +124,10 @@ class CJniUtilsPrinter(
     }
 
     private fun printCallbackInvoke(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
-        val args = listOf("${callback.name}* callback") +
+        val args = listOf("${callback.name}* _callback") +
                 callback.args.map { "${it.type.toCType()} ${it.name}" }
 
-        val jvmArgs = listOf("(jobject)callback->m") +
+        val jvmArgs = listOf("(jobject)_callback->m") +
                 callback.args.map { castJniToJava(it.type, it.name, it.isDealloc(), false) }
 
         append("""
@@ -154,9 +154,10 @@ class CJniUtilsPrinter(
                     WebIDLBuiltinKind.DOUBLE -> "CallStaticDoubleMethod"
                     else -> "CallStaticObjectMethod"
                 }
-                else -> throw UnsupportedOperationException()
+                is ResolvedIdlCallbackFunction -> "CallStaticObjectMethod"
+                else -> throw UnsupportedOperationException(callback.type.toString())
             }
-            else -> throw UnsupportedOperationException()
+            else -> throw UnsupportedOperationException(callback.type.toString())
         }
 
         val call = "(*env)->$funcName(env, jniClass, callback${callback.name}, ${jvmArgs.joinToString()})"

@@ -28,6 +28,7 @@ extern "C" {
 typedef struct SimpleCallback SimpleCallback;
 typedef struct StringCallback StringCallback;
 typedef struct StringPingCallback StringPingCallback;
+typedef struct CallbackPingCallback CallbackPingCallback;
 
 /* =================== *\
         Callbacks
@@ -49,6 +50,12 @@ struct StringPingCallback {
 	void *m;
 	const char* (*invoke)(StringPingCallback* _, const char* text);
 	void (*free)(StringPingCallback* _);
+};
+
+struct CallbackPingCallback {
+	void *m;
+	SimpleCallback* (*invoke)(CallbackPingCallback* _, SimpleCallback* callback);
+	void (*free)(CallbackPingCallback* _);
 };
 
 /* =================== *\
@@ -86,6 +93,7 @@ void simpleCallback(SimpleCallback* callback);
 SimpleCallback* callbackReturn(SimpleCallback* callback);
 bool callbackReturnString(StringCallback* callback);
 bool callbackPingString(StringPingCallback* callback);
+SimpleCallback* callbackPingCallback(CallbackPingCallback* callback, SimpleCallback* item);
 bool jvmci1();
 bool jvmci2(int32_t a1);
 bool jvmci3(int32_t a1, int32_t a2);
