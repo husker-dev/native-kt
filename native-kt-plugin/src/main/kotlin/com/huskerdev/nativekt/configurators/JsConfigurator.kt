@@ -3,7 +3,7 @@ package com.huskerdev.nativekt.configurators
 import com.huskerdev.nativekt.plugin.NativeKtExtension
 import com.huskerdev.nativekt.plugin.NativeModule
 import com.huskerdev.nativekt.printers.HeaderPrinter
-import com.huskerdev.nativekt.printers.js.CppEmscriptenPrinter
+import com.huskerdev.nativekt.printers.js.CEmscriptenPrinter
 import com.huskerdev.nativekt.utils.dir
 import com.huskerdev.nativekt.printers.js.KotlinJsPrinter
 import com.huskerdev.nativekt.utils.cmakeBuild
@@ -66,7 +66,7 @@ internal fun configureJs(
 
         add_executable(lib$${module.name} $<TARGET_OBJECTS:$${module.name}> emscripten_bindings.c)
         
-        set_target_properties(libtest PROPERTIES LINK_FLAGS "-s --no-entry -s ALLOW_MEMORY_GROWTH=1 -s MODULARIZE=1 -s EXPORT_ES6=1 -s WASM_BIGINT=0 -s EXPORTED_RUNTIME_METHODS=UTF8ToString,stringToUTF8,lengthBytesUTF8,HEAP32 -s EXPORTED_FUNCTIONS=$$exportedStr")
+        set_target_properties(libtest PROPERTIES LINK_FLAGS "-s --no-entry -s ALLOW_MEMORY_GROWTH=1 -s ALLOW_TABLE_GROWTH=1 -s MODULARIZE=1 -s EXPORT_ES6=1 -s WASM_BIGINT=0 -s EXPORTED_RUNTIME_METHODS=UTF8ToString,stringToUTF8,lengthBytesUTF8,HEAP32,addFunction -s EXPORTED_FUNCTIONS=$$exportedStr")
     """.trimIndent())
 
     // Create Kotlin/JS bindings
@@ -78,8 +78,7 @@ internal fun configureJs(
         useCoroutines = extension.useCoroutines,
         expectActual = expectActual
     )
-
-    CppEmscriptenPrinter(
+    CEmscriptenPrinter(
         idl = idl,
         target = File(cmakeDir, "emscripten_bindings.c")
     )

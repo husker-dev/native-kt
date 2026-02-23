@@ -6,19 +6,13 @@ import com.huskerdev.nativekt.utils.isDealloc
 import com.huskerdev.nativekt.utils.isString
 import com.huskerdev.nativekt.utils.printFunctionHeader
 import com.huskerdev.nativekt.utils.syncFunctionName
+import com.huskerdev.nativekt.utils.toEmscriptenDesc
 import com.huskerdev.webidl.resolver.BuiltinIdlDeclaration
 import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlCallbackFunction
-import com.huskerdev.webidl.resolver.ResolvedIdlDictionary
-import com.huskerdev.webidl.resolver.ResolvedIdlEnum
-import com.huskerdev.webidl.resolver.ResolvedIdlField
-import com.huskerdev.webidl.resolver.ResolvedIdlInterface
-import com.huskerdev.webidl.resolver.ResolvedIdlNamespace
 import com.huskerdev.webidl.resolver.ResolvedIdlOperation
 import com.huskerdev.webidl.resolver.ResolvedIdlType
-import com.huskerdev.webidl.resolver.ResolvedIdlTypeDef
 import com.huskerdev.webidl.resolver.WebIDLBuiltinKind
-import org.gradle.internal.extensions.stdlib.capitalized
 import java.io.File
 
 class KotlinJsPrinter(
@@ -39,6 +33,7 @@ class KotlinJsPrinter(
             @file:OptIn(ExperimentalWasmJsInterop::class)
             package $classPath
             
+            import com.huskerdev.nativekt.web.*
             import kotlin.js.*
             ${
                 if(useCoroutines) "import kotlinx.coroutines.await"
@@ -49,6 +44,19 @@ class KotlinJsPrinter(
             private external val _lib: dynamic
             
             private var _module: dynamic = null
+            
+        """.trimIndent())
+
+        if(idl.callbacks.isNotEmpty())
+            builder.append("""
+                set(value) {
+                    field = value
+                    initCallbacks()
+                }
+                
+            """.replaceIndent("\t"))
+
+        builder.append("""
             
             ${actual}val isLibTestLoaded: Boolean
                 get() = _module != null
@@ -79,65 +87,26 @@ class KotlinJsPrinter(
             """.trimIndent())
         }
 
-        val arenaName = "${moduleName.capitalized()}Arena"
+        // Callbacks loading
+        if(idl.callbacks.isNotEmpty()) {
+            builder.append("\nprivate var _freeCallback: dynamic = null\n")
+            idl.callbacks.values.joinTo(builder, separator = "\n") {
+                "private var _invoke${it.name}: dynamic = null"
+            }
 
-        builder.append("""
-            
-            class $arenaName: AutoCloseable {
-                companion object {
-                    fun <T> use(block: $arenaName.() -> T) = 
-                        $arenaName().use { block(it) }
-                }
+            builder.append("""
                 
-                private val allocated = hashSetOf<Any>()
                 
-                fun malloc(size: Int): Any =
-                    (_module._malloc(size) as Any).also { allocated += this }
-                
-                fun String.cstr(): Any {
-                    val len = _module.lengthBytesUTF8(this) + 1
-                    val mem = malloc(len)
-                    _module.stringToUTF8(this, mem, len)
-                    return mem
-                }
-                
-                fun asString(ptr: Any, dealloc: Boolean): String {
-                    val result = _module.UTF8ToString(ptr)
-                    if(dealloc && ptr !in allocated)
-                        _module._free(ptr)
-                    return result
-                }
-            
-                override fun close() = allocated.forEach {
-                    _module._free(it)
-                }
-            }
-            
-            private fun _${moduleName}UnwrapString(ptr: dynamic, dealloc: Boolean): String {
-            	val result = _module.UTF8ToString(ptr)
-            	if(dealloc)
-            		_module._free(ptr)
-            	return result
-            }
-            
-            private fun _${moduleName}UnwrapLong(value: dynamic): Long {
-            	val ptr = (value as JsNumber).toInt() shr 2
+                private fun initCallbacks() {
+                    _freeCallback = createCallbackFreeFunction(_module)
+                    
+            """.trimIndent())
+            idl.callbacks.values.forEach { printCallbackInvoke(builder, it) }
+            builder.append("}\n")
 
-            	val low = (_module.HEAP32[ptr] as JsNumber).toLong()
-            	val high = (_module.HEAP32[ptr + 1] as JsNumber).toLong()
-            	_module._free(ptr)
-
-            	return high shl 32 or (low and 0xffffffff)
-            }
-            
-            private fun _${moduleName}WrapLong(value: Long): Int {
-            	val ptr = (_module._malloc(8) as JsNumber).toInt()
-                _module.HEAP32[ptr shr 2] = (value and 0xffffffff).toInt()
-                _module.HEAP32[(ptr shr 2) + 1] = (value shr 32).toInt()
-                return ptr
-            }
-            
-        """.trimIndent())
+            // wrap
+            idl.callbacks.values.forEach { callback -> printCallbackWrap(builder, callback) }
+        }
 
         idl.globalOperators().forEach { printFunction(builder, it) }
 
@@ -145,19 +114,57 @@ class KotlinJsPrinter(
         target.writeText(builder.toString())
     }
 
+    private fun printCallbackWrap(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
+        append("\nprivate fun ")
+        append(callback.name)
+        append(".wrap")
+        append(callback.name)
+        append("() =\n\t")
+        append("mallocCallback(_module, this, _invoke")
+        append(callback.name)
+        append(", _freeCallback)\n")
+    }
+
+    private fun printCallbackInvoke(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
+        val args = listOf("_c") + callback.args.map { it.name }
+        val castedArgs = callback.args.map { castToJS(it.type, it.name, it.isDealloc(), false) }
+        val argTypes = listOf(callback.type.toEmscriptenDesc(), "p") +
+                callback.args.map { it.type.toEmscriptenDesc() }
+
+        // header
+        append("\n\t_invoke")
+        append(callback.name)
+        append(" = _module.addFunction({ ")
+        args.joinTo(builder)
+        append(" ->\n\t\t")
+
+        // body
+        val call = "unwrapCallback<${callback.name}>(_module, _c, false)(${castedArgs.joinToString()})"
+        append(castToNative(callback.type, call, dealloc = false, useArena = false))
+        append("\n\t")
+
+        // footer
+        append("}, \"")
+        argTypes.joinTo(builder, separator = "")
+        append("\")\n")
+    }
+
     private fun printFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
         append('\n')
         printFunctionHeader(builder, function, isActual = expectActual, forcePrintVoid = true)
         append(" = ")
 
-        val useArena = function.args.any { it.type.isString() } || function.type.isString()
+        val useArena = function.args.any { it.type.isString() || it.isDealloc() }
 
         if(useArena)
-            append("${moduleName.capitalized()}Arena.use {")
+            append("EmArena.use(_module) { arena ->")
         append("\n\t")
 
+        val args = function.args.joinToString {
+            castToNative(it.type, it.name, it.isDealloc(), useArena)
+        }
         val func = "_module.__${function.name}"
-        append(castFromJS(function.type, "$func(${castArgs(function.args)})", function.isDealloc()))
+        append(castToJS(function.type, "$func($args)", function.isDealloc(), useArena))
 
         if(useArena)
             append("\n}")
@@ -165,96 +172,42 @@ class KotlinJsPrinter(
         append("\n")
     }
 
-    private fun castArgs(args: List<ResolvedIdlField.Argument>): String {
-        return args.joinToString { arg ->
-            castToJS(arg.type, arg.name)
-        }
-    }
-
-    private fun castFromJS(type: ResolvedIdlType, content: String, dealloc: Boolean): String = when(type) {
-        is ResolvedIdlType.Union -> throw UnsupportedOperationException()
+    private fun castToNative(type: ResolvedIdlType, content: String, dealloc: Boolean, useArena: Boolean): String = when(type) {
         is ResolvedIdlType.Void -> content
         is ResolvedIdlType.Default -> when(val decl = type.declaration) {
-            is ResolvedIdlCallbackFunction -> TODO()
-            is ResolvedIdlDictionary -> TODO()
-            is ResolvedIdlEnum -> TODO()
-            is ResolvedIdlInterface -> TODO()
-            is ResolvedIdlNamespace -> TODO()
-            is ResolvedIdlTypeDef -> TODO()
             is BuiltinIdlDeclaration -> when(decl.kind) {
-                WebIDLBuiltinKind.ANY -> TODO()
-                WebIDLBuiltinKind.OBJECT -> TODO()
-                WebIDLBuiltinKind.VOID -> TODO()
-                WebIDLBuiltinKind.LIST -> TODO()
-                WebIDLBuiltinKind.MUTABLE_LIST -> TODO()
-                WebIDLBuiltinKind.MAP -> TODO()
-                WebIDLBuiltinKind.PROMISE -> TODO()
-                WebIDLBuiltinKind.USV_STRING -> TODO()
-                WebIDLBuiltinKind.BIG_INT -> TODO()
-                WebIDLBuiltinKind.BYTE_SEQUENCE -> TODO()
+                WebIDLBuiltinKind.LONG,
+                WebIDLBuiltinKind.UNSIGNED_LONG -> "wrapLong(_module, $content)"
+                WebIDLBuiltinKind.STRING ->
+                    if(useArena) "arena.allocCStr($content)"
+                    else "allocCStr(_module, $content)"
+                else -> content
+            }
+            is ResolvedIdlCallbackFunction ->
+                if(dealloc) "arena.callback($content.wrap${decl.name}())"
+                else "$content.wrap${decl.name}()"
+            else -> throw UnsupportedOperationException(type.toString())
+        }
+        is ResolvedIdlType.Union -> throw UnsupportedOperationException(type.toString())
+    }
 
+    private fun castToJS(type: ResolvedIdlType, content: String, dealloc: Boolean, useArena: Boolean): String = when(type) {
+        is ResolvedIdlType.Void -> content
+        is ResolvedIdlType.Default -> when(val decl = type.declaration) {
+            is BuiltinIdlDeclaration -> when(decl.kind) {
                 WebIDLBuiltinKind.BOOLEAN -> "$content == 1"
-
-                WebIDLBuiltinKind.CHAR,
-                WebIDLBuiltinKind.UNSIGNED_INT,
-                WebIDLBuiltinKind.FLOAT,
-                WebIDLBuiltinKind.UNRESTRICTED_FLOAT,
-                WebIDLBuiltinKind.DOUBLE,
-                WebIDLBuiltinKind.UNRESTRICTED_DOUBLE,
-                WebIDLBuiltinKind.BYTE,
-                WebIDLBuiltinKind.UNSIGNED_BYTE,
-                WebIDLBuiltinKind.SHORT,
-                WebIDLBuiltinKind.UNSIGNED_SHORT,
-                WebIDLBuiltinKind.INT -> content
-
                 WebIDLBuiltinKind.LONG,
-                WebIDLBuiltinKind.UNSIGNED_LONG -> "_${moduleName}UnwrapLong($content)"
-
-                WebIDLBuiltinKind.STRING -> "asString($content, $dealloc)"
+                WebIDLBuiltinKind.UNSIGNED_LONG -> "unwrapLong(_module, $content)"
+                WebIDLBuiltinKind.STRING ->
+                    if(useArena) "arena.unwrapCStr($content, $dealloc)"
+                    else "unwrapCStr(_module, $content, $dealloc)"
+                else -> content
             }
+            is ResolvedIdlCallbackFunction ->
+                if(useArena) "arena.unwrapCallback<${decl.name}>($content, $dealloc)"
+                else "unwrapCallback${decl.name}>(_module, $content, $dealloc)"
+            else -> throw UnsupportedOperationException(type.toString())
         }
-    }
-
-    private fun castToJS(type: ResolvedIdlType, content: String): String = when(type) {
-        is ResolvedIdlType.Union -> throw UnsupportedOperationException()
-        is ResolvedIdlType.Void -> content
-        is ResolvedIdlType.Default -> when(val decl = type.declaration) {
-            is ResolvedIdlCallbackFunction -> content
-            is ResolvedIdlDictionary -> TODO()
-            is ResolvedIdlEnum -> TODO()
-            is ResolvedIdlInterface -> TODO()
-            is ResolvedIdlNamespace -> TODO()
-            is ResolvedIdlTypeDef -> TODO()
-            is BuiltinIdlDeclaration -> when(decl.kind) {
-                WebIDLBuiltinKind.ANY -> TODO()
-                WebIDLBuiltinKind.OBJECT -> TODO()
-                WebIDLBuiltinKind.VOID -> TODO()
-                WebIDLBuiltinKind.LIST -> TODO()
-                WebIDLBuiltinKind.MUTABLE_LIST -> TODO()
-                WebIDLBuiltinKind.MAP -> TODO()
-                WebIDLBuiltinKind.PROMISE -> TODO()
-                WebIDLBuiltinKind.USV_STRING -> TODO()
-                WebIDLBuiltinKind.BIG_INT -> TODO()
-                WebIDLBuiltinKind.BYTE_SEQUENCE -> TODO()
-
-                WebIDLBuiltinKind.BOOLEAN,
-                WebIDLBuiltinKind.CHAR,
-                WebIDLBuiltinKind.UNSIGNED_INT,
-                WebIDLBuiltinKind.FLOAT,
-                WebIDLBuiltinKind.UNRESTRICTED_FLOAT,
-                WebIDLBuiltinKind.DOUBLE,
-                WebIDLBuiltinKind.UNRESTRICTED_DOUBLE,
-                WebIDLBuiltinKind.BYTE,
-                WebIDLBuiltinKind.UNSIGNED_BYTE,
-                WebIDLBuiltinKind.SHORT,
-                WebIDLBuiltinKind.UNSIGNED_SHORT,
-                WebIDLBuiltinKind.INT -> content
-
-                WebIDLBuiltinKind.LONG,
-                WebIDLBuiltinKind.UNSIGNED_LONG -> "_${moduleName}WrapLong($content)"
-
-                WebIDLBuiltinKind.STRING -> "$content.cstr()"
-            }
-        }
+        else -> throw UnsupportedOperationException(type.toString())
     }
 }

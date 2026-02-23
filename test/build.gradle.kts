@@ -77,13 +77,11 @@ kotlin {
 
     sourceSets.commonMain.dependencies {
         implementation(libs.kotlinx.coroutines)
+        implementation(project(":native-kt-runtime"))
     }
     sourceSets.commonTest.dependencies {
         implementation(kotlin("test"))
         implementation(libs.kotlinx.coroutines.test)
-    }
-    sourceSets.jvmMain.dependencies {
-        implementation(project(":native-kt-runtime"))
     }
     sourceSets.getByName("androidDeviceTest").dependencies {
         implementation(kotlin("test"))
