@@ -16,7 +16,6 @@ version = projectDir.parentFile.resolve("VERSION").readText()
 native {
     ndkVersion = "29.0.14206865"
     useJVMCI = true
-    useForeignApi = false
 
     create("test", Multiplatform::class)
 }
