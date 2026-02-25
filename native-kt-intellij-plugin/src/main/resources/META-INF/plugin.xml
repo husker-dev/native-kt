@@ -1,0 +1,29 @@
+<idea-plugin>
+    <id>com.huskerdev.native-kt</id>
+    <name>Native-Kt Utils</name>
+    <vendor email="redfancoestar@gmail.com" url="https://www.huskerdev.com">husker-dev</vendor>
+    <description>Syntax highlight for native-kt gradle plugin</description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>org.jetbrains.kotlin</depends>
+
+    <!-- K2 mode compatibility -->
+    <extensions defaultExtensionNs="org.jetbrains.kotlin">
+        <supportsKotlinPluginMode supportsK2="true" />
+    </extensions>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <fileType
+                name="NDL File"
+                implementationClass="com.huskerdev.nativekt.intellij.NdlFileType"
+                fieldName="INSTANCE"
+                language="NDL"
+                extensions="ndl"/>
+<!--        <lang.parserDefinition-->
+<!--                language="NDL"-->
+<!--                implementationClass="com.huskerdev.nativekt.intellij.parser.NdlParserDefinition"/>-->
+        <lang.syntaxHighlighterFactory
+                language="NDL"
+                implementationClass="com.huskerdev.nativekt.intellij.highlight.NdlSyntaxHighlighterFactory"/>
+    </extensions>
+</idea-plugin>
