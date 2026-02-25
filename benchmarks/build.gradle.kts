@@ -1,5 +1,3 @@
-import com.huskerdev.nativekt.plugin.Multiplatform
-
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlinx.benchmark)
@@ -11,15 +9,6 @@ plugins {
 group = "com.huskerdev"
 version = projectDir.parentFile.resolve("VERSION").readText()
 
-native {
-    useCoroutines = false
-    useJVMCI = true
-
-    create("jniBindings", Multiplatform::class)
-    create("foreignBindings", Multiplatform::class)
-    create("jvmciBindings", Multiplatform::class)
-}
-
 kotlin {
     jvm()
 
@@ -27,6 +16,15 @@ kotlin {
         implementation(libs.kotlinx.benchmark)
         implementation(project(":native-kt-runtime"))
     }
+}
+
+native {
+    useCoroutines = false
+    useJVMCI = true
+
+    create("jniBindings")
+    create("foreignBindings")
+    create("jvmciBindings")
 }
 
 benchmark {

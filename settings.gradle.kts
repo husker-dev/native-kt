@@ -9,7 +9,7 @@ include("example-glfw")
 include("benchmarks")
 
 pluginManagement {
-    includeBuild("native-kt-plugin")
+    includeBuild("native-kt-gradle-plugin")
 
     repositories {
         gradlePluginPortal()

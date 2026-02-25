@@ -1,6 +1,5 @@
 @file:OptIn(ExperimentalKotlinGradlePluginApi::class)
 
-import com.huskerdev.nativekt.plugin.Multiplatform
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 
 plugins {
@@ -12,14 +11,6 @@ plugins {
 
 group = "com.huskerdev"
 version = projectDir.parentFile.resolve("VERSION").readText()
-
-native {
-    useCoroutines = false
-    useUniversalMacOSLib = false
-    useJVMCI = true
-
-    create("glfwBindings", Multiplatform::class)
-}
 
 kotlin {
     jvm {
@@ -47,4 +38,12 @@ kotlin {
     sourceSets.commonMain.dependencies {
         implementation(project(":native-kt-runtime"))
     }
+}
+
+native {
+    useCoroutines = false
+    useUniversalMacOSLib = false
+    useJVMCI = true
+
+    create("glfwBindings")
 }

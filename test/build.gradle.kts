@@ -13,13 +13,6 @@ plugins {
 group = "com.huskerdev"
 version = projectDir.parentFile.resolve("VERSION").readText()
 
-native {
-    ndkVersion = "29.0.14206865"
-    useJVMCI = true
-
-    create("test", Multiplatform::class)
-}
-
 kotlin {
     jvm {
         compilations.configureEach {
@@ -97,6 +90,14 @@ kotlin {
         implementation(libs.androidx.test.runner)
     }
 }
+
+native {
+    ndkVersion = "29.0.14206865"
+    useJVMCI = true
+
+    create("test")
+}
+
 
 tasks.withType<Test>().configureEach {
     if (name.contains("jvm", ignoreCase = true)) {
