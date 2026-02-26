@@ -35,3 +35,13 @@ gradlePlugin {
         }
     }
 }
+
+project.afterEvaluate {
+    file("src/main/kotlin/com/huskerdev/nativekt/plugin/NativeKtInfo.kt").writeText("""
+        package com.huskerdev.nativekt.plugin
+        
+        object NativeKtInfo {
+            const val VERSION = "$version"
+        }
+    """.trimIndent())
+}

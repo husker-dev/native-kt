@@ -2,12 +2,17 @@ package com.huskerdev.nativekt.plugin
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.kotlin.dsl.the
+import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import java.io.File
 
 @Suppress("unused")
 class NativeKtPlugin: Plugin<Project> {
     lateinit var project: Project
     lateinit var extension: NativeKtExtension
+
+    val kotlin: KotlinMultiplatformExtension
+        get() = project.the<KotlinMultiplatformExtension>()
 
     override fun apply(project: Project) {
         this.project = project
@@ -18,7 +23,7 @@ class NativeKtPlugin: Plugin<Project> {
         val srcGenDir = File(buildDir, "generated/natives")
 
         project.plugins.withId("com.android.kotlin.multiplatform.library") {
-            initAndroid(cmakeDir, srcGenDir)
+            configureAndroid(cmakeDir, srcGenDir)
         }
 
         project.plugins.withId("org.jetbrains.kotlin.multiplatform") {

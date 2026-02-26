@@ -22,7 +22,7 @@ import org.gradle.kotlin.dsl.the
 import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
 import java.io.File
 
-internal fun configureAndroid(
+internal fun configureAndroidSourceSet(
     project: Project,
     extension: NativeKtExtension,
     androidExtension: KotlinMultiplatformAndroidLibraryExtension,

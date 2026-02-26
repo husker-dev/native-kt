@@ -55,11 +55,10 @@ fun NativeKtPlugin.configureKotlin(
     }
 }
 
-fun NativeKtPlugin.initAndroid(
+fun NativeKtPlugin.configureAndroid(
     cmakeDir: File,
     srcGenDir: File
 ) {
-    val kotlin = project.the<KotlinMultiplatformExtension>()
     val androidComponents = project.the<KotlinMultiplatformAndroidComponentsExtension>()
 
     androidComponents.finalizeDsl { androidExtension ->
@@ -76,15 +75,14 @@ fun NativeKtPlugin.initAndroid(
                     module.getActiveSourceSets(kotlin)
                         .filter { getTargetType(kotlin, it) == TargetType.ANDROID }
                         .forEach {
-                            configureAndroid(project, extension, androidExtension, idl, module, it, srcGenModuleDir, cmakeModuleDir, true)
+                            configureAndroidSourceSet(project, extension, androidExtension, idl, module, it, srcGenModuleDir, cmakeModuleDir, true)
                         }
                 }
                 is SinglePlatform -> {
-                    val sourceSet = kotlin.sourceSets.findByName(module.targetSourceSet)
-                        ?: throw Exception("Source set '${module.targetSourceSet}' was not found")
+                    val sourceSet = kotlin.findSourceSet(module.targetSourceSet)
 
                     if(getTargetType(kotlin, sourceSet) == TargetType.ANDROID)
-                        configureAndroid(project, extension, androidExtension, idl, module, sourceSet, srcGenModuleDir, cmakeModuleDir, false)
+                        configureAndroidSourceSet(project, extension, androidExtension, idl, module, sourceSet, srcGenModuleDir, cmakeModuleDir, false)
                 }
             }
         }
@@ -97,11 +95,7 @@ private fun NativeKtPlugin.configureSinglePlatform(
     srcGenDir: File,
     module: SinglePlatform
 ){
-    val kotlin = project.the<KotlinMultiplatformExtension>()
-
-    val sourceSet = kotlin.sourceSets.findByName(module.targetSourceSet)
-        ?: throw Exception("Source set '${module.targetSourceSet}' was not found")
-
+    val sourceSet = kotlin.findSourceSet(module.targetSourceSet)
     configureKotlinSourceSet(kotlin, idl, cmakeRootDir, srcGenDir, module, sourceSet, false)
 }
 
@@ -113,6 +107,8 @@ private fun NativeKtPlugin.configureMultiplatform(
 ){
     val kotlin = project.the<KotlinMultiplatformExtension>()
 
+    val commonSourceSet = kotlin.sourceSets.findByName(module.commonSourceSet)
+        ?: throw Exception("Source set '${module.commonSourceSet}' was not found")
     val targetSourceSets = module.getActiveSourceSets(kotlin)
     val stubSourceSets = module.getActiveStubs(kotlin)
 
@@ -120,10 +116,10 @@ private fun NativeKtPlugin.configureMultiplatform(
         configuration = extension,
         idl = idl,
         module = module,
-        sourceSet = kotlin.sourceSets.findByName(module.commonSourceSet)
-            ?: throw Exception("Source set '${module.commonSourceSet}' was not found"),
+        sourceSet = commonSourceSet,
         srcGenDir = srcGenDir
     )
+    applyRuntime(extension, commonSourceSet)
 
     targetSourceSets.forEach {
         configureKotlinSourceSet(kotlin, idl, cmakeRootDir, srcGenDir, module, it, true)
@@ -146,13 +142,13 @@ private fun NativeKtPlugin.configureKotlinSourceSet(
     TargetType.JVM -> configureJvm(project, extension, idl, module, sourceSet, srcGenDir, cmakeRootDir, expectActual)
     TargetType.JS -> configureJs(project, extension, idl, module, sourceSet, srcGenDir, cmakeRootDir, expectActual)
     TargetType.WASM -> { }
+    TargetType.ANDROID -> { }
     else -> configureNative(project, extension, idl, module, sourceSet, targetType, srcGenDir, cmakeRootDir, expectActual)
 }
 
-private fun Multiplatform.getActiveSourceSets(kotlin: KotlinMultiplatformExtension): Set<KotlinSourceSet> {
+private fun Multiplatform.getActiveSourceSets(kotlin: KotlinMultiplatformExtension): List<KotlinSourceSet> {
     return targetSourceSets
         .mapNotNull { kotlin.sourceSets.findByName(it) }
-        .toSet()
 }
 
 private fun Multiplatform.getActiveStubs(kotlin: KotlinMultiplatformExtension): List<KotlinSourceSet> {
@@ -209,3 +205,15 @@ private fun getTargetType(
     }
 }
 
+private fun KotlinMultiplatformExtension.findSourceSet(name: String): KotlinSourceSet {
+    return sourceSets.findByName(name)
+        ?: throw Exception("Source set '$name:' was not found")
+}
+
+private fun applyRuntime(extension: NativeKtExtension, sourceSet: KotlinSourceSet) {
+    if(extension.applyRuntime) {
+        sourceSet.dependencies {
+            implementation("com.huskerdev:native-kt-runtime:${NativeKtInfo.VERSION}")
+        }
+    }
+}

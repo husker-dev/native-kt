@@ -30,6 +30,8 @@ open class NativeKtExtension @Inject constructor(
 
     var ndkVersion: String? = null
     val androidTargets = arrayListOf("arm64-v8a", "armeabi-v7a", "x86_64")
+
+    val applyRuntime = true
 }
 
 sealed class NativeModule @Inject constructor(
