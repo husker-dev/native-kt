@@ -30,7 +30,7 @@ fun NativeKtPlugin.configureKotlin(
         if(!module.idlFile(project).exists()) {
             project.logger.error("""
                 Native module '${module.name}' is not loaded:
-                  'api.idl' file not found.
+                  'api.ndl' file not found.
                 
                 Possible solution: 
                   run './gradlew :${initTask.name}'

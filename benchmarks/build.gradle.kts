@@ -20,7 +20,6 @@ kotlin {
 
 native {
     useCoroutines = false
-    useJVMCI = true
 
     create("jniBindings")
     create("foreignBindings")

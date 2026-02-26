@@ -3,8 +3,9 @@ package com.huskerdev.nativekt.utils
 import com.huskerdev.nativekt.TargetType
 import com.huskerdev.nativekt.plugin.NativeModule
 import com.huskerdev.webidl.WebIDL
+import com.huskerdev.webidl.WebIDLEnv
 import com.huskerdev.webidl.jvm.iterator
-import com.huskerdev.webidl.resolver.IdlResolver
+import com.huskerdev.webidl.resolver.WebIDLBuiltinKind
 import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.api.Project
 import java.io.File
@@ -15,10 +16,25 @@ fun NativeModule.dir(project: Project): File =
         ?: project.file("natives/$name")
 
 fun NativeModule.idlFile(project: Project): File =
-    File(dir(project), "api.idl")
+    File(dir(project), "api.ndl")
 
-fun NativeModule.idl(project: Project): IdlResolver =
-    WebIDL.resolve(idlFile(project).reader().iterator())
+fun NativeModule.idl(project: Project) = WebIDL.resolve(
+    iterable = idlFile(project).reader().iterator(),
+    env = object: WebIDLEnv {
+        override val builtinTypes = hashMapOf(
+            "void" to WebIDLBuiltinKind.VOID,
+            "char" to WebIDLBuiltinKind.CHAR,
+            "boolean" to WebIDLBuiltinKind.BOOLEAN,
+            "byte" to WebIDLBuiltinKind.BYTE,
+            "short" to WebIDLBuiltinKind.SHORT,
+            "int" to WebIDLBuiltinKind.INT,
+            "long" to WebIDLBuiltinKind.LONG,
+            "float" to WebIDLBuiltinKind.FLOAT,
+            "double" to WebIDLBuiltinKind.DOUBLE,
+            "string" to WebIDLBuiltinKind.STRING,
+        )
+    }
+)
 
 fun Project.exec(command: String, workingDir: File? = null, silent: Boolean = false): String {
     return project.providers.exec {

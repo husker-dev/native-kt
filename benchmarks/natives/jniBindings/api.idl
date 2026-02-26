@@ -1,9 +1,0 @@
-
-namespace global {
-    long callJni();
-    long callJniAdd(long a, long b);
-    long callJniString(DOMString arg);
-
-    [Critical] long callCriticalJni();
-    [Critical] long callCriticalJniString(DOMString arg);
-};

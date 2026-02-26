@@ -1,6 +1,0 @@
-
-namespace global {
-    [Critical] long callCriticalJVMCI();
-    [Critical] long callCriticalJVMCIAdd(long a, long b);
-    [Critical] long callCriticalJVMCIString(DOMString arg);
-};

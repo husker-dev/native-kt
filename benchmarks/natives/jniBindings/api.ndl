@@ -1,0 +1,9 @@
+
+namespace global {
+    int callJni();
+    int callJniAdd(int a, int b);
+    int callJniString(string arg);
+
+    [Critical] int callCriticalJni();
+    [Critical] int callCriticalJniString(string arg);
+};

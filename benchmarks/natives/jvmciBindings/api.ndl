@@ -1,0 +1,6 @@
+
+namespace global {
+    [Critical] int callCriticalJVMCI();
+    [Critical] int callCriticalJVMCIAdd(int a, int b);
+    [Critical] int callCriticalJVMCIString(string arg);
+};

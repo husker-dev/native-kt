@@ -24,7 +24,7 @@ open class NativeKtExtension @Inject constructor(
     var useCoroutines = true
 
     var useForeignApi = true
-    var useJVMCI = false
+    var useJVMCI = true
 
     var useUniversalMacOSLib = false
 

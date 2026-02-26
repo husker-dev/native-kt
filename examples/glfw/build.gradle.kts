@@ -4,13 +4,11 @@ import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
-
     id("com.huskerdev.native-kt")
-    id("maven-publish")
 }
 
 group = "com.huskerdev"
-version = projectDir.parentFile.resolve("VERSION").readText()
+version = "1.0.0"
 
 kotlin {
     jvm {
@@ -43,7 +41,6 @@ kotlin {
 native {
     useCoroutines = false
     useUniversalMacOSLib = false
-    useJVMCI = true
 
     create("glfwBindings")
 }

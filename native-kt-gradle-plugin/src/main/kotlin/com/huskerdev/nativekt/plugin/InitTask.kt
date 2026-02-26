@@ -31,7 +31,7 @@ open class InitTask @Inject constructor(
                 
                 target_include_directories(${PROJECT_NAME} PRIVATE include)
             """.trimIndent())
-            File(dir, "api.idl").writeText("""
+            File(dir, "api.ndl").writeText("""
                 
                 namespace global {
                     void helloWorld();

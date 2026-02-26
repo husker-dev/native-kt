@@ -1,4 +1,3 @@
-import com.huskerdev.nativekt.plugin.*
 import org.apache.tools.ant.taskdefs.condition.Os
 import org.jetbrains.kotlin.gradle.dsl.*
 
@@ -93,7 +92,6 @@ kotlin {
 
 native {
     ndkVersion = "29.0.14206865"
-    useJVMCI = true
 
     create("test")
 }

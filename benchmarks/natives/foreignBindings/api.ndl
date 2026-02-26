@@ -1,0 +1,10 @@
+
+namespace global {
+    int callForeign();
+    int callForeignAdd(int a, int b);
+    int callForeignString(string arg);
+
+    [Critical] int callCriticalForeign();
+    [Critical] int callCriticalForeignAdd(int a, int b);
+    [Critical] int callCriticalForeignString(string arg);
+};

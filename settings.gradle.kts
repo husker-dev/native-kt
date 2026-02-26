@@ -5,8 +5,8 @@ include("native-kt-runtime")
 include("native-kt-runtime-jvm")
 include("native-kt-intellij-plugin")
 
-include("test")
-include("example-glfw")
+include("tests")
+include("examples:glfw")
 include("benchmarks")
 
 pluginManagement {
