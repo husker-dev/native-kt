@@ -5,10 +5,10 @@ package com.huskerdev.nativekt.kn
 import kotlinx.cinterop.*
 import platform.posix.*
 
+expect fun malloc(size: UInt): COpaquePointer
+
 expect inline fun <reified T: CVariable> allocStruct(): CPointer<T>
 
-fun String.allocCStr(): CPointer<ByteVar> =
-     strdup(this)!!
 
 fun CPointer<ByteVar>.unwrapCStr(dealloc: Boolean): String {
     val result = toKString()

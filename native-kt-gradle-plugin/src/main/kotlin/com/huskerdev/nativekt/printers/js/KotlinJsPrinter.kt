@@ -1,18 +1,7 @@
 package com.huskerdev.nativekt.printers.js
 
-import com.huskerdev.nativekt.utils.asyncFunctionName
-import com.huskerdev.nativekt.utils.globalOperators
-import com.huskerdev.nativekt.utils.isDealloc
-import com.huskerdev.nativekt.utils.isString
-import com.huskerdev.nativekt.utils.printFunctionHeader
-import com.huskerdev.nativekt.utils.syncFunctionName
-import com.huskerdev.nativekt.utils.toEmscriptenDesc
-import com.huskerdev.webidl.resolver.BuiltinIdlDeclaration
-import com.huskerdev.webidl.resolver.IdlResolver
-import com.huskerdev.webidl.resolver.ResolvedIdlCallbackFunction
-import com.huskerdev.webidl.resolver.ResolvedIdlOperation
-import com.huskerdev.webidl.resolver.ResolvedIdlType
-import com.huskerdev.webidl.resolver.WebIDLBuiltinKind
+import com.huskerdev.nativekt.utils.*
+import com.huskerdev.webidl.resolver.*
 import java.io.File
 
 class KotlinJsPrinter(
@@ -101,7 +90,9 @@ class KotlinJsPrinter(
                     _freeCallback = createCallbackFreeFunction(_module)
                     
             """.trimIndent())
-            idl.callbacks.values.forEach { printCallbackInvoke(builder, it) }
+            idl.callbacks.values.forEachIndexed { index, callback ->
+                printCallbackInvoke(builder, callback, index)
+            }
             builder.append("}\n")
 
             // wrap
@@ -125,16 +116,14 @@ class KotlinJsPrinter(
         append(", _freeCallback)\n")
     }
 
-    private fun printCallbackInvoke(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
+    private fun printCallbackInvoke(builder: StringBuilder, callback: ResolvedIdlCallbackFunction, index: Int) = builder.apply {
         val args = listOf("_c") + callback.args.map { it.name }
         val castedArgs = callback.args.map { castToJS(it.type, it.name, it.isDealloc(), false) }
-        val argTypes = listOf(callback.type.toEmscriptenDesc(), "p") +
-                callback.args.map { it.type.toEmscriptenDesc() }
 
         // header
         append("\n\t_invoke")
         append(callback.name)
-        append(" = _module.addFunction({ ")
+        append(" = _module._setCallback(${index}, { ")
         args.joinTo(builder)
         append(" ->\n\t\t")
 
@@ -144,9 +133,7 @@ class KotlinJsPrinter(
         append("\n\t")
 
         // footer
-        append("}, \"")
-        argTypes.joinTo(builder, separator = "")
-        append("\")\n")
+        append("})\n")
     }
 
     private fun printFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
@@ -163,7 +150,7 @@ class KotlinJsPrinter(
         val args = function.args.joinToString {
             castToNative(it.type, it.name, it.isDealloc(), useArena)
         }
-        val func = "_module.__${function.name}"
+        val func = "_module.${function.name}"
         append(castToJS(function.type, "$func($args)", function.isDealloc(), useArena))
 
         if(useArena)
@@ -176,8 +163,6 @@ class KotlinJsPrinter(
         is ResolvedIdlType.Void -> content
         is ResolvedIdlType.Default -> when(val decl = type.declaration) {
             is BuiltinIdlDeclaration -> when(decl.kind) {
-                WebIDLBuiltinKind.LONG,
-                WebIDLBuiltinKind.UNSIGNED_LONG -> "wrapLong(_module, $content)"
                 WebIDLBuiltinKind.STRING ->
                     if(useArena) "arena.allocCStr($content)"
                     else "allocCStr(_module, $content)"
@@ -196,8 +181,6 @@ class KotlinJsPrinter(
         is ResolvedIdlType.Default -> when(val decl = type.declaration) {
             is BuiltinIdlDeclaration -> when(decl.kind) {
                 WebIDLBuiltinKind.BOOLEAN -> "$content == 1"
-                WebIDLBuiltinKind.LONG,
-                WebIDLBuiltinKind.UNSIGNED_LONG -> "unwrapLong(_module, $content)"
                 WebIDLBuiltinKind.STRING ->
                     if(useArena) "arena.unwrapCStr($content, $dealloc)"
                     else "unwrapCStr(_module, $content, $dealloc)"

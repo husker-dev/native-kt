@@ -87,7 +87,7 @@ class CJniPrinter(
 
         append(") {\n")
 
-        val useArena = function.args.any { it.type.isString() || it.isDealloc() }
+        val useArena = function.args.any { it.type.isString() || it.type.isArray() || it.isDealloc() }
 
         if(useArena) {
             append("\tArena arena;\n")
@@ -116,7 +116,39 @@ class CJniPrinter(
 
         append("}\n")
     }
+}
 
+internal fun castJniToJava(type: ResolvedIdlType, content: String, dealloc: Boolean, useArena: Boolean): String {
+    return when(type) {
+        is ResolvedIdlType.Void -> content
+        is ResolvedIdlType.Default -> when(val decl = type.declaration) {
+            is BuiltinIdlDeclaration -> when(decl.kind) {
+                WebIDLBuiltinKind.STRING ->
+                    if(useArena) "Arena__wrapString(&arena, $content, $dealloc)"
+                    else "JNI_toJvmString(env, $content, $dealloc)"
+                else -> content
+            }
+            is ResolvedIdlCallbackFunction -> "JNI_toJvmCallback(env, (JNI_Callback*)$content, $dealloc)"
+            else -> throw UnsupportedOperationException(type.toString())
+        }
+        else -> throw UnsupportedOperationException(type.toString())
+    }
+}
 
-
+internal fun castJavaToJNI(type: ResolvedIdlType, content: String, critical: Boolean, dealloc: Boolean, useArena: Boolean): String {
+    return when(type) {
+        is ResolvedIdlType.Default -> when(val decl = type.declaration) {
+            is BuiltinIdlDeclaration -> when(decl.kind) {
+                WebIDLBuiltinKind.STRING ->
+                    if(useArena) "Arena__unwrapString${if(critical) "Critical" else ""}(&arena, $content)"
+                    else "JNI_toNativeString(env, $content)"
+                else -> content
+            }
+            is ResolvedIdlCallbackFunction ->
+                if(dealloc) "(${decl.name}*)Arena__callback(&arena, (JNI_Callback*)JNI_wrap${decl.name}(env, $content))"
+                else "JNI_wrap${decl.name}(env, $content)"
+            else -> throw UnsupportedOperationException(type.toString())
+        }
+        else -> throw UnsupportedOperationException(type.toString())
+    }
 }

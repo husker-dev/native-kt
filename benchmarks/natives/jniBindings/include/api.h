@@ -16,15 +16,64 @@
 extern "C" {
 #endif
 
-/* =================== *\
-        Functions
-\* =================== */
+// ╔════════════════╗
+// ║     stdlib     ║
+// ╚════════════════╝
 
-int32_t callJni();
-int32_t callJniAdd(int32_t a, int32_t b);
-int32_t callJniString(const char* arg);
-int32_t callCriticalJni();
-int32_t callCriticalJniString(const char* arg);
+typedef int32_t  KInt;
+typedef int64_t  KLong;
+typedef float    KFloat;
+typedef double   KDouble;
+typedef int8_t   KByte;
+typedef int16_t  KShort;
+typedef bool     KBoolean;
+typedef uint16_t KChar;
+
+typedef struct KString {
+    const char* data;
+    KInt length;
+} KString;
+
+inline KString makeKString(const char* data, const KInt length) {
+    return (KString) { data, length };
+}
+
+#define KArrayDef(Name, Type)	                                \
+typedef struct Name {			                                \
+    const Type elements;				                        \
+    const KInt size;				                            \
+} Name;                                                         \
+                                                                \
+inline Name make##Name(const Type elements, const KInt size) {  \
+    return (Name){ elements, size };                            \
+}
+KArrayDef(KCharArray,	 KChar*)
+KArrayDef(KBooleanArray, KBoolean*)
+KArrayDef(KByteArray,	 KByte*)
+KArrayDef(KShortArray,	 KShort*)
+KArrayDef(KIntArray,	 KInt*)
+KArrayDef(KLongArray,	 KLong*)
+KArrayDef(KFloatArray,	 KFloat*)
+KArrayDef(KDoubleArray,  KDouble*)
+KArrayDef(KObjectArray,  void*)
+#undef KArrayDef
+
+#define KCallbackDef(Name, Type, ...)		\
+struct Name {								\
+    void *m;								\
+    Type (*invoke)(Name* _, ##__VA_ARGS__);	\
+    void (*free)(Name* _);					\
+};
+
+// ╔═══════════════════╗
+// ║     Functions     ║
+// ╚═══════════════════╝
+
+KInt callJni();
+KInt callJniAdd(KInt a, KInt b);
+KInt callJniString(KString arg);
+KInt callCriticalJni();
+KInt callCriticalJniString(KString arg);
 
 #ifdef __cplusplus
 }

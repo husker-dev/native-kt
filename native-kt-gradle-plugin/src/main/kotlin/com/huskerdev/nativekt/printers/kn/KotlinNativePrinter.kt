@@ -25,6 +25,7 @@ class KotlinNativePrinter(
             
             import kotlinx.cinterop.*
             import com.huskerdev.nativekt.kn.*
+            import platform.posix.strdup
             
             ${actual}val isLibTestLoaded: Boolean = true
             
@@ -35,6 +36,27 @@ class KotlinNativePrinter(
         """.trimIndent())
         if(useCoroutines)
             builder.append("${actual}suspend fun ${asyncFunctionName(moduleName)}() = Unit\n")
+
+        builder.append("""
+            
+            private fun String.makeKString(arena: NativeArena) = cValue<$cinteropPath.KString> {
+                data = this@makeKString.cstr.getPointer(arena.scope)
+                length = this@makeKString.length
+                arena.ptr(data!!)
+            }
+            
+            private fun String.makeKString() = cValue<$cinteropPath.KString> {
+                data = strdup(this@makeKString)
+                length = this@makeKString.length
+            }
+            
+            private fun CValue<$cinteropPath.KString>.unwrapKString(dealloc: Boolean): String =
+                useContents { data }!!.unwrapCStr(dealloc)
+            
+            private fun CValue<$cinteropPath.KString>.unwrapKString(arena: NativeArena, dealloc: Boolean): String =
+                arena.unwrapCStr(useContents { data }!!, dealloc)
+            
+        """.trimIndent())
 
         idl.callbacks.values.forEach { printCallbackWrap(builder, it) }
 
@@ -112,8 +134,8 @@ class KotlinNativePrinter(
             is BuiltinIdlDeclaration -> when(decl.kind) {
                 WebIDLBuiltinKind.CHAR -> "$content.toInt().toChar()"
                 WebIDLBuiltinKind.STRING ->
-                    if(useArena) "arena.unwrapCStr($content!!, $dealloc)"
-                    else "$content!!.unwrapCStr($dealloc)"
+                    if(useArena) "$content.unwrapKString(arena, $dealloc)"
+                    else "$content.unwrapKString($dealloc)"
                 else -> content
             }
             is ResolvedIdlCallbackFunction ->
@@ -129,8 +151,8 @@ class KotlinNativePrinter(
         is ResolvedIdlType.Default -> when(val decl = type.declaration) {
             is BuiltinIdlDeclaration -> when(decl.kind) {
                 WebIDLBuiltinKind.STRING ->
-                    if(useArena) "arena.allocCStr($content)"
-                    else "$content.allocCStr()"
+                    if(useArena) "$content.makeKString(arena)"
+                    else "$content.makeKString()"
                 WebIDLBuiltinKind.CHAR -> "$content.code.toUShort()"
                 else -> content
             }

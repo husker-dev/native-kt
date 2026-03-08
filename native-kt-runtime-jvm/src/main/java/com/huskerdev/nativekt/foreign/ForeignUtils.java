@@ -5,12 +5,23 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.invoke.VarHandle;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+
+import static java.lang.foreign.ValueLayout.JAVA_BYTE;
 
 @SuppressWarnings("unused")
 public class ForeignUtils {
 
     private static final Linker linker = Linker.nativeLinker();
+
+    public static final StructLayout STRING_STRUCT = MemoryLayout.structLayout(
+            ValueLayout.ADDRESS.withName("data"),
+            ValueLayout.JAVA_INT.withName("length"),
+            MemoryLayout.paddingLayout(4) // align to 16
+    );
+    public static final VarHandle stringDataVarHandle = STRING_STRUCT.varHandle(MemoryLayout.PathElement.groupElement("data"));
+    public static final VarHandle stringLengthVarHandle = STRING_STRUCT.varHandle(MemoryLayout.PathElement.groupElement("length"));
 
     public static final HashMap<Long, Object> callbacks = new HashMap<>();
 
@@ -44,7 +55,7 @@ public class ForeignUtils {
         return MemorySegment.ofArray(str.getBytes());
     }
 
-    public static MethodHandle lookup(String name, boolean isCritical, ValueLayout retType, ValueLayout... argTypes) {
+    public static MethodHandle lookup(String name, boolean isCritical, MemoryLayout retType, MemoryLayout... argTypes) {
         FunctionDescriptor function = retType == null ?
                 FunctionDescriptor.ofVoid(argTypes) :
                 FunctionDescriptor.of(retType, argTypes);
@@ -84,14 +95,38 @@ public class ForeignUtils {
         }
     }
 
+    public static void fillKString(MemorySegment struct, MemorySegment data, int length) {
+        stringDataVarHandle.set(struct, 0L, data);
+        stringLengthVarHandle.set(struct, 0L, length);
+    }
+
+    public static MemorySegment getKStringData(MemorySegment struct) {
+        return (MemorySegment)stringDataVarHandle.get(struct, 0L);
+    }
+
+    public static int getKStringLength(MemorySegment struct) {
+        return (int)stringLengthVarHandle.get(struct, 0L);
+    }
+
+    public static String fromKString(MemorySegment data, int length) {
+        final byte[] bytes = new byte[length];
+        MemorySegment.copy(data.reinterpret(length), JAVA_BYTE, 0, bytes, 0, length);
+        return new String(bytes, StandardCharsets.UTF_8);
+    }
+
     public static MemorySegment cstr(String of) {
-        return Arena.global().allocateFrom(of);
+        MemorySegment struct = Arena.ofAuto().allocate(STRING_STRUCT);
+        fillKString(struct, Arena.global().allocateFrom(of), of.length());
+        return struct;
     }
 
     public static String asString(MemorySegment segment, boolean dealloc) throws Throwable {
-        String result = segment.reinterpret(Long.MAX_VALUE).getString(0);
+        MemorySegment data = getKStringData(segment);
+        int length = getKStringLength(segment);
+
+        String result = fromKString(data, length);
         if(dealloc)
-            freeHandle.invoke(segment);
+            freeHandle.invoke(data);
         return result;
     }
 

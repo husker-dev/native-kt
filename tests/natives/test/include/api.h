@@ -16,98 +16,128 @@
 extern "C" {
 #endif
 
-#ifndef INVOKE
-#define INVOKE(callback, ...) callback->invoke(callback, ##__VA_ARGS__)
-#endif // INVOKE
+// ╔════════════════╗
+// ║     stdlib     ║
+// ╚════════════════╝
 
-#ifndef FREE_CALLBACK
-#define FREE_CALLBACK(callback) callback->free(callback)
-#endif // FREE_CALLBACK
+typedef int32_t  KInt;
+typedef int64_t  KLong;
+typedef float    KFloat;
+typedef double   KDouble;
+typedef int8_t   KByte;
+typedef int16_t  KShort;
+typedef bool     KBoolean;
+typedef uint16_t KChar;
+
+typedef struct KString {
+    const char* data;
+    KInt length;
+} KString;
+
+inline KString makeKString(const char* data, const KInt length) {
+    return (KString) { data, length };
+}
+
+#define KArrayDef(Name, Type)	                                \
+typedef struct Name {			                                \
+    const Type elements;				                        \
+    const KInt size;				                            \
+} Name;                                                         \
+                                                                \
+inline Name make##Name(const Type elements, const KInt size) {  \
+    return (Name){ elements, size };                            \
+}
+KArrayDef(KCharArray,	 KChar*)
+KArrayDef(KBooleanArray, KBoolean*)
+KArrayDef(KByteArray,	 KByte*)
+KArrayDef(KShortArray,	 KShort*)
+KArrayDef(KIntArray,	 KInt*)
+KArrayDef(KLongArray,	 KLong*)
+KArrayDef(KFloatArray,	 KFloat*)
+KArrayDef(KDoubleArray,  KDouble*)
+KArrayDef(KObjectArray,  void*)
+#undef KArrayDef
+
+#define KCallbackDef(Name, Type, ...)		\
+struct Name {								\
+    void *m;								\
+    Type (*invoke)(Name* _, ##__VA_ARGS__);	\
+    void (*free)(Name* _);					\
+};
+
+// ╔═══════════════════╗
+// ║     Type defs     ║
+// ╚═══════════════════╝
 
 typedef struct SimpleCallback SimpleCallback;
 typedef struct StringCallback StringCallback;
 typedef struct StringPingCallback StringPingCallback;
 typedef struct CallbackPingCallback CallbackPingCallback;
 
-/* =================== *\
-        Callbacks
-\* =================== */
+// ╔═══════════════════╗
+// ║     Functions     ║
+// ╚═══════════════════╝
 
-struct SimpleCallback {
-	void *m;
-	void (*invoke)(SimpleCallback* _, int32_t status);
-	void (*free)(SimpleCallback* _);
-};
-
-struct StringCallback {
-	void *m;
-	const char* (*invoke)(StringCallback* _);
-	void (*free)(StringCallback* _);
-};
-
-struct StringPingCallback {
-	void *m;
-	const char* (*invoke)(StringPingCallback* _, const char* text);
-	void (*free)(StringPingCallback* _);
-};
-
-struct CallbackPingCallback {
-	void *m;
-	SimpleCallback* (*invoke)(CallbackPingCallback* _, SimpleCallback* callback);
-	void (*free)(CallbackPingCallback* _);
-};
-
-/* =================== *\
-        Functions
-\* =================== */
-
-bool consume();
-bool consumeInt(int32_t arg);
-bool consumeLong(int64_t arg);
-bool consumeFloat(float arg);
-bool consumeDouble(double arg);
-bool consumeByte(int8_t arg);
-bool consumeBoolean(bool arg);
-bool consumeChar(uint16_t arg);
-bool consumeString(const char* arg);
+KBoolean consume();
+KBoolean consumeInt(KInt arg);
+KBoolean consumeLong(KLong arg);
+KBoolean consumeFloat(KFloat arg);
+KBoolean consumeDouble(KDouble arg);
+KBoolean consumeByte(KByte arg);
+KBoolean consumeBoolean(KBoolean arg);
+KBoolean consumeChar(KChar arg);
+KBoolean consumeString(KString arg);
 void get();
-int32_t getInt();
-int64_t getLong();
-float getFloat();
-double getDouble();
-int8_t getByte();
-bool getBoolean();
-uint16_t getChar();
-const char* getStringLiteral();
-const char* getString();
-int32_t pingInt(int32_t arg);
-int64_t pingLong(int64_t arg);
-float pingFloat(float arg);
-double pingDouble(double arg);
-int8_t pingByte(int8_t arg);
-bool pingBoolean(bool arg);
-uint16_t pingChar(uint16_t arg);
-const char* pingString(const char* arg);
+KInt getInt();
+KLong getLong();
+KFloat getFloat();
+KDouble getDouble();
+KByte getByte();
+KBoolean getBoolean();
+KChar getChar();
+KString getStringLiteral();
+KString getString();
+KInt pingInt(KInt arg);
+KLong pingLong(KLong arg);
+KFloat pingFloat(KFloat arg);
+KDouble pingDouble(KDouble arg);
+KByte pingByte(KByte arg);
+KBoolean pingBoolean(KBoolean arg);
+KChar pingChar(KChar arg);
+KString pingString(KString arg);
 void simpleCallback(SimpleCallback* callback);
 SimpleCallback* callbackReturn(SimpleCallback* callback);
-bool callbackReturnString(StringCallback* callback);
-bool callbackPingString(StringPingCallback* callback);
+KBoolean callbackReturnString(StringCallback* callback);
+KBoolean callbackPingString(StringPingCallback* callback);
 SimpleCallback* callbackPingCallback(CallbackPingCallback* callback, SimpleCallback* item);
-bool jvmci1();
-bool jvmci2(int32_t a1);
-bool jvmci3(int32_t a1, int32_t a2);
-bool jvmci4(int32_t a1, int32_t a2, int32_t a3, int32_t a4, int32_t a5, int32_t a6, int32_t a7, int32_t a8, int32_t a9);
-bool jvmci5(int32_t a1, int64_t a2, int32_t a3, int64_t a4, int32_t a5, int64_t a6, int32_t a7, int32_t a8, int64_t a9);
-bool jvmci6(float a1, float a2, float a3, float a4, float a5, float a6, float a7, float a8, float a9, int32_t a10, int32_t a11, int32_t a12, int32_t a13);
-bool jvmci7(float a1, double a2, float a3, double a4, float a5, double a6, float a7, float a8, double a9);
-bool jvmci8(int32_t a1, double a2, float a3, int64_t a4);
-bool jvmci9(int32_t a1, double a2, float a3, int64_t a4, int64_t a5, double a6, float a7, float a8, int32_t a9);
-bool jvmci10(const char* a1, double a2, float a3, int64_t a4, int64_t a5, double a6, const char* a7, float a8, int32_t a9);
-bool jvmci11(float a1, int32_t a2, float a3, int32_t a4, float a5, int32_t a6, float a7, int32_t a8, float a9, int32_t a10, float a11, int32_t a12, float a13, int32_t a14, float a15, int32_t a16, float a17);
-int32_t jvmci12();
-int64_t jvmci13();
-float jvmci14();
-double jvmci15();
+KBoolean jvmci1();
+KBoolean jvmci2(KInt a1);
+KBoolean jvmci3(KInt a1, KInt a2);
+KBoolean jvmci4(KInt a1, KInt a2, KInt a3, KInt a4, KInt a5, KInt a6, KInt a7, KInt a8, KInt a9);
+KBoolean jvmci5(KInt a1, KLong a2, KInt a3, KLong a4, KInt a5, KLong a6, KInt a7, KInt a8, KLong a9);
+KBoolean jvmci6(KFloat a1, KFloat a2, KFloat a3, KFloat a4, KFloat a5, KFloat a6, KFloat a7, KFloat a8, KFloat a9, KInt a10, KInt a11, KInt a12, KInt a13);
+KBoolean jvmci7(KFloat a1, KDouble a2, KFloat a3, KDouble a4, KFloat a5, KDouble a6, KFloat a7, KFloat a8, KDouble a9);
+KBoolean jvmci8(KInt a1, KDouble a2, KFloat a3, KLong a4);
+KBoolean jvmci9(KInt a1, KDouble a2, KFloat a3, KLong a4, KLong a5, KDouble a6, KFloat a7, KFloat a8, KInt a9);
+KBoolean jvmci10(KString a1, KDouble a2, KFloat a3, KLong a4, KLong a5, KDouble a6, KString a7, KFloat a8, KInt a9);
+KBoolean jvmci11(KFloat a1, KInt a2, KFloat a3, KInt a4, KFloat a5, KInt a6, KFloat a7, KInt a8, KFloat a9, KInt a10, KFloat a11, KInt a12, KFloat a13, KInt a14, KFloat a15, KInt a16, KFloat a17);
+KInt jvmci12();
+KLong jvmci13();
+KFloat jvmci14();
+KDouble jvmci15();
+
+// ╔═══════════════════╗
+// ║     Callbacks     ║
+// ╚═══════════════════╝
+// ┌───────┬─────────────────────┬────────────────┬─────────────────────────┐
+// │  ...  │ Name                │ Type           │ Args                    │
+// └───────┴─────────────────────┴────────────────┴─────────────────────────┘
+KCallbackDef(SimpleCallback,       void,            KInt status             )
+KCallbackDef(StringCallback,       KString                                  )
+KCallbackDef(StringPingCallback,   KString,         KString text            )
+KCallbackDef(CallbackPingCallback, SimpleCallback*, SimpleCallback* callback)
+#undef KCallbackDef
+
 
 #ifdef __cplusplus
 }

@@ -5,6 +5,7 @@ import com.huskerdev.webidl.parser.IdlExtendedAttribute
 import com.huskerdev.webidl.resolver.BuiltinIdlDeclaration
 import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlCallbackFunction
+import com.huskerdev.webidl.resolver.ResolvedIdlDeclaration
 import com.huskerdev.webidl.resolver.ResolvedIdlOperation
 import com.huskerdev.webidl.resolver.ResolvedIdlType
 import com.huskerdev.webidl.resolver.WebIDLBuiltinKind
@@ -22,6 +23,14 @@ fun ResolvedIdlType.toKotlinForeignType(): String {
     else toKotlinType()
 }
 
+private fun <T> ResolvedIdlType.Default.firstParam(block: (type: ResolvedIdlType.Default, declaration: ResolvedIdlDeclaration) -> T): T {
+    val param = parameters.firstOrNull()
+        ?: throw UnsupportedOperationException("Array without type")
+    val type = param as? ResolvedIdlType.Default
+        ?: throw UnsupportedOperationException("Unsupported array type: $param")
+    return block(type, type.declaration)
+}
+
 fun ResolvedIdlType.toKotlinType(
     stringAsBytes: Boolean = false,
     callbackAsAny: Boolean = false
@@ -31,19 +40,27 @@ fun ResolvedIdlType.toKotlinType(
         is BuiltinIdlDeclaration -> when((declaration as BuiltinIdlDeclaration).kind) {
             WebIDLBuiltinKind.CHAR -> "Char"
             WebIDLBuiltinKind.BOOLEAN -> "Boolean"
-            WebIDLBuiltinKind.BYTE,
-            WebIDLBuiltinKind.UNSIGNED_BYTE -> "Byte"
-            WebIDLBuiltinKind.SHORT,
-            WebIDLBuiltinKind.UNSIGNED_SHORT -> "Short"
-            WebIDLBuiltinKind.INT,
-            WebIDLBuiltinKind.UNSIGNED_INT -> "Int"
-            WebIDLBuiltinKind.LONG,
-            WebIDLBuiltinKind.UNSIGNED_LONG -> "Long"
-            WebIDLBuiltinKind.FLOAT,
-            WebIDLBuiltinKind.UNRESTRICTED_FLOAT -> "Float"
-            WebIDLBuiltinKind.DOUBLE,
-            WebIDLBuiltinKind.UNRESTRICTED_DOUBLE -> "Double"
+            WebIDLBuiltinKind.BYTE -> "Byte"
+            WebIDLBuiltinKind.SHORT -> "Short"
+            WebIDLBuiltinKind.INT -> "Int"
+            WebIDLBuiltinKind.LONG -> "Long"
+            WebIDLBuiltinKind.FLOAT -> "Float"
+            WebIDLBuiltinKind.DOUBLE -> "Double"
             WebIDLBuiltinKind.STRING -> if(stringAsBytes) "ByteArray" else "String"
+            WebIDLBuiltinKind.LIST -> firstParam { type, declaration ->
+                if(declaration is BuiltinIdlDeclaration) when(declaration.kind) {
+                    WebIDLBuiltinKind.CHAR -> "CharArray"
+                    WebIDLBuiltinKind.BOOLEAN -> "BooleanArray"
+                    WebIDLBuiltinKind.BYTE -> "ByteArray"
+                    WebIDLBuiltinKind.SHORT -> "ShortArray"
+                    WebIDLBuiltinKind.INT -> "IntArray"
+                    WebIDLBuiltinKind.LONG -> "LongArray"
+                    WebIDLBuiltinKind.FLOAT -> "FloatArray"
+                    WebIDLBuiltinKind.DOUBLE -> "DoubleArray"
+                    else -> "Array<${type.toKotlinType(stringAsBytes, callbackAsAny)}>"
+                } else
+                    "Array<${type.toKotlinType(stringAsBytes, callbackAsAny)}>"
+            }
             else -> throw UnsupportedOperationException(toString())
         }
         is ResolvedIdlCallbackFunction -> if(callbackAsAny) "Any" else declaration.name
@@ -54,30 +71,66 @@ fun ResolvedIdlType.toKotlinType(
 
 fun ResolvedIdlType.toCType(
     longPtr: Boolean = false,
-    constChar: Boolean = true
+    constChar: Boolean = true,
+    callbackAsPtr: Boolean = true
 ): String = when(this) {
     is ResolvedIdlType.Void -> "void"
     is ResolvedIdlType.Default -> when(declaration) {
         is BuiltinIdlDeclaration -> when((declaration as BuiltinIdlDeclaration).kind) {
             WebIDLBuiltinKind.CHAR -> "uint16_t"
             WebIDLBuiltinKind.BOOLEAN -> "bool"
-            WebIDLBuiltinKind.BYTE,
-            WebIDLBuiltinKind.UNSIGNED_BYTE -> "int8_t"
-            WebIDLBuiltinKind.SHORT,
-            WebIDLBuiltinKind.UNSIGNED_SHORT -> "int16_t"
-            WebIDLBuiltinKind.INT,
-            WebIDLBuiltinKind.UNSIGNED_INT -> "int32_t"
-            WebIDLBuiltinKind.LONG,
-            WebIDLBuiltinKind.UNSIGNED_LONG -> "int64_t${if(longPtr) "*" else ""}"
-            WebIDLBuiltinKind.FLOAT,
-            WebIDLBuiltinKind.UNRESTRICTED_FLOAT -> "float"
-            WebIDLBuiltinKind.DOUBLE,
-            WebIDLBuiltinKind.UNRESTRICTED_DOUBLE -> "double"
+            WebIDLBuiltinKind.BYTE -> "int8_t"
+            WebIDLBuiltinKind.SHORT -> "int16_t"
+            WebIDLBuiltinKind.INT -> "int32_t"
+            WebIDLBuiltinKind.LONG -> "int64_t${if(longPtr) "*" else ""}"
+            WebIDLBuiltinKind.FLOAT -> "float"
+            WebIDLBuiltinKind.DOUBLE -> "double"
             WebIDLBuiltinKind.STRING -> "${if(constChar) "const " else ""}char*"
+            WebIDLBuiltinKind.LIST -> firstParam { type, _ ->
+                "${type.toCType()}*"
+            }
             else -> throw UnsupportedOperationException(toString())
         }
-        is ResolvedIdlCallbackFunction -> "${declaration.name}*"
-        else -> declaration.name
+        is ResolvedIdlCallbackFunction ->
+            if(callbackAsPtr) "intptr_t"
+            else "${declaration.name}*"
+        else -> "${declaration.name}*"
+    }
+    else -> throw UnsupportedOperationException(toString())
+}
+
+fun ResolvedIdlType.toCDefType(
+    longPtr: Boolean = false
+): String = when(this) {
+    is ResolvedIdlType.Void -> "void"
+    is ResolvedIdlType.Default -> when(declaration) {
+        is BuiltinIdlDeclaration -> when((declaration as BuiltinIdlDeclaration).kind) {
+            WebIDLBuiltinKind.CHAR -> "KChar"
+            WebIDLBuiltinKind.BOOLEAN -> "KBoolean"
+            WebIDLBuiltinKind.BYTE -> "KByte"
+            WebIDLBuiltinKind.SHORT -> "KShort"
+            WebIDLBuiltinKind.INT -> "KInt"
+            WebIDLBuiltinKind.LONG -> "KLong${if (longPtr) "*" else ""}"
+            WebIDLBuiltinKind.FLOAT -> "KFloat"
+            WebIDLBuiltinKind.DOUBLE -> "KDouble"
+            WebIDLBuiltinKind.STRING -> "KString${if (longPtr) "*" else ""}"
+            WebIDLBuiltinKind.LIST -> firstParam { type, declaration ->
+                if(declaration is BuiltinIdlDeclaration) when(declaration.kind) {
+                    WebIDLBuiltinKind.CHAR -> "KCharArray"
+                    WebIDLBuiltinKind.BOOLEAN -> "KBooleanArray"
+                    WebIDLBuiltinKind.BYTE -> "KByteArray"
+                    WebIDLBuiltinKind.SHORT -> "KShortArray"
+                    WebIDLBuiltinKind.INT -> "KIntArray"
+                    WebIDLBuiltinKind.LONG -> "KLongArray"
+                    WebIDLBuiltinKind.FLOAT -> "KFloatArray"
+                    WebIDLBuiltinKind.DOUBLE -> "KDoubleArray"
+                    WebIDLBuiltinKind.STRING -> "KStringArray"
+                    else -> "${type.toCDefType()}*"
+                } else "${type.toCDefType()}*"
+            }
+            else -> throw UnsupportedOperationException(toString())
+        }
+        else -> "${declaration.name}*"
     }
     else -> throw UnsupportedOperationException(toString())
 }
@@ -89,19 +142,26 @@ fun ResolvedIdlType.toJNIType(): String = when(this) {
         is BuiltinIdlDeclaration -> when((declaration as BuiltinIdlDeclaration).kind) {
             WebIDLBuiltinKind.CHAR -> "jchar"
             WebIDLBuiltinKind.BOOLEAN -> "jboolean"
-            WebIDLBuiltinKind.BYTE,
-            WebIDLBuiltinKind.UNSIGNED_BYTE -> "jbyte"
-            WebIDLBuiltinKind.SHORT,
-            WebIDLBuiltinKind.UNSIGNED_SHORT -> "jshort"
-            WebIDLBuiltinKind.INT,
-            WebIDLBuiltinKind.UNSIGNED_INT -> "jint"
-            WebIDLBuiltinKind.LONG,
-            WebIDLBuiltinKind.UNSIGNED_LONG -> "jlong"
-            WebIDLBuiltinKind.FLOAT,
-            WebIDLBuiltinKind.UNRESTRICTED_FLOAT -> "jfloat"
-            WebIDLBuiltinKind.DOUBLE,
-            WebIDLBuiltinKind.UNRESTRICTED_DOUBLE -> "jdouble"
-            WebIDLBuiltinKind.STRING -> "jobject"
+            WebIDLBuiltinKind.BYTE -> "jbyte"
+            WebIDLBuiltinKind.SHORT -> "jshort"
+            WebIDLBuiltinKind.INT -> "jint"
+            WebIDLBuiltinKind.LONG -> "jlong"
+            WebIDLBuiltinKind.FLOAT -> "jfloat"
+            WebIDLBuiltinKind.DOUBLE -> "jdouble"
+            WebIDLBuiltinKind.STRING -> "jstring"
+            WebIDLBuiltinKind.LIST -> firstParam { _, declaration ->
+                if(declaration is BuiltinIdlDeclaration) when(declaration.kind) {
+                    WebIDLBuiltinKind.CHAR -> "jcharArray"
+                    WebIDLBuiltinKind.BOOLEAN -> "jbooleanArray"
+                    WebIDLBuiltinKind.BYTE -> "jbyteArray"
+                    WebIDLBuiltinKind.SHORT -> "jshortArray"
+                    WebIDLBuiltinKind.INT -> "jintArray"
+                    WebIDLBuiltinKind.LONG -> "jlongArray"
+                    WebIDLBuiltinKind.FLOAT -> "floatArray"
+                    WebIDLBuiltinKind.DOUBLE -> "jdoubleArray"
+                    else -> "jobjectArray"
+                } else "jobjectArray"
+            }
             else -> throw UnsupportedOperationException(toString())
         }
         else -> "jobject"
@@ -115,19 +175,16 @@ fun ResolvedIdlType.toJavaDesc(): String = when(this) {
         is BuiltinIdlDeclaration -> when((declaration as BuiltinIdlDeclaration).kind) {
             WebIDLBuiltinKind.CHAR -> "C"
             WebIDLBuiltinKind.BOOLEAN -> "Z"
-            WebIDLBuiltinKind.BYTE,
-            WebIDLBuiltinKind.UNSIGNED_BYTE -> "B"
-            WebIDLBuiltinKind.SHORT,
-            WebIDLBuiltinKind.UNSIGNED_SHORT -> "S"
-            WebIDLBuiltinKind.INT,
-            WebIDLBuiltinKind.UNSIGNED_INT -> "I"
-            WebIDLBuiltinKind.LONG,
-            WebIDLBuiltinKind.UNSIGNED_LONG -> "J"
-            WebIDLBuiltinKind.FLOAT,
-            WebIDLBuiltinKind.UNRESTRICTED_FLOAT -> "F"
-            WebIDLBuiltinKind.DOUBLE,
-            WebIDLBuiltinKind.UNRESTRICTED_DOUBLE -> "D"
+            WebIDLBuiltinKind.BYTE -> "B"
+            WebIDLBuiltinKind.SHORT -> "S"
+            WebIDLBuiltinKind.INT -> "I"
+            WebIDLBuiltinKind.LONG -> "J"
+            WebIDLBuiltinKind.FLOAT -> "F"
+            WebIDLBuiltinKind.DOUBLE -> "D"
             WebIDLBuiltinKind.STRING -> "Ljava/lang/String;"
+            WebIDLBuiltinKind.LIST -> firstParam { type, _ ->
+                "[${type.toJavaDesc()}"
+            }
             else -> throw UnsupportedOperationException(toString())
         }
         else -> "Ljava/lang/Object;"
@@ -135,71 +192,32 @@ fun ResolvedIdlType.toJavaDesc(): String = when(this) {
     else -> throw UnsupportedOperationException(toString())
 }
 
-fun ResolvedIdlType.toEmscriptenDesc(): String = when(this) {
-    is ResolvedIdlType.Void -> "v"
-    is ResolvedIdlType.Default -> when(declaration) {
-        is BuiltinIdlDeclaration -> when((declaration as BuiltinIdlDeclaration).kind) {
-            WebIDLBuiltinKind.CHAR -> "s"
-            WebIDLBuiltinKind.BOOLEAN -> "c"
-            WebIDLBuiltinKind.BYTE,
-            WebIDLBuiltinKind.UNSIGNED_BYTE -> "c"
-            WebIDLBuiltinKind.SHORT,
-            WebIDLBuiltinKind.UNSIGNED_SHORT -> "s"
-            WebIDLBuiltinKind.INT,
-            WebIDLBuiltinKind.UNSIGNED_INT -> "i"
-            WebIDLBuiltinKind.LONG,
-            WebIDLBuiltinKind.UNSIGNED_LONG -> "p"
-            WebIDLBuiltinKind.FLOAT,
-            WebIDLBuiltinKind.UNRESTRICTED_FLOAT -> "f"
-            WebIDLBuiltinKind.DOUBLE,
-            WebIDLBuiltinKind.UNRESTRICTED_DOUBLE -> "d"
-            WebIDLBuiltinKind.STRING -> "p"
-            else -> throw UnsupportedOperationException(toString())
-        }
-        else -> "p"
-    }
-    else -> throw UnsupportedOperationException(toString())
-}
 
-fun castJniToJava(type: ResolvedIdlType, content: String, dealloc: Boolean, useArena: Boolean): String {
-    return when(type) {
-        is ResolvedIdlType.Void -> content
-        is ResolvedIdlType.Default -> when(val decl = type.declaration) {
-            is BuiltinIdlDeclaration -> when(decl.kind) {
-                WebIDLBuiltinKind.STRING ->
-                    if(useArena) "Arena__wrapString(&arena, $content, $dealloc)"
-                    else "JNI_toJvmString(env, $content, $dealloc)"
-                else -> content
-            }
-            is ResolvedIdlCallbackFunction -> "JNI_toJvmCallback(env, (JNI_Callback*)$content, $dealloc)"
-            else -> throw UnsupportedOperationException(type.toString())
-        }
-        else -> throw UnsupportedOperationException(type.toString())
-    }
-}
-
-fun castJavaToJNI(type: ResolvedIdlType, content: String, critical: Boolean, dealloc: Boolean, useArena: Boolean): String {
-    return when(type) {
-        is ResolvedIdlType.Default -> when(val decl = type.declaration) {
-            is BuiltinIdlDeclaration -> when(decl.kind) {
-                WebIDLBuiltinKind.STRING ->
-                    if(useArena) "Arena__unwrapString${if(critical) "Critical" else ""}(&arena, $content)"
-                    else "JNI_toNativeString(env, $content)"
-                else -> content
-            }
-            is ResolvedIdlCallbackFunction ->
-                if(dealloc) "(${decl.name}*)Arena__callback(&arena, (JNI_Callback*)JNI_wrap${decl.name}(env, $content))"
-                else "JNI_wrap${decl.name}(env, $content)"
-            else -> throw UnsupportedOperationException(type.toString())
-        }
-        else -> throw UnsupportedOperationException(type.toString())
-    }
-}
 
 fun ResolvedIdlType.isString(): Boolean {
     if (this !is ResolvedIdlType.Default ||
         declaration !is BuiltinIdlDeclaration) return false
     return (declaration as BuiltinIdlDeclaration).kind == WebIDLBuiltinKind.STRING
+}
+
+fun ResolvedIdlType.isLong(): Boolean {
+    if (this !is ResolvedIdlType.Default ||
+        declaration !is BuiltinIdlDeclaration) return false
+    return (declaration as BuiltinIdlDeclaration).kind == WebIDLBuiltinKind.LONG
+}
+
+fun ResolvedIdlType.isArray(): Boolean {
+    if (this !is ResolvedIdlType.Default ||
+        declaration !is BuiltinIdlDeclaration) return false
+    return (declaration as BuiltinIdlDeclaration).kind == WebIDLBuiltinKind.LIST
+}
+
+fun ResolvedIdlType.isStringArray(): Boolean {
+    if (this !is ResolvedIdlType.Default ||
+        declaration !is BuiltinIdlDeclaration) return false
+    if((declaration as BuiltinIdlDeclaration).kind != WebIDLBuiltinKind.LIST)
+        return false
+    return firstParam { type, _ -> type.isString() }
 }
 
 fun ResolvedIdlType.isCallback(): Boolean =
@@ -214,6 +232,12 @@ fun IdlAttributedHolder.isDealloc(): Boolean =
     this.attributes.any {
         it is IdlExtendedAttribute.NoArgs && it.name == "Dealloc"
     }
+
+fun ResolvedIdlOperation.isCriticalCapable(): Boolean =
+    !type.isArray() && !type.isString() && !args.any { it.type.isStringArray() }
+
+fun ResolvedIdlOperation.hasString(): Boolean =
+    args.any { it.type.isString() }
 
 fun IdlResolver.globalOperators() =
     namespaces.values.flatMap { it.operations }
@@ -258,6 +282,12 @@ fun printFunctionHeader(
         append(": ")
         append(arg.type.toKotlinType(stringAsBytes, callbackAsAny))
 
+        if(stringAsBytes && arg.type.isString()) {
+            append(", __len_")
+            append(arg.name)
+            append(": Int")
+        }
+
         if(index != function.args.lastIndex)
             append(", ")
     }
@@ -266,4 +296,25 @@ fun printFunctionHeader(
         append(": ")
         append(function.type.toKotlinType(stringAsBytes, callbackAsAny))
     }
+}
+
+fun printLabel(builder: StringBuilder, text: String) = builder.apply {
+    val indent = 5
+
+    // line 1
+    append("\n// ╔")
+    append("═".repeat(text.length + indent*2))
+    append("╗\n")
+
+    // line 2
+    append("// ║")
+    append(" ".repeat(indent))
+    append(text)
+    append(" ".repeat(indent))
+    append("║\n")
+
+    // line 3
+    append("// ╚")
+    append("═".repeat(text.length + indent*2))
+    append("╝\n")
 }

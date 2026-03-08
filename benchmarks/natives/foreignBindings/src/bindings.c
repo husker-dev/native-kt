@@ -1,27 +1,26 @@
 #include "api.h"
-#include <stdio.h>
 
-int callForeign() {
+KInt callForeign() {
     return 10;
 }
 
-int callForeignAdd(int a, int b) {
+KInt callForeignAdd(KInt a, KInt b) {
     return a + b;
 }
 
-int callForeignString(const char* arg) {
+KInt callForeignString(KString arg) {
     return 10;
 }
 
 
-int callCriticalForeign() {
+KInt callCriticalForeign() {
     return 10;
 }
 
-int callCriticalForeignAdd(int a, int b) {
+KInt callCriticalForeignAdd(KInt a, KInt b) {
     return a + b;
 }
 
-int callCriticalForeignString(const char* arg) {
+KInt callCriticalForeignString(KString arg) {
     return 10;
 }

@@ -5,24 +5,25 @@
 // Callback
 
 void simpleCallback(SimpleCallback* callback) {
-    INVOKE(callback, 2);
+    callback->invoke(callback, 2);
 }
 
 SimpleCallback* callbackReturn(SimpleCallback* callback) {
     return callback;
 }
 
-bool callbackReturnString(StringCallback* callback) {
-    const char* text = INVOKE(callback);
-    bool result = strcmp(text, "test") == 0;
-    free((void*)text);
+KBoolean callbackReturnString(StringCallback* callback) {
+    KString text = callback->invoke(callback);
+    bool result = strcmp(text.data, "test") == 0;
+    free((void*)text.data);
     return result;
 }
 
-bool callbackPingString(StringPingCallback* callback) {
-    return strcmp(INVOKE(callback, "test"), "test") == 0;
+KBoolean callbackPingString(StringPingCallback* callback) {
+    KString txt = callback->invoke(callback, makeKString("test", 4));
+    return strcmp(txt.data, "test") == 0;
 }
 
 SimpleCallback* callbackPingCallback(CallbackPingCallback* callback, SimpleCallback* item) {
-    return INVOKE(callback, item);
+    return callback->invoke(callback, item);
 }

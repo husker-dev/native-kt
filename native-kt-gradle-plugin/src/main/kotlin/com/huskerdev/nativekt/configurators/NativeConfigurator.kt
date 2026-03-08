@@ -75,7 +75,6 @@ internal fun configureNative(
         idl = idl,
         target = cinteropHeaderFile,
         guardName = module.name.uppercase(),
-        constChar = false
     )
     DefPrinter(
         target = cinteropDefFile,

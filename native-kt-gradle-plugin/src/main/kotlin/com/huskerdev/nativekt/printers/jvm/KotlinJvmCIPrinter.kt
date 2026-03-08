@@ -23,10 +23,10 @@ class KotlinJvmCIPrinter(
                     companion object {
                         @JvmStatic external fun getFunctionAddress(libName: String, funcName: String): Long
                         
-                        private fun linkFunction(lib: String, name: String, vararg types: Class<*>) {
+                        private fun linkFunction(lib: String, name: String, alt: Boolean, vararg types: Class<*>) {
                             JVMCIUtils.linkNativeCall(
                                 $$name::class.java.getDeclaredMethod(name, *types),
-                                getFunctionAddress(lib, "EXPORTED_$${classPath.replace(".", "_")}_$name")
+                                getFunctionAddress(lib, "EXPORTED_$${classPath.replace(".", "_")}_$name${if (alt) "_" else ""}")
                             )
                         }
                         
@@ -37,9 +37,7 @@ class KotlinJvmCIPrinter(
                 printFunctionHeader(builder, it, isExternal = true, stringAsBytes = true)
             }
             append("\n\t}\n\n")
-            append($$"""
-                init {
-            """.replaceIndent("\t"))
+            append("\tinit {")
 
             operators.forEach {
                 printFunctionBinding(builder, it)
@@ -56,9 +54,13 @@ class KotlinJvmCIPrinter(
     }
 
     private fun printFunctionBinding(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
-        val args = listOf("\"${function.name}\"") +
-                function.args.map {
-                    "${it.type.toKotlinType(stringAsBytes = true)}::class.java"
+        val args = listOf("\"${function.name}\"", function.hasString()) +
+                function.args.flatMap {
+                    val clazz = "${it.type.toKotlinType(stringAsBytes = true)}::class.java"
+
+                    if(it.type.isString())
+                        listOf(clazz, "Int::class.java")
+                    else listOf(clazz)
                 }
 
         append("\n\t\tlinkFunction(fileName, ${args.joinToString()})")
@@ -75,7 +77,7 @@ class KotlinJvmCIPrinter(
 
         val args = function.args.joinToString {
             if(it.type.isString())
-                "${it.name}.toByteArray()"
+                "${it.name}.toByteArray(), ${it.name}.length"
             else it.name
         }
         append("${function.name}(${args})")

@@ -92,8 +92,8 @@ namespace global {
 
 ### Supported types
 
-|     IDL     | Kotlin  |      C      |
-| ----------- | ------- | ------------|
+| IDL         | Kotlin  | C           |
+|-------------|---------|-------------|
 | `long`      | Int     | int32_t     |
 | `long long` | Long    | int64_t     |
 | `float`     | Float   | float       |

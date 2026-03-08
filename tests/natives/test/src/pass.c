@@ -1,39 +1,40 @@
 #include <api.h>
+#include <string.h>
 
 // Consume
 
-bool consume() {
+KBoolean consume() {
     return true;
 }
 
-bool consumeInt(int32_t arg) {
-    return true;
+KBoolean consumeInt(KInt arg) {
+    return arg == 99;
 }
 
-bool consumeLong(int64_t arg) {
-    return true;
+KBoolean consumeLong(KLong arg) {
+    return arg == 9223372036854775805;
 }
 
-bool consumeFloat(float arg) {
-    return true;
+KBoolean consumeFloat(KFloat arg) {
+    return arg == 99.9f;
 }
 
-bool consumeDouble(double arg) {
-    return true;
+KBoolean consumeDouble(KDouble arg) {
+    return arg == 1.1;
 }
 
-bool consumeByte(int8_t arg) {
-    return true;
+KBoolean consumeByte(KByte arg) {
+    return arg == 1;
 }
 
-bool consumeBoolean(bool arg) {
-    return true;
+KBoolean consumeBoolean(KBoolean arg) {
+    return arg == true;
 }
 
-bool consumeChar(uint16_t arg) {
-    return true;
+KBoolean consumeChar(KChar arg) {
+    return arg == 'a';
 }
 
-bool consumeString(const char* arg) {
-    return true;
+KBoolean consumeString(KString arg) {
+    return arg.length == 11 && strncmp(arg.data, "test string", arg.length) == 0;
 }

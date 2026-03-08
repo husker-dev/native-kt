@@ -51,27 +51,29 @@ class CJniArenaPrinter(
             }
             
             // String
-            
+
             void ArenaNode__freeString(Arena* arena, ArenaNode* node){
                 JNIEnv *env = arena->env;
                 (*env)->ReleaseStringUTFChars(env, node->obj, (const char*)node->ptr);
             }
             
-            const char* Arena__unwrapString(Arena* arena, jobject str) {
+            KString Arena__unwrapString(Arena* arena, jstring str) {
                 JNIEnv *env = arena->env;
-                return (const char*) Arena__push(arena,
+                jsize length = (*env)->GetStringLength(env, str);
+                const char* data = (const char*) Arena__push(arena,
                     str,
                     (void*)(*env)->GetStringUTFChars(env, str, NULL),
                     ArenaNode__freeString
                 );
+                return (KString) { data, length };
             }
             
-            jobject Arena__wrapString(Arena* arena, const char* ptr, bool dealloc) {
+            jstring Arena__wrapString(Arena* arena, KString str, bool dealloc) {
                 JNIEnv *env = arena->env;
-                jobject result = (*env)->NewStringUTF(env, ptr);
-            
-                if(dealloc && !Arena__contains(arena, (void*)ptr))
-                    free((void*)ptr);
+                jstring result = JNI_createJString(env, str);
+                
+                if(dealloc && !Arena__contains(arena, (void*)str.data))
+                    free((void*)str.data);
                 return result;
             }
             
@@ -82,13 +84,15 @@ class CJniArenaPrinter(
                 (*env)->ReleaseStringCritical(env, node->obj, (const jchar*)node->ptr);
             }
             
-            const char* Arena__unwrapStringCritical(Arena* arena, jobject str) {
+            KString Arena__unwrapStringCritical(Arena* arena, jstring str) {
                 JNIEnv *env = arena->env;
-                return (const char*) Arena__push(arena,
+                jsize length = (*env)->GetStringLength(env, str);
+                const char* data = (const char*) Arena__push(arena,
                     str,
                     (void*)(*env)->GetStringCritical(env, str, 0),
                     ArenaNode__freeStringCritical
                 );
+                return (KString) { data, length };
             }
             
             // new/free

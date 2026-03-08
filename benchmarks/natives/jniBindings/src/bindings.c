@@ -1,22 +1,21 @@
 #include "api.h"
-#include <stdio.h>
 
-int callJni() {
+KInt callJni() {
     return 10;
 }
 
-int callJniAdd(int a, int b) {
+KInt callJniAdd(KInt a, KInt b) {
     return a + b;
 }
 
-int callJniString(const char* arg) {
+KInt callJniString(KString arg) {
     return 10;
 }
 
-int callCriticalJni() {
+KInt callCriticalJni() {
     return 10;
 }
 
-int callCriticalJniString(const char* arg) {
+KInt callCriticalJniString(KString arg) {
     return 10;
 }

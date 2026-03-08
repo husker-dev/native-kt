@@ -26,6 +26,8 @@ kotlin {
         nodejs()
 
         compilerOptions {
+            freeCompilerArgs.addAll("-Xes-long-as-bigint", "-XXLanguage:+JsAllowLongInExportedDeclarations")
+
             target = "es2015"
             moduleKind = JsModuleKind.MODULE_COMMONJS
             main = JsMainFunctionExecutionMode.NO_CALL
@@ -92,6 +94,7 @@ kotlin {
 
 native {
     ndkVersion = "29.0.14206865"
+    useJsBigInt = true
 
     create("test")
 }

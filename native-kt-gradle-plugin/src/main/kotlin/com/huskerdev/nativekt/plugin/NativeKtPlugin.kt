@@ -6,7 +6,6 @@ import org.gradle.kotlin.dsl.the
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import java.io.File
 
-@Suppress("unused")
 class NativeKtPlugin: Plugin<Project> {
     lateinit var project: Project
     lateinit var extension: NativeKtExtension

@@ -7,40 +7,40 @@
 void get() {
 }
 
-int32_t getInt() {
+KInt getInt() {
     return 99;
 }
 
-int64_t getLong() {
+KLong getLong() {
     return 9223372036854775805;
 }
 
-float getFloat() {
+KFloat getFloat() {
     return 99;
 }
 
-double getDouble() {
+KDouble getDouble() {
     return 99.0;
 }
 
-int8_t getByte() {
+KByte getByte() {
     return 99;
 }
 
-bool getBoolean() {
+KBoolean getBoolean() {
     return true;
 }
 
-uint16_t getChar() {
+KChar getChar() {
     return 'a';
 }
 
-const char* getStringLiteral() {
-    return "test string";
+KString getStringLiteral() {
+    return makeKString("test string", 11);
 }
 
-const char* getString() {
-    char* str = (char*)malloc(100);
-    strcpy(str, "test string\0");
-    return str;
+KString getString() {
+    char* str = malloc(100);
+    strcpy(str, "test string");
+    return makeKString(str, 11);
 }

@@ -36,12 +36,12 @@ internal fun configureAndroidSourceSet(
     val androidComponents = project.the<KotlinMultiplatformAndroidComponentsExtension>()
 
     if (extension.ndkVersion == null)
-        throw Exception("NDK version is not specified in 'native { ... }'")
+        throw UnsupportedOperationException("NDK version is not specified in 'native { ... }'")
 
     val ndkDir = File(androidComponents.sdkComponents.sdkDirectory.get().asFile,
         "ndk/${extension.ndkVersion}")
     if (!ndkDir.exists())
-        throw Exception("NDK ${extension.ndkVersion} is not installed")
+        throw UnsupportedOperationException("NDK ${extension.ndkVersion} is not installed")
 
     val toolchain = File(ndkDir, "build/cmake/android.toolchain.cmake")
 

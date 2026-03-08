@@ -4,36 +4,44 @@ import java.io.Closeable;
 import java.lang.foreign.*;
 import java.util.ArrayList;
 
+import static com.huskerdev.nativekt.foreign.ForeignUtils.fromKString;
+
 @SuppressWarnings("unused")
 public class ForeignArena implements Closeable {
 
-    private final Arena arena = Arena.ofConfined();
-    private final ArrayList<MemorySegment> allocated = new ArrayList<>();
+    public final Arena heap = Arena.ofConfined();
+    private final ArrayList<Long> allocated = new ArrayList<>();
     private final ArrayList<MemorySegment> callbacks = new ArrayList<>();
 
     private boolean notContains(long address) {
-        for(MemorySegment segment : allocated)
-            if(segment.address() == address)
+        for(Long segment : allocated)
+            if(segment == address)
                 return false;
         return true;
     }
 
     public MemorySegment cstr(String of) {
-        MemorySegment result = arena.allocateFrom(of);
-        allocated.add(result);
-        return result;
+        MemorySegment struct = heap.allocate(ForeignUtils.STRING_STRUCT);
+        MemorySegment data = heap.allocateFrom(of);
+        ForeignUtils.fillKString(struct, data, of.length());
+
+        allocated.add(data.address());
+        return struct;
     }
 
     public MemorySegment callback(MemorySegment callback) {
-        allocated.add(callback);
+        allocated.add(callback.address());
         callbacks.add(callback);
         return callback;
     }
 
     public String asString(MemorySegment segment, boolean dealloc) throws Throwable {
-        String result = segment.reinterpret(Long.MAX_VALUE).getString(0);
-        if(dealloc && notContains(segment.address()))
-            ForeignUtils.freeHandle.invoke(segment);
+        MemorySegment data = ForeignUtils.getKStringData(segment);
+        int length = ForeignUtils.getKStringLength(segment);
+
+        String result = fromKString(data, length);
+        if(dealloc && notContains(data.address()))
+            ForeignUtils.freeHandle.invoke(data);
         return result;
     }
 
@@ -48,6 +56,6 @@ public class ForeignArena implements Closeable {
     public void close() {
         for(MemorySegment callback : callbacks)
             ForeignUtils.callbackFree(callback);
-        arena.close();
+        heap.close();
     }
 }

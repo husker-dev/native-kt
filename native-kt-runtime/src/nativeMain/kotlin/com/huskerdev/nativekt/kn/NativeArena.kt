@@ -2,18 +2,11 @@
 
 package com.huskerdev.nativekt.kn
 
-import kotlinx.cinterop.ByteVar
-import kotlinx.cinterop.CPointer
-import kotlinx.cinterop.CStructVar
-import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.MemScope
-import kotlinx.cinterop.cstr
-import kotlinx.cinterop.memScoped
-import kotlinx.cinterop.toKString
+import kotlinx.cinterop.*
 import platform.posix.free
 
 class NativeArena(
-    val memScope: MemScope
+    val scope: MemScope
 ) {
     companion object {
         fun <T> use(block: (NativeArena) -> T) = memScoped {
@@ -25,8 +18,9 @@ class NativeArena(
     private val allocated = hashSetOf<Long>()
     private val callbacks = hashSetOf<CPointer<CStructVar>>()
 
-    fun allocCStr(text: String): CPointer<ByteVar> =
-        text.cstr.getPointer(memScope).also { allocated += it.rawValue.toLong() }
+    fun ptr(ptr: CPointer<*>){
+        allocated += ptr.getPointer(scope).rawValue.toLong()
+    }
 
     fun unwrapCStr(mem: CPointer<ByteVar>, dealloc: Boolean): String {
         val result = mem.toKString()

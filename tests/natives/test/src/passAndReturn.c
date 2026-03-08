@@ -2,34 +2,34 @@
 
 // Ping
 
-int32_t pingInt(int32_t arg) {
+KInt pingInt(KInt arg) {
     return arg;
 }
 
-int64_t pingLong(int64_t arg) {
+KLong pingLong(KLong arg) {
     return arg;
 }
 
-float pingFloat(float arg) {
+KFloat pingFloat(KFloat arg) {
     return arg;
 }
 
-double pingDouble(double arg) {
+KDouble pingDouble(KDouble arg) {
     return arg;
 }
 
-int8_t pingByte(int8_t arg) {
+KByte pingByte(KByte arg) {
     return arg;
 }
 
-bool pingBoolean(bool arg) {
+KBoolean pingBoolean(KBoolean arg) {
     return arg;
 }
 
-uint16_t pingChar(uint16_t arg) {
+KChar pingChar(KChar arg) {
     return arg;
 }
 
-const char* pingString(const char* arg) {
+KString pingString(KString arg) {
     return arg;
 }

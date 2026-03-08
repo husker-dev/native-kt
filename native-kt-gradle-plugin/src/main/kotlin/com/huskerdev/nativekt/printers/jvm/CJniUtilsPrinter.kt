@@ -1,15 +1,9 @@
 package com.huskerdev.nativekt.printers.jvm
 
-import com.huskerdev.nativekt.utils.castJavaToJNI
-import com.huskerdev.nativekt.utils.castJniToJava
 import com.huskerdev.nativekt.utils.isDealloc
-import com.huskerdev.nativekt.utils.toCType
+import com.huskerdev.nativekt.utils.toCDefType
 import com.huskerdev.nativekt.utils.toJavaDesc
-import com.huskerdev.webidl.resolver.BuiltinIdlDeclaration
-import com.huskerdev.webidl.resolver.IdlResolver
-import com.huskerdev.webidl.resolver.ResolvedIdlCallbackFunction
-import com.huskerdev.webidl.resolver.ResolvedIdlType
-import com.huskerdev.webidl.resolver.WebIDLBuiltinKind
+import com.huskerdev.webidl.resolver.*
 import java.io.File
 
 class CJniUtilsPrinter(
@@ -31,6 +25,21 @@ class CJniUtilsPrinter(
             
             JavaVM *jvm;
             jclass jniClass;
+            jclass stringClass;
+            jmethodID stringConstructor;
+            
+            typedef struct KString KString;
+            
+            jstring JNI_createJString(JNIEnv *env, KString str) {
+                int32_t length = str.length;
+
+                jbyteArray bytes = (*env)->NewByteArray(env, length);
+                (*env)->SetByteArrayRegion(env, bytes, 0, length, (jbyte*)str.data);
+                
+                jstring result = (jstring)(*env)->NewObject(env, stringClass, stringConstructor, bytes);
+                (*env)->DeleteLocalRef(env, bytes);
+                return result;
+            }
             
         """.trimIndent())
 
@@ -39,18 +48,19 @@ class CJniUtilsPrinter(
             /* =================== *\
                       Casts
             \* =================== */
-            
-            jobject JNI_toJvmString(JNIEnv *env, const char* ptr, bool dealloc) {
-                jobject result = (*env)->NewStringUTF(env, ptr);
-                if(dealloc) free((void*)ptr);
+
+            jstring JNI_toJvmString(JNIEnv *env, KString str, bool dealloc) {
+                jstring result = JNI_createJString(env, str);
+                if(dealloc) free((void*)str.data);
                 return result;
             }
             
-            const char* JNI_toNativeString(JNIEnv *env, jobject obj) {
+            KString JNI_toNativeString(JNIEnv *env, jstring obj) {
+                jsize length = (*env)->GetStringLength(env, obj);
                 const char* temp = (*env)->GetStringUTFChars(env, obj, NULL);
                 const char* copy = strdup(temp);
                 (*env)->ReleaseStringUTFChars(env, obj, temp);
-                return copy;
+                return (KString) { copy, length };
             }
             
         """.trimIndent())
@@ -125,14 +135,14 @@ class CJniUtilsPrinter(
 
     private fun printCallbackInvoke(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
         val args = listOf("${callback.name}* _callback") +
-                callback.args.map { "${it.type.toCType()} ${it.name}" }
+                callback.args.map { "${it.type.toCDefType()} ${it.name}" }
 
         val jvmArgs = listOf("(jobject)_callback->m") +
                 callback.args.map { castJniToJava(it.type, it.name, it.isDealloc(), false) }
 
         append("""
             
-            ${callback.type.toCType()} JNI_CALLBACK_${callback.name}_invoke(${args.joinToString()}) {
+            ${callback.type.toCDefType()} JNI_CALLBACK_${callback.name}_invoke(${args.joinToString()}) {
                 JNIEnv *env;
                 jint __status = JVM_attach(&env);
                 
@@ -148,9 +158,7 @@ class CJniUtilsPrinter(
                     WebIDLBuiltinKind.SHORT -> "CallStaticShortMethod"
                     WebIDLBuiltinKind.INT -> "CallStaticIntMethod"
                     WebIDLBuiltinKind.LONG -> "CallStaticLongMethod"
-                    WebIDLBuiltinKind.UNRESTRICTED_FLOAT,
                     WebIDLBuiltinKind.FLOAT -> "CallStaticFloatMethod"
-                    WebIDLBuiltinKind.UNRESTRICTED_DOUBLE,
                     WebIDLBuiltinKind.DOUBLE -> "CallStaticDoubleMethod"
                     else -> "CallStaticObjectMethod"
                 }
@@ -163,7 +171,7 @@ class CJniUtilsPrinter(
         val call = "(*env)->$funcName(env, jniClass, callback${callback.name}, ${jvmArgs.joinToString()})"
 
         if(callback.type !is ResolvedIdlType.Void) {
-            append(callback.type.toCType())
+            append(callback.type.toCDefType())
             append(" __result = ")
             append(castJavaToJNI(callback.type, call, critical = false, dealloc = false, useArena = false))
         } else
@@ -205,7 +213,10 @@ class CJniUtilsPrinter(
                 JNIEnv *env;
                 (*vm)->GetEnv(vm, (void**)&env, JNI_VERSION_1_6);
                 
-                jniClass = (*env)->FindClass(env, "${(classPath.split(".") + name).joinToString(separator = "/")}");
+                jniClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "${(classPath.split(".") + name).joinToString(separator = "/")}"));
+                stringClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "java/lang/String"));
+                stringConstructor = (*env)->GetMethodID(env, stringClass, "<init>", "([B)V");
+                
                 (*env)->RegisterNatives(env, jniClass, methods, count);
                 
         """.replaceIndent())

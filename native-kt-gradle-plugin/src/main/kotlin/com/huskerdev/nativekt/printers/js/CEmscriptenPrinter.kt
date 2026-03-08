@@ -1,8 +1,10 @@
 package com.huskerdev.nativekt.printers.js
 
-import com.huskerdev.nativekt.utils.globalOperators
-import com.huskerdev.nativekt.utils.toCType
-import com.huskerdev.webidl.resolver.*
+import com.huskerdev.nativekt.utils.*
+import com.huskerdev.webidl.resolver.IdlResolver
+import com.huskerdev.webidl.resolver.ResolvedIdlCallbackFunction
+import com.huskerdev.webidl.resolver.ResolvedIdlOperation
+import com.huskerdev.webidl.resolver.ResolvedIdlType
 import java.io.File
 
 class CEmscriptenPrinter(
@@ -14,71 +16,147 @@ class CEmscriptenPrinter(
         builder.append("""
             #include "api.h"
             #include <stdlib.h>
+            #include <string.h>
+            #include <emscripten/bind.h>
             
-            int64_t* __emWrapLong(int64_t value) {
-                int64_t* ptr = (int64_t*)malloc(sizeof(int64_t));
-                *ptr = value;
-                return ptr;
-            }
+            using namespace emscripten;
             
-            int64_t __emUnwrapLong(int64_t* value) {
-                int64_t result = *value;
-                free(value);
-                return result;
-            }
+            #define POINTER_FIELD(Name, SelfType, PointerType)	\
+            optional_override([](const SelfType& s) -> int {	\
+            	return (int)(intptr_t)s.Name;					\
+            }),													\
+            optional_override([](SelfType& s, int v) {			\
+            	s.Name = (PointerType)(intptr_t)v;				\
+            })
+
+        """.trimIndent())
+
+        if(idl.callbacks.isNotEmpty()) {
+            printLabel(builder, "Callbacks")
+            printCallbacks(builder, idl.callbacks.values)
+        }
+
+        printLabel(builder, "Functions")
+
+        builder.append("""
+            
+            EMSCRIPTEN_BINDINGS(my_module) {
+            
+            	value_object<KString>("KString")
+                    .field("data", POINTER_FIELD(data, KString, const char*))
+                    .field("length", &KString::length);
+            
             
         """.trimIndent())
 
-        idl.globalOperators().forEach { printFunction(builder, it) }
+        if(idl.callbacks.isNotEmpty()) {
+            builder.append("\tfunction(\"_setCallback\", &_setCallback);\n\n")
+        }
 
+        idl.globalOperators().forEach {
+            if(it.hasPointers())
+                printOverride(builder, it)
+            else
+                printSimple(builder, it)
+        }
+
+        builder.append("\n}")
         target.writeText(builder.toString())
     }
 
-    private fun printFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
+    private fun ResolvedIdlOperation.hasPointers() =
+        type.isCallback() || args.any { it.type.isCallback() }
+
+    private fun printSimple(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
+        append("\tfunction(\"${function.name}\", &${function.name});\n")
+    }
+
+    private fun printCallbacks(builder: StringBuilder, callbacks: Collection<ResolvedIdlCallbackFunction>) = builder.apply {
+        val valNames = callbacks.associateWith { "_callback${it.name}" }
+        val invokeNames = callbacks.associateWith { "_invoke${it.name}" }
+
+        // Fields
         append("\n")
-        append(function.type.toCType(longPtr = true))
-        append(" _")
-        append(function.name)
-        append("(")
-        function.args.joinTo(this) {
-            "${it.type.toCType(longPtr = true)} ${it.name}"
+        callbacks.forEach {
+            append("val ${valNames[it]} = val::undefined();\n")
         }
-        append(") {\n\t")
+
+        // invoke functions
+        callbacks.forEach { callback ->
+            append("\nstatic ")
+            append(callback.type.toCDefType())
+            append(" ")
+            append(invokeNames[callback])
+            append("(")
+
+            (
+                listOf("${callback.name}* _c") +
+                callback.args.map { "${it.type.toCDefType()} ${it.name}" }
+            ).joinTo(builder)
+
+            append(") {\n\t")
+
+            if(callback.type !is ResolvedIdlType.Void)
+                append("return ")
+            if(callback.type.isCallback())
+                append("(${callback.type.toCDefType()})")
+
+            val args = listOf("(intptr_t)_c") + callback.args.map {
+                if(it.type.isCallback())
+                    "(intptr_t)${it.name}"
+                else it.name
+            }
+
+            append("${valNames[callback]}(${args.joinToString()})")
+
+            if(callback.type.isString())
+                append(".as<KString>()")
+            if(callback.type.isCallback())
+                append(".as<intptr_t>()")
+
+            append(";\n}\n")
+        }
+
+        // setter
+        append("\nstatic intptr_t _setCallback(int index, val value) {\n")
+        append("\tswitch (index) {\n")
+        callbacks.forEachIndexed { index, callback ->
+            append("\t\tcase $index:\n")
+            append("\t\t\t${valNames[callback]} = value;\n")
+            append("\t\t\treturn (intptr_t)${invokeNames[callback]};\n")
+        }
+        append("\t}\n")
+        append("\treturn 0;\n}\n")
+    }
+
+    private fun printOverride(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
+        append("\tfunction(\"")
+        append(function.name)
+        append("\", optional_override([](")
+
+        function.args.joinTo(builder) {
+            "${it.type.toCType(callbackAsPtr = true)} ${it.name}"
+        }
+        append(")")
+
+        if(function.type !is ResolvedIdlType.Void) {
+            append(" -> ")
+            append(function.type.toCType(callbackAsPtr = true))
+        }
+        append(" {\n\t\t")
 
         if(function.type !is ResolvedIdlType.Void)
             append("return ")
+        if(function.type.isCallback())
+            append("(intptr_t)")
 
-        // == Function call ==
-        val call = "${function.name}(${function.args.joinToString { castToNative(it.type, it.name) }})"
-        append(castToJS(function.type, call))
-        append(";\n}\n")
-    }
-
-    private fun castToNative(type: ResolvedIdlType, content: String): String = when(type) {
-        is ResolvedIdlType.Void -> content
-        is ResolvedIdlType.Default -> when(val decl = type.declaration) {
-            is BuiltinIdlDeclaration -> when(decl.kind) {
-                WebIDLBuiltinKind.LONG,
-                WebIDLBuiltinKind.UNSIGNED_LONG -> "__emUnwrapLong($content)"
-                else -> content
-            }
-            is ResolvedIdlCallbackFunction -> content
-            else -> throw UnsupportedOperationException(type.toString())
+        val args = function.args.joinToString {
+            if(it.type.isCallback())
+                "(${(it.type as ResolvedIdlType.Default).declaration.name}*)${it.name}"
+            else it.name
         }
-        else -> throw UnsupportedOperationException(type.toString())
-    }
 
-    private fun castToJS(type: ResolvedIdlType, content: String): String = when(type) {
-        is ResolvedIdlType.Void -> content
-        is ResolvedIdlType.Default -> when(val decl = type.declaration) {
-            is BuiltinIdlDeclaration -> when(decl.kind) {
-                WebIDLBuiltinKind.LONG,
-                WebIDLBuiltinKind.UNSIGNED_LONG -> "__emWrapLong($content)"
-                else -> content
-            }
-            is ResolvedIdlCallbackFunction -> content
-            else -> throw UnsupportedOperationException(type.toString())
-        }
-        else -> throw UnsupportedOperationException(type.toString())
+        append("${function.name}($args);\n")
+        append("\t}));\n")
     }
 }

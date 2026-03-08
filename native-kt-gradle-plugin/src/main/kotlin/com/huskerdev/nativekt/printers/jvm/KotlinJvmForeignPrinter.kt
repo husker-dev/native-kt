@@ -69,7 +69,7 @@ class KotlinJvmForeignPrinter(
         )
         append(" = ")
 
-        val useArena = !function.isCritical() && (function.args.any { it.type.isString() } || function.args.any { it.isDealloc() })
+        val useArena = !function.isCritical() && (function.type.isString() || function.args.any { it.type.isString() || it.isDealloc() })
 
         if(useArena)
             append("ForeignArena().use { arena ->\n\t\t")
@@ -77,8 +77,15 @@ class KotlinJvmForeignPrinter(
 
         val type = function.type.toKotlinForeignType()
 
-        val args = function.args.joinToString { castToNative(it.type, it.name, function.isCritical(), it.isDealloc(), useArena) }
-        val call = "(handle${function.name.capitalized()}.invokeExact($args) as $type)"
+        val args = arrayListOf<String>()
+        if(function.type.isString())
+            args += "arena.heap as SegmentAllocator"
+
+        args += function.args.map {
+            castToNative(it.type, it.name, function.isCritical(), it.isDealloc(), useArena)
+        }
+
+        val call = "(handle${function.name.capitalized()}.invokeExact(${args.joinToString()}) as $type)"
         append(castFromNative(function.type, call, function.isDealloc(), useArena))
 
         if(useArena)
@@ -207,30 +214,21 @@ class KotlinJvmForeignPrinter(
     fun ResolvedIdlType.toForeignType(): String = when(this) {
         is ResolvedIdlType.Union -> throw UnsupportedOperationException("Union type are not unsupported")
         is ResolvedIdlType.Void -> "null"
-        is ResolvedIdlType.Default -> buildString {
-            append(when(declaration) {
-                is BuiltinIdlDeclaration -> when(val a = (declaration as BuiltinIdlDeclaration).kind) {
-                    WebIDLBuiltinKind.CHAR -> "ForeignUtils.C_CHAR"
-                    WebIDLBuiltinKind.BOOLEAN -> "ForeignUtils.C_BOOLEAN"
-                    WebIDLBuiltinKind.BYTE,
-                    WebIDLBuiltinKind.UNSIGNED_BYTE -> "ForeignUtils.C_BYTE"
-                    WebIDLBuiltinKind.SHORT,
-                    WebIDLBuiltinKind.UNSIGNED_SHORT -> "ForeignUtils.C_SHORT"
-                    WebIDLBuiltinKind.INT,
-                    WebIDLBuiltinKind.UNSIGNED_INT -> "ForeignUtils.C_INT"
-                    WebIDLBuiltinKind.LONG,
-                    WebIDLBuiltinKind.UNSIGNED_LONG -> "ForeignUtils.C_LONG"
-                    WebIDLBuiltinKind.FLOAT,
-                    WebIDLBuiltinKind.UNRESTRICTED_FLOAT -> "ForeignUtils.C_FLOAT"
-                    WebIDLBuiltinKind.DOUBLE,
-                    WebIDLBuiltinKind.UNRESTRICTED_DOUBLE -> "ForeignUtils.C_DOUBLE"
-                    WebIDLBuiltinKind.STRING -> "ForeignUtils.C_ADDRESS"
-                    else -> throw UnsupportedOperationException(a.toString())
-                }
-                else -> "ForeignUtils.C_ADDRESS"
-            })
-            if(parameters.isNotEmpty())
-                throw UnsupportedOperationException("Parameters are not null")
+        is ResolvedIdlType.Default -> when(declaration) {
+            is BuiltinIdlDeclaration -> when(val a = (declaration as BuiltinIdlDeclaration).kind) {
+                WebIDLBuiltinKind.CHAR -> "ForeignUtils.C_CHAR"
+                WebIDLBuiltinKind.BOOLEAN -> "ForeignUtils.C_BOOLEAN"
+                WebIDLBuiltinKind.BYTE -> "ForeignUtils.C_BYTE"
+                WebIDLBuiltinKind.SHORT -> "ForeignUtils.C_SHORT"
+                WebIDLBuiltinKind.INT -> "ForeignUtils.C_INT"
+                WebIDLBuiltinKind.LONG -> "ForeignUtils.C_LONG"
+                WebIDLBuiltinKind.FLOAT -> "ForeignUtils.C_FLOAT"
+                WebIDLBuiltinKind.DOUBLE -> "ForeignUtils.C_DOUBLE"
+                WebIDLBuiltinKind.STRING -> "ForeignUtils.STRING_STRUCT"
+                WebIDLBuiltinKind.LIST -> "ForeignUtils.C_ADDRESS"
+                else -> throw UnsupportedOperationException(a.toString())
+            }
+            else -> "ForeignUtils.C_ADDRESS"
         }
     }
 }

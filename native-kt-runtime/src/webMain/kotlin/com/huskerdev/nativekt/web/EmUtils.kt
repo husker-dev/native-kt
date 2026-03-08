@@ -2,37 +2,30 @@
 
 package com.huskerdev.nativekt.web
 
-private val callbacks = hashMapOf<Pair<dynamic, Int>, Any>()
+import kotlin.js.json
 
-fun unwrapCStr(module: dynamic, ptr: dynamic, dealloc: Boolean): String {
-    val result = module.UTF8ToString(ptr)
-    if(dealloc)
-        module._free(ptr)
-    return result
-}
+private val callbacks = hashMapOf<Pair<dynamic, Int>, Any>()
 
 fun allocCStr(module: dynamic, str: String): Any {
     val len = module.lengthBytesUTF8(str) + 1
-    val mem = module._malloc(len)
-    module.stringToUTF8(str, mem, len)
-    return mem
+    val strMem = module._malloc(len)
+    module.stringToUTF8(str, strMem, len)
+
+    return json(
+        "data" to strMem,
+        "length" to str.length
+    )
 }
 
-fun unwrapLong(module: dynamic, value: dynamic): Long {
-    val ptr = (value as JsNumber).toInt() shr 2
+fun unwrapCStr(module: dynamic, ptr: dynamic, dealloc: Boolean): String {
+    val data = (ptr.data as JsNumber).toInt()
+    val length = (ptr.length as JsNumber).toInt()
 
-    val low = (module.HEAP32[ptr] as JsNumber).toLong()
-    val high = (module.HEAP32[ptr + 1] as JsNumber).toLong()
-    module._free(ptr)
+    val result = module.UTF8ToString(data, length)
+    if(dealloc)
+        module._free(data)
 
-    return high shl 32 or (low and 0xffffffff)
-}
-
-fun wrapLong(module: dynamic, value: Long): Int {
-    val ptr = (module._malloc(8) as JsNumber).toInt()
-    module.HEAP32[ptr shr 2] = (value and 0xffffffff).toInt()
-    module.HEAP32[(ptr shr 2) + 1] = (value shr 32).toInt()
-    return ptr
+    return result
 }
 
 fun mallocCallback(

@@ -2,6 +2,8 @@
 
 package com.huskerdev.nativekt.web
 
+import kotlin.js.json
+
 class EmArena(
     val module: dynamic
 ): AutoCloseable {
@@ -18,15 +20,23 @@ class EmArena(
 
     fun allocCStr(str: String): Any {
         val len = module.lengthBytesUTF8(str) + 1
-        val mem = malloc(len)
-        module.stringToUTF8(str, mem, len)
-        return mem
+        val strMem = malloc(len)
+        module.stringToUTF8(str, strMem, len)
+
+        return json(
+            "data" to strMem,
+            "length" to str.length
+        )
     }
 
-    fun unwrapCStr(ptr: Any, dealloc: Boolean): String {
-        val result = module.UTF8ToString(ptr)
+    fun unwrapCStr(ptr: dynamic, dealloc: Boolean): String {
+        val data = (ptr.data as JsNumber).toInt()
+        val length = (ptr.length as JsNumber).toInt()
+
+        val result = module.UTF8ToString(data, length)
         if(dealloc && ptr !in allocated)
-            module._free(ptr)
+            module._free(data)
+
         return result
     }
 

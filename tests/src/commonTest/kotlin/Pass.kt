@@ -29,12 +29,12 @@ class Pass {
 
     @Test
     fun passFloat() = withLib {
-        assertTrue(consumeFloat(99f))
+        assertTrue(consumeFloat(99.9f))
     }
 
     @Test
     fun passDouble() = withLib {
-        assertTrue(consumeDouble(1.0))
+        assertTrue(consumeDouble(1.1))
     }
 
     @Test
