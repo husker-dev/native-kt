@@ -34,7 +34,7 @@ class KotlinJvmCIPrinter(
 
             operators.forEach {
                 append("\n\t\t@JvmStatic ")
-                printFunctionHeader(builder, it, isExternal = true, stringAsBytes = true)
+                printFunctionHeader(builder, it, isExternal = true, stringAsBytes = true, arraysLen = true)
             }
             append("\n\t}\n\n")
             append("\tinit {")
@@ -54,11 +54,11 @@ class KotlinJvmCIPrinter(
     }
 
     private fun printFunctionBinding(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
-        val args = listOf("\"${function.name}\"", function.hasString()) +
+        val args = listOf("\"${function.name}\"", function.hasString() || function.hasArray()) +
                 function.args.flatMap {
                     val clazz = "${it.type.toKotlinType(stringAsBytes = true)}::class.java"
 
-                    if(it.type.isString())
+                    if(it.type.isString() || it.type.isArray())
                         listOf(clazz, "Int::class.java")
                     else listOf(clazz)
                 }
@@ -78,6 +78,8 @@ class KotlinJvmCIPrinter(
         val args = function.args.joinToString {
             if(it.type.isString())
                 "${it.name}.toByteArray(), ${it.name}.length"
+            else if(it.type.isArray())
+                "${it.name}, ${it.name}.size"
             else it.name
         }
         append("${function.name}(${args})")

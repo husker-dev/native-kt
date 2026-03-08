@@ -40,6 +40,11 @@ namespace global {
     boolean callbackPingString([Dealloc] StringPingCallback callback);
     SimpleCallback callbackPingCallback([Dealloc] CallbackPingCallback callback, [Dealloc] SimpleCallback item);
 
+    // Arrays
+    boolean passArray(Array<int> arg);
+    [Dealloc] Array<int> returnArray();
+    Array<int> pingArray(Array<int> arg);
+
     // JVMCI
     [Critical] boolean jvmci1();
     [Critical] boolean jvmci2(int a1);
@@ -56,6 +61,8 @@ namespace global {
     [Critical] long jvmci13();
     [Critical] float jvmci14();
     [Critical] double jvmci15();
+    [Critical] boolean jvmciArray(Array<int> array);
+    [Critical] boolean jvmciSomeArrays(Array<int> array1, Array<float> array2, Array<double> array3);
 };
 
 callback SimpleCallback = void (int status);

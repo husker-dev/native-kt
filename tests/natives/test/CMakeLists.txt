@@ -8,6 +8,7 @@ add_library(${PROJECT_NAME} OBJECT
         src/pass.c
         src/passAndReturn.c
         src/return.c
+        src/arrays.c
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE include)

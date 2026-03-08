@@ -18,17 +18,29 @@ fun syncFunctionName(moduleName: String) =
     "loadLib${moduleName.capitalized()}Sync"
 
 fun ResolvedIdlType.toKotlinForeignType(): String {
-    return if(isCallback() || isString())
+    return if(isCallback() || isString() || isArray())
         "MemorySegment"
     else toKotlinType()
 }
 
-private fun <T> ResolvedIdlType.Default.firstParam(block: (type: ResolvedIdlType.Default, declaration: ResolvedIdlDeclaration) -> T): T {
+fun <T> ResolvedIdlType.Default.firstParam(block: (type: ResolvedIdlType.Default, declaration: ResolvedIdlDeclaration) -> T): T {
     val param = parameters.firstOrNull()
         ?: throw UnsupportedOperationException("Array without type")
     val type = param as? ResolvedIdlType.Default
         ?: throw UnsupportedOperationException("Unsupported array type: $param")
     return block(type, type.declaration)
+}
+
+internal fun WebIDLBuiltinKind.simpleName() = when(this) {
+    WebIDLBuiltinKind.CHAR -> "Char"
+    WebIDLBuiltinKind.BOOLEAN -> "Boolean"
+    WebIDLBuiltinKind.BYTE -> "Byte"
+    WebIDLBuiltinKind.SHORT -> "Short"
+    WebIDLBuiltinKind.INT -> "Int"
+    WebIDLBuiltinKind.LONG -> "Long"
+    WebIDLBuiltinKind.FLOAT -> "Float"
+    WebIDLBuiltinKind.DOUBLE -> "Double"
+    else -> throw UnsupportedOperationException(toString())
 }
 
 fun ResolvedIdlType.toKotlinType(
@@ -157,7 +169,7 @@ fun ResolvedIdlType.toJNIType(): String = when(this) {
                     WebIDLBuiltinKind.SHORT -> "jshortArray"
                     WebIDLBuiltinKind.INT -> "jintArray"
                     WebIDLBuiltinKind.LONG -> "jlongArray"
-                    WebIDLBuiltinKind.FLOAT -> "floatArray"
+                    WebIDLBuiltinKind.FLOAT -> "jfloatArray"
                     WebIDLBuiltinKind.DOUBLE -> "jdoubleArray"
                     else -> "jobjectArray"
                 } else "jobjectArray"
@@ -239,6 +251,9 @@ fun ResolvedIdlOperation.isCriticalCapable(): Boolean =
 fun ResolvedIdlOperation.hasString(): Boolean =
     args.any { it.type.isString() }
 
+fun ResolvedIdlOperation.hasArray(): Boolean =
+    args.any { it.type.isArray() }
+
 fun IdlResolver.globalOperators() =
     namespaces.values.flatMap { it.operations }
 
@@ -266,7 +281,8 @@ fun printFunctionHeader(
     name: String = function.name,
     forcePrintVoid: Boolean = false,
     stringAsBytes: Boolean = false,
-    callbackAsAny: Boolean = false
+    callbackAsAny: Boolean = false,
+    arraysLen: Boolean = false,
 ) = builder.apply {
     if(isActual) append("actual ")
     if(isExpect) append("expect ")
@@ -282,7 +298,7 @@ fun printFunctionHeader(
         append(": ")
         append(arg.type.toKotlinType(stringAsBytes, callbackAsAny))
 
-        if(stringAsBytes && arg.type.isString()) {
+        if((stringAsBytes && arg.type.isString()) || (arraysLen && arg.type.isArray())) {
             append(", __len_")
             append(arg.name)
             append(": Int")

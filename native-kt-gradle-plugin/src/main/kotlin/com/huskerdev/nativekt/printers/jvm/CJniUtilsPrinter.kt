@@ -1,6 +1,7 @@
 package com.huskerdev.nativekt.printers.jvm
 
 import com.huskerdev.nativekt.utils.isDealloc
+import com.huskerdev.nativekt.utils.printLabel
 import com.huskerdev.nativekt.utils.toCDefType
 import com.huskerdev.nativekt.utils.toJavaDesc
 import com.huskerdev.webidl.resolver.*
@@ -43,11 +44,8 @@ class CJniUtilsPrinter(
             
         """.trimIndent())
 
+        printLabel(builder, "String")
         builder.append("""
-            
-            /* =================== *\
-                      Casts
-            \* =================== */
 
             jstring JNI_toJvmString(JNIEnv *env, KString str, bool dealloc) {
                 jstring result = JNI_createJString(env, str);
@@ -65,15 +63,42 @@ class CJniUtilsPrinter(
             
         """.trimIndent())
 
+        printLabel(builder, "Primitive Arrays")
+        builder.append("""
+
+            #define KArrayCast(Name, JType)                                                         \
+            K##Name##Array JNI_toNative##Name##Array(JNIEnv *env, JType##Array arr) {               \
+                jsize size = (*env)->GetArrayLength(env, arr);                                      \
+                JType* tmp = (*env)->Get##Name##ArrayElements(env, arr, NULL);                      \
+                const JType* copy = (JType*)malloc(size * sizeof(JType));                           \
+                memcpy((void*)copy, (void*)tmp, size * sizeof(JType));                              \
+                (*env)->Release##Name##ArrayElements(env, arr, tmp, 0);                             \
+                return (K##Name##Array) { (K##Name*)copy, size };                                   \
+            }                                                                                       \
+                                                                                                    \
+            JType##Array JNI_toJvm##Name##Array(JNIEnv *env, K##Name##Array arr, bool dealloc) {    \
+                JType##Array result = (*env)->New##Name##Array(env, arr.size);                      \
+                (*env)->Set##Name##ArrayRegion(env, result, 0, arr.size, (JType*)arr.elements);     \
+                if(dealloc) free((void*)arr.elements);                                              \
+                return result;                                                                      \
+            }
+
+            KArrayCast(Char,    jchar)
+            KArrayCast(Boolean, jboolean)
+            KArrayCast(Byte,    jbyte)
+            KArrayCast(Short,   jshort)
+            KArrayCast(Int,     jint)
+            KArrayCast(Long,    jlong)
+            KArrayCast(Float,   jfloat)
+            KArrayCast(Double,  jdouble)
+
+            #undef KArrayCast
+            
+        """.trimIndent())
+
         if(idl.callbacks.isNotEmpty()) {
 
-            builder.append("""
-                
-                /* =================== *\
-                        Callbacks
-                \* =================== */
-                
-            """.trimIndent())
+            printLabel(builder, "Callbacks")
             builder.append("\n")
             idl.callbacks.values.joinTo(builder, separator = "\n") {
                 "jmethodID callback${it.name};"
@@ -201,11 +226,8 @@ class CJniUtilsPrinter(
     }
 
     private fun printRegisterFunction(builder: StringBuilder) = builder.apply {
+        printLabel(builder, "Init function")
         append("""
-            
-            /* =================== *\
-                  Init function
-            \* =================== */
             
             jint JNI_Init(JavaVM *vm, JNINativeMethod *methods, jint count) {
                 jvm = vm;

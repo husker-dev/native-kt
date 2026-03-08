@@ -1,6 +1,7 @@
 package com.huskerdev.nativekt.printers.jvm
 
 import com.huskerdev.nativekt.utils.*
+import com.huskerdev.nativekt.utils.firstParam
 import com.huskerdev.webidl.resolver.*
 import java.io.File
 
@@ -25,11 +26,8 @@ class CJniPrinter(
     }
 
     private fun printRegisterFunction(builder: StringBuilder) = builder.apply {
+        printLabel(builder, "Load")
         append("""
-            
-            /* =================== *\
-                      Load
-            \* =================== */
             
             JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
                 JNINativeMethod methods[] = {
@@ -126,6 +124,13 @@ internal fun castJniToJava(type: ResolvedIdlType, content: String, dealloc: Bool
                 WebIDLBuiltinKind.STRING ->
                     if(useArena) "Arena__wrapString(&arena, $content, $dealloc)"
                     else "JNI_toJvmString(env, $content, $dealloc)"
+                WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
+                    if(declaration is BuiltinIdlDeclaration) {
+                        val name = declaration.kind.simpleName()
+                        if(useArena) "Arena__wrap${name}Array(&arena, $content, $dealloc)"
+                        else "JNI_toJvm${name}Array(env, $content, $dealloc)"
+                    } else throw UnsupportedOperationException(type.toString())
+                }
                 else -> content
             }
             is ResolvedIdlCallbackFunction -> "JNI_toJvmCallback(env, (JNI_Callback*)$content, $dealloc)"
@@ -142,6 +147,13 @@ internal fun castJavaToJNI(type: ResolvedIdlType, content: String, critical: Boo
                 WebIDLBuiltinKind.STRING ->
                     if(useArena) "Arena__unwrapString${if(critical) "Critical" else ""}(&arena, $content)"
                     else "JNI_toNativeString(env, $content)"
+                WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
+                    if(declaration is BuiltinIdlDeclaration) {
+                        val name = declaration.kind.simpleName()
+                        if(useArena) "Arena__unwrap${name}Array(&arena, $content)"
+                        else "JNI_toNative${name}Array(env, $content)"
+                    } else throw UnsupportedOperationException(type.toString())
+                }
                 else -> content
             }
             is ResolvedIdlCallbackFunction ->

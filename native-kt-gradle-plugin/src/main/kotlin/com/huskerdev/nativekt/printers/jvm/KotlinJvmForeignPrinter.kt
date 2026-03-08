@@ -69,7 +69,9 @@ class KotlinJvmForeignPrinter(
         )
         append(" = ")
 
-        val useArena = !function.isCritical() && (function.type.isString() || function.args.any { it.type.isString() || it.isDealloc() })
+        val useArena = !function.isCritical() && (
+                function.type.isString() || function.type.isArray() ||
+                        function.args.any { it.type.isString() || it.type.isArray() || it.isDealloc() })
 
         if(useArena)
             append("ForeignArena().use { arena ->\n\t\t")
@@ -78,7 +80,7 @@ class KotlinJvmForeignPrinter(
         val type = function.type.toKotlinForeignType()
 
         val args = arrayListOf<String>()
-        if(function.type.isString())
+        if(function.type.isString() || function.type.isArray())
             args += "arena.heap as SegmentAllocator"
 
         args += function.args.map {
@@ -182,6 +184,13 @@ class KotlinJvmForeignPrinter(
                 WebIDLBuiltinKind.STRING ->
                     if(useArena) "arena.asString($content, $dealloc)"
                     else "ForeignUtils.asString($content, $dealloc)"
+                WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
+                    if(declaration is BuiltinIdlDeclaration) {
+                        val name = declaration.kind.simpleName()
+                        if(useArena) "arena.toJvm${name}Array($content, $dealloc)"
+                        else "ForeignUtils.toJvm${name}Array($content, $dealloc)"
+                    } else throw UnsupportedOperationException(type.toString())
+                }
                 else -> content
             }
             is ResolvedIdlCallbackFunction ->
@@ -200,6 +209,13 @@ class KotlinJvmForeignPrinter(
                     if(critical) "ForeignUtils.heapStr($content)"
                     else if(useArena) "arena.cstr($content)"
                     else "ForeignUtils.cstr($content)"
+                WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
+                    if(declaration is BuiltinIdlDeclaration) {
+                        val name = declaration.kind.simpleName()
+                        if(useArena) "arena.toNative${name}Array($content)"
+                        else "ForeignUtils.toNative${name}Array($content)"
+                    } else throw UnsupportedOperationException(type.toString())
+                }
                 else -> content
             }
             is ResolvedIdlCallbackFunction ->
@@ -225,7 +241,7 @@ class KotlinJvmForeignPrinter(
                 WebIDLBuiltinKind.FLOAT -> "ForeignUtils.C_FLOAT"
                 WebIDLBuiltinKind.DOUBLE -> "ForeignUtils.C_DOUBLE"
                 WebIDLBuiltinKind.STRING -> "ForeignUtils.STRING_STRUCT"
-                WebIDLBuiltinKind.LIST -> "ForeignUtils.C_ADDRESS"
+                WebIDLBuiltinKind.LIST -> "ForeignUtils.ARRAY_STRUCT"
                 else -> throw UnsupportedOperationException(a.toString())
             }
             else -> "ForeignUtils.C_ADDRESS"

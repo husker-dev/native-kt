@@ -50,6 +50,47 @@ class CJniArenaPrinter(
                 return false;
             }
             
+            // Primite arrays
+            
+            #define KArrayCast(Name, JType)		                                                    \
+            static void ArenaNode__free##Name##Array(Arena* arena, ArenaNode* node){                \
+                JNIEnv *env = arena->env;                                                           \
+                (*env)->Release##Name##ArrayElements(env, node->obj, (JType*)node->ptr, 0);         \
+            }                                                                                       \
+                                                                                                    \
+            K##Name##Array Arena__unwrap##Name##Array(Arena* arena, JType##Array arr) {             \
+                JNIEnv *env = arena->env;                                                           \
+                jsize size = (*env)->GetArrayLength(env, arr);                                      \
+                                                                                                    \
+                K##Name* elements = (K##Name*) Arena__push(arena,                                   \
+                    arr,                                                                            \
+                    (void*)(*env)->Get##Name##ArrayElements(env, arr, NULL),                        \
+                    ArenaNode__free##Name##Array                                                    \
+                );                                                                                  \
+                return (K##Name##Array) { elements, size };                                         \
+            }                                                                                       \
+                                                                                                    \
+            JType##Array Arena__wrap##Name##Array(Arena* arena, K##Name##Array arr, bool dealloc) { \
+                JNIEnv *env = arena->env;                                                           \
+                JType##Array result = (*env)->New##Name##Array(env, arr.size);                      \
+                (*env)->Set##Name##ArrayRegion(env, result, 0, arr.size, (JType*)arr.elements);     \
+                                                                                                    \
+                if(dealloc && !Arena__contains(arena, (void*)arr.elements))                         \
+                    free((void*)arr.elements);                                                      \
+                return result;                                                                      \
+            }
+
+            KArrayCast(Char,    jchar)
+            KArrayCast(Boolean, jboolean)
+            KArrayCast(Byte,    jbyte)
+            KArrayCast(Short,   jshort)
+            KArrayCast(Int,     jint)
+            KArrayCast(Long,    jlong)
+            KArrayCast(Float,   jfloat)
+            KArrayCast(Double,  jdouble)
+
+            #undef KArrayCast
+            
             // String
 
             void ArenaNode__freeString(Arena* arena, ArenaNode* node){

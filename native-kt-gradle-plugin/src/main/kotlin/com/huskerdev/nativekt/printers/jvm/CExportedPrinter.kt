@@ -19,7 +19,7 @@ class CExportedPrinter(
 
         idl.globalOperators().forEach {
             printFunction(builder, it)
-            if(it.isCriticalCapable() && it.hasString())
+            if(it.isCriticalCapable() && (it.hasString() || it.hasArray()))
                 printFunctionCritical(builder, it)
         }
 
@@ -60,7 +60,10 @@ class CExportedPrinter(
         function.args.flatMap {
             if(it.type.isString())
                 listOf("const char* __arg_${it.name}", "int32_t __length_${it.name}")
-            else
+            else if(it.type.isArray()) {
+                val type = (it.type as ResolvedIdlType.Default).firstParam { type, _ -> type.toCDefType() }
+                listOf("$type* __arg_${it.name}", "int32_t __length_${it.name}")
+            } else
                 listOf("${it.type.toCDefType()} __arg_${it.name}")
         }.joinTo(this)
         append(") {\n")
@@ -72,7 +75,7 @@ class CExportedPrinter(
 
         val args = function.args.joinToString { castToKType(it.type, it.name) }
         val call = "${function.name}($args)"
-        append(castFromKType(function.type, call))
+        append(call)
         append(";\n}\n")
     }
 
@@ -81,6 +84,7 @@ class CExportedPrinter(
             is ResolvedIdlType.Void -> name
             is ResolvedIdlType.Default -> when(val decl = type.declaration) {
                 is BuiltinIdlDeclaration -> when(decl.kind) {
+                    WebIDLBuiltinKind.LIST -> "make${type.toCDefType()}(__arg_${name}, __length_${name})"
                     WebIDLBuiltinKind.STRING -> "makeKString(__arg_${name}, __length_${name})"
                     else -> "__arg_$name"
                 }
@@ -90,18 +94,5 @@ class CExportedPrinter(
         }
     }
 
-    internal fun castFromKType(type: ResolvedIdlType, content: String): String {
-        return when(type) {
-            is ResolvedIdlType.Void -> content
-            is ResolvedIdlType.Default -> when(val decl = type.declaration) {
-                is BuiltinIdlDeclaration -> when(decl.kind) {
-                    WebIDLBuiltinKind.STRING -> "$content.data"
-                    else -> content
-                }
-                else -> content
-            }
-            else -> throw UnsupportedOperationException(type.toString())
-        }
-    }
 
 }

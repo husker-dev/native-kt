@@ -41,7 +41,7 @@ inline KString makeKString(const char* data, const KInt length) {
 #define KArrayDef(Name, Type)	                                \
 typedef struct Name {			                                \
     const Type elements;				                        \
-    const KInt size;				                            \
+    KInt size;				                                    \
 } Name;                                                         \
                                                                 \
 inline Name make##Name(const Type elements, const KInt size) {  \

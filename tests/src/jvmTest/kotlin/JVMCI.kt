@@ -89,4 +89,14 @@ class JVMCI {
     fun jvmciReturnsDouble() = withJVMCI {
         assertEquals(1.5, jvmci15())
     }
+
+    @Test
+    fun jvmciArray() = withJVMCI {
+        assertTrue(jvmciArray(intArrayOf(1, 2, 3)))
+    }
+
+    @Test
+    fun jvmciSomeArrays() = withJVMCI {
+        assertTrue(jvmciSomeArrays(intArrayOf(1, 2, 3), floatArrayOf(4f, 5f, 6f), doubleArrayOf(7.0, 8.0, 9.0)))
+    }
 }

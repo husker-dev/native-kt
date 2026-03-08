@@ -85,3 +85,25 @@ KFloat jvmci14() {
 KDouble jvmci15() {
     return 1.5;
 }
+
+KBoolean jvmciArray(KIntArray array) {
+    return array.size == 3 &&
+        array.elements[0] == 1 &&
+        array.elements[1] == 2 &&
+        array.elements[2] == 3;
+}
+
+KBoolean jvmciSomeArrays(KIntArray array1, KFloatArray array2, KDoubleArray array3) {
+    return array1.size == 3 &&
+        array1.elements[0] == 1 &&
+        array1.elements[1] == 2 &&
+        array1.elements[2] == 3 &&
+        array2.size == 3 &&
+        array2.elements[0] == 4.0 &&
+        array2.elements[1] == 5.0 &&
+        array2.elements[2] == 6.0 &&
+        array3.size == 3 &&
+        array3.elements[0] == 7.0 &&
+        array3.elements[1] == 8.0 &&
+        array3.elements[2] == 9.0;
+}

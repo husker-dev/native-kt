@@ -15,6 +15,8 @@ public class ForeignUtils {
 
     private static final Linker linker = Linker.nativeLinker();
 
+    // KString struct
+
     public static final StructLayout STRING_STRUCT = MemoryLayout.structLayout(
             ValueLayout.ADDRESS.withName("data"),
             ValueLayout.JAVA_INT.withName("length"),
@@ -22,6 +24,18 @@ public class ForeignUtils {
     );
     public static final VarHandle stringDataVarHandle = STRING_STRUCT.varHandle(MemoryLayout.PathElement.groupElement("data"));
     public static final VarHandle stringLengthVarHandle = STRING_STRUCT.varHandle(MemoryLayout.PathElement.groupElement("length"));
+
+    // KArray struct
+
+    public static final StructLayout ARRAY_STRUCT = MemoryLayout.structLayout(
+            ValueLayout.ADDRESS.withName("elements"),
+            ValueLayout.JAVA_INT.withName("size"),
+            MemoryLayout.paddingLayout(4) // align to 16
+    );
+    public static final VarHandle arrayElementsVarHandle = ARRAY_STRUCT.varHandle(MemoryLayout.PathElement.groupElement("elements"));
+    public static final VarHandle arraySizeVarHandle = ARRAY_STRUCT.varHandle(MemoryLayout.PathElement.groupElement("size"));
+
+    // Callbacks
 
     public static final HashMap<Long, Object> callbacks = new HashMap<>();
 
@@ -35,6 +49,8 @@ public class ForeignUtils {
 
     private static final MemorySegment callbackFree;
 
+    // Types
+
     public static ValueLayout C_CHAR = ValueLayout.JAVA_CHAR;
     public static ValueLayout C_BYTE = ValueLayout.JAVA_BYTE;
     public static ValueLayout C_BOOLEAN = ValueLayout.JAVA_BOOLEAN;
@@ -44,6 +60,8 @@ public class ForeignUtils {
     public static ValueLayout C_FLOAT = ValueLayout.JAVA_FLOAT;
     public static ValueLayout C_DOUBLE = ValueLayout.JAVA_DOUBLE;
     public static ValueLayout C_ADDRESS = ValueLayout.ADDRESS;
+
+    // Free function
 
     public static final MethodHandle freeHandle = linker.downcallHandle(
             linker.defaultLookup().find("free").orElseThrow(),
@@ -67,6 +85,236 @@ public class ForeignUtils {
         else
             return linker.downcallHandle(address, function);
     }
+
+    // String
+
+    public static String fromKString(MemorySegment struct) {
+        MemorySegment data = (MemorySegment)stringDataVarHandle.get(struct, 0L);
+        int length = (int)stringLengthVarHandle.get(struct, 0L);
+
+        final byte[] bytes = new byte[length];
+        MemorySegment.copy(data.reinterpret(length), JAVA_BYTE, 0, bytes, 0, length);
+        return new String(bytes, StandardCharsets.UTF_8);
+    }
+
+    public static MemorySegment cstr(String of) {
+        MemorySegment struct = Arena.ofAuto().allocate(STRING_STRUCT);
+        stringDataVarHandle.set(struct, 0L, Arena.global().allocateFrom(of));
+        stringLengthVarHandle.set(struct, 0L, of.length());
+        return struct;
+    }
+
+    public static String asString(MemorySegment struct, boolean dealloc) throws Throwable {
+        String result = fromKString(struct);
+        if(dealloc)
+            freeHandle.invoke((MemorySegment)ForeignUtils.stringDataVarHandle.get(struct, 0L));
+        return result;
+    }
+
+    // Arrays
+
+    public static int arraySize(MemorySegment struct) {
+        return (int)arraySizeVarHandle.get(struct, 0L);
+    }
+
+    public static MemorySegment arrayElements(MemorySegment struct) {
+        return (MemorySegment)ForeignUtils.arrayElementsVarHandle.get(struct, 0L);
+    }
+
+    public static long arrayElementsAddress(MemorySegment struct) {
+        return arrayElements(struct).address();
+    }
+
+    // Array: char
+
+    public static MemorySegment toNativeCharArray(char[] arr) {
+        return toNativeCharArray(arr, Arena.global(), Arena.ofAuto());
+    }
+
+    public static MemorySegment toNativeCharArray(char[] arr, Arena elementsArena, Arena structArena) {
+        MemorySegment struct = structArena.allocate(ARRAY_STRUCT);
+        arrayElementsVarHandle.set(struct, 0L,
+                elementsArena.allocate((long) arr.length * C_CHAR.byteSize(), C_CHAR.byteAlignment())
+                        .copyFrom(MemorySegment.ofArray(arr))
+        );
+        arraySizeVarHandle.set(struct, 0L, arr.length);
+        return struct;
+    }
+
+    public static char[] toJvmCharArray(MemorySegment struct, boolean dealloc) throws Throwable {
+        char[] result = new char[arraySize(struct)];
+        MemorySegment elements = arrayElements(struct).reinterpret(result.length * C_CHAR.byteSize());
+        MemorySegment.copy(elements, C_CHAR, 0L, result, 0, result.length);
+        if(dealloc) freeHandle.invoke(elements);
+        return result;
+    }
+
+    // Array: boolean
+
+    public static MemorySegment toNativeBooleanArray(boolean[] arr) {
+        return toNativeBooleanArray(arr, Arena.global(), Arena.ofAuto());
+    }
+
+    public static MemorySegment toNativeBooleanArray(boolean[] arr, Arena elementsArena, Arena structArena) {
+        byte[] bytes = new byte[arr.length];
+        for(int i = 0; i < arr.length; i++)
+            bytes[i] = (byte)(arr[i] ? 1 : 0);
+        return toNativeByteArray(bytes, elementsArena, structArena);
+    }
+
+    public static boolean[] toJvmBooleanArray(MemorySegment struct, boolean dealloc) throws Throwable {
+        byte[] bytes = toJvmByteArray(struct, dealloc);
+        boolean[] result = new boolean[bytes.length];
+        for(int i = 0; i < bytes.length; i++)
+            result[i] = (bytes[i] == 1);
+        return result;
+    }
+
+    // Array: byte
+
+    public static MemorySegment toNativeByteArray(byte[] arr) {
+        return toNativeByteArray(arr, Arena.global(), Arena.ofAuto());
+    }
+
+    public static MemorySegment toNativeByteArray(byte[] arr, Arena elementsArena, Arena structArena) {
+        MemorySegment struct = structArena.allocate(ARRAY_STRUCT);
+        arrayElementsVarHandle.set(struct, 0L,
+                elementsArena.allocate((long) arr.length * C_BYTE.byteSize(), C_BYTE.byteAlignment())
+                        .copyFrom(MemorySegment.ofArray(arr))
+        );
+        arraySizeVarHandle.set(struct, 0L, arr.length);
+        return struct;
+    }
+
+    public static byte[] toJvmByteArray(MemorySegment struct, boolean dealloc) throws Throwable {
+        byte[] result = new byte[arraySize(struct)];
+        MemorySegment elements = arrayElements(struct).reinterpret(result.length * C_BYTE.byteSize());
+        MemorySegment.copy(elements, C_BYTE, 0L, result, 0, result.length);
+        if(dealloc) freeHandle.invoke(elements);
+        return result;
+    }
+
+    // Array: short
+
+    public static MemorySegment toNativeShortArray(short[] arr) {
+        return toNativeShortArray(arr, Arena.global(), Arena.ofAuto());
+    }
+
+    public static MemorySegment toNativeShortArray(short[] arr, Arena elementsArena, Arena structArena) {
+        MemorySegment struct = structArena.allocate(ARRAY_STRUCT);
+        arrayElementsVarHandle.set(struct, 0L,
+                elementsArena.allocate((long) arr.length * C_SHORT.byteSize(), C_SHORT.byteAlignment())
+                        .copyFrom(MemorySegment.ofArray(arr))
+        );
+        arraySizeVarHandle.set(struct, 0L, arr.length);
+        return struct;
+    }
+
+    public static short[] toJvmShortArray(MemorySegment struct, boolean dealloc) throws Throwable {
+        short[] result = new short[arraySize(struct)];
+        MemorySegment elements = arrayElements(struct).reinterpret(result.length * C_SHORT.byteSize());
+        MemorySegment.copy(elements, C_SHORT, 0L, result, 0, result.length);
+        if(dealloc) freeHandle.invoke(elements);
+        return result;
+    }
+
+    // Array: int
+
+    public static MemorySegment toNativeIntArray(int[] arr) {
+        return toNativeIntArray(arr, Arena.global(), Arena.ofAuto());
+    }
+
+    public static MemorySegment toNativeIntArray(int[] arr, Arena elementsArena, Arena structArena) {
+        MemorySegment struct = structArena.allocate(ARRAY_STRUCT);
+        arrayElementsVarHandle.set(struct, 0L,
+                elementsArena.allocate((long) arr.length * C_INT.byteSize(), C_INT.byteAlignment())
+                        .copyFrom(MemorySegment.ofArray(arr))
+        );
+        arraySizeVarHandle.set(struct, 0L, arr.length);
+        return struct;
+    }
+
+    public static int[] toJvmIntArray(MemorySegment struct, boolean dealloc) throws Throwable {
+        int[] result = new int[arraySize(struct)];
+        MemorySegment elements = arrayElements(struct).reinterpret(result.length * C_INT.byteSize());
+        MemorySegment.copy(elements, C_INT, 0L, result, 0, result.length);
+        if(dealloc) freeHandle.invoke(elements);
+        return result;
+    }
+
+    // Array: long
+
+    public static MemorySegment toNativeLongArray(long[] arr) {
+        return toNativeLongArray(arr, Arena.global(), Arena.ofAuto());
+    }
+
+    public static MemorySegment toNativeLongArray(long[] arr, Arena elementsArena, Arena structArena) {
+        MemorySegment struct = structArena.allocate(ARRAY_STRUCT);
+        arrayElementsVarHandle.set(struct, 0L,
+                elementsArena.allocate((long) arr.length * C_LONG.byteSize(), C_LONG.byteAlignment())
+                        .copyFrom(MemorySegment.ofArray(arr))
+        );
+        arraySizeVarHandle.set(struct, 0L, arr.length);
+        return struct;
+    }
+
+    public static long[] toJvmLongArray(MemorySegment struct, boolean dealloc) throws Throwable {
+        long[] result = new long[arraySize(struct)];
+        MemorySegment elements = arrayElements(struct).reinterpret(result.length * C_LONG.byteSize());
+        MemorySegment.copy(elements, C_LONG, 0L, result, 0, result.length);
+        if(dealloc) freeHandle.invoke(elements);
+        return result;
+    }
+
+    // Array: float
+
+    public static MemorySegment toNativeFloatArray(float[] arr) {
+        return toNativeFloatArray(arr, Arena.global(), Arena.ofAuto());
+    }
+
+    public static MemorySegment toNativeFloatArray(float[] arr, Arena elementsArena, Arena structArena) {
+        MemorySegment struct = structArena.allocate(ARRAY_STRUCT);
+        arrayElementsVarHandle.set(struct, 0L,
+                elementsArena.allocate((long) arr.length * C_FLOAT.byteSize(), C_FLOAT.byteAlignment())
+                        .copyFrom(MemorySegment.ofArray(arr))
+        );
+        arraySizeVarHandle.set(struct, 0L, arr.length);
+        return struct;
+    }
+
+    public static float[] toJvmFloatArray(MemorySegment struct, boolean dealloc) throws Throwable {
+        float[] result = new float[arraySize(struct)];
+        MemorySegment elements = arrayElements(struct).reinterpret(result.length * C_FLOAT.byteSize());
+        MemorySegment.copy(elements, C_FLOAT, 0L, result, 0, result.length);
+        if(dealloc) freeHandle.invoke(elements);
+        return result;
+    }
+
+    // Array: double
+
+    public static MemorySegment toNativeDoubleArray(double[] arr) {
+        return toNativeDoubleArray(arr, Arena.global(), Arena.ofAuto());
+    }
+
+    public static MemorySegment toNativeDoubleArray(double[] arr, Arena elementsArena, Arena structArena) {
+        MemorySegment struct = structArena.allocate(ARRAY_STRUCT);
+        arrayElementsVarHandle.set(struct, 0L,
+                elementsArena.allocate((long) arr.length * C_DOUBLE.byteSize(), C_DOUBLE.byteAlignment())
+                        .copyFrom(MemorySegment.ofArray(arr))
+        );
+        arraySizeVarHandle.set(struct, 0L, arr.length);
+        return struct;
+    }
+
+    public static double[] toJvmDoubleArray(MemorySegment struct, boolean dealloc) throws Throwable {
+        double[] result = new double[arraySize(struct)];
+        MemorySegment elements = arrayElements(struct).reinterpret(result.length * C_DOUBLE.byteSize());
+        MemorySegment.copy(elements, C_DOUBLE, 0L, result, 0, result.length);
+        if(dealloc) freeHandle.invoke(elements);
+        return result;
+    }
+
+    // Callbacks
 
     public static MemorySegment createCallback(
             Object callback,
@@ -93,41 +341,6 @@ public class ForeignUtils {
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
-    }
-
-    public static void fillKString(MemorySegment struct, MemorySegment data, int length) {
-        stringDataVarHandle.set(struct, 0L, data);
-        stringLengthVarHandle.set(struct, 0L, length);
-    }
-
-    public static MemorySegment getKStringData(MemorySegment struct) {
-        return (MemorySegment)stringDataVarHandle.get(struct, 0L);
-    }
-
-    public static int getKStringLength(MemorySegment struct) {
-        return (int)stringLengthVarHandle.get(struct, 0L);
-    }
-
-    public static String fromKString(MemorySegment data, int length) {
-        final byte[] bytes = new byte[length];
-        MemorySegment.copy(data.reinterpret(length), JAVA_BYTE, 0, bytes, 0, length);
-        return new String(bytes, StandardCharsets.UTF_8);
-    }
-
-    public static MemorySegment cstr(String of) {
-        MemorySegment struct = Arena.ofAuto().allocate(STRING_STRUCT);
-        fillKString(struct, Arena.global().allocateFrom(of), of.length());
-        return struct;
-    }
-
-    public static String asString(MemorySegment segment, boolean dealloc) throws Throwable {
-        MemorySegment data = getKStringData(segment);
-        int length = getKStringLength(segment);
-
-        String result = fromKString(data, length);
-        if(dealloc)
-            freeHandle.invoke(data);
-        return result;
     }
 
     @SuppressWarnings("unchecked")

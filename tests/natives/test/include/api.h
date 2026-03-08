@@ -41,7 +41,7 @@ inline KString makeKString(const char* data, const KInt length) {
 #define KArrayDef(Name, Type)	                                \
 typedef struct Name {			                                \
     const Type elements;				                        \
-    const KInt size;				                            \
+    KInt size;				                                    \
 } Name;                                                         \
                                                                 \
 inline Name make##Name(const Type elements, const KInt size) {  \
@@ -110,6 +110,9 @@ SimpleCallback* callbackReturn(SimpleCallback* callback);
 KBoolean callbackReturnString(StringCallback* callback);
 KBoolean callbackPingString(StringPingCallback* callback);
 SimpleCallback* callbackPingCallback(CallbackPingCallback* callback, SimpleCallback* item);
+KBoolean passArray(KIntArray arg);
+KIntArray returnArray();
+KIntArray pingArray(KIntArray arg);
 KBoolean jvmci1();
 KBoolean jvmci2(KInt a1);
 KBoolean jvmci3(KInt a1, KInt a2);
@@ -125,6 +128,8 @@ KInt jvmci12();
 KLong jvmci13();
 KFloat jvmci14();
 KDouble jvmci15();
+KBoolean jvmciArray(KIntArray array);
+KBoolean jvmciSomeArrays(KIntArray array1, KFloatArray array2, KDoubleArray array3);
 
 // ╔═══════════════════╗
 // ║     Callbacks     ║
