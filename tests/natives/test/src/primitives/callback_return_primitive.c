@@ -1,0 +1,42 @@
+#include <api.h>
+#include <string.h>
+
+KBoolean callbackReturnChar(CallbackReturnChar* arg) {
+    return arg->invoke(arg) == 'a';
+}
+
+KBoolean callbackReturnBoolean(CallbackReturnBoolean* arg) {
+    return arg->invoke(arg) == true;
+}
+
+KBoolean callbackReturnByte(CallbackReturnByte* arg) {
+    return arg->invoke(arg) == 1;
+}
+
+KBoolean callbackReturnShort(CallbackReturnShort* arg) {
+    return arg->invoke(arg) == 1;
+}
+
+KBoolean callbackReturnInt(CallbackReturnInt* arg) {
+    return arg->invoke(arg) == 1;
+}
+
+KBoolean callbackReturnLong(CallbackReturnLong* arg) {
+    return arg->invoke(arg) == 1;
+}
+
+KBoolean callbackReturnFloat(CallbackReturnFloat* arg) {
+    return arg->invoke(arg) == 1.1f;
+}
+
+KBoolean callbackReturnDouble(CallbackReturnDouble* arg) {
+    return arg->invoke(arg) == 1.1;
+}
+
+KBoolean callbackReturnString(CallbackReturnString* arg) {
+    return strcmp(arg->invoke(arg).data, "test string") == 0;
+}
+
+VoidCallback* callbackReturnCallback(CallbackReturnCallback* arg) {
+    return arg->invoke(arg);
+}

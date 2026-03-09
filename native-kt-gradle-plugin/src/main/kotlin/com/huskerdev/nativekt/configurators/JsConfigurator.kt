@@ -91,7 +91,7 @@ internal fun configureJs(
         add_executable(lib$${module.name} $<TARGET_OBJECTS:$${module.name}> emscripten_bindings.cpp)
         set_target_properties(lib$${module.name} PROPERTIES CXX_STANDARD 17)
         
-        set_target_properties(lib$${module.name} PROPERTIES LINK_FLAGS "-s -lembind -s --no-entry -s ALLOW_MEMORY_GROWTH=1 -s ALLOW_TABLE_GROWTH=1 -s MODULARIZE=1 -s EXPORT_ES6=1 -s WASM_BIGINT=$${if(extension.useJsBigInt) "1" else "0"} -s EXPORTED_RUNTIME_METHODS=UTF8ToString,stringToUTF8,lengthBytesUTF8,HEAP32,HEAP8,addFunction -s EXPORTED_FUNCTIONS=$$exportedStr")
+        set_target_properties(lib$${module.name} PROPERTIES LINK_FLAGS "-s -lembind -s --no-entry -s ALLOW_MEMORY_GROWTH=1 -s ALLOW_TABLE_GROWTH=1 -s MODULARIZE=1 -s EXPORT_ES6=1 -s WASM_BIGINT=$${if(extension.useJsBigInt) "1" else "0"} -s EXPORTED_RUNTIME_METHODS=UTF8ToString,stringToUTF8,lengthBytesUTF8,HEAP32,HEAP8,HEAPF32,addFunction -s EXPORTED_FUNCTIONS=$$exportedStr")
     """.trimIndent())
 
     // Create Kotlin/JS bindings

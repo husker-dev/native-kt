@@ -3,15 +3,16 @@
 
 package com.huskerdev.nativekt.web
 
-import org.khronos.webgl.Float64Array
-import org.khronos.webgl.Float32Array
-import org.khronos.webgl.Int16Array
-import org.khronos.webgl.Int32Array
-import org.khronos.webgl.Int8Array
-import org.khronos.webgl.Uint16Array
+import org.khronos.webgl.*
 import kotlin.js.json
+import kotlin.math.truncate
 
 private val callbacks = hashMapOf<Pair<dynamic, Int>, Any>()
+
+fun Float.truncF32(): Float {
+    val factor = 10_000_000
+    return truncate(this * factor) / factor
+}
 
 fun allocCStr(module: dynamic, str: String): Any {
     val len = module.lengthBytesUTF8(str) + 1
@@ -44,7 +45,7 @@ private fun <T> toArray(obj: Any): Array<T> =
 
 fun toNativeCharArray(module: dynamic, arr: CharArray): dynamic {
     val elements = module._malloc(arr.size * Char.SIZE_BYTES)
-    Uint16Array(module.HEAP8.buffer, elements, arr.size)
+    Int16Array(module.HEAP8.buffer, elements, arr.size)
         .set(arr.map { it.code.toShort() }.toTypedArray())
     return json("elements" to elements, "size" to arr.size)
 }
@@ -53,7 +54,8 @@ fun toKotlinCharArray(module: dynamic, struct: dynamic, dealloc: Boolean): CharA
     val elements = (struct.elements as JsNumber).toInt()
     val size = (struct.size as JsNumber).toInt()
 
-    val result = toArray<Char>(Uint16Array(module.HEAP8.buffer, elements, size)).toCharArray()
+    val result = toArray<Short>(Int16Array(module.HEAP8.buffer, elements, size))
+        .map { it.toInt().toChar() }.toCharArray()
     if(dealloc) module._free(elements)
     return result
 }
@@ -130,19 +132,31 @@ fun toKotlinIntArray(module: dynamic, struct: dynamic, dealloc: Boolean): IntArr
 
 // Array: long
 
+external class BigInt64Array(buffer: dynamic, byteOffset: Int, length: Int) {
+    fun set(value: dynamic)
+}
+
 fun toNativeLongArray(module: dynamic, arr: LongArray): dynamic {
-    throw UnsupportedOperationException("Temporally unsupported")
+    val elements = module._malloc(arr.size * Long.SIZE_BYTES)
+    BigInt64Array(module.HEAP8.buffer, elements, arr.size)
+        .set(arr.toTypedArray())
+    return json("elements" to elements, "size" to arr.size)
 }
 
 fun toKotlinLongArray(module: dynamic, struct: dynamic, dealloc: Boolean): LongArray {
-    throw UnsupportedOperationException("Temporally unsupported")
+    val elements = (struct.elements as JsNumber).toInt()
+    val size = (struct.size as JsNumber).toInt()
+
+    val result = toArray<Long>(BigInt64Array(module.HEAP8.buffer, elements, size)).toLongArray()
+    if(dealloc) module._free(elements)
+    return result
 }
 
 // Array: float
 
 fun toNativeFloatArray(module: dynamic, arr: FloatArray): dynamic {
     val elements = module._malloc(arr.size * Float.SIZE_BYTES)
-    Float32Array(module.HEAP8.buffer, elements, arr.size).set(arr.toTypedArray())
+    Float32Array(module.HEAPF32.buffer, elements, arr.size).set(arr.toTypedArray())
     return json("elements" to elements, "size" to arr.size)
 }
 
@@ -150,16 +164,16 @@ fun toKotlinFloatArray(module: dynamic, struct: dynamic, dealloc: Boolean): Floa
     val elements = (struct.elements as JsNumber).toInt()
     val size = (struct.size as JsNumber).toInt()
 
-    val result = toArray<Float>(Float32Array(module.HEAP8.buffer, elements, size)).toFloatArray()
+    val result = toArray<Float>(Float32Array(module.HEAPF32.buffer, elements, size))
     if(dealloc) module._free(elements)
-    return result
+    return FloatArray(size) { result[it].truncF32() }
 }
 
 // Array: double
 
 fun toNativeDoubleArray(module: dynamic, arr: DoubleArray): dynamic {
     val elements = module._malloc(arr.size * Double.SIZE_BYTES)
-    Float64Array(module.HEAP8.buffer, elements, arr.size).set(arr.toTypedArray())
+    Float64Array(module.HEAPF32.buffer, elements, arr.size).set(arr.toTypedArray())
     return json("elements" to elements, "size" to arr.size)
 }
 
@@ -167,7 +181,7 @@ fun toKotlinDoubleArray(module: dynamic, struct: dynamic, dealloc: Boolean): Dou
     val elements = (struct.elements as JsNumber).toInt()
     val size = (struct.size as JsNumber).toInt()
 
-    val result = toArray<Double>(Float64Array(module.HEAP8.buffer, elements, size)).toDoubleArray()
+    val result = toArray<Double>(Float64Array(module.HEAPF32.buffer, elements, size)).toDoubleArray()
     if(dealloc) module._free(elements)
     return result
 }

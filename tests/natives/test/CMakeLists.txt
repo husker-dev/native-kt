@@ -3,12 +3,17 @@ cmake_minimum_required(VERSION 3.15)
 project("test")
 
 add_library(${PROJECT_NAME} OBJECT
-        src/callbacks.c
         src/jvmci.c
-        src/pass.c
-        src/passAndReturn.c
-        src/return.c
-        src/arrays.c
+        src/primitives/pass_primitive.c
+        src/primitives/ping_primitive.c
+        src/primitives/return_primitive.c
+        src/primitives/callback_arg_primitive.c
+        src/primitives/callback_return_primitive.c
+        src/arrays/pass_array.c
+        src/arrays/return_array.c
+        src/arrays/ping_array.c
+        src/arrays/callback_arg_array.c
+        src/arrays/callback_return_array.c
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE include)

@@ -165,6 +165,7 @@ class KotlinJsPrinter(
         is ResolvedIdlType.Void -> content
         is ResolvedIdlType.Default -> when(val decl = type.declaration) {
             is BuiltinIdlDeclaration -> when(decl.kind) {
+                WebIDLBuiltinKind.CHAR -> "${content}.code"
                 WebIDLBuiltinKind.STRING ->
                     if(useArena) "arena.allocCStr($content)"
                     else "allocCStr(_module, $content)"
@@ -190,6 +191,13 @@ class KotlinJsPrinter(
         is ResolvedIdlType.Default -> when(val decl = type.declaration) {
             is BuiltinIdlDeclaration -> when(decl.kind) {
                 WebIDLBuiltinKind.BOOLEAN -> "$content == 1"
+                WebIDLBuiltinKind.FLOAT -> "($content as Float).truncF32()"
+                WebIDLBuiltinKind.CHAR -> "($content as JsNumber).toInt().toChar()"
+                WebIDLBuiltinKind.INT -> "($content as JsNumber).toInt()"
+                WebIDLBuiltinKind.DOUBLE -> "($content as JsNumber).toDouble()"
+                WebIDLBuiltinKind.BYTE -> "($content as JsNumber).toInt().toByte()"
+                WebIDLBuiltinKind.SHORT -> "($content as JsNumber).toInt().toShort()"
+                WebIDLBuiltinKind.LONG -> "$content as JsBigInt"
                 WebIDLBuiltinKind.STRING ->
                     if(useArena) "arena.unwrapCStr($content, $dealloc)"
                     else "unwrapCStr(_module, $content, $dealloc)"

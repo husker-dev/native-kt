@@ -1,49 +1,116 @@
 
 namespace global {
-    // Consume
-    boolean consume();
-    boolean consumeInt(int arg);
-    boolean consumeLong(long arg);
-    boolean consumeFloat(float arg);
-    boolean consumeDouble(double arg);
-    boolean consumeByte(byte arg);
-    boolean consumeBoolean(boolean arg);
-    boolean consumeChar(char arg);
-    boolean consumeString(string arg);
 
-    // Get
-    void get();
-    int getInt();
-    long getLong();
-    float getFloat();
-    double getDouble();
-    byte getByte();
-    boolean getBoolean();
-    char getChar();
-    string getStringLiteral();
-    [Dealloc] string getString();
+    // Primitives pass
+    boolean passVoid();
+    boolean passChar(char arg);
+    boolean passBoolean(boolean arg);
+    boolean passByte(byte arg);
+    boolean passShort(short arg);
+    boolean passInt(int arg);
+    boolean passLong(long arg);
+    boolean passFloat(float arg);
+    boolean passDouble(double arg);
+    boolean passString(string arg);
 
-    // Ping
+    // Primitives: return
+    void returnVoid();
+    char returnChar();
+    boolean returnBoolean();
+    byte returnByte();
+    short returnShort();
+    int returnInt();
+    long returnLong();
+    float returnFloat();
+    double returnDouble();
+    string returnStringLiteral();
+    [Dealloc] string returnString();
+
+    // Primitives: ping
+    char pingChar(char arg);
+    boolean pingBoolean(boolean arg);
+    byte pingByte(byte arg);
+    short pingShort(short arg);
     int pingInt(int arg);
     long pingLong(long arg);
     float pingFloat(float arg);
     double pingDouble(double arg);
-    byte pingByte(byte arg);
-    boolean pingBoolean(boolean arg);
-    char pingChar(char arg);
     [Dealloc] string pingString(string arg);
 
-    // Callback
-    void simpleCallback([Dealloc] SimpleCallback callback);
-    SimpleCallback callbackReturn([Dealloc] SimpleCallback callback);
-    boolean callbackReturnString([Dealloc] StringCallback callback);
-    boolean callbackPingString([Dealloc] StringPingCallback callback);
-    SimpleCallback callbackPingCallback([Dealloc] CallbackPingCallback callback, [Dealloc] SimpleCallback item);
+    // Primitives: callback arg
+    void callbackVoid(VoidCallback arg);
+    boolean callbackArgChar(CallbackPassChar arg);
+    boolean callbackArgBoolean(CallbackPassBoolean arg);
+    boolean callbackArgByte(CallbackPassByte arg);
+    boolean callbackArgShort(CallbackPassShort arg);
+    boolean callbackArgInt(CallbackPassInt arg);
+    boolean callbackArgLong(CallbackPassLong arg);
+    boolean callbackArgFloat(CallbackPassFloat arg);
+    boolean callbackArgDouble(CallbackPassDouble arg);
+    boolean callbackArgString(CallbackPassString arg);
+    boolean callbackArgCallback(VoidCallback pass, CallbackPassCallback arg);
 
-    // Arrays
-    boolean passArray(Array<int> arg);
-    [Dealloc] Array<int> returnArray();
-    Array<int> pingArray(Array<int> arg);
+    // Primitives: callback return
+    boolean callbackReturnChar(CallbackReturnChar arg);
+    boolean callbackReturnBoolean(CallbackReturnBoolean arg);
+    boolean callbackReturnByte(CallbackReturnByte arg);
+    boolean callbackReturnShort(CallbackReturnShort arg);
+    boolean callbackReturnInt(CallbackReturnInt arg);
+    boolean callbackReturnLong(CallbackReturnLong arg);
+    boolean callbackReturnFloat(CallbackReturnFloat arg);
+    boolean callbackReturnDouble(CallbackReturnDouble arg);
+    boolean callbackReturnString(CallbackReturnString arg);
+    VoidCallback callbackReturnCallback(CallbackReturnCallback arg);
+
+    // Arrays: pass
+    boolean passCharArray(Array<char> arg);
+    boolean passBooleanArray(Array<boolean> arg);
+    boolean passByteArray(Array<byte> arg);
+    boolean passShortArray(Array<short> arg);
+    boolean passIntArray(Array<int> arg);
+    boolean passLongArray(Array<long> arg);
+    boolean passFloatArray(Array<float> arg);
+    boolean passDoubleArray(Array<double> arg);
+
+    // Arrays: return
+    [Dealloc] Array<char> returnCharArray();
+    [Dealloc] Array<boolean> returnBooleanArray();
+    [Dealloc] Array<byte> returnByteArray();
+    [Dealloc] Array<short> returnShortArray();
+    [Dealloc] Array<int> returnIntArray();
+    [Dealloc] Array<long> returnLongArray();
+    [Dealloc] Array<float> returnFloatArray();
+    [Dealloc] Array<double> returnDoubleArray();
+
+    // Arrays: ping
+    Array<char> pingCharArray(Array<char> arg);
+    Array<boolean> pingBooleanArray(Array<boolean> arg);
+    Array<byte> pingByteArray(Array<byte> arg);
+    Array<short> pingShortArray(Array<short> arg);
+    Array<int> pingIntArray(Array<int> arg);
+    Array<long> pingLongArray(Array<long> arg);
+    Array<float> pingFloatArray(Array<float> arg);
+    Array<double> pingDoubleArray(Array<double> arg);
+
+     // Arrays: callback arg
+    boolean callbackArgCharArray(CallbackPassCharArray arg);
+    boolean callbackArgBooleanArray(CallbackPassBooleanArray arg);
+    boolean callbackArgByteArray(CallbackPassByteArray arg);
+    boolean callbackArgShortArray(CallbackPassShortArray arg);
+    boolean callbackArgIntArray(CallbackPassIntArray arg);
+    boolean callbackArgLongArray(CallbackPassLongArray arg);
+    boolean callbackArgFloatArray(CallbackPassFloatArray arg);
+    boolean callbackArgDoubleArray(CallbackPassDoubleArray arg);
+
+    // Arrays: callback arg
+    boolean callbackReturnCharArray(CallbackReturnCharArray arg);
+    boolean callbackReturnBooleanArray(CallbackReturnBooleanArray arg);
+    boolean callbackReturnByteArray(CallbackReturnByteArray arg);
+    boolean callbackReturnShortArray(CallbackReturnShortArray arg);
+    boolean callbackReturnIntArray(CallbackReturnIntArray arg);
+    boolean callbackReturnLongArray(CallbackReturnLongArray arg);
+    boolean callbackReturnFloatArray(CallbackReturnFloatArray arg);
+    boolean callbackReturnDoubleArray(CallbackReturnDoubleArray arg);
 
     // JVMCI
     [Critical] boolean jvmci1();
@@ -65,12 +132,48 @@ namespace global {
     [Critical] boolean jvmciSomeArrays(Array<int> array1, Array<float> array2, Array<double> array3);
 };
 
-callback SimpleCallback = void (int status);
-callback StringCallback = string ();
-callback StringPingCallback = string (string text);
-callback CallbackPingCallback = SimpleCallback (SimpleCallback callback);
+callback VoidCallback = void ();
 
-// Is not supported (yet)
-dictionary myStruct {
-    long field1;
-};
+// primitives
+
+callback CallbackPassChar = boolean (char arg);
+callback CallbackPassBoolean = boolean (boolean arg);
+callback CallbackPassByte = boolean (byte arg);
+callback CallbackPassShort = boolean (short arg);
+callback CallbackPassInt = boolean (int arg);
+callback CallbackPassLong = boolean (long arg);
+callback CallbackPassFloat = boolean (float arg);
+callback CallbackPassDouble = boolean (double arg);
+callback CallbackPassString = boolean (string arg);
+callback CallbackPassCallback = boolean (VoidCallback arg);
+
+callback CallbackReturnChar = char ();
+callback CallbackReturnBoolean = boolean ();
+callback CallbackReturnByte = byte ();
+callback CallbackReturnShort = short ();
+callback CallbackReturnInt = int ();
+callback CallbackReturnLong = long ();
+callback CallbackReturnFloat = float ();
+callback CallbackReturnDouble = double ();
+callback CallbackReturnString = string ();
+callback CallbackReturnCallback = VoidCallback ();
+
+// arrays
+
+callback CallbackPassCharArray = boolean (Array<char> arg);
+callback CallbackPassBooleanArray = boolean (Array<boolean> arg);
+callback CallbackPassByteArray = boolean (Array<byte> arg);
+callback CallbackPassShortArray = boolean (Array<short> arg);
+callback CallbackPassIntArray = boolean (Array<int> arg);
+callback CallbackPassLongArray = boolean (Array<long> arg);
+callback CallbackPassFloatArray = boolean (Array<float> arg);
+callback CallbackPassDoubleArray = boolean (Array<double> arg);
+
+callback CallbackReturnCharArray = Array<char> ();
+callback CallbackReturnBooleanArray = Array<boolean> ();
+callback CallbackReturnByteArray = Array<byte> ();
+callback CallbackReturnShortArray = Array<short> ();
+callback CallbackReturnIntArray = Array<int> ();
+callback CallbackReturnLongArray = Array<long> ();
+callback CallbackReturnFloatArray = Array<float> ();
+callback CallbackReturnDoubleArray = Array<double> ();

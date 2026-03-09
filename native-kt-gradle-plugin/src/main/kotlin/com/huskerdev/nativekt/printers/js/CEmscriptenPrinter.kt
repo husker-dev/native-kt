@@ -123,10 +123,10 @@ class CEmscriptenPrinter(
 
             append("${valNames[callback]}(${args.joinToString()})")
 
-            if(callback.type.isString())
-                append(".as<KString>()")
             if(callback.type.isCallback())
                 append(".as<intptr_t>()")
+            else
+                append(".as<${callback.type.toCDefType()}>()")
 
             append(";\n}\n")
         }
