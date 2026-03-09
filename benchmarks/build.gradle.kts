@@ -3,7 +3,6 @@ plugins {
     alias(libs.plugins.kotlinx.benchmark)
 
     id("com.huskerdev.native-kt")
-    id("maven-publish")
 }
 
 group = "com.huskerdev"

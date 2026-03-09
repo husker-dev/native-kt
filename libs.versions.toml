@@ -1,10 +1,10 @@
 [versions]
 
-kotlin = "2.3.0"
+kotlin = "2.3.20-RC2"
 coroutines = "1.10.2"
 benchmark = "0.4.16"
 
-android_plugin = "9.1.0-alpha07"
+android_plugin = "9.1.0-rc01"
 android_test_runner = "1.7.0"
 
 webidl = "1.0.1"
