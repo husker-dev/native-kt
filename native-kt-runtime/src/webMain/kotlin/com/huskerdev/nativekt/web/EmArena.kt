@@ -1,4 +1,5 @@
 @file:OptIn(ExperimentalWasmJsInterop::class)
+@file:Suppress("unused")
 
 package com.huskerdev.nativekt.web
 
@@ -15,8 +16,13 @@ class EmArena(
     private val allocated = hashSetOf<Any>()
     private val callbacks = hashSetOf<JsNumber>()
 
+    private fun ptr(ptr: dynamic): dynamic {
+        allocated += ptr as Any
+        return ptr
+    }
+
     fun malloc(size: Int): Any =
-        (module._malloc(size) as Any).also { allocated += this }
+        ptr(module._malloc(size)) as Any
 
     fun allocCStr(str: String): Any {
         val len = module.lengthBytesUTF8(str) + 1
@@ -34,11 +40,80 @@ class EmArena(
         val length = (ptr.length as JsNumber).toInt()
 
         val result = module.UTF8ToString(data, length)
-        if(dealloc && ptr !in allocated)
+        if(dealloc && data !in allocated)
             module._free(data)
 
         return result
     }
+
+    // Primitive Arrays
+
+    // Array: char
+
+    fun toNativeCharArray( arr: CharArray) =
+        ptr(toNativeCharArray(module, arr))
+
+    fun toKotlinCharArray(struct: dynamic, dealloc: Boolean) =
+        toKotlinCharArray(module, struct, dealloc && struct.elements !in allocated)
+
+    // Array: boolean
+
+    fun toNativeBooleanArray(arr: BooleanArray) =
+        ptr(toNativeBooleanArray(module, arr))
+
+    fun toKotlinBooleanArray(struct: dynamic, dealloc: Boolean) =
+        toKotlinBooleanArray(module, struct, dealloc && struct.elements !in allocated)
+
+    // Array: byte
+
+    fun toNativeByteArray(arr: ByteArray) =
+        ptr(toNativeByteArray(module, arr))
+
+    fun toKotlinByteArray(struct: dynamic, dealloc: Boolean) =
+        toKotlinByteArray(module, struct, dealloc && struct.elements !in allocated)
+
+    // Array: short
+
+    fun toNativeShortArray(arr: ShortArray): dynamic =
+        ptr(toNativeShortArray(module, arr))
+
+    fun toKotlinShortArray(struct: dynamic, dealloc: Boolean): ShortArray =
+        toKotlinShortArray(module, struct, dealloc && struct.elements !in allocated)
+
+    // Array: int
+
+    fun toNativeIntArray(arr: IntArray) =
+        ptr(toNativeIntArray(module, arr))
+
+    fun toKotlinIntArray(struct: dynamic, dealloc: Boolean) =
+        toKotlinIntArray(module, struct, dealloc && struct.elements !in allocated)
+
+    // Array: long
+
+    fun toNativeLongArray(arr: LongArray): dynamic =
+        ptr(toNativeLongArray(module, arr))
+
+    fun toKotlinLongArray(struct: dynamic, dealloc: Boolean): LongArray =
+        toKotlinLongArray(module, struct, dealloc && struct.elements !in allocated)
+
+    // Array: float
+
+    fun toNativeFloatArray(arr: FloatArray): dynamic =
+        ptr(toNativeFloatArray(module, arr))
+
+    fun toKotlinFloatArray(struct: dynamic, dealloc: Boolean): FloatArray =
+        toKotlinFloatArray(module, struct, dealloc && struct.elements !in allocated)
+
+    // Array: double
+
+    fun toNativeDoubleArray(arr: DoubleArray): dynamic =
+        ptr(toNativeDoubleArray(module, arr))
+
+    fun toKotlinDoubleArray(struct: dynamic, dealloc: Boolean): DoubleArray =
+        toKotlinDoubleArray(module, struct, dealloc && struct.elements !in allocated)
+
+
+    // Callbacks
 
     fun <T> unwrapCallback(ptr: JsNumber, dealloc: Boolean): T {
         val result = unwrapCallback<T>(module, ptr, dealloc)

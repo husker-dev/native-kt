@@ -28,6 +28,11 @@ class CEmscriptenPrinter(
             optional_override([](SelfType& s, int v) {			\
             	s.Name = (PointerType)(intptr_t)v;				\
             })
+            
+            #define K_ARRAY_DECL(Name, Type)							 \
+            value_object<Name>(#Name)									 \
+                .field("elements", POINTER_FIELD(elements, Name, Type*)) \
+                .field("size", &Name::size);							 \
 
         """.trimIndent())
 
@@ -45,6 +50,15 @@ class CEmscriptenPrinter(
             	value_object<KString>("KString")
                     .field("data", POINTER_FIELD(data, KString, const char*))
                     .field("length", &KString::length);
+                    
+                K_ARRAY_DECL(KCharArray, KChar)
+                K_ARRAY_DECL(KBooleanArray, KBoolean)
+                K_ARRAY_DECL(KByteArray, KByte)
+                K_ARRAY_DECL(KShortArray, KShort)
+                K_ARRAY_DECL(KIntArray, KInt)
+                K_ARRAY_DECL(KLongArray, KLong)
+                K_ARRAY_DECL(KFloatArray, KFloat)
+                K_ARRAY_DECL(KDoubleArray, KDouble)
             
             
         """.trimIndent())

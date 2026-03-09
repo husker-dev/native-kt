@@ -20,6 +20,8 @@ class KotlinJsPrinter(
         val builder = StringBuilder()
         builder.append("""
             @file:OptIn(ExperimentalWasmJsInterop::class)
+            @file:Suppress("unused", "ACTUAL_ANNOTATIONS_NOT_MATCH_EXPECT")
+            
             package $classPath
             
             import com.huskerdev.nativekt.web.*
@@ -141,7 +143,7 @@ class KotlinJsPrinter(
         printFunctionHeader(builder, function, isActual = expectActual, forcePrintVoid = true)
         append(" = ")
 
-        val useArena = function.args.any { it.type.isString() || it.isDealloc() }
+        val useArena = function.args.any { it.type.isString() || it.type.isArray() || it.isDealloc() }
 
         if(useArena)
             append("EmArena.use(_module) { arena ->")
@@ -166,6 +168,13 @@ class KotlinJsPrinter(
                 WebIDLBuiltinKind.STRING ->
                     if(useArena) "arena.allocCStr($content)"
                     else "allocCStr(_module, $content)"
+                WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
+                    if(declaration is BuiltinIdlDeclaration) {
+                        val name = declaration.kind.simpleName()
+                        if(useArena) "arena.toNative${name}Array($content)"
+                        else "toNative${name}Array(_module, $content)"
+                    } else throw UnsupportedOperationException(type.toString())
+                }
                 else -> content
             }
             is ResolvedIdlCallbackFunction ->
@@ -184,6 +193,13 @@ class KotlinJsPrinter(
                 WebIDLBuiltinKind.STRING ->
                     if(useArena) "arena.unwrapCStr($content, $dealloc)"
                     else "unwrapCStr(_module, $content, $dealloc)"
+                WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
+                    if(declaration is BuiltinIdlDeclaration) {
+                        val name = declaration.kind.simpleName()
+                        if(useArena) "arena.toKotlin${name}Array($content, $dealloc)"
+                        else "toKotlin${name}Array(_module, $content, $dealloc)"
+                    } else throw UnsupportedOperationException(type.toString())
+                }
                 else -> content
             }
             is ResolvedIdlCallbackFunction ->
