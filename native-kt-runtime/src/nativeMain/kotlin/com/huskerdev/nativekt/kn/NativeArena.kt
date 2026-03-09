@@ -5,6 +5,7 @@ package com.huskerdev.nativekt.kn
 import kotlinx.cinterop.*
 import platform.posix.free
 
+@Suppress("unused")
 class NativeArena(
     val scope: MemScope
 ) {
@@ -16,7 +17,16 @@ class NativeArena(
         }
     }
     private val allocated = hashSetOf<Long>()
-    private val callbacks = hashSetOf<CPointer<CStructVar>>()
+    private val callbacks = arrayListOf<CPointer<CStructVar>>()
+    private val pinned = arrayListOf<Pinned<*>>()
+
+    fun <T: Any> pin(obj: T): Pinned<T> =
+         obj.pin().also { pinned += it }
+
+    fun freeMem(ptr: CPointer<*>) {
+        if(ptr.rawValue.toLong() !in allocated)
+            free(ptr)
+    }
 
     fun ptr(ptr: CPointer<*>){
         allocated += ptr.getPointer(scope).rawValue.toLong()
@@ -44,5 +54,6 @@ class NativeArena(
 
     private fun free() {
         callbacks.forEach(::freeCallback)
+        pinned.forEach(Pinned<*>::unpin)
     }
 }

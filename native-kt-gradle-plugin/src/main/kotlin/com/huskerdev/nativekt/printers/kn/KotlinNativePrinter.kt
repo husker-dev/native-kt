@@ -20,12 +20,13 @@ class KotlinNativePrinter(
         val builder = StringBuilder()
         builder.append("""
             @file:OptIn(ExperimentalForeignApi::class)
+            @file:Suppress("unused")
             
             package $classPath
             
             import kotlinx.cinterop.*
             import com.huskerdev.nativekt.kn.*
-            import platform.posix.strdup
+            import platform.posix.*
             
             ${actual}val isLibTestLoaded: Boolean = true
             
@@ -36,6 +37,8 @@ class KotlinNativePrinter(
         """.trimIndent())
         if(useCoroutines)
             builder.append("${actual}suspend fun ${asyncFunctionName(moduleName)}() = Unit\n")
+
+        printLabel(builder, "String")
 
         builder.append("""
             
@@ -58,7 +61,14 @@ class KotlinNativePrinter(
             
         """.trimIndent())
 
+        printLabel(builder, "Arrays")
+        printArrayCasts(builder)
+
+        printLabel(builder, "Callbacks")
+
         idl.callbacks.values.forEach { printCallbackWrap(builder, it) }
+
+        printLabel(builder, "Functions")
 
         idl.globalOperators().forEach { printFunction(builder, it) }
 
@@ -109,7 +119,7 @@ class KotlinNativePrinter(
         printFunctionHeader(builder, function, isActual = expectActual)
         append(" = ")
 
-        val useArena = function.args.any { it.type.isString() || it.isDealloc() }
+        val useArena = function.args.any { it.type.isString() || it.type.isArray() || it.isDealloc() }
 
         if(useArena)
             append("NativeArena.use { arena ->")
@@ -128,6 +138,111 @@ class KotlinNativePrinter(
         append("\n")
     }
 
+    private fun printArrayCasts(builder: StringBuilder) = builder.apply {
+        arrayOf(
+            "Byte", "Short", "Int", "Long", "Float", "Double"
+        ).forEach { type ->
+            append("""
+                
+                // Array: $type
+    
+                private fun toNative${type}Array(array: ${type}Array, arena: NativeArena) = cValue<cinterop.natives.test.K${type}Array> {
+                    elements = arena.pin(array).addressOf(0)
+                    size = array.size
+                    arena.ptr(elements!!)
+                }
+    
+                private fun toNative${type}Array(array: ${type}Array) = cValue<cinterop.natives.test.K${type}Array> {
+                    val bytes = array.size * ${type}.SIZE_BYTES
+                    elements = mallocExact(bytes.toUInt()).reinterpret()
+                    size = array.size
+                    array.usePinned { memcpy(elements, it.addressOf(0), bytes.toULong()) }
+                }
+    
+                private fun toKotlin${type}Array(struct: CValue<cinterop.natives.test.K${type}Array>, arena: NativeArena, dealloc: Boolean) = struct.useContents {
+                    ${type}Array(size) { elements!![it] }.also {
+                        if(dealloc) arena.freeMem(elements!!)
+                    }
+                }
+    
+                private fun toKotlin${type}Array(struct: CValue<cinterop.natives.test.K${type}Array>, dealloc: Boolean) = struct.useContents {
+                    ${type}Array(size) { elements!![it] }.also {
+                        if(dealloc) free(elements!!)
+                    }
+                }
+                
+            """.trimIndent())
+        }
+
+        // Char needs some changes:
+        // 1. .reinterpret() in toNativeCharArray
+        // 2. .toInt().toChar() in toKotlinCharArray
+        append("""
+            
+            // Array: Char
+
+            private fun toNativeCharArray(array: CharArray, arena: NativeArena) = cValue<cinterop.natives.test.KCharArray> {
+                elements = arena.pin(array).addressOf(0).reinterpret()
+                size = array.size
+                arena.ptr(elements!!)
+            }
+
+            private fun toNativeCharArray(array: CharArray) = cValue<cinterop.natives.test.KCharArray> {
+                val bytes = array.size * Char.SIZE_BYTES
+                elements = mallocExact(bytes.toUInt()).reinterpret()
+                size = array.size
+                array.usePinned { memcpy(elements, it.addressOf(0), bytes.toULong()) }
+            }
+
+            private fun toKotlinCharArray(struct: CValue<cinterop.natives.test.KCharArray>, arena: NativeArena, dealloc: Boolean) = struct.useContents {
+                CharArray(size) { elements!![it].toInt().toChar() }.also {
+                    if(dealloc) arena.freeMem(elements!!)
+                }
+            }
+
+            private fun toKotlinCharArray(struct: CValue<cinterop.natives.test.KCharArray>, dealloc: Boolean) = struct.useContents {
+                CharArray(size) { elements!![it].toInt().toChar() }.also {
+                    if(dealloc) free(elements!!)
+                }
+            }
+            
+        """.trimIndent())
+
+        // Booleans needs to be cast to bytes
+        append("""
+            
+            // Array: Boolean
+
+            private fun toNativeBooleanArray(array: BooleanArray, arena: NativeArena) = cValue<cinterop.natives.test.KBooleanArray> {
+            	val byteArray = array.map { it.toByte() }.toByteArray()
+            	elements = arena.pin(byteArray).addressOf(0).reinterpret()
+            	size = array.size
+            	arena.ptr(elements!!)
+            }
+
+            private fun toNativeBooleanArray(array: BooleanArray) = cValue<cinterop.natives.test.KBooleanArray> {
+            	val bytes = array.size * Byte.SIZE_BYTES
+            	elements = mallocExact(bytes.toUInt()).reinterpret()
+            	size = array.size
+            	val byteArray = array.map { it.toByte() }.toByteArray()
+            	byteArray.usePinned { memcpy(elements, it.addressOf(0), bytes.toULong()) }
+            }
+
+            private fun toKotlinBooleanArray(struct: CValue<cinterop.natives.test.KBooleanArray>, arena: NativeArena, dealloc: Boolean) = struct.useContents {
+            	BooleanArray(size) { elements!![it].value }.also {
+            		if(dealloc) arena.freeMem(elements!!)
+            	}
+            }
+
+            private fun toKotlinBooleanArray(struct: CValue<cinterop.natives.test.KBooleanArray>, dealloc: Boolean) = struct.useContents {
+            	BooleanArray(size) { elements!![it].value }.also {
+            		if(dealloc) free(elements!!)
+            	}
+            }
+            
+        """.trimIndent())
+    }
+
     private fun castFromNative(type: ResolvedIdlType, content: String, dealloc: Boolean, useArena: Boolean): String = when(type) {
         is ResolvedIdlType.Void -> content
         is ResolvedIdlType.Default -> when(val decl = type.declaration) {
@@ -136,6 +251,13 @@ class KotlinNativePrinter(
                 WebIDLBuiltinKind.STRING ->
                     if(useArena) "$content.unwrapKString(arena, $dealloc)"
                     else "$content.unwrapKString($dealloc)"
+                WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
+                    if(declaration is BuiltinIdlDeclaration) {
+                        val name = declaration.kind.simpleName()
+                        if(useArena) "toKotlin${name}Array($content, arena, $dealloc)"
+                        else "toKotlin${name}Array($content, $dealloc)"
+                    } else throw UnsupportedOperationException(type.toString())
+                }
                 else -> content
             }
             is ResolvedIdlCallbackFunction ->
@@ -154,6 +276,13 @@ class KotlinNativePrinter(
                     if(useArena) "$content.makeKString(arena)"
                     else "$content.makeKString()"
                 WebIDLBuiltinKind.CHAR -> "$content.code.toUShort()"
+                WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
+                    if(declaration is BuiltinIdlDeclaration) {
+                        val name = declaration.kind.simpleName()
+                        if(useArena) "toNative${name}Array($content, arena)"
+                        else "toNative${name}Array($content)"
+                    } else throw UnsupportedOperationException(type.toString())
+                }
                 else -> content
             }
             is ResolvedIdlCallbackFunction ->

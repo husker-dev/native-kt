@@ -1,11 +1,12 @@
 @file:OptIn(ExperimentalForeignApi::class)
+@file:Suppress("unused")
 
 package com.huskerdev.nativekt.kn
 
 import kotlinx.cinterop.*
 import platform.posix.*
 
-expect fun malloc(size: UInt): COpaquePointer
+expect fun mallocExact(size: UInt): COpaquePointer
 
 expect inline fun <reified T: CVariable> allocStruct(): CPointer<T>
 

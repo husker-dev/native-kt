@@ -1,4 +1,5 @@
-@file: OptIn(ExperimentalForeignApi::class)
+@file:OptIn(ExperimentalForeignApi::class)
+@file:Suppress("unused")
 
 package com.huskerdev.nativekt.kn
 
@@ -8,8 +9,7 @@ import kotlinx.cinterop.reinterpret
 import kotlinx.cinterop.sizeOf
 import platform.posix.malloc
 
-@Suppress("unused")
-actual fun malloc(size: UInt): COpaquePointer =
+actual fun mallocExact(size: UInt): COpaquePointer =
     malloc(size)!!
 
 actual inline fun <reified T : kotlinx.cinterop.CVariable> allocStruct() =
