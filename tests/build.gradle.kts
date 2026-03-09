@@ -39,7 +39,9 @@ kotlin {
         compileSdk {
             version = release(32)
         }
-        withDeviceTest { }
+        withDeviceTestBuilder {
+            sourceSetTreeName = "test"
+        }
     }
 
     when {

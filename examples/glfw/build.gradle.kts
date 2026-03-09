@@ -21,7 +21,7 @@ kotlin {
 
     setOf(
         mingwX64(),
-        macosArm64(), macosX64(),
+        macosArm64(),
         linuxX64(), linuxArm64()
     ).forEach {
         it.binaries {

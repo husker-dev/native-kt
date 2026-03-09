@@ -8,6 +8,7 @@ import com.huskerdev.nativekt.printers.HeaderPrinter
 import com.huskerdev.nativekt.printers.KotlinAndroidPrinter
 import com.huskerdev.nativekt.printers.jvm.CJniArenaPrinter
 import com.huskerdev.nativekt.printers.jvm.CJniPrinter
+import com.huskerdev.nativekt.printers.jvm.CJniUtilsPrinter
 import com.huskerdev.nativekt.utils.cmakeBuild
 import com.huskerdev.nativekt.utils.cmakeGen
 import com.huskerdev.nativekt.utils.dir
@@ -82,11 +83,18 @@ internal fun configureAndroidSourceSet(
     // Create Kotlin/Android bindings
     KotlinAndroidPrinter(
         idl = idl,
-        target = File(classPathFile, "${module.name}.kt"),
+        target = File(classPathFile, "${module.name}_android.kt"),
         classPath = module.classPath,
         moduleName = module.name,
         useCoroutines = extension.useCoroutines,
         expectActual = expectActual
+    )
+
+    CJniUtilsPrinter(
+        idl = idl,
+        target = File(cmakeDir, "jni_utils.h"),
+        classPath = module.classPath,
+        name = "${module.name.capitalized()}JNI"
     )
 
     CJniPrinter(

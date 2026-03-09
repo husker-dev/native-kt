@@ -37,7 +37,7 @@ public class ForeignArena implements Closeable {
 
         String result = fromKString(struct);
         if(dealloc && notContains(data.address()))
-            ForeignUtils.freeHandle.invoke();
+            ForeignUtils.freeHandle.invoke(data);
         return result;
     }
 
