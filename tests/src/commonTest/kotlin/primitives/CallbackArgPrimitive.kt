@@ -15,10 +15,7 @@ class CallbackArgPrimitive {
 
     @Test
     fun callbackArgChar() = withLib {
-        assertTrue(natives.test.callbackArgChar {
-            println("${it.code} | ${it == 'a'}")
-            it == 'a'
-        })
+        assertTrue(natives.test.callbackArgChar { it == 'a' })
     }
 
     @Test
