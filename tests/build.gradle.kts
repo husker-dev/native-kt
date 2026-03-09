@@ -41,7 +41,20 @@ kotlin {
         }
         withDeviceTestBuilder {
             sourceSetTreeName = "test"
+        }.configure {
+            instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+            managedDevices {
+                localDevices {
+                    create("api32") {
+                        device = "Pixel 6"
+                        apiLevel = 32
+                        systemImageSource = "aosp-atd"
+                    }
+                }
+            }
         }
+
     }
 
     when {
@@ -83,9 +96,8 @@ kotlin {
         implementation(libs.kotlinx.coroutines.test)
     }
     sourceSets.getByName("androidDeviceTest").dependencies {
-        implementation(kotlin("test"))
-        implementation(libs.kotlinx.coroutines.test)
         implementation(libs.androidx.test.runner)
+        implementation(libs.androidx.test.ext.junit)
     }
 }
 
