@@ -45,14 +45,7 @@ jobs:
         shell: pwsh
         run: |
           $targetPath = "C:/msys64/clang64/bin"
-      
-          if (Test-Path $targetPath) {
-            Write-Host "Exists: $targetPath"
-            Get-ChildItem $targetPath
-          } else {
-            Write-Host "Not found: $targetPath"
-          }
-          echo "$targetPath" >> $env:GITHUB_PATH
+          echo "PATH=$targetPath;$env:PATH" >> $env:GITHUB_ENV
       
       - name: Setup Java
         uses: actions/setup-java@v4
