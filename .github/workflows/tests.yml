@@ -68,14 +68,16 @@ jobs:
         run: echo $env:PATH
 
       - name: Setup Emscripten (Windows)
+        if: runner.os == 'Windows'
         run: |
           git clone https://github.com/emscripten-core/emsdk.git
           cd emsdk
-          ./emsdk.bat install latest
-          ./emsdk.bat activate latest
+          emsdk.bat install latest
+          emsdk.bat activate latest
           emsdk_env.bat
           
       - name: Setup Emscripten (Unix)
+        if: runner.os != 'Windows'
         run: |
           git clone https://github.com/emscripten-core/emsdk.git
           cd emsdk
