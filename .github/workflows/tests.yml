@@ -34,9 +34,8 @@ jobs:
       - name: Setup MSYS2
         if: runner.os == 'Windows'
         uses: msys2/setup-msys2@v2
-        env:
-          MSYS2_LOCATION: 'C:\msys64'
         with:
+          location: C:\
           msystem: clang64
           install: mingw-w64-clang-x86_64-clang
 
@@ -56,6 +55,8 @@ jobs:
         shell: pwsh
         run: |
           Get-Command clang | Select-Object -ExpandProperty Source
+          ls C:\
+          ls C:\msys64
           ls C:\msys64\clang64\bin\clang*
 
       - name: Check PATH
