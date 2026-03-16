@@ -47,7 +47,12 @@ jobs:
         uses: jwlawson/actions-setup-cmake@v2
         with:
           cmake-version: '4.2.2'
-
+          
+      - name: Setup MSYS2 (clang64)
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: clang64
       
       - name: Run Native tests (Linux x64)
         if: runner.os == 'Linux'
