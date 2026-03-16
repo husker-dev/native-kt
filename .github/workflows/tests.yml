@@ -2,7 +2,6 @@ name: Tests
 
 env:
   EM_VERSION: 5.0.3
-  MSYS2_LOCATION: 'C:\msys64'
 
 on:
   push:
@@ -52,6 +51,8 @@ jobs:
       - name: Setup MSYS2
         if: runner.os == 'Windows'
         uses: msys2/setup-msys2@v2
+        env:
+          MSYS2_LOCATION: 'C:\msys64'
         with:
           msystem: clang64
           install: mingw-w64-clang-x86_64-clang
