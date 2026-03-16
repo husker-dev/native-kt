@@ -1,0 +1,54 @@
+name: Tests
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+    
+jobs:
+  test:
+    name: Kotlin/Native (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, macos-latest, windows-latest ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'graalvm'
+          java-version: '25'
+
+      - name: Cache Gradle & Kotlin/Native toolchain
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            ~/.konan
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts', '**/gradle-wrapper.properties') }}
+          restore-keys: ${{ runner.os }}-gradle-
+
+      - name: Run Native tests (Linux x64)
+        if: runner.os == 'Linux'
+        run: ./gradlew linuxX64Test --continue
+
+      - name: Run Native tests (macOS arm64)
+        if: runner.os == 'macOS'
+        run: ./gradlew macosArm64Test --continue
+
+      - name: Run Native tests (Windows x64)
+        if: runner.os == 'Windows'
+        run: ./gradlew mingwX64Test --continue
+
+      - name: Test Summary
+        if: always()
+        uses: test-summary/action@v2
+        with:
+          paths: "**/build/test-results/**/TEST-*.xml"
+          show: "all"
