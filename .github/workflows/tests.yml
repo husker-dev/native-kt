@@ -31,6 +31,29 @@ jobs:
             emsdk-cache
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts', '**/gradle-wrapper.properties') }}-emsdk-${{ env.EM_VERSION }}
 
+      - name: Setup MSYS2
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        env:
+          MSYS2_LOCATION: 'C:\msys64'
+        with:
+          msystem: clang64
+          install: mingw-w64-clang-x86_64-clang
+          
+      - name: Setup MSYS2 (env)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $targetPath = "C:/msys64/clang64/bin"
+      
+          if (Test-Path $targetPath) {
+            Write-Host "Exists: $targetPath"
+            Get-ChildItem $targetPath
+          } else {
+            Write-Host "Not found: $targetPath"
+          }
+          echo "$targetPath" >> $env:GITHUB_PATH
+      
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -47,19 +70,6 @@ jobs:
         uses: jwlawson/actions-setup-cmake@v2
         with:
           cmake-version: '4.2.2'
-          
-      - name: Setup MSYS2
-        if: runner.os == 'Windows'
-        uses: msys2/setup-msys2@v2
-        env:
-          MSYS2_LOCATION: 'C:\msys64'
-        with:
-          msystem: clang64
-          install: mingw-w64-clang-x86_64-clang
-          
-      - name: Setup MSYS2 (env)
-        if: runner.os == 'Windows'
-        run: echo "C:/msys64/clang64/bin" >> $GITHUB_PATH
       
       - name: Run Native tests (Linux x64)
         if: runner.os == 'Linux'
