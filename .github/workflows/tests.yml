@@ -72,9 +72,9 @@ jobs:
         run: |
           git clone https://github.com/emscripten-core/emsdk.git
           cd emsdk
-          emsdk.bat install latest
-          emsdk.bat activate latest
-          emsdk_env.bat
+          ./emsdk install latest
+          ./emsdk activate latest
+          ./emsdk_env
           
       - name: Setup Emscripten (Unix)
         if: runner.os != 'Windows'
