@@ -38,7 +38,7 @@ jobs:
           java-version: '25'
 
       - name: Setup Emscripten
-        uses: mymindstorm/setup-emsdk@v15
+        uses: pyodide/setup-emsdk@v15
         with:
           version: ${{env.EM_VERSION}}
           actions-cache-folder: '~/.emsdk-cache'
