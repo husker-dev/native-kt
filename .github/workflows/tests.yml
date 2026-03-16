@@ -73,8 +73,7 @@ jobs:
           git clone https://github.com/emscripten-core/emsdk.git
           cd emsdk
           ./emsdk install latest
-          ./emsdk activate latest
-          ./emsdk_env
+          ./emsdk activate latest --permanent
           
       - name: Setup Emscripten (Unix)
         if: runner.os != 'Windows'
@@ -83,7 +82,7 @@ jobs:
           cd emsdk
           ./emsdk install latest
           ./emsdk activate latest
-          source ./emsdk_env.sh
+          'source "./emsdk_env.sh"' >> $HOME/.bash_profile
 
       - name: Check PATH
         if: runner.os == 'Windows'
