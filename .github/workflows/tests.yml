@@ -74,15 +74,17 @@ jobs:
           cd emsdk
           ./emsdk install latest
           ./emsdk activate latest --permanent
+          echo "EMSDK=$env:EMSDK" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           
       - name: Setup Emscripten (Unix)
         if: runner.os != 'Windows'
         run: |
+          cd ~
           git clone https://github.com/emscripten-core/emsdk.git
           cd emsdk
           ./emsdk install latest
           ./emsdk activate latest
-          'source "./emsdk_env.sh"' >> $HOME/.bash_profile
+          'source "~/emsdk/emsdk_env.sh"' >> $HOME/.bash_profile
 
       - name: Check PATH
         if: runner.os == 'Windows'
