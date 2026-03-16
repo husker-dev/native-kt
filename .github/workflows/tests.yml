@@ -38,42 +38,18 @@ jobs:
           location: D:\
           msystem: clang64
           install: mingw-w64-clang-x86_64-clang
-
-      - name: Check PATH
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: echo $env:PATH
           
       - name: Setup MSYS2 (env)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           echo "D:\msys64\clang64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
-      - name: Debug clang
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          Get-Command clang | Select-Object -ExpandProperty Source
-          ls D:\
-          ls D:\msys64
-          ls D:\msys64\clang64\bin\clang*
-
-      - name: Check PATH
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: echo $env:PATH
       
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'graalvm'
           java-version: '25'
-
-      - name: Check PATH
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: echo $env:PATH
 
       - name: Setup Emscripten (Windows)
         if: runner.os == 'Windows'
@@ -92,17 +68,13 @@ jobs:
           cd emsdk
           ./emsdk install latest
           ./emsdk activate latest
-          'source "$HOME/emsdk/emsdk_env.sh"' >> $HOME/.bash_profile
-
-      - name: Check PATH
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: echo $env:PATH
+          "source \"$HOME/emsdk/emsdk_env.sh\"" >> $HOME/.bash_profile
 
       - name: Setup cmake
         uses: jwlawson/actions-setup-cmake@v2
         with:
           cmake-version: '4.2.2'
+          
       
       - name: Run Native tests (Linux x64)
         if: runner.os == 'Linux'
