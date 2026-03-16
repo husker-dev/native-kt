@@ -28,7 +28,7 @@ jobs:
             ~/.gradle/caches
             ~/.gradle/wrapper
             ~/.konan
-            ~/.emsdk-cache
+            emsdk-cache
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts', '**/gradle-wrapper.properties') }}-emsdk-${{ env.EM_VERSION }}
 
       - name: Setup Java
@@ -41,7 +41,7 @@ jobs:
         uses: pyodide/setup-emsdk@v15
         with:
           version: ${{env.EM_VERSION}}
-          actions-cache-folder: '~/.emsdk-cache'
+          actions-cache-folder: 'emsdk-cache'
 
       - name: Setup cmake
         uses: jwlawson/actions-setup-cmake@v2
