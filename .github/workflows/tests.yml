@@ -21,7 +21,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Cache Gradle & Kotlin/Native toolchain
+      - name: Cache
         uses: actions/cache@v4
         with:
           path: |
@@ -38,7 +38,7 @@ jobs:
           java-version: '25'
 
       - name: Setup Emscripten
-        uses: mymindstorm/setup-emsdk@v14
+        uses: mymindstorm/setup-emsdk@v15
         with:
           version: ${{env.EM_VERSION}}
           actions-cache-folder: '~/.emsdk-cache'
