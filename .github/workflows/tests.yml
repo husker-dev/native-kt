@@ -54,6 +54,10 @@ jobs:
         with:
           msystem: clang64
           install: mingw-w64-clang-x86_64-clang
+          
+      - name: Setup MSYS2 (env)
+        if: runner.os == 'Windows'
+        run: echo "C:/msys64/clang64/bin" >> $GITHUB_PATH
       
       - name: Run Native tests (Linux x64)
         if: runner.os == 'Linux'
