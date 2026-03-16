@@ -21,6 +21,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Cache Gradle & Kotlin/Native toolchain
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            ~/.konan
+            ~/.emsdk-cache
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts', '**/gradle-wrapper.properties') }}-emsdk-${{ env.EM_VERSION }}
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -38,16 +48,7 @@ jobs:
         with:
           cmake-version: '4.2.2'
 
-      - name: Cache Gradle & Kotlin/Native toolchain
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-            ~/.konan
-            ~/.emsdk-cache
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts', '**/gradle-wrapper.properties') }}-emsdk-${{ env.EM_VERSION }}
-
+      
       - name: Run Native tests (Linux x64)
         if: runner.os == 'Linux'
         run: ./gradlew linuxX64Test --continue
