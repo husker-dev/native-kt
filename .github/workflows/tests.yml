@@ -51,15 +51,15 @@ jobs:
       
       - name: Run Native tests (Linux x64)
         if: runner.os == 'Linux'
-        run: ./gradlew linuxX64Test --continue
+        run: ./gradlew :tests:linuxX64Test --continue
 
       - name: Run Native tests (macOS arm64)
         if: runner.os == 'macOS'
-        run: ./gradlew macosArm64Test --continue
+        run: ./gradlew :tests:macosArm64Test --continue
 
       - name: Run Native tests (Windows x64)
         if: runner.os == 'Windows'
-        run: ./gradlew mingwX64Test --continue
+        run: ./gradlew :tests:mingwX64Test --continue
 
       - name: Test Summary
         if: always()
