@@ -68,7 +68,8 @@ jobs:
           cd emsdk
           ./emsdk install latest
           ./emsdk activate latest
-          "source \"$HOME/emsdk/emsdk_env.sh\"" >> $HOME/.bash_profile
+          source "$HOME/emsdk/emsdk_env.sh"
+          echo "EMSDK=$EMSDK" >> $GITHUB_ENV
 
       - name: Setup cmake
         uses: jwlawson/actions-setup-cmake@v2
