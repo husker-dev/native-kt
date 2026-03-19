@@ -201,8 +201,8 @@ private abstract class PrepareNativesJvm: DefaultTask() {
                 
                 target_link_libraries(lib_$$moduleName PRIVATE $$moduleName)
                 
-                target_include_directories(lib_$$moduleName PRIVATE "$$jdkIncludeDir")
-                target_include_directories(lib_$$moduleName PRIVATE "$${File(jdkIncludeDir).parent}")
+                target_include_directories(lib_$$moduleName PRIVATE "$${jdkIncludeDir.replace("\\", "/")}")
+                target_include_directories(lib_$$moduleName PRIVATE "$${File(jdkIncludeDir).parent.replace("\\", "/")}")
             """.trimIndent())
 
             KotlinJvmPrinter(
