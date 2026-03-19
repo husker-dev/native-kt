@@ -2,11 +2,11 @@ package com.huskerdev.nativekt.utils
 
 import com.huskerdev.nativekt.plugin.CMakeBuildType
 import org.apache.tools.ant.taskdefs.condition.Os
-import org.gradle.api.Project
+import org.gradle.process.ExecOperations
 import java.io.File
 
 internal fun cmakeGen(
-    project: Project,
+    execOps: ExecOperations,
     dir: File,
     buildDir: File,
     buildType: CMakeBuildType,
@@ -21,13 +21,13 @@ internal fun cmakeGen(
     )
     command += args
 
-    project.exec(command.joinToString(" "), buildDir)
+    execOps.exec(command.joinToString(" "), buildDir)
 }
 
 internal fun cmakeBuild(
-    project: Project,
+    execOps: ExecOperations,
     buildDir: File,
-) = project.exec("cmake --build \"$buildDir\"", buildDir)
+) = execOps.exec("cmake --build \"$buildDir\"", buildDir)
 
 private val cmakeGenerator: String = when {
     Os.isFamily(Os.FAMILY_WINDOWS) -> "MinGW Makefiles"

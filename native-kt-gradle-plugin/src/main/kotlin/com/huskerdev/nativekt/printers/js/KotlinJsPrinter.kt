@@ -26,42 +26,49 @@ class KotlinJsPrinter(
             
             import com.huskerdev.nativekt.web.*
             import kotlin.js.*
-            ${
-                if(useCoroutines) "import kotlinx.coroutines.await"
-                else ""
-            }
-            
-            @JsModule("$fileName")
-            private external val _lib: dynamic
-            
-            private var _module: dynamic = null
             
         """.trimIndent())
 
-        if(idl.callbacks.isNotEmpty())
+        if(useCoroutines)
             builder.append("""
-                set(value) {
-                    field = value
-                    initCallbacks()
-                }
+                import kotlinx.coroutines.suspendCancellableCoroutine
+                import kotlin.coroutines.resume
                 
-            """.replaceIndent("\t"))
+            """.trimIndent())
 
         builder.append("""
             
+            @JsModule("$fileName")
+            private external val _lib: JsAny
+            
+            private lateinit var _module: Module
+            
+        """.trimIndent())
+
+        val initCallbacks = if(idl.callbacks.isNotEmpty())
+            "initCallbacks()" else ""
+
+        builder.append("""
+            
+            fun wrapCallback(block: (JsNumber) -> Unit): JsAny = js("block")
+            
+            private var isLibTestLoaded_: Boolean = false
             ${actual}val isLibTestLoaded: Boolean
-                get() = _module != null
+                get() = isLibTestLoaded_
             
             ${actual}fun ${syncFunctionName(moduleName)}(): Unit = 
                 throw UnsupportedOperationException("Synchronous library loading is not supported in JS")
                 
             ${actual}fun ${asyncFunctionName(moduleName)}(onReady: () -> Unit) {
-                if(_module != null) 
+                if(isLibTestLoaded) 
                     return
-                    
-                (_lib.default() as Promise<dynamic>).then { it: dynamic ->
+                
+                loadLib<Module>(_lib).then {
                     _module = it
+                    $initCallbacks
+                    isLibTestLoaded_ = true
                     onReady()
+                    _lib // does nothing, but required
                 }
             }
             
@@ -71,8 +78,13 @@ class KotlinJsPrinter(
             builder.append("""
                 
                 ${actual}suspend fun ${asyncFunctionName(moduleName)}() {
-                    if(_module == null)
-                        _module = (_lib.default() as Promise<dynamic>).await()
+                    if(isLibTestLoaded)
+                        return
+                    suspendCancellableCoroutine { continuation ->
+                        ${asyncFunctionName(moduleName)} {
+                            continuation.resume(Unit)
+                        }
+                    }
                 }
                 
             """.trimIndent())
@@ -80,9 +92,21 @@ class KotlinJsPrinter(
 
         // Callbacks loading
         if(idl.callbacks.isNotEmpty()) {
-            builder.append("\nprivate var _freeCallback: dynamic = null\n")
+            builder.append("\nprivate var _freeCallback: Int = 0\n")
             idl.callbacks.values.joinTo(builder, separator = "\n") {
-                "private var _invoke${it.name}: dynamic = null"
+                "private var _invoke${it.name} = 0"
+            }
+
+            builder.append("\n")
+            idl.callbacks.values.forEachIndexed { index, callback ->
+                builder.append("\nprivate fun _callback")
+                builder.append(index)
+                builder.append("Js(block: (")
+                (arrayListOf("Int") + callback.args.map { toSimpleJsType(it.type) })
+                    .joinTo(builder)
+                builder.append(") -> ")
+                builder.append(toSimpleJsType(callback.type))
+                builder.append("): JsAny = js(\"block\")")
             }
 
             builder.append("""
@@ -90,7 +114,7 @@ class KotlinJsPrinter(
                 
                 private fun initCallbacks() {
                     _freeCallback = createCallbackFreeFunction(_module)
-                    
+                
             """.trimIndent())
             idl.callbacks.values.forEachIndexed { index, callback ->
                 printCallbackInvoke(builder, callback, index)
@@ -102,6 +126,8 @@ class KotlinJsPrinter(
         }
 
         idl.globalOperators().forEach { printFunction(builder, it) }
+
+        printTypes(builder, idl.globalOperators())
 
         target.parentFile.mkdirs()
         target.writeText(builder.toString())
@@ -118,14 +144,19 @@ class KotlinJsPrinter(
         append(", _freeCallback)\n")
     }
 
-    private fun printCallbackInvoke(builder: StringBuilder, callback: ResolvedIdlCallbackFunction, index: Int) = builder.apply {
-        val args = listOf("_c") + callback.args.map { it.name }
+    private fun printCallbackInvoke(
+        builder: StringBuilder,
+        callback: ResolvedIdlCallbackFunction,
+        index: Int
+    ) = builder.apply {
+        val args = listOf("_c: Int") + callback.args.map { "${it.name}: ${toSimpleJsType(it.type)}" }
         val castedArgs = callback.args.map { castToJS(it.type, it.name, it.isDealloc(), false) }
 
         // header
+        append("\n\t// ").append(callback.name)
         append("\n\t_invoke")
         append(callback.name)
-        append(" = _module._setCallback(${index}, { ")
+        append(" = _module._setCallback(${index}, _callback${index}Js { ")
         args.joinTo(builder)
         append(" ->\n\t\t")
 
@@ -161,6 +192,33 @@ class KotlinJsPrinter(
         append("\n")
     }
 
+    private fun printTypes(buffer: StringBuilder, functions: List<ResolvedIdlOperation>) = buffer.apply {
+        append("""
+            
+            private external interface Lib: JsAny {
+            	fun default(): Promise<Module>
+            }
+
+            private external interface Module: EmModule {
+            	fun _setCallback(index: Int, callback: JsAny): Int
+
+        """.trimIndent())
+
+        functions.forEach { function ->
+            append("\tfun ")
+            append(function.name)
+            append("(")
+            function.args.joinTo(buffer) { "${it.name}: ${toSimpleJsType(it.type)}" }
+            append(")")
+            if(function.type !is ResolvedIdlType.Void) {
+                append(": ")
+                append(toSimpleJsType(function.type))
+            }
+            append("\n")
+        }
+        append("}\n")
+    }
+
     private fun castToNative(type: ResolvedIdlType, content: String, dealloc: Boolean, useArena: Boolean): String = when(type) {
         is ResolvedIdlType.Void -> content
         is ResolvedIdlType.Default -> when(val decl = type.declaration) {
@@ -190,14 +248,8 @@ class KotlinJsPrinter(
         is ResolvedIdlType.Void -> content
         is ResolvedIdlType.Default -> when(val decl = type.declaration) {
             is BuiltinIdlDeclaration -> when(decl.kind) {
-                WebIDLBuiltinKind.BOOLEAN -> "$content == 1"
-                WebIDLBuiltinKind.FLOAT -> "($content as Float).truncF32()"
-                WebIDLBuiltinKind.CHAR -> "($content as JsNumber).toInt().toChar()"
-                WebIDLBuiltinKind.INT -> "($content as JsNumber).toInt()"
-                WebIDLBuiltinKind.DOUBLE -> "($content as JsNumber).toDouble()"
-                WebIDLBuiltinKind.BYTE -> "($content as JsNumber).toInt().toByte()"
-                WebIDLBuiltinKind.SHORT -> "($content as JsNumber).toInt().toShort()"
-                WebIDLBuiltinKind.LONG -> "$content as JsBigInt"
+                WebIDLBuiltinKind.FLOAT -> "$content.truncF32()"
+                WebIDLBuiltinKind.CHAR -> "$content.toChar()"
                 WebIDLBuiltinKind.STRING ->
                     if(useArena) "arena.unwrapCStr($content, $dealloc)"
                     else "unwrapCStr(_module, $content, $dealloc)"
@@ -214,6 +266,28 @@ class KotlinJsPrinter(
                 if(useArena) "arena.unwrapCallback<${decl.name}>($content, $dealloc)"
                 else "unwrapCallback<${decl.name}>(_module, $content, $dealloc)"
             else -> throw UnsupportedOperationException(type.toString())
+        }
+        else -> throw UnsupportedOperationException(type.toString())
+    }
+
+    private fun toSimpleJsType(type: ResolvedIdlType): String = when(type) {
+        is ResolvedIdlType.Void -> "Unit"
+        is ResolvedIdlType.Default -> when(val decl = type.declaration) {
+            is BuiltinIdlDeclaration -> when(decl.kind) {
+                WebIDLBuiltinKind.BOOLEAN -> "Boolean"
+                WebIDLBuiltinKind.FLOAT -> "Float"
+                WebIDLBuiltinKind.CHAR -> "Int"
+                WebIDLBuiltinKind.INT -> "Int"
+                WebIDLBuiltinKind.DOUBLE -> "Double"
+                WebIDLBuiltinKind.BYTE -> "Byte"
+                WebIDLBuiltinKind.SHORT -> "Short"
+                WebIDLBuiltinKind.LONG -> "Long"
+                WebIDLBuiltinKind.STRING -> "EmString"
+                WebIDLBuiltinKind.LIST -> "EmArray"
+                else -> "JsNumber"
+            }
+            is ResolvedIdlCallbackFunction -> "Int"
+            else -> "JsNumber"
         }
         else -> throw UnsupportedOperationException(type.toString())
     }

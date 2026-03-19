@@ -7,7 +7,10 @@ import com.huskerdev.webidl.WebIDL
 import com.huskerdev.webidl.jvm.iterator
 import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.api.Project
+import org.gradle.api.tasks.TaskProvider
+import org.gradle.process.ExecOperations
 import java.io.File
+import java.io.OutputStream
 
 fun NativeModule.dir(project: Project): File =
     projectDir?.get()?.asFile
@@ -21,8 +24,29 @@ fun NativeModule.idl(project: Project) = WebIDL.resolve(
     env = NDLEnv()
 )
 
-fun Project.exec(command: String, workingDir: File? = null, silent: Boolean = false): String {
-    return project.providers.exec {
+fun TaskProvider<*>.dependsOnReload() {
+    // Invoke task when reloading using IDEA
+    get().project.tasks.matching { it.name == "prepareKotlinIdeaImport" }.configureEach {
+        dependsOn(this@dependsOnReload)
+    }
+}
+
+fun ExecOperations.exec(command: String, workingDir: File? = null, silent: Boolean = false): String {
+    class StringOutputStream(
+        private val delegate: OutputStream,
+        private val string: StringBuilder = StringBuilder()
+    ): OutputStream() {
+        override fun write(b: Int) {
+            string.append(b.toChar())
+            if(!silent) delegate.write(b)
+        }
+        override fun flush() = delegate.flush()
+        override fun toString() = string.toString()
+    }
+    val stdOut = StringOutputStream(System.out)
+    val errOut = StringOutputStream(System.err)
+
+    return exec {
         isIgnoreExitValue = true
         if(workingDir != null)
             this.workingDir = workingDir
@@ -31,13 +55,13 @@ fun Project.exec(command: String, workingDir: File? = null, silent: Boolean = fa
             commandLine("/bin/bash", "-c", command)
         else
             commandLine("cmd.exe", "/c", command)
+
+        standardOutput = stdOut
+        errorOutput = errOut
     }.run {
-        val output = standardOutput.asText.get()
-        if(!silent)
-            println(output)
-        if(result.get().exitValue != 0)
-            throw Exception("Failed to execute command (code=${result.get().exitValue}): \n$command\nError:\n${standardError.asText.get()}")
-        output.trim()
+        if(exitValue != 0)
+            throw Exception("Failed to execute command (code=${exitValue}): \n$command\nError:\n${stdOut}")
+        stdOut.toString().trim()
     }
 }
 

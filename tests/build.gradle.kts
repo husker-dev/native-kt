@@ -1,5 +1,9 @@
+@file:OptIn(ExperimentalWasmDsl::class)
+
 import org.apache.tools.ant.taskdefs.condition.Os
-import org.jetbrains.kotlin.gradle.dsl.*
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
+import org.jetbrains.kotlin.gradle.dsl.JsMainFunctionExecutionMode
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -20,15 +24,15 @@ kotlin {
         }
     }
 
-    js {
+    configure(listOf(
+        wasmJs(), js()
+    )) {
         browser()
         nodejs()
 
         compilerOptions {
             freeCompilerArgs.addAll("-Xes-long-as-bigint", "-XXLanguage:+JsAllowLongInExportedDeclarations")
-
             target = "es2015"
-            moduleKind = JsModuleKind.MODULE_COMMONJS
             main = JsMainFunctionExecutionMode.NO_CALL
         }
     }

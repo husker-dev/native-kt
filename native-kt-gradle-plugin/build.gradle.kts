@@ -14,8 +14,9 @@ repositories {
 
 dependencies {
     implementation(libs.kotlin.gradle.plugin)
-    compileOnly(libs.android.tools)
+    implementation(libs.kotlinx.serialization)
     implementation(libs.webidl)
+    compileOnly(libs.android.tools)
 }
 
 tasks.jar {

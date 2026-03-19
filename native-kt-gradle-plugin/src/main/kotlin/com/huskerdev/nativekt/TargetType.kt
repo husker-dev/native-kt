@@ -6,7 +6,7 @@ enum class TargetType(
 ) {
     JVM("jvm"),
     JS("js"),
-    WASM("wasm"),
+    WASM_JS("wasmJs"),
 
     ANDROID("android"),
 

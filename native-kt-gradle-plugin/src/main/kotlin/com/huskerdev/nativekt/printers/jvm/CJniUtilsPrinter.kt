@@ -11,7 +11,8 @@ class CJniUtilsPrinter(
     val idl: IdlResolver,
     target: File,
     val classPath: String,
-    val name: String = "JNI"
+    val name: String,
+    val isAndroid: Boolean
 ) {
     init {
         val builder = StringBuilder()
@@ -114,7 +115,7 @@ class CJniUtilsPrinter(
                 static jint JVM_attach(JNIEnv **env) {
                     jint status = (*jvm)->GetEnv(jvm, (void**)env, JNI_VERSION_1_6);
                     if (status == JNI_EDETACHED)
-                        (*jvm)->AttachCurrentThread(jvm, (void**)env, NULL);
+                        (*jvm)->AttachCurrentThread(jvm, (${if(isAndroid) "JNIEnv**" else "void**"})env, NULL);
                     return status;
                 }
 

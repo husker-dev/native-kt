@@ -1,107 +1,66 @@
 package com.huskerdev.nativekt.configurators
 
+import com.android.build.gradle.internal.tasks.factory.dependsOn
 import com.huskerdev.nativekt.TargetType
+import com.huskerdev.nativekt.plugin.CMakeBuildType
 import com.huskerdev.nativekt.plugin.NativeKtExtension
 import com.huskerdev.nativekt.plugin.NativeModule
-import com.huskerdev.nativekt.utils.currentTargetType
-import com.huskerdev.nativekt.utils.dir
-import com.huskerdev.nativekt.utils.exec
-import com.huskerdev.nativekt.printers.kn.DefPrinter
 import com.huskerdev.nativekt.printers.HeaderPrinter
+import com.huskerdev.nativekt.printers.kn.DefPrinter
 import com.huskerdev.nativekt.printers.kn.KotlinNativePrinter
-import com.huskerdev.nativekt.utils.cmakeBuild
-import com.huskerdev.nativekt.utils.cmakeGen
-import com.huskerdev.nativekt.utils.fresh
+import com.huskerdev.nativekt.utils.*
 import com.huskerdev.webidl.resolver.IdlResolver
+import kotlinx.serialization.json.Json
+import org.gradle.api.DefaultTask
 import org.gradle.api.Project
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.TaskProvider
 import org.gradle.internal.extensions.stdlib.capitalized
 import org.gradle.kotlin.dsl.the
+import org.gradle.process.ExecOperations
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeCacheApi
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import java.io.File
+import javax.inject.Inject
 
+@OptIn(KotlinNativeCacheApi::class)
 internal fun configureNative(
     project: Project,
     extension: NativeKtExtension,
+    commonTask: TaskProvider<*>?,
     idl: IdlResolver,
     module: NativeModule,
     sourceSet: KotlinSourceSet,
     targetType: TargetType,
-    srcGenDir: File,
+    srcRootDir: File,
     cmakeRootDir: File,
     expectActual: Boolean
 ) {
-    if(targetType.kotlinTarget !in currentTargetType().compiles)
+    val targetName = targetType.kotlinTarget
+
+    if(targetName !in currentTargetType().compiles)
         return
 
     val kotlin = project.the<KotlinMultiplatformExtension>()
 
-    val targetName = targetType.kotlinTarget
-    val sourceSetName = sourceSet.name
+    // cmake paths
+    val cmakeDir = File(cmakeRootDir, "native/$targetName")
+    val cmakeBuildDir = File(cmakeDir, "build")
 
-    val nativeGenDir = File(srcGenDir, "native/$sourceSetName")
-    nativeGenDir.fresh()
+    // src paths
+    val srcTargetDir = File(srcRootDir, "native/$targetName")
 
-    val cinteropGenDir = File(srcGenDir, "cinterop")
-    cinteropGenDir.mkdirs()
+    val srcDir = File(srcTargetDir, "src")
+    val cinteropDir = File(srcTargetDir, "cinterop")
 
-    val classPathFile = File(nativeGenDir, module.classPath.replace(".", "/"))
+    val defFile = File(cinteropDir, "cinterop.def")
+    val headerFile = File(cinteropDir, "header.h")
 
-    val cinteropDefFile = File(cinteropGenDir, "${module.name}.def")
-    val cinteropHeaderFile = File(cinteropGenDir, "${module.name}.h")
-
-    val cmakeDir = File(cmakeRootDir, "kn")
-    cmakeDir.mkdirs()
-
-    val cmakeBuildDir = File(cmakeDir, targetName)
-    cmakeBuildDir.mkdirs()
-
-    val commonCmakeBuildDir = File(cmakeRootDir, "common")
-    commonCmakeBuildDir.mkdirs()
-
-    sourceSet.kotlin.srcDir(nativeGenDir)
-
-    // Generate Kotlin files
-    KotlinNativePrinter(
-        idl = idl,
-        target = File(classPathFile, "${module.name}.kt"),
-        classPath = module.classPath,
-        moduleName = module.name,
-        useCoroutines = extension.useCoroutines,
-        expectActual = expectActual
-    )
-    HeaderPrinter(
-        idl = idl,
-        target = cinteropHeaderFile,
-        guardName = module.name.uppercase(),
-    )
-    DefPrinter(
-        target = cinteropDefFile,
-        headerFile = cinteropHeaderFile,
-        classPath = module.classPath
-    )
-
-    // Create CMake file
-    File(cmakeDir, "CMakeLists.txt").writeText($$"""
-        cmake_minimum_required(VERSION 3.15)
-
-        project("$${module.name}")
-
-        add_subdirectory("$${
-            module.dir(project).absolutePath.replace("\\", "/")
-        }" "$${
-            commonCmakeBuildDir.absolutePath.replace("\\", "/")
-        }")
-
-        add_library(lib_$${module.name} SHARED stub.c)
-        target_link_libraries(lib_$${module.name} PUBLIC $${module.name})
-        
-        add_library(libstatic_$${module.name} STATIC stub.c)
-        target_link_libraries(libstatic_$${module.name} PUBLIC $${module.name})
-    """.trimIndent())
-
-    File(cmakeDir, "stub.c").writeText("")
+    sourceSet.kotlin.srcDir(srcDir)
 
     // Configure Kotlin cinterop
     val target = kotlin.targets.findByName(targetName) as? KotlinNativeTarget
@@ -110,152 +69,299 @@ internal fun configureNative(
     val compilation = target.compilations.findByName("main")
         ?: throw UnsupportedOperationException()
 
+    // Prepare task
+
+    val prepareTask = project.tasks.register(
+        "prepareNatives${module.name.capitalized()}${targetName.capitalized()}",
+        PrepareNativesKn::class.java
+    )
+    prepareTask.get().also {
+        it.defFile.set(defFile)
+        it.inputs.dir(module.dir(project))
+        it.outputs.dirs(srcDir, cmakeDir)
+
+        it.idl = Json.encodeToString(idl)
+        it.useCoroutines = extension.useCoroutines
+        it.expectActual = expectActual
+
+        it.srcDir = srcDir.absolutePath
+
+        it.cmakeBuildType = module.buildType
+        it.targetType = targetType
+        it.cmakeDir = cmakeDir.absolutePath
+        it.cmakeBuildDir = cmakeBuildDir.absolutePath
+        it.headerFile = headerFile.absolutePath
+        it.moduleName = module.name
+        it.moduleClasspath = module.classPath
+        it.srcFile = srcDir.resolve(module.classPath.replace(".", "/")).resolve("${module.name}.native.kt").absolutePath
+        it.nativeProjectDir = module.dir(project).absolutePath.replace("\\", "/")
+    }
+    if(commonTask != null)
+        prepareTask.dependsOn(commonTask)
+
+    project.gradle.taskGraph.whenReady {
+        if (hasTask("${project.path}:compileKotlin${targetName.capitalized()}"))
+            prepareTask.get().shouldInit = true
+    }
+
     compilation.cinterops {
-        create("natives_${module.name}").definitionFile.set(cinteropDefFile)
+        create("natives_${module.name}").definitionFile.set(prepareTask.flatMap { it.defFile })
     }
 
-    val task = project.tasks.register("compileNatives${module.name.capitalized()}Native${targetName.capitalized()}") {
-        group = "native"
-        doLast {
-            // Generate CMake build
-            run {
-                fun flags(vararg flags: String) = setOf(
-                    "-DCMAKE_C_FLAGS=\"${flags.joinToString(" ")}\"",
-                    "-DCMAKE_CXX_FLAGS=\"${flags.joinToString(" ")}\""
-                )
-                fun xcSdkVersion(sdk: String) =
-                    project.exec("xcrun --sdk $sdk --show-sdk-platform-version", silent = true)
-                fun xcSdkSysroot(sdk: String) =
-                    project.exec("xcrun --sdk $sdk --show-sdk-path", silent = true)
+    // Compilation task
 
+    val compilationTask = project.tasks.register(
+        "compileNatives${module.name.capitalized()}Kn${targetName.capitalized()}",
+        CompileNativesKn::class.java
+    )
+    compilationTask.get().also {
+        it.inputs.dir(module.dir(project))
+        it.outputs.dirs(cmakeDir)
 
-                val args = hashSetOf(
-                    "-DCMAKE_C_COMPILER=clang",
-                    "-DCMAKE_CXX_COMPILER=clang++",
-                )
-                args += when(targetType) {
-                    TargetType.IOS_SIMULATOR_ARM64 -> flags(
-                        "-arch arm64",
-                        "-target arm64-apple-ios${xcSdkVersion("iphonesimulator")}-simulator",
-                        "-isysroot ${xcSdkSysroot("iphonesimulator")}"
-                    )
-                    TargetType.IOS_X64 -> flags(
-                        "-arch x86_64",
-                        "-target x86_64-apple-ios${xcSdkVersion("iphonesimulator")}-simulator",
-                        "-isysroot ${xcSdkSysroot("iphonesimulator")}"
-                    )
-                    TargetType.IOS_ARM64 -> flags(
-                        "-arch arm64",
-                        "-target arm64-apple-ios${xcSdkVersion("iphoneos")}",
-                        "-isysroot ${xcSdkSysroot("iphoneos")}"
-                    )
-                    TargetType.TVOS_ARM64 -> flags(
-                        "-arch arm64",
-                        "-target arm64-apple-tvos${xcSdkVersion("appletvos")}",
-                        "-isysroot ${xcSdkSysroot("appletvos")}"
-                    )
-                    TargetType.TVOS_SIMULATOR_ARM64 -> flags(
-                        "-arch arm64",
-                        "-target arm64-apple-tvos${xcSdkVersion("appletvsimulator")}-simulator",
-                        "-isysroot ${xcSdkSysroot("appletvsimulator")}"
-                    )
-                    TargetType.TVOS_X64 -> flags(
-                        "-arch x86_64",
-                        "-target x86_64-apple-tvos${xcSdkVersion("appletvsimulator")}-simulator",
-                        "-isysroot ${xcSdkSysroot("appletvsimulator")}"
-                    )
-                    TargetType.WATCHOS_ARM32 -> flags(
-                        "-arch armv7k",
-                        "-target armv7k-apple-watchos${xcSdkVersion("watchos")}",
-                        "-isysroot ${xcSdkSysroot("watchos")}"
-                    )
-                    TargetType.WATCHOS_ARM64 -> flags(
-                        "-arch arm64_32",
-                        "-target arm64-apple-watchos${xcSdkVersion("watchos")}",
-                        "-isysroot ${xcSdkSysroot("watchos")}"
-                    )
-                    TargetType.WATCHOS_DEVICE_ARM64 -> flags(
-                        "-arch arm64",
-                        "-target arm64-apple-watchos${xcSdkVersion("watchos")}",
-                        "-isysroot ${xcSdkSysroot("watchos")}"
-                    )
-                    TargetType.WATCHOS_SIMULATOR_ARM64 -> flags(
-                        "-arch arm64",
-                        "-target arm64-apple-watchos${xcSdkVersion("watchsimulator")}-simulator",
-                        "-isysroot ${xcSdkSysroot("watchsimulator")}"
-                    )
-                    TargetType.WATCHOS_X64 -> flags(
-                        "-arch x86_64",
-                        "-target x86_64-apple-watchos${xcSdkVersion("watchsimulator")}-simulator",
-                        "-isysroot ${xcSdkSysroot("watchsimulator")}"
-                    )
-                    TargetType.MACOS_ARM64 -> flags("-arch arm64")
-                    TargetType.MACOS_X64 -> flags("-arch x86_64")
-                    else -> emptySet()
-                }
-
-                cmakeGen(project, cmakeDir, cmakeBuildDir, module.buildType, args)
-            }
-
-            // Build
-            cmakeBuild(project, cmakeBuildDir)
-
-            // Configure Kotlin linker options (copy from CMake)
-            target.binaries {
-                all {
-                    // arguments generates only with executable or shared libraries, so our CMakeLists.txt contains `SHARED` target
-                    val args = arrayListOf<String>()
-
-                    val linkLibs = File(
-                        cmakeBuildDir,
-                        "CMakeFiles/lib_${module.name}.dir/linkLibs.rsp"
-                    )
-                    val link = File(
-                        cmakeBuildDir,
-                        "CMakeFiles/lib_${module.name}.dir/link.txt"
-                    )
-
-                    if(linkLibs.exists()) {
-                        args += linkLibs.readText()
-                            .splitRespectingQuotes()
-                            .map {
-                                if(!it.startsWith("-l") && !File(it).isAbsolute)
-                                    File(cmakeBuildDir, it).absolutePath
-                                else it
-                            }
-                            .filter { it !in setOf("-lpthread") }
-                    } else if(link.exists()) {
-                        val parts = link.readText()
-                            .splitRespectingQuotes()
-
-                        var i = 0
-                        while(i < parts.size) {
-                            val part = parts[i]
-                            if(part.endsWith(".a")) {
-                                val path = if(!File(part).isAbsolute)
-                                    File(cmakeBuildDir, part).absolutePath
-                                else part
-                                args += path
-                            }
-                            if(part == "-framework") {
-                                args += part
-                                args += parts[++i]
-                            }
-                            i++
-                        }
-                    }
-
-                    linkerOpts(args +
-                        "-L${cmakeBuildDir.absolutePath.replace("\\", "/")}" +
-                        "-llibstatic_${module.name}"
-                    )
-                }
-            }
-        }
+        it.cmakeBuildDir = cmakeBuildDir.absolutePath
     }
+    compilationTask.dependsOn(prepareTask)
 
     project.tasks.matching { it.name == "compileKotlin${targetName.capitalized()}" }.forEach {
-        it.dependsOn(task)
+        it.dependsOn(compilationTask)
+    }
+}
+
+private fun extractLinkerOpts(
+    cmakeBuildDir: File,
+    moduleName: String
+): List<String> = buildList {
+    // arguments generates only with executable or shared libraries, so our CMakeLists.txt contains `SHARED` target
+    this += "-L${cmakeBuildDir.absolutePath.replace("\\", "/")}"
+    this += "-llibstatic_$moduleName"
+
+    val linkLibs = File(
+        cmakeBuildDir,
+        "CMakeFiles/lib_$moduleName.dir/linkLibs.rsp"
+    )
+    val link = File(
+        cmakeBuildDir,
+        "CMakeFiles/lib_$moduleName.dir/link.txt"
+    )
+
+    if(linkLibs.exists()) {
+        this += linkLibs.readText()
+            .splitRespectingQuotes()
+            .map {
+                if(!it.startsWith("-l") && !File(it).isAbsolute)
+                    File(cmakeBuildDir, it).absolutePath
+                else it
+            }
+            .filter { it !in setOf("-lpthread") }
+    } else if(link.exists()) {
+        val parts = link.readText()
+            .splitRespectingQuotes()
+
+        var i = 0
+        while(i < parts.size) {
+            val part = parts[i]
+            if(part.endsWith(".a")) {
+                val path = if(!File(part).isAbsolute)
+                    File(cmakeBuildDir, part).absolutePath
+                else part
+                this += path
+            }
+            if(part == "-framework") {
+                this += part
+                this += parts[++i]
+            }
+            i++
+        }
+    }
+}
+
+private fun configureCMake(
+    execOps: ExecOperations,
+    targetType: TargetType,
+    cmakeDir: File,
+    cmakeBuildDir: File,
+    cmakeBuildType: CMakeBuildType
+) {
+    fun flags(vararg flags: String) = setOf(
+        "-DCMAKE_C_FLAGS=\"${flags.joinToString(" ")}\"",
+        "-DCMAKE_CXX_FLAGS=\"${flags.joinToString(" ")}\""
+    )
+    fun xcSdkVersion(sdk: String) =
+        execOps.exec("xcrun --sdk $sdk --show-sdk-platform-version", silent = true)
+    fun xcSdkSysroot(sdk: String) =
+        execOps.exec("xcrun --sdk $sdk --show-sdk-path", silent = true)
+
+
+    val args = hashSetOf(
+        "-DCMAKE_C_COMPILER=clang",
+        "-DCMAKE_CXX_COMPILER=clang++",
+    )
+    args += when(targetType) {
+        TargetType.IOS_SIMULATOR_ARM64 -> flags(
+            "-arch arm64",
+            "-target arm64-apple-ios${xcSdkVersion("iphonesimulator")}-simulator",
+            "-isysroot ${xcSdkSysroot("iphonesimulator")}"
+        )
+        TargetType.IOS_X64 -> flags(
+            "-arch x86_64",
+            "-target x86_64-apple-ios${xcSdkVersion("iphonesimulator")}-simulator",
+            "-isysroot ${xcSdkSysroot("iphonesimulator")}"
+        )
+        TargetType.IOS_ARM64 -> flags(
+            "-arch arm64",
+            "-target arm64-apple-ios${xcSdkVersion("iphoneos")}",
+            "-isysroot ${xcSdkSysroot("iphoneos")}"
+        )
+        TargetType.TVOS_ARM64 -> flags(
+            "-arch arm64",
+            "-target arm64-apple-tvos${xcSdkVersion("appletvos")}",
+            "-isysroot ${xcSdkSysroot("appletvos")}"
+        )
+        TargetType.TVOS_SIMULATOR_ARM64 -> flags(
+            "-arch arm64",
+            "-target arm64-apple-tvos${xcSdkVersion("appletvsimulator")}-simulator",
+            "-isysroot ${xcSdkSysroot("appletvsimulator")}"
+        )
+        TargetType.TVOS_X64 -> flags(
+            "-arch x86_64",
+            "-target x86_64-apple-tvos${xcSdkVersion("appletvsimulator")}-simulator",
+            "-isysroot ${xcSdkSysroot("appletvsimulator")}"
+        )
+        TargetType.WATCHOS_ARM32 -> flags(
+            "-arch armv7k",
+            "-target armv7k-apple-watchos${xcSdkVersion("watchos")}",
+            "-isysroot ${xcSdkSysroot("watchos")}"
+        )
+        TargetType.WATCHOS_ARM64 -> flags(
+            "-arch arm64_32",
+            "-target arm64-apple-watchos${xcSdkVersion("watchos")}",
+            "-isysroot ${xcSdkSysroot("watchos")}"
+        )
+        TargetType.WATCHOS_DEVICE_ARM64 -> flags(
+            "-arch arm64",
+            "-target arm64-apple-watchos${xcSdkVersion("watchos")}",
+            "-isysroot ${xcSdkSysroot("watchos")}"
+        )
+        TargetType.WATCHOS_SIMULATOR_ARM64 -> flags(
+            "-arch arm64",
+            "-target arm64-apple-watchos${xcSdkVersion("watchsimulator")}-simulator",
+            "-isysroot ${xcSdkSysroot("watchsimulator")}"
+        )
+        TargetType.WATCHOS_X64 -> flags(
+            "-arch x86_64",
+            "-target x86_64-apple-watchos${xcSdkVersion("watchsimulator")}-simulator",
+            "-isysroot ${xcSdkSysroot("watchsimulator")}"
+        )
+        TargetType.MACOS_ARM64 -> flags("-arch arm64")
+        TargetType.MACOS_X64 -> flags("-arch x86_64")
+        else -> emptySet()
+    }
+    cmakeGen(execOps, cmakeDir, cmakeBuildDir, cmakeBuildType, args)
+}
+
+private abstract class PrepareNativesKn @Inject constructor(
+    private val execOps: ExecOperations,
+): DefaultTask() {
+    @get:OutputFile
+    abstract val defFile: RegularFileProperty
+
+    @get:Input abstract var shouldInit: Boolean
+
+    @get:Input abstract var idl: String
+    @get:Input abstract var useCoroutines: Boolean
+    @get:Input abstract var expectActual: Boolean
+
+    @get:Input abstract var srcDir: String
+
+    @get:Input abstract var cmakeBuildType: CMakeBuildType
+    @get:Input abstract var targetType: TargetType
+    @get:Input abstract var cmakeDir: String
+    @get:Input abstract var cmakeBuildDir: String
+    @get:Input abstract var headerFile: String
+    @get:Input abstract var moduleName: String
+    @get:Input abstract var moduleClasspath: String
+    @get:Input abstract var srcFile: String
+    @get:Input abstract var nativeProjectDir: String
+
+    init {
+        doLast {
+            File(srcDir).fresh()
+
+            val idl = Json.decodeFromString<IdlResolver>(idl)
+
+            val cmakeBuildDir = File(cmakeBuildDir)
+            val cmakeDir = File(cmakeDir)
+            val headerFile = File(headerFile)
+
+            cmakeDir.mkdirs()
+            headerFile.parentFile.mkdirs()
+
+            // Generate header
+            HeaderPrinter(
+                idl = idl,
+                target = headerFile,
+                guardName = moduleName.uppercase(),
+            )
+
+            // Create CMake file
+            File(cmakeDir, "CMakeLists.txt").writeText($$"""
+                cmake_minimum_required(VERSION 3.15)
+        
+                project("$$moduleName")
+        
+                add_subdirectory("$$nativeProjectDir" "$${
+                File(cmakeBuildDir, "common").absolutePath.replace("\\", "/")
+            }")
+                
+                add_library(lib_$$moduleName SHARED stub.c)
+                target_link_libraries(lib_$$moduleName PUBLIC $$moduleName)
+                
+                add_library(libstatic_$$moduleName STATIC stub.c)
+                target_link_libraries(libstatic_$$moduleName PUBLIC $$moduleName)
+            """.trimIndent())
+
+            File(cmakeDir, "stub.c").writeText("")
+
+            // Configure CMake (if needed)
+            if(shouldInit)
+                configureCMake(execOps, targetType, cmakeDir, cmakeBuildDir, cmakeBuildType)
+
+            // Get linker opts
+            val linkerOpts = if(shouldInit)
+                extractLinkerOpts(cmakeBuildDir, moduleName)
+            else emptyList()
+
+            // Create .def file
+            DefPrinter(
+                target = defFile.get().asFile,
+                headerFile = headerFile,
+                classPath = moduleClasspath,
+                linkerOpts = linkerOpts
+            )
+
+            // Generate Kotlin files
+            KotlinNativePrinter(
+                idl = idl,
+                target = File(srcFile),
+                classPath = moduleClasspath,
+                moduleName = moduleName,
+                useCoroutines = useCoroutines,
+                expectActual = expectActual
+            )
+        }
+    }
+}
+
+private abstract class CompileNativesKn @Inject constructor(
+    private val execOps: ExecOperations,
+): DefaultTask() {
+    @get:Input abstract var cmakeBuildDir: String
+
+    init {
+        group = "native"
+        doLast {
+            cmakeBuild(execOps, File(cmakeBuildDir))
+        }
     }
 }
 

@@ -3,45 +3,45 @@
 
 package com.huskerdev.nativekt.web
 
-import kotlin.js.json
+import kotlin.js.*
 
 class EmArena(
-    val module: dynamic
+    module: JsAny
 ): AutoCloseable {
     companion object {
-        fun <T> use(module: dynamic, block: (EmArena) -> T) =
+        fun <T> use(module: JsAny, block: (EmArena) -> T) =
             EmArena(module).use { block(it) }
     }
 
-    private val allocated = hashSetOf<Any>()
-    private val callbacks = hashSetOf<JsNumber>()
+    private val module = module.unsafeCast<EmModule>()
+    private val allocated = hashSetOf<Int>()
+    private val callbacks = hashSetOf<Int>()
 
-    private fun ptr(ptr: dynamic): dynamic {
-        allocated += ptr as Any
+    private fun ptr(ptr: Int): Int {
+        allocated += ptr
         return ptr
     }
 
-    fun malloc(size: Int): Any =
-        ptr(module._malloc(size)) as Any
+    fun malloc(size: Int): Int =
+        ptr(module._malloc(size))
 
-    fun allocCStr(str: String): Any {
+    fun allocCStr(str: String): EmString {
         val len = module.lengthBytesUTF8(str) + 1
         val strMem = malloc(len)
         module.stringToUTF8(str, strMem, len)
 
-        return json(
-            "data" to strMem,
-            "length" to str.length
-        )
+        return createJsObject {
+            data = strMem
+            length = str.length
+        }
     }
 
-    fun unwrapCStr(ptr: dynamic, dealloc: Boolean): String {
-        val data = (ptr.data as JsNumber).toInt()
-        val length = (ptr.length as JsNumber).toInt()
+    fun unwrapCStr(struct: EmString, dealloc: Boolean): String {
+        val struct = struct.unsafeCast<EmString>()
 
-        val result = module.UTF8ToString(data, length)
-        if(dealloc && data !in allocated)
-            module._free(data)
+        val result = module.UTF8ToString(struct.data, struct.length)
+        if(dealloc && struct.data !in allocated)
+            module._free(struct.data)
 
         return result
     }
@@ -50,79 +50,79 @@ class EmArena(
 
     // Array: char
 
-    fun toNativeCharArray( arr: CharArray) =
-        ptr(toNativeCharArray(module, arr))
+    fun toNativeCharArray(arr: CharArray) =
+        toNativeCharArray(module, arr).also { ptr(it.elements) }
 
-    fun toKotlinCharArray(struct: dynamic, dealloc: Boolean) =
-        toKotlinCharArray(module, struct, dealloc && struct.elements !in allocated)
+    fun toKotlinCharArray(struct: EmArray, dealloc: Boolean) =
+        toKotlinCharArray(module, struct, dealloc && struct.unsafeCast<EmArray>().elements !in allocated)
 
     // Array: boolean
 
     fun toNativeBooleanArray(arr: BooleanArray) =
-        ptr(toNativeBooleanArray(module, arr))
+        toNativeBooleanArray(module, arr).also { ptr(it.elements) }
 
-    fun toKotlinBooleanArray(struct: dynamic, dealloc: Boolean) =
-        toKotlinBooleanArray(module, struct, dealloc && struct.elements !in allocated)
+    fun toKotlinBooleanArray(struct: EmArray, dealloc: Boolean) =
+        toKotlinBooleanArray(module, struct, dealloc && struct.unsafeCast<EmArray>().elements !in allocated)
 
     // Array: byte
 
     fun toNativeByteArray(arr: ByteArray) =
-        ptr(toNativeByteArray(module, arr))
+        toNativeByteArray(module, arr).also { ptr(it.elements) }
 
-    fun toKotlinByteArray(struct: dynamic, dealloc: Boolean) =
-        toKotlinByteArray(module, struct, dealloc && struct.elements !in allocated)
+    fun toKotlinByteArray(struct: EmArray, dealloc: Boolean) =
+        toKotlinByteArray(module, struct, dealloc && struct.unsafeCast<EmArray>().elements !in allocated)
 
     // Array: short
 
-    fun toNativeShortArray(arr: ShortArray): dynamic =
-        ptr(toNativeShortArray(module, arr))
+    fun toNativeShortArray(arr: ShortArray) =
+        toNativeShortArray(module, arr).also { ptr(it.elements) }
 
-    fun toKotlinShortArray(struct: dynamic, dealloc: Boolean): ShortArray =
-        toKotlinShortArray(module, struct, dealloc && struct.elements !in allocated)
+    fun toKotlinShortArray(struct: EmArray, dealloc: Boolean): ShortArray =
+        toKotlinShortArray(module, struct, dealloc && struct.unsafeCast<EmArray>().elements !in allocated)
 
     // Array: int
 
     fun toNativeIntArray(arr: IntArray) =
-        ptr(toNativeIntArray(module, arr))
+        toNativeIntArray(module, arr).also { ptr(it.elements) }
 
-    fun toKotlinIntArray(struct: dynamic, dealloc: Boolean) =
-        toKotlinIntArray(module, struct, dealloc && struct.elements !in allocated)
+    fun toKotlinIntArray(struct: EmArray, dealloc: Boolean) =
+        toKotlinIntArray(module, struct, dealloc && struct.unsafeCast<EmArray>().elements !in allocated)
 
     // Array: long
 
-    fun toNativeLongArray(arr: LongArray): dynamic =
-        ptr(toNativeLongArray(module, arr))
+    fun toNativeLongArray(arr: LongArray) =
+        toNativeLongArray(module, arr).also { ptr(it.elements) }
 
-    fun toKotlinLongArray(struct: dynamic, dealloc: Boolean): LongArray =
-        toKotlinLongArray(module, struct, dealloc && struct.elements !in allocated)
+    fun toKotlinLongArray(struct: EmArray, dealloc: Boolean): LongArray =
+        toKotlinLongArray(module, struct, dealloc && struct.unsafeCast<EmArray>().elements !in allocated)
 
     // Array: float
 
-    fun toNativeFloatArray(arr: FloatArray): dynamic =
-        ptr(toNativeFloatArray(module, arr))
+    fun toNativeFloatArray(arr: FloatArray) =
+        toNativeFloatArray(module, arr).also { ptr(it.elements) }
 
-    fun toKotlinFloatArray(struct: dynamic, dealloc: Boolean): FloatArray =
-        toKotlinFloatArray(module, struct, dealloc && struct.elements !in allocated)
+    fun toKotlinFloatArray(struct: EmArray, dealloc: Boolean): FloatArray =
+        toKotlinFloatArray(module, struct, dealloc && struct.unsafeCast<EmArray>().elements !in allocated)
 
     // Array: double
 
-    fun toNativeDoubleArray(arr: DoubleArray): dynamic =
-        ptr(toNativeDoubleArray(module, arr))
+    fun toNativeDoubleArray(arr: DoubleArray) =
+        toNativeDoubleArray(module, arr).also { ptr(it.elements) }
 
-    fun toKotlinDoubleArray(struct: dynamic, dealloc: Boolean): DoubleArray =
-        toKotlinDoubleArray(module, struct, dealloc && struct.elements !in allocated)
+    fun toKotlinDoubleArray(struct: EmArray, dealloc: Boolean): DoubleArray =
+        toKotlinDoubleArray(module, struct, dealloc && struct.unsafeCast<EmArray>().elements !in allocated)
 
 
     // Callbacks
 
-    fun <T> unwrapCallback(ptr: JsNumber, dealloc: Boolean): T {
+    fun <T> unwrapCallback(ptr: Int, dealloc: Boolean): T {
         val result = unwrapCallback<T>(module, ptr, dealloc)
         if(dealloc && ptr !in allocated)
             module._free(ptr)
         return result
     }
 
-    fun callback(callback: JsNumber): JsNumber {
+    fun callback(callback: Int): Int {
         callbacks += callback
         return callback
     }

@@ -6,6 +6,7 @@ class DefPrinter(
     target: File,
     headerFile: File,
     classPath: String,
+    linkerOpts: List<String>
 ) {
 
     init {
@@ -14,6 +15,7 @@ class DefPrinter(
         target.writeText("""
             headers = ${headerFile.absolutePath.replace("\\", "/")}
             package = cinterop.$classPath
+            linkerOpts = ${linkerOpts.joinToString(" ")}
         """.trimIndent())
     }
 }

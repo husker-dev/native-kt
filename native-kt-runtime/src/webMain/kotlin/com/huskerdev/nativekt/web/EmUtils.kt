@@ -3,186 +3,196 @@
 
 package com.huskerdev.nativekt.web
 
-import org.khronos.webgl.*
-import kotlin.js.json
+import kotlin.js.*
 import kotlin.math.truncate
 
-private val callbacks = hashMapOf<Pair<dynamic, Int>, Any>()
+private val callbacks = hashMapOf<Pair<EmModule, Int>, Any>()
 
 fun Float.truncF32(): Float {
     val factor = 10_000_000
     return truncate(this * factor) / factor
 }
 
-fun allocCStr(module: dynamic, str: String): Any {
+fun <T: JsAny> loadLib(lib: JsAny): Promise<T> =
+    js("'__esModule' in lib ? lib.default() : lib()")
+
+fun Boolean.toInt() = if(this) 1 else 0
+
+fun allocCStr(module: EmModule, str: String): EmString {
     val len = module.lengthBytesUTF8(str) + 1
     val strMem = module._malloc(len)
     module.stringToUTF8(str, strMem, len)
 
-    return json(
-        "data" to strMem,
-        "length" to str.length
-    )
+    return createJsObject {
+        data = strMem
+        length = str.length
+    }
 }
 
-fun unwrapCStr(module: dynamic, struct: dynamic, dealloc: Boolean): String {
-    val data = (struct.data as JsNumber).toInt()
-    val length = (struct.length as JsNumber).toInt()
-
-    val result = module.UTF8ToString(data, length)
+fun unwrapCStr(module: EmModule, struct: EmString, dealloc: Boolean): String {
+    val result = module.UTF8ToString(struct.data, struct.length)
     if(dealloc)
-        module._free(data)
+        module._free(struct.data)
     return result
 }
 
-
-// Primitive Arrays
-
-private fun <T> toArray(obj: Any): Array<T> =
-    js("function(e) { return Array.from(e); }")(obj)
-
 // Array: char
 
-fun toNativeCharArray(module: dynamic, arr: CharArray): dynamic {
+fun toNativeCharArray(module: EmModule, arr: CharArray): EmArray {
     val elements = module._malloc(arr.size * Char.SIZE_BYTES)
     Int16Array(module.HEAP8.buffer, elements, arr.size)
-        .set(arr.map { it.code.toShort() }.toTypedArray())
-    return json("elements" to elements, "size" to arr.size)
+        .set(arr.map { it.code.toJsNumber() }.toJsArray())
+    return createJsObject {
+        this.elements = elements
+        this.size = arr.size
+    }
 }
 
-fun toKotlinCharArray(module: dynamic, struct: dynamic, dealloc: Boolean): CharArray {
-    val elements = (struct.elements as JsNumber).toInt()
-    val size = (struct.size as JsNumber).toInt()
-
-    val result = toArray<Short>(Int16Array(module.HEAP8.buffer, elements, size))
+fun toKotlinCharArray(module: EmModule, struct: EmArray, dealloc: Boolean): CharArray {
+    val result = JsArrayTools.from<JsNumber>(Int16Array(module.HEAP8.buffer, struct.elements, struct.size))
+        .toArray()
         .map { it.toInt().toChar() }.toCharArray()
-    if(dealloc) module._free(elements)
+    if(dealloc) module._free(struct.elements)
     return result
 }
 
 // Array: boolean
 
-fun toNativeBooleanArray(module: dynamic, arr: BooleanArray): dynamic {
+fun toNativeBooleanArray(module: EmModule, arr: BooleanArray): EmArray {
     val elements = module._malloc(arr.size * Byte.SIZE_BYTES)
     Int8Array(module.HEAP8.buffer, elements, arr.size)
-        .set(arr.map { (if(it) 1 else 0).toByte() }.toTypedArray())
-    return json("elements" to elements, "size" to arr.size)
+        .set(arr.map { (if(it) 1 else 0).toJsNumber() }.toJsArray())
+    return createJsObject {
+        this.elements = elements
+        this.size = arr.size
+    }
 }
 
-fun toKotlinBooleanArray(module: dynamic, struct: dynamic, dealloc: Boolean): BooleanArray {
-    val elements = (struct.elements as JsNumber).toInt()
-    val size = (struct.size as JsNumber).toInt()
-
-    val result = toArray<Byte>(Int8Array(module.HEAP8.buffer, elements, size))
-        .map { it == 1.toByte() }.toBooleanArray()
-    if(dealloc) module._free(elements)
+fun toKotlinBooleanArray(module: EmModule, struct: EmArray, dealloc: Boolean): BooleanArray {
+    val result = JsArrayTools.from<JsNumber>(Int8Array(module.HEAP8.buffer, struct.elements, struct.size))
+        .toArray()
+        .map { it.toInt() == 1 }.toBooleanArray()
+    if(dealloc) module._free(struct.elements)
     return result
 }
 
 // Array: byte
 
-fun toNativeByteArray(module: dynamic, arr: ByteArray): dynamic {
+fun toNativeByteArray(module: EmModule, arr: ByteArray): EmArray {
     val elements = module._malloc(arr.size * Byte.SIZE_BYTES)
-    Int8Array(module.HEAP8.buffer, elements, arr.size).set(arr.toTypedArray())
-    return json("elements" to elements, "size" to arr.size)
+    Int8Array(module.HEAP8.buffer, elements, arr.size)
+        .set(arr.map { it.toInt().toJsNumber() }.toJsArray())
+    return createJsObject {
+        this.elements = elements
+        this.size = arr.size
+    }
 }
 
-fun toKotlinByteArray(module: dynamic, struct: dynamic, dealloc: Boolean): ByteArray {
-    val elements = (struct.elements as JsNumber).toInt()
-    val size = (struct.size as JsNumber).toInt()
-
-    val result = toArray<Byte>(Int8Array(module.HEAP8.buffer, elements, size)).toByteArray()
-    if(dealloc) module._free(elements)
+fun toKotlinByteArray(module: EmModule, struct: EmArray, dealloc: Boolean): ByteArray {
+    val result = JsArrayTools.from<JsNumber>(Int8Array(module.HEAP8.buffer, struct.elements, struct.size))
+        .toArray()
+        .map { it.toInt().toByte() }.toByteArray()
+    if(dealloc) module._free(struct.elements)
     return result
 }
 
 // Array: short
 
-fun toNativeShortArray(module: dynamic, arr: ShortArray): dynamic {
+fun toNativeShortArray(module: EmModule, arr: ShortArray): EmArray {
     val elements = module._malloc(arr.size * Short.SIZE_BYTES)
-    Int16Array(module.HEAP8.buffer, elements, arr.size).set(arr.toTypedArray())
-    return json("elements" to elements, "size" to arr.size)
+    Int16Array(module.HEAP8.buffer, elements, arr.size)
+        .set(arr.map { it.toInt().toJsNumber() }.toJsArray())
+    return createJsObject {
+        this.elements = elements
+        this.size = arr.size
+    }
 }
 
-fun toKotlinShortArray(module: dynamic, struct: dynamic, dealloc: Boolean): ShortArray {
-    val elements = (struct.elements as JsNumber).toInt()
-    val size = (struct.size as JsNumber).toInt()
-
-    val result = toArray<Short>(Int16Array(module.HEAP8.buffer, elements, size)).toShortArray()
-    if(dealloc) module._free(elements)
+fun toKotlinShortArray(module: EmModule, struct: EmArray, dealloc: Boolean): ShortArray {
+    val result = JsArrayTools.from<JsNumber>(Int16Array(module.HEAP8.buffer, struct.elements, struct.size))
+        .toArray()
+        .map { it.toInt().toShort() }.toShortArray()
+    if(dealloc) module._free(struct.elements)
     return result
 }
 
 // Array: int
 
-fun toNativeIntArray(module: dynamic, arr: IntArray): dynamic {
+fun toNativeIntArray(module: EmModule, arr: IntArray): EmArray {
     val elements = module._malloc(arr.size * Int.SIZE_BYTES)
-    Int32Array(module.HEAP8.buffer, elements, arr.size).set(arr.toTypedArray())
-    return json("elements" to elements, "size" to arr.size)
+    Int32Array(module.HEAP8.buffer, elements, arr.size)
+        .set(arr.map { it.toJsNumber() }.toJsArray())
+    return createJsObject {
+        this.elements = elements
+        this.size = arr.size
+    }
 }
 
-fun toKotlinIntArray(module: dynamic, struct: dynamic, dealloc: Boolean): IntArray {
-    val elements = (struct.elements as JsNumber).toInt()
-    val size = (struct.size as JsNumber).toInt()
-
-    val result = toArray<Int>(Int32Array(module.HEAP8.buffer, elements, size)).toIntArray()
-    if(dealloc) module._free(elements)
+fun toKotlinIntArray(module: EmModule, struct: EmArray, dealloc: Boolean): IntArray {
+    val result = JsArrayTools.from<JsNumber>(Int32Array(module.HEAP8.buffer, struct.elements, struct.size))
+        .toArray()
+        .map { it.toInt() }.toIntArray()
+    if(dealloc) module._free(struct.elements)
     return result
 }
 
 // Array: long
 
-external class BigInt64Array(buffer: dynamic, byteOffset: Int, length: Int) {
-    fun set(value: dynamic)
-}
-
-fun toNativeLongArray(module: dynamic, arr: LongArray): dynamic {
+fun toNativeLongArray(module: EmModule, arr: LongArray): EmArray {
     val elements = module._malloc(arr.size * Long.SIZE_BYTES)
     BigInt64Array(module.HEAP8.buffer, elements, arr.size)
-        .set(arr.toTypedArray())
-    return json("elements" to elements, "size" to arr.size)
+        .set(arr.map { it.toJsBigInt() }.toJsArray())
+    return createJsObject {
+        this.elements = elements
+        this.size = arr.size
+    }
 }
 
-fun toKotlinLongArray(module: dynamic, struct: dynamic, dealloc: Boolean): LongArray {
-    val elements = (struct.elements as JsNumber).toInt()
-    val size = (struct.size as JsNumber).toInt()
-
-    val result = toArray<Long>(BigInt64Array(module.HEAP8.buffer, elements, size)).toLongArray()
-    if(dealloc) module._free(elements)
+fun toKotlinLongArray(module: EmModule, struct: EmArray, dealloc: Boolean): LongArray {
+    val result = JsArrayTools.from<JsBigInt>(BigInt64Array(module.HEAP8.buffer, struct.elements, struct.size))
+        .toArray()
+        .map { it.toLong() }.toLongArray()
+    if(dealloc) module._free(struct.elements)
     return result
 }
 
 // Array: float
 
-fun toNativeFloatArray(module: dynamic, arr: FloatArray): dynamic {
+fun toNativeFloatArray(module: EmModule, arr: FloatArray): EmArray {
     val elements = module._malloc(arr.size * Float.SIZE_BYTES)
-    Float32Array(module.HEAPF32.buffer, elements, arr.size).set(arr.toTypedArray())
-    return json("elements" to elements, "size" to arr.size)
+    Float32Array(module.HEAPF32.buffer, elements, arr.size)
+        .set(arr.map { it.toDouble().toJsNumber() }.toJsArray())
+    return createJsObject {
+        this.elements = elements
+        this.size = arr.size
+    }
 }
 
-fun toKotlinFloatArray(module: dynamic, struct: dynamic, dealloc: Boolean): FloatArray {
-    val elements = (struct.elements as JsNumber).toInt()
-    val size = (struct.size as JsNumber).toInt()
-
-    val result = toArray<Float>(Float32Array(module.HEAPF32.buffer, elements, size))
-    if(dealloc) module._free(elements)
-    return FloatArray(size) { result[it].truncF32() }
+fun toKotlinFloatArray(module: EmModule, struct: EmArray, dealloc: Boolean): FloatArray {
+    val result = JsArrayTools.from<JsNumber>(Float32Array(module.HEAPF32.buffer, struct.elements, struct.size))
+        .toArray()
+    if(dealloc) module._free(struct.elements)
+    return FloatArray(struct.size) {
+        result[it].toDouble().toFloat().truncF32()
+    }
 }
 
 // Array: double
 
-fun toNativeDoubleArray(module: dynamic, arr: DoubleArray): dynamic {
+fun toNativeDoubleArray(module: EmModule, arr: DoubleArray): EmArray {
     val elements = module._malloc(arr.size * Double.SIZE_BYTES)
-    Float64Array(module.HEAPF32.buffer, elements, arr.size).set(arr.toTypedArray())
-    return json("elements" to elements, "size" to arr.size)
+    Float64Array(module.HEAPF32.buffer, elements, arr.size)
+        .set(arr.map { it.toJsNumber() }.toJsArray())
+    return createJsObject {
+        this.elements = elements
+        this.size = arr.size
+    }
 }
 
-fun toKotlinDoubleArray(module: dynamic, struct: dynamic, dealloc: Boolean): DoubleArray {
-    val elements = (struct.elements as JsNumber).toInt()
-    val size = (struct.size as JsNumber).toInt()
-
-    val result = toArray<Double>(Float64Array(module.HEAPF32.buffer, elements, size)).toDoubleArray()
-    if(dealloc) module._free(elements)
+fun toKotlinDoubleArray(module: EmModule, struct: EmArray, dealloc: Boolean): DoubleArray {
+    val result = JsArrayTools.from<JsNumber>(Float64Array(module.HEAPF32.buffer, struct.elements, struct.size))
+        .toArray().map { it.toDouble() }.toDoubleArray()
+    if(dealloc) module._free(struct.elements)
     return result
 }
 
@@ -190,36 +200,41 @@ fun toKotlinDoubleArray(module: dynamic, struct: dynamic, dealloc: Boolean): Dou
 // Callbacks
 
 fun mallocCallback(
-    module: dynamic,
+    module: JsAny,
     callback: Any,
-    invoke: dynamic,
-    free: dynamic
-): JsNumber {
-    val rawPtr = module._malloc(12) as JsNumber
-    val ptr = rawPtr.toInt()
+    invoke: Int,
+    free: Int
+): Int {
+    val module = module.unsafeCast<EmModule>()
+
+    val ptr = module._malloc(12)
     // 'm' is not used
     // module.HEAP32[ptr shr 2] = 0
     module.HEAP32[(ptr shr 2) + 1] = invoke
     module.HEAP32[(ptr shr 2) + 2] = free
 
     callbacks[Pair(module, ptr)] = callback
-    return rawPtr
+    return ptr
 }
 
 @Suppress("unchecked_cast")
-fun <T> unwrapCallback(module: dynamic, ptr: JsNumber, dealloc: Boolean): T {
-    val result = callbacks[Pair(module, ptr.toInt())]
+fun <T> unwrapCallback(module: JsAny, ptr: Int, dealloc: Boolean): T {
+    val module = module.unsafeCast<EmModule>()
+    val result = callbacks[Pair(module, ptr)]
     if(dealloc)
         freeCallback(module, ptr)
     return result as T
 }
 
-fun freeCallback(module: dynamic, ptr: JsNumber) {
-    callbacks.remove(Pair(module, ptr.toInt()))
+fun freeCallback(module: JsAny, ptr: Int) {
+    val module = module.unsafeCast<EmModule>()
+    callbacks.remove(Pair(module, ptr))
     module._free(ptr)
 }
 
-fun createCallbackFreeFunction(module: dynamic) =
-     module.addFunction({ callback ->
+private fun freeCallbackJs(block: (Int) -> Unit): JsAny = js("block")
+
+fun createCallbackFreeFunction(module: EmModule): Int =
+    module.addFunction(freeCallbackJs { callback: Int ->
         freeCallback(module, callback)
     }, "vp")

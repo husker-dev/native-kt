@@ -84,6 +84,7 @@ open class Multiplatform @Inject constructor(
     var targetSourceSets = setOf(
         "jvmMain",
         "jsMain",
+        "wasmJsMain",
         "androidMain",
 
         "mingwX64Main",
