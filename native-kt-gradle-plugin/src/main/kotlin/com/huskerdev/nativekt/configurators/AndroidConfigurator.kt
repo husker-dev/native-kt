@@ -4,6 +4,7 @@ import com.android.build.api.dsl.KotlinMultiplatformAndroidLibraryExtension
 import com.android.build.api.variant.KotlinMultiplatformAndroidComponentsExtension
 import com.android.build.gradle.internal.tasks.factory.dependsOn
 import com.huskerdev.nativekt.plugin.CMakeBuildType
+import com.huskerdev.nativekt.plugin.NDK_LATEST
 import com.huskerdev.nativekt.plugin.NativeKtExtension
 import com.huskerdev.nativekt.plugin.NativeModule
 import com.huskerdev.nativekt.printers.HeaderPrinter
@@ -46,19 +47,27 @@ internal fun configureAndroidSourceSet(
     if (extension.ndkVersion == null)
         throw UnsupportedOperationException("NDK version is not specified in 'native { ... }'")
 
-    val ndkDir = androidComponents.sdkComponents.sdkDirectory.get().asFile
-        .resolve("ndk/${extension.ndkVersion}")
+    val ndkDir: File
+    if(extension.ndkVersion == NDK_LATEST) {
+        ndkDir = androidComponents.sdkComponents.sdkDirectory.get().asFile
+            .resolve("ndk").listFiles()
+            .maxByOrNull { it.name }
+            ?: throw UnsupportedOperationException("Can not get latest NDK, because no NDK are installed")
+    } else {
+        ndkDir = androidComponents.sdkComponents.sdkDirectory.get().asFile
+            .resolve("ndk/${extension.ndkVersion}")
 
-    if (!ndkDir.exists()) {
-        val available = arrayListOf<String>()
-        if(ndkDir.parentFile.exists())
-            available += ndkDir.parentFile!!.listFiles().map { it.name }
+        if (!ndkDir.exists()) {
+            val available = arrayListOf<String>()
+            if (ndkDir.parentFile.exists())
+                available += ndkDir.parentFile!!.listFiles().map { it.name }
 
-        var message = "NDK ${extension.ndkVersion} is not installed."
-        if(available.isNotEmpty())
-            message += " Available:\n\t- ${available.joinToString("\n\t- ")}"
+            var message = "NDK ${extension.ndkVersion} is not installed."
+            if (available.isNotEmpty())
+                message += " Available:\n\t- ${available.joinToString("\n\t- ")}"
 
-        throw UnsupportedOperationException(message)
+            throw UnsupportedOperationException(message)
+        }
     }
 
     val toolchain = File(ndkDir, "build/cmake/android.toolchain.cmake")

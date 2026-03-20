@@ -6,6 +6,8 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import javax.inject.Inject
 
+const val NDK_LATEST = "~latest~"
+
 open class NativeKtExtension @Inject constructor(
     objects: ObjectFactory
 ): ExtensiblePolymorphicDomainObjectContainer<NativeModule> by objects.polymorphicDomainObjectContainer(NativeModule::class.java) {
