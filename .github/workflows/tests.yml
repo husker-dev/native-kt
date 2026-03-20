@@ -30,7 +30,7 @@ jobs:
             ~/.konan
             emsdk-cache
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts', '**/gradle-wrapper.properties') }}-emsdk-${{ env.EM_VERSION }}
-
+      
       - name: Setup MSYS2
         if: runner.os == 'Windows'
         uses: msys2/setup-msys2@v2
@@ -97,9 +97,21 @@ jobs:
         if: runner.os == 'Windows'
         run: ./gradlew :tests:wasmJsTest --continue
 
-      - name: Kotlin/JVM tests
+      - name: Kotlin/JVM tests (Linux x64)
+        if: runner.os == 'Linux'
+        run: ./gradlew :tests:jvmTest --continue
+
+      - name: Kotlin/JVM tests (macOS arm64)
+        if: runner.os == 'macOS'
+        run: ./gradlew :tests:jvmTest --continue
+
+      - name: Kotlin/JVM tests (Windows x64)
         if: runner.os == 'Windows'
         run: ./gradlew :tests:jvmTest --continue
+
+      - name: Android tests
+        if: runner.os == 'Linux'
+        run: ./gradlew :tests:api32AndroidDeviceTest --continue
 
       - name: Test Summary
         if: always()
