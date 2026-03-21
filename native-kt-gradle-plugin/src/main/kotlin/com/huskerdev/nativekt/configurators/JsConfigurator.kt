@@ -109,7 +109,7 @@ internal fun configureJs(
     )
     compileTask.get().also {
         it.inputs.dir(module.dir(project))
-        it.outputs.dirs(cmakeDir)
+        it.outputs.dirs(cmakeDir, resourcesDir)
 
         it.cmakeBuildType = module.buildType
         it.cmakeDir       = cmakeDir.absolutePath
