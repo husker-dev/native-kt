@@ -82,7 +82,7 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 32
-          script: ./gradlew connectedAndroidTest
+          script: ./gradlew :tests:connectedAndroidTest
           
       - name: Kotlin/Native tests (Linux x64)
         if: runner.os == 'Linux'
