@@ -110,7 +110,7 @@ jobs:
         run: ./gradlew :tests:jvmTest --continue
 
       - name: Android tests
-        if: runner.os == 'Linux'
+        if: runner.os == 'macOS'
         run: ./gradlew :tests:api32AndroidDeviceTest --continue
 
       - name: Test Summary
