@@ -93,6 +93,8 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 32
+          arch: x86_64
+          target: google_apis
           script: ./gradlew :tests:connectedAndroidTest
           
       - name: Kotlin/Native tests (Linux x64)
