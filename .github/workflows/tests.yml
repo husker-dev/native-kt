@@ -81,38 +81,18 @@ jobs:
 
 
 
-      - name: (Android) AVD cache
-        if: runner.os == 'macOS'
-        uses: actions/cache@v3
-        id: avd-cache
-        with:
-          path: |
-            ~/.android/avd/*
-            ~/.android/adb*
-          key: 32-arm64-v8a
-
-      - name: (Android) Create AVD and generate snapshot for caching
-        if: steps.avd-cache.outputs.cache-hit != 'true' && (runner.os == 'macOS')
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 32
-          target: google_apis
-          arch: arm64-v8a
-          force-avd-creation: false
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          disable-animations: false
-          script: echo "Generated AVD snapshot for caching."
-
+      - name: (Android) Enable KVM
+        if: runner.os == 'Linux'
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          
       - name: (Android) Run tests
-        if: runner.os == 'macOS'
+        if: runner.os == 'Linux'
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 32
-          target: google_apis
-          arch: arm64-v8a
-          force-avd-creation: false
-          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          disable-animations: true
           script: ./gradlew :tests:connectedAndroidTest
           
       - name: Kotlin/Native tests (Linux x64)
