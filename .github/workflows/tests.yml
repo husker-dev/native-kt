@@ -86,7 +86,7 @@ jobs:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
-          key: 32
+          key: 32-aarch64
 
       - name: (Android) Create AVD and generate snapshot for caching
         if: steps.avd-cache.outputs.cache-hit != 'true' && (runner.os == 'macOS')
@@ -94,7 +94,7 @@ jobs:
         with:
           api-level: 32
           target: google_apis
-          arch: x86_64
+          arch: aarch64
           force-avd-creation: false
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: false
@@ -106,7 +106,7 @@ jobs:
         with:
           api-level: 32
           target: google_apis
-          arch: x86_64
+          arch: aarch64
           force-avd-creation: false
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
