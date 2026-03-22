@@ -112,7 +112,7 @@ jobs:
       - name: Android tests
         if: runner.os == 'macOS'
         run: |
-          yes | sdkmanager --licenses
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
           ./gradlew :tests:api32AndroidDeviceTest --continue
 
       - name: Test Summary
