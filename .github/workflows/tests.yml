@@ -75,8 +75,15 @@ jobs:
         uses: jwlawson/actions-setup-cmake@v2
         with:
           cmake-version: '4.2.2'
+
+
+
+      - name: Android tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 32
+          script: ./gradlew connectedAndroidTest
           
-      
       - name: Kotlin/Native tests (Linux x64)
         if: runner.os == 'Linux'
         run: ./gradlew :tests:linuxX64Test --continue
@@ -108,12 +115,6 @@ jobs:
       - name: Kotlin/JVM tests (Windows x64)
         if: runner.os == 'Windows'
         run: ./gradlew :tests:jvmTest --continue
-
-      - name: Android tests
-        if: runner.os == 'macOS'
-        run: |
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
-          ./gradlew :tests:api32AndroidDeviceTest --continue
 
       - name: Test Summary
         if: always()
