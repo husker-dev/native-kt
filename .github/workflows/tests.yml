@@ -111,7 +111,9 @@ jobs:
 
       - name: Android tests
         if: runner.os == 'macOS'
-        run: ./gradlew :tests:api32AndroidDeviceTest --continue
+        run: |
+          yes | sdkmanager --licenses
+          ./gradlew :tests:api32AndroidDeviceTest --continue
 
       - name: Test Summary
         if: always()
