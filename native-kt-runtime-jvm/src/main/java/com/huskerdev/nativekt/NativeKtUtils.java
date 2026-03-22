@@ -88,7 +88,7 @@ public class NativeKtUtils {
         try {
             Class.forName("java.lang.foreign.Linker");
             return true;
-        } catch (ClassNotFoundException e) {}
+        } catch (ClassNotFoundException ignored) {}
         return false;
     }
 
@@ -101,8 +101,13 @@ public class NativeKtUtils {
         try {
             Class.forName("jdk.vm.ci.runtime.JVMCI");
             Arch arch = Arch.current();
-            return arch != Arch.X86 && arch != Arch.RISCV64;
-        } catch (ClassNotFoundException e) {}
+
+            boolean isX86 = arch == Arch.X86;
+            boolean isRISCV64 = arch == Arch.RISCV64;
+            boolean isX64macOS = arch == Arch.X64 && OS.current() == OS.MACOS;
+
+            return !isX86 && !isRISCV64 && !isX64macOS;
+        } catch (ClassNotFoundException ignored) {}
         return false;
     }
 

@@ -35,9 +35,6 @@ internal fun configureJs(
     expectActual: Boolean,
     isWasm: Boolean
 ) {
-    if(System.getenv()["EMSDK"] == null)
-        throw UnsupportedOperationException("Environment variable 'EMSDK' is not specified")
-
     val targetName = if(isWasm) "wasmJs" else "js"
 
     if(idl.isUsingLong() && !extension.useJsBigInt) {
@@ -203,6 +200,9 @@ private abstract class CompileNativesJs @Inject constructor(
     init {
         group = "native"
         doLast {
+            if(System.getenv()["EMSDK"] == null)
+                throw UnsupportedOperationException("Environment variable 'EMSDK' is not specified")
+
             val cmakeBuildDir = File(cmakeBuildDir)
             val resourcesDir = File(resourcesDir)
 

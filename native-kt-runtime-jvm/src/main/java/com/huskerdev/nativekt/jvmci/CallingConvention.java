@@ -1,6 +1,7 @@
 package com.huskerdev.nativekt.jvmci;
 
 import com.huskerdev.nativekt.NativeKtUtils;
+import com.huskerdev.nativekt.jvmci.conventions.AMD64LinuxCallingConvention;
 import com.huskerdev.nativekt.jvmci.conventions.AMD64WindowsCallingConvention;
 import com.huskerdev.nativekt.jvmci.conventions.ARM64CallingConvention;
 import jdk.vm.ci.hotspot.*;
@@ -19,6 +20,9 @@ abstract public class CallingConvention {
             case X64: {
                 if(NativeKtUtils.OS.current() == NativeKtUtils.OS.WINDOWS)
                     return new AMD64WindowsCallingConvention();
+                else if(NativeKtUtils.OS.current() == NativeKtUtils.OS.LINUX)
+                    return new AMD64LinuxCallingConvention();
+                else throw new UnsupportedOperationException("Unsupported OS");
             }
             default: throw new UnsupportedOperationException("Unsupported CPU architecture");
         }
