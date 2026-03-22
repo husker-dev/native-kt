@@ -79,9 +79,12 @@ jobs:
 
 
       - name: Android tests
+        if: runner.os == 'macOS'
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 32
+          target: google_apis
+          arch: x86_64
           script: ./gradlew :tests:connectedAndroidTest
           
       - name: Kotlin/Native tests (Linux x64)
