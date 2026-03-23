@@ -30,7 +30,11 @@ fun NativeKtPlugin.configureKotlin(
     extension.whenObjectAdded {
         val module = this
 
-        val initTask = project.tasks.register("cmakeInit${module.name.capitalized()}", InitTask::class.java, module)
+        val initTask = project.tasks.register("cmakeInit${module.name.capitalized()}", InitTask::class.java)
+        initTask.get().apply {
+            this.dir = module.dir(project).absolutePath
+            this.moduleName = module.name
+        }
 
         if(!module.idlFile(project).exists()) {
             project.logger.error("""

@@ -11,6 +11,7 @@ import com.huskerdev.nativekt.printers.kn.KotlinNativePrinter
 import com.huskerdev.nativekt.utils.*
 import com.huskerdev.webidl.resolver.IdlResolver
 import kotlinx.serialization.json.Json
+import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.file.RegularFileProperty
@@ -131,9 +132,10 @@ private fun extractLinkerOpts(
     cmakeBuildDir: File,
     moduleName: String
 ): List<String> = buildList {
-    // arguments generates only with executable or shared libraries, so our CMakeLists.txt contains `SHARED` target
-    this += "-L${cmakeBuildDir.absolutePath.replace("\\", "/")}"
-    this += "-llibstatic_$moduleName"
+    // Tip: arguments generates only with executable or shared libraries, so our CMakeLists.txt contains `SHARED` target
+
+    this += cmakeBuildDir.resolve("liblibstatic_$moduleName.a")
+        .absolutePath.replace("\\", "/")
 
     val linkLibs = File(
         cmakeBuildDir,
@@ -143,13 +145,19 @@ private fun extractLinkerOpts(
         cmakeBuildDir,
         "CMakeFiles/lib_$moduleName.dir/link.txt"
     )
+    val cmakeCache = File(
+        cmakeBuildDir,
+        "CMakeCache.txt"
+    )
+
+    // Collect linker flags from 'linkLibs.rsp' or 'link.txt'
 
     if(linkLibs.exists()) {
         this += linkLibs.readText()
             .splitRespectingQuotes()
             .map {
                 if(!it.startsWith("-l") && !File(it).isAbsolute)
-                    File(cmakeBuildDir, it).absolutePath
+                    File(cmakeBuildDir, it).absolutePath.replace("\\", "/")
                 else it
             }
             .filter { it !in setOf("-lpthread") }
@@ -171,6 +179,36 @@ private fun extractLinkerOpts(
                 this += parts[++i]
             }
             i++
+        }
+    }
+
+    // Try to resolve libs from 'PkgConfig'
+
+    val cmakeCacheText = cmakeCache.readLines()
+    if(cmakeCacheText.any { "_STATIC_LIBRARY_DIRS:INTERNAL=" in it }) {
+
+        val libDirs = cmakeCacheText
+            .filter { "_STATIC_LIBRARY_DIRS:INTERNAL=" in it }
+            .flatMap { it.split("_STATIC_LIBRARY_DIRS:INTERNAL=")[1].split(";") }
+            .toSet().sorted()
+
+        val libNames = cmakeCacheText.asSequence()
+            .filter { "STATIC_LIBRARIES:INTERNAL=" in it }
+            .flatMap { it.split("STATIC_LIBRARIES:INTERNAL=")[1].split(";") }
+            .toSet().sorted()
+            .toMutableList()
+
+        if(Os.isFamily(Os.FAMILY_WINDOWS))
+            libNames += "mingwex"
+
+        libNames.forEach { lib ->
+            this.remove("-l$lib")
+
+            libDirs.forEach { dir ->
+                val file = File(dir, "lib${lib}.a")
+                if(file.exists())
+                    this += file.absolutePath.replace("\\", "/")
+            }
         }
     }
 }

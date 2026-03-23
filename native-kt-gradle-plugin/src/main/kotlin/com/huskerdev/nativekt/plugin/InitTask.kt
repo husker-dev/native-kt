@@ -1,33 +1,37 @@
 package com.huskerdev.nativekt.plugin
 
+import com.huskerdev.nativekt.NDLEnv
 import com.huskerdev.nativekt.printers.HeaderPrinter
-import com.huskerdev.nativekt.utils.dir
-import com.huskerdev.nativekt.utils.idl
+import com.huskerdev.webidl.WebIDL
+import com.huskerdev.webidl.jvm.iterator
 import org.gradle.api.DefaultTask
+import org.gradle.api.tasks.Input
 import java.io.File
-import javax.inject.Inject
 
-open class InitTask @Inject constructor(
-    module: NativeModule
-): DefaultTask() {
+abstract class InitTask: DefaultTask() {
+    @get:Input abstract var dir: String
+    @get:Input abstract var moduleName: String
+
     init {
         group = "native"
         doLast {
-            val dir = module.dir(project)
+            val dir = File(dir)
+
             dir.mkdirs()
             if(dir.list()!!.isNotEmpty()) {
                 project.logger.error("Can not init module: directory '${dir}' is not empty.")
                 return@doLast
             }
+
             File(dir, "src").mkdirs()
             File(dir, "include").mkdirs()
 
             File(dir, "CMakeLists.txt").writeText($$"""
                 cmake_minimum_required(VERSION 3.15)
 
-                project("$${module.name}")
+                project("$$moduleName")
                 
-                add_library(${PROJECT_NAME} STATIC src/$${module.name}.c)
+                add_library(${PROJECT_NAME} STATIC src/$$moduleName.c)
                 
                 target_include_directories(${PROJECT_NAME} PRIVATE include)
             """.trimIndent())
@@ -37,7 +41,7 @@ open class InitTask @Inject constructor(
                     void helloWorld();
                 };
             """.trimIndent())
-            File(dir, "src/${module.name}.c").writeText("""
+            File(dir, "src/$moduleName.c").writeText("""
                 #include <api.h>
                 #include <stdio.h>
                 
@@ -46,10 +50,16 @@ open class InitTask @Inject constructor(
                     fflush(stdout);
                 }
             """.trimIndent())
+
+            val idl = WebIDL.resolve(
+                iterable = File(dir, "api.ndl").reader().iterator(),
+                env = NDLEnv()
+            )
+
             HeaderPrinter(
-                idl = module.idl(project),
-                target = File(module.dir(project), "include/api.h"),
-                guardName = module.name.uppercase()
+                idl = idl,
+                target = File(dir, "include/api.h"),
+                guardName = moduleName.uppercase()
             )
         }
     }

@@ -146,26 +146,26 @@ class KotlinNativePrinter(
                 
                 // Array: $type
     
-                private fun toNative${type}Array(array: ${type}Array, arena: NativeArena) = cValue<cinterop.natives.test.K${type}Array> {
+                private fun toNative${type}Array(array: ${type}Array, arena: NativeArena) = cValue<$cinteropPath.K${type}Array> {
                     elements = arena.pin(array).addressOf(0)
                     size = array.size
                     arena.ptr(elements!!)
                 }
     
-                private fun toNative${type}Array(array: ${type}Array) = cValue<cinterop.natives.test.K${type}Array> {
+                private fun toNative${type}Array(array: ${type}Array) = cValue<$cinteropPath.K${type}Array> {
                     val bytes = array.size * ${type}.SIZE_BYTES
                     elements = mallocExact(bytes.toUInt()).reinterpret()
                     size = array.size
                     array.usePinned { memcpy(elements, it.addressOf(0), bytes.toULong()) }
                 }
     
-                private fun toKotlin${type}Array(struct: CValue<cinterop.natives.test.K${type}Array>, arena: NativeArena, dealloc: Boolean) = struct.useContents {
+                private fun toKotlin${type}Array(struct: CValue<$cinteropPath.K${type}Array>, arena: NativeArena, dealloc: Boolean) = struct.useContents {
                     ${type}Array(size) { elements!![it] }.also {
                         if(dealloc) arena.freeMem(elements!!)
                     }
                 }
     
-                private fun toKotlin${type}Array(struct: CValue<cinterop.natives.test.K${type}Array>, dealloc: Boolean) = struct.useContents {
+                private fun toKotlin${type}Array(struct: CValue<$cinteropPath.K${type}Array>, dealloc: Boolean) = struct.useContents {
                     ${type}Array(size) { elements!![it] }.also {
                         if(dealloc) free(elements!!)
                     }
@@ -181,26 +181,26 @@ class KotlinNativePrinter(
             
             // Array: Char
 
-            private fun toNativeCharArray(array: CharArray, arena: NativeArena) = cValue<cinterop.natives.test.KCharArray> {
+            private fun toNativeCharArray(array: CharArray, arena: NativeArena) = cValue<$cinteropPath.KCharArray> {
                 elements = arena.pin(array).addressOf(0).reinterpret()
                 size = array.size
                 arena.ptr(elements!!)
             }
 
-            private fun toNativeCharArray(array: CharArray) = cValue<cinterop.natives.test.KCharArray> {
+            private fun toNativeCharArray(array: CharArray) = cValue<$cinteropPath.KCharArray> {
                 val bytes = array.size * Char.SIZE_BYTES
                 elements = mallocExact(bytes.toUInt()).reinterpret()
                 size = array.size
                 array.usePinned { memcpy(elements, it.addressOf(0), bytes.toULong()) }
             }
 
-            private fun toKotlinCharArray(struct: CValue<cinterop.natives.test.KCharArray>, arena: NativeArena, dealloc: Boolean) = struct.useContents {
+            private fun toKotlinCharArray(struct: CValue<$cinteropPath.KCharArray>, arena: NativeArena, dealloc: Boolean) = struct.useContents {
                 CharArray(size) { elements!![it].toInt().toChar() }.also {
                     if(dealloc) arena.freeMem(elements!!)
                 }
             }
 
-            private fun toKotlinCharArray(struct: CValue<cinterop.natives.test.KCharArray>, dealloc: Boolean) = struct.useContents {
+            private fun toKotlinCharArray(struct: CValue<$cinteropPath.KCharArray>, dealloc: Boolean) = struct.useContents {
                 CharArray(size) { elements!![it].toInt().toChar() }.also {
                     if(dealloc) free(elements!!)
                 }
@@ -213,14 +213,14 @@ class KotlinNativePrinter(
             
             // Array: Boolean
 
-            private fun toNativeBooleanArray(array: BooleanArray, arena: NativeArena) = cValue<cinterop.natives.test.KBooleanArray> {
+            private fun toNativeBooleanArray(array: BooleanArray, arena: NativeArena) = cValue<$cinteropPath.KBooleanArray> {
             	val byteArray = array.map { it.toByte() }.toByteArray()
             	elements = arena.pin(byteArray).addressOf(0).reinterpret()
             	size = array.size
             	arena.ptr(elements!!)
             }
 
-            private fun toNativeBooleanArray(array: BooleanArray) = cValue<cinterop.natives.test.KBooleanArray> {
+            private fun toNativeBooleanArray(array: BooleanArray) = cValue<$cinteropPath.KBooleanArray> {
             	val bytes = array.size * Byte.SIZE_BYTES
             	elements = mallocExact(bytes.toUInt()).reinterpret()
             	size = array.size
@@ -228,13 +228,13 @@ class KotlinNativePrinter(
             	byteArray.usePinned { memcpy(elements, it.addressOf(0), bytes.toULong()) }
             }
 
-            private fun toKotlinBooleanArray(struct: CValue<cinterop.natives.test.KBooleanArray>, arena: NativeArena, dealloc: Boolean) = struct.useContents {
+            private fun toKotlinBooleanArray(struct: CValue<$cinteropPath.KBooleanArray>, arena: NativeArena, dealloc: Boolean) = struct.useContents {
             	BooleanArray(size) { elements!![it].value }.also {
             		if(dealloc) arena.freeMem(elements!!)
             	}
             }
 
-            private fun toKotlinBooleanArray(struct: CValue<cinterop.natives.test.KBooleanArray>, dealloc: Boolean) = struct.useContents {
+            private fun toKotlinBooleanArray(struct: CValue<$cinteropPath.KBooleanArray>, dealloc: Boolean) = struct.useContents {
             	BooleanArray(size) { elements!![it].value }.also {
             		if(dealloc) free(elements!!)
             	}
