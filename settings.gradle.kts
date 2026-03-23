@@ -7,6 +7,7 @@ include("native-kt-intellij-plugin")
 
 include("tests")
 include("examples:glfw")
+include("examples:freetype")
 include("benchmarks")
 
 pluginManagement {
