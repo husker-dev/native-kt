@@ -44,9 +44,6 @@ internal fun configureAndroidSourceSet(
 
     // NDK
 
-    if (extension.ndkVersion == null)
-        throw UnsupportedOperationException("NDK version is not specified in 'native { ... }'")
-
     val ndkDir: File
     if(extension.ndkVersion == NDK_LATEST) {
         ndkDir = androidComponents.sdkComponents.sdkDirectory.get().asFile

@@ -36,7 +36,7 @@ kotlin {
     }
 }
 
-native {
+natives {
     useCoroutines = false
     useUniversalMacOSLib = false
 

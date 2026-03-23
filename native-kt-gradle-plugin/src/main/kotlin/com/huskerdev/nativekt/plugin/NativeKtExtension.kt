@@ -30,7 +30,7 @@ open class NativeKtExtension @Inject constructor(
 
     var useUniversalMacOSLib = false
 
-    var ndkVersion: String? = null
+    var ndkVersion: String = NDK_LATEST
     val androidTargets = arrayListOf("arm64-v8a", "armeabi-v7a", "x86_64")
 
     val applyRuntime = true

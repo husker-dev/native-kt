@@ -17,7 +17,7 @@ kotlin {
     }
 }
 
-native {
+natives {
     useCoroutines = false
 
     create("jniBindings")

@@ -1,6 +1,5 @@
 @file:OptIn(ExperimentalWasmDsl::class)
 
-import com.huskerdev.nativekt.plugin.NDK_LATEST
 import org.apache.tools.ant.taskdefs.condition.Os
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JsMainFunctionExecutionMode
@@ -106,8 +105,7 @@ kotlin {
     }
 }
 
-native {
-    ndkVersion = NDK_LATEST
+natives {
     useJsBigInt = true
 
     create("test")

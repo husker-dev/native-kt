@@ -6,9 +6,10 @@ include("native-kt-runtime-jvm")
 include("native-kt-intellij-plugin")
 
 include("tests")
+include("benchmarks")
+
 include("examples:glfw")
 include("examples:freetype")
-include("benchmarks")
 
 pluginManagement {
     includeBuild("native-kt-gradle-plugin")

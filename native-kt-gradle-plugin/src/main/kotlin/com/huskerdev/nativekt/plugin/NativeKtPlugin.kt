@@ -15,7 +15,7 @@ class NativeKtPlugin: Plugin<Project> {
 
     override fun apply(project: Project) {
         this.project = project
-        extension = project.extensions.create("native", NativeKtExtension::class.java)
+        extension = project.extensions.create("natives", NativeKtExtension::class.java)
 
         val buildDir = project.layout.buildDirectory.get().asFile
         val cmakeDir = File(buildDir, "cmake")
