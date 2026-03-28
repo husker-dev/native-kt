@@ -72,7 +72,7 @@ class KotlinAndroidPrinter(
     private fun printFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
         append('\n')
         printFunctionHeader(builder, function, isActual = expectActual)
-        append(" = \n\t$jniClassName.")
+        append(" = \n\t")
 
         val args = function.args.joinToString {
             jniCastToNative(it.type, it.name)
