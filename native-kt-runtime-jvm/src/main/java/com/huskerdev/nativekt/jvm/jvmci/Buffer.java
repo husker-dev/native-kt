@@ -1,4 +1,4 @@
-package com.huskerdev.nativekt.jvmci;
+package com.huskerdev.nativekt.jvm.jvmci;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;

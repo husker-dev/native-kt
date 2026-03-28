@@ -1,5 +1,6 @@
 package primitives
 
+import natives.test.MyEnum
 import withLib
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -62,5 +63,10 @@ class CallbackArgPrimitive {
     fun callbackArgCallback() = withLib {
         val toPass = {}
         assertTrue(natives.test.callbackArgCallback(toPass) { it == toPass })
+    }
+
+    @Test
+    fun callbackArgEnum() = withLib {
+        assertTrue(natives.test.callbackArgEnum { it == MyEnum.CASE2 })
     }
 }

@@ -185,17 +185,25 @@ class KotlinJvmForeignPrinter(
                     if(useArena) "arena.asString($content, $dealloc)"
                     else "ForeignUtils.asString($content, $dealloc)"
                 WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
-                    if(declaration is BuiltinIdlDeclaration) {
-                        val name = declaration.kind.simpleName()
-                        if(useArena) "arena.toJvm${name}Array($content, $dealloc)"
-                        else "ForeignUtils.toJvm${name}Array($content, $dealloc)"
-                    } else throw UnsupportedOperationException(type.toString())
+                    when (declaration) {
+                        is BuiltinIdlDeclaration -> {
+                            val name = declaration.kind.simpleName()
+                            if (useArena) "arena.toJvm${name}Array($content, $dealloc)"
+                            else "ForeignUtils.toJvm${name}Array($content, $dealloc)"
+                        }
+                        is ResolvedIdlEnum -> {
+                            if (useArena) "arena.toJvmEnumArray($content, $dealloc, ${declaration.name}::class.java)"
+                            else "ForeignUtils.toJvmEnumArray($content, $dealloc, ${declaration.name}::class.java)"
+                        }
+                        else -> throw UnsupportedOperationException(type.toString())
+                    }
                 }
                 else -> content
             }
             is ResolvedIdlCallbackFunction ->
                 if(useArena) "arena.asCallback<${type.declaration.name}>($content, $dealloc)"
                 else "ForeignUtils.asCallback<${type.declaration.name}>($content, $dealloc)"
+            is ResolvedIdlEnum -> "${type.declaration.name}.entries[$content]"
             else -> throw UnsupportedOperationException(type.toString())
         }
         else -> throw UnsupportedOperationException(type.toString())
@@ -210,17 +218,25 @@ class KotlinJvmForeignPrinter(
                     else if(useArena) "arena.cstr($content)"
                     else "ForeignUtils.cstr($content)"
                 WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
-                    if(declaration is BuiltinIdlDeclaration) {
-                        val name = declaration.kind.simpleName()
-                        if(useArena) "arena.toNative${name}Array($content)"
-                        else "ForeignUtils.toNative${name}Array($content)"
-                    } else throw UnsupportedOperationException(type.toString())
+                    when (declaration) {
+                        is BuiltinIdlDeclaration -> {
+                            val name = declaration.kind.simpleName()
+                            if (useArena) "arena.toNative${name}Array($content)"
+                            else "ForeignUtils.toNative${name}Array($content)"
+                        }
+                        is ResolvedIdlEnum -> {
+                            if (useArena) "arena.toNativeEnumArray($content)"
+                            else "ForeignUtils.toNativeEnumArray($content)"
+                        }
+                        else -> throw UnsupportedOperationException(type.toString())
+                    }
                 }
                 else -> content
             }
             is ResolvedIdlCallbackFunction ->
                 if(dealloc) "arena.callback($content.wrap${type.declaration.name}())"
                 else "$content.wrap${type.declaration.name}()"
+            is ResolvedIdlEnum -> "$content.ordinal"
             else -> throw UnsupportedOperationException(type.toString())
         }
         else -> throw UnsupportedOperationException(type.toString())
@@ -244,6 +260,7 @@ class KotlinJvmForeignPrinter(
                 WebIDLBuiltinKind.LIST -> "ForeignUtils.ARRAY_STRUCT"
                 else -> throw UnsupportedOperationException(a.toString())
             }
+            is ResolvedIdlEnum -> "ForeignUtils.C_INT"
             else -> "ForeignUtils.C_ADDRESS"
         }
     }

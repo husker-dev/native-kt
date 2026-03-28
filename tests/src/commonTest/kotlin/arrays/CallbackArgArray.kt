@@ -1,5 +1,6 @@
 package arrays
 
+import natives.test.MyEnum
 import withLib
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -44,5 +45,10 @@ class CallbackArgArray {
     @Test
     fun callbackArgDoubleArray() = withLib {
         assertTrue(natives.test.callbackArgDoubleArray { it.contentEquals(doubleArrayOf(1.1, 2.2)) })
+    }
+
+    @Test
+    fun callbackArgEnumArray() = withLib {
+        assertTrue(natives.test.callbackArgEnumArray { it.contentEquals(arrayOf(MyEnum.CASE1, MyEnum.CASE2)) })
     }
 }

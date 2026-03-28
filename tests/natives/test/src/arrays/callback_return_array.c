@@ -55,3 +55,12 @@ KBoolean callbackReturnDoubleArray(CallbackReturnDoubleArray* arg) {
         array.elements[0] == 1.1 &&
         array.elements[1] == 2.2;
 }
+
+KBoolean callbackReturnEnumArray(CallbackReturnEnumArray* arg) {
+    const KArray array = arg->invoke(arg);
+    const MyEnum* elements = (MyEnum*)array.elements;
+
+    return array.size == 2 &&
+        elements[0] == CASE1 &&
+        elements[1] == CASE2;
+}

@@ -1,4 +1,4 @@
-import com.huskerdev.nativekt.NativeKtUtils
+import com.huskerdev.nativekt.jvm.NativeKtUtils
 import natives.test.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -98,5 +98,10 @@ class JVMCI {
     @Test
     fun jvmciSomeArrays() = withJVMCI {
         assertTrue(jvmciSomeArrays(intArrayOf(1, 2, 3), floatArrayOf(4f, 5f, 6f), doubleArrayOf(7.0, 8.0, 9.0)))
+    }
+
+    @Test
+    fun jvmciEnum() = withJVMCI {
+        assertTrue(jvmciEnum(MyEnum.CASE1, MyEnum.CASE2, arrayOf(MyEnum.CASE1, MyEnum.CASE2, MyEnum.CASE1)))
     }
 }

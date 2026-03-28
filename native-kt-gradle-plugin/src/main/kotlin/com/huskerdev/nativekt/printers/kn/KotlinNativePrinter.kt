@@ -2,6 +2,7 @@ package com.huskerdev.nativekt.printers.kn
 
 import com.huskerdev.nativekt.utils.*
 import com.huskerdev.webidl.resolver.*
+import org.gradle.internal.extensions.stdlib.capitalized
 import java.io.File
 
 class KotlinNativePrinter(
@@ -28,7 +29,7 @@ class KotlinNativePrinter(
             import com.huskerdev.nativekt.kn.*
             import platform.posix.*
             
-            ${actual}val isLibTestLoaded: Boolean = true
+            ${actual}val isLib${moduleName.capitalized()}Loaded: Boolean = true
             
             @Throws(UnsupportedOperationException::class)
             ${actual}fun ${syncFunctionName(moduleName)}() = Unit
@@ -63,6 +64,7 @@ class KotlinNativePrinter(
 
         printLabel(builder, "Arrays")
         printArrayCasts(builder)
+        idl.enums.values.forEach { printEnumCast(builder, it) }
 
         printLabel(builder, "Callbacks")
 
@@ -241,6 +243,71 @@ class KotlinNativePrinter(
             }
             
         """.trimIndent())
+
+        // Enum casts
+        append("""
+            // Array: Enum
+
+            private fun <T: Enum<T>, N: CPrimitiveVar> toNativeEnumArray(
+                array: Array<T>,
+                arena: NativeArena,
+                typeSize: Long,
+                setter: (from: Array<T>, to: CPointer<N>) -> Unit
+            ) = cValue<cinterop.natives.test.KArray> {
+                val bytes = array.size * typeSize
+                elements = arena.ptr(mallocExact(bytes.toUInt()).reinterpret())
+                size = array.size
+                setter(array, elements!!.reinterpret())
+            }
+            
+            private fun <T: Enum<T>, N: CPrimitiveVar> toNativeEnumArray(
+                array: Array<T>,
+                typeSize: Long,
+                setter: (from: Array<T>, to: CPointer<N>) -> Unit
+            ) = cValue<cinterop.natives.test.KArray> {
+                val bytes = array.size * typeSize
+                elements = mallocExact(bytes.toUInt()).reinterpret()
+                size = array.size
+                setter(array, elements!!.reinterpret())
+            }
+            
+            private fun <T: Enum<T>, N: CPrimitiveVar> toKotlinEnumArray(
+                struct: CValue<cinterop.natives.test.KArray>,
+                arena: NativeArena, 
+                dealloc: Boolean,
+                converter: (size: Int, elements: CPointer<N>) -> Array<T>
+            ) = struct.useContents {
+                converter(size, this.elements!!.reinterpret()).also {
+                    if(dealloc) arena.freeMem(this.elements!!)
+                }
+            }
+            
+            private fun <T: Enum<T>, N: CPrimitiveVar> toKotlinEnumArray(
+                struct: CValue<cinterop.natives.test.KArray>,
+                dealloc: Boolean,
+                converter: (size: Int, elements: CPointer<N>) -> Array<T>
+            ) = struct.useContents {
+                converter(size, this.elements!!.reinterpret()).also {
+                    if(dealloc) free(this.elements!!)
+                }
+            }
+            
+        """.trimIndent())
+    }
+
+    private fun printEnumCast(builder: StringBuilder, enum: ResolvedIdlEnum) = builder.apply {
+        append("""
+            
+            private val _${enum.name}ToKt = { size: Int, elements: CPointer<${cinteropPath}.${enum.name}.Var> ->
+                Array(size) { ${enum.name}.entries[elements[it].value.ordinal] }
+            }
+            
+            private val _${enum.name}ToNative = { from: Array<${enum.name}>, to: CPointer<${cinteropPath}.${enum.name}.Var> ->
+                for(i in from.indices)
+                    to[i].value = ${cinteropPath}.${enum.name}.entries[from[i].ordinal]
+            }
+            
+        """.trimIndent())
     }
 
     private fun castFromNative(type: ResolvedIdlType, content: String, dealloc: Boolean, useArena: Boolean): String = when(type) {
@@ -256,6 +323,9 @@ class KotlinNativePrinter(
                         val name = declaration.kind.simpleName()
                         if(useArena) "toKotlin${name}Array($content, arena, $dealloc)"
                         else "toKotlin${name}Array($content, $dealloc)"
+                    } else if(declaration is ResolvedIdlEnum) {
+                        if(useArena) "toKotlinEnumArray($content, arena, $dealloc, _${declaration.name}ToKt)"
+                        else "toKotlinEnumArray($content, $dealloc, _${declaration.name}ToKt)"
                     } else throw UnsupportedOperationException(type.toString())
                 }
                 else -> content
@@ -263,6 +333,7 @@ class KotlinNativePrinter(
             is ResolvedIdlCallbackFunction ->
                 if(useArena) "arena.unwrapCallback<${decl.name}>($content!!.reinterpret(), $dealloc)"
                 else "unwrapCallback<${decl.name}>($content!!.reinterpret(), $dealloc)"
+            is ResolvedIdlEnum -> "${decl.name}.entries[${content}.ordinal]"
             else -> throw UnsupportedOperationException(type.toString())
         }
         else -> throw UnsupportedOperationException(type.toString())
@@ -281,10 +352,14 @@ class KotlinNativePrinter(
                         val name = declaration.kind.simpleName()
                         if(useArena) "toNative${name}Array($content, arena)"
                         else "toNative${name}Array($content)"
+                    } else if(declaration is ResolvedIdlEnum) {
+                        if(useArena) "toNativeEnumArray($content, arena, sizeOf<${cinteropPath}.${declaration.name}.Var>(), _${declaration.name}ToNative)"
+                        else "toNativeEnumArray($content, sizeOf<${cinteropPath}.${declaration.name}.Var>(), _${declaration.name}ToNative)"
                     } else throw UnsupportedOperationException(type.toString())
                 }
                 else -> content
             }
+            is ResolvedIdlEnum -> "${cinteropPath}.${decl.name}.entries[${content}.ordinal]"
             is ResolvedIdlCallbackFunction ->
                 if(dealloc) "arena.callback($content.wrap${decl.name}())"
                 else "$content.wrap${decl.name}()"

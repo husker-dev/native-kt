@@ -1,4 +1,4 @@
-package com.huskerdev.nativekt;
+package com.huskerdev.nativekt.jvm;
 
 import sun.misc.Unsafe;
 

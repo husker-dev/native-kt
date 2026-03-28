@@ -31,3 +31,8 @@ KBoolean callbackArgFloatArray(CallbackPassFloatArray* arg) {
 KBoolean callbackArgDoubleArray(CallbackPassDoubleArray* arg) {
     return arg->invoke(arg, makeKDoubleArray((KDouble[]) { 1.1, 2.2 }, 2));
 }
+
+KBoolean callbackArgEnumArray(CallbackPassEnumArray* arg) {
+    return arg->invoke(arg, makeKArray((MyEnum[]) { CASE1, CASE2 }, 2));
+}
+

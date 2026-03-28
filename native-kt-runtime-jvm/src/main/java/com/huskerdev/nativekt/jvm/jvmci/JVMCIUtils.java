@@ -1,14 +1,12 @@
-package com.huskerdev.nativekt.jvmci;
+package com.huskerdev.nativekt.jvm.jvmci;
 
-import com.huskerdev.nativekt.NativeKtUtils;
-import jdk.vm.ci.code.site.*;
+import com.huskerdev.nativekt.jvm.NativeKtUtils;
 import jdk.vm.ci.hotspot.*;
-import jdk.vm.ci.meta.*;
 import jdk.vm.ci.runtime.JVMCI;
 import jdk.vm.ci.runtime.JVMCIBackend;
 import java.lang.reflect.Method;
 
-import static com.huskerdev.nativekt.NativeKtUtils.addExports;
+import static com.huskerdev.nativekt.jvm.NativeKtUtils.addExports;
 
 public class JVMCIUtils {
 

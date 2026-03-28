@@ -28,8 +28,9 @@ class NativeArena(
             free(ptr)
     }
 
-    fun ptr(ptr: CPointer<*>){
+    fun <N: CPointed> ptr(ptr: CPointer<N>): CPointer<N> {
         allocated += ptr.getPointer(scope).rawValue.toLong()
+        return ptr
     }
 
     fun unwrapCStr(mem: CPointer<ByteVar>, dealloc: Boolean): String {

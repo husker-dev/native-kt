@@ -1,9 +1,6 @@
 package com.huskerdev.nativekt.printers.jvm
 
-import com.huskerdev.nativekt.utils.globalOperators
-import com.huskerdev.nativekt.utils.isCallback
-import com.huskerdev.nativekt.utils.printFunctionHeader
-import com.huskerdev.nativekt.utils.toKotlinType
+import com.huskerdev.nativekt.utils.*
 import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlType
 
@@ -35,31 +32,31 @@ class KotlinJvmJniPrinter(
             printFunctionHeader(
                 builder, function,
                 isExternal = true,
-                callbackAsAny = true
+                callbackAsAny = true,
+                enumAsInt = true
             )
             builder.append("\n")
         }
 
         idl.callbacks.values.forEach { callback ->
-            val args = listOf("obj: Any") +
-                    callback.args.map { "${it.name}: ${it.type.toKotlinType(callbackAsAny = true)}" }
+            val args = listOf("_obj: Any") +
+                    callback.args.map { "${it.name}: ${it.type.toKotlinType(callbackAsAny = true, enumAsInt = true)}" }
 
             builder.append("\n\t\t@Suppress(\"unchecked_cast\")\n")
             builder.append("\t\t@JvmStatic fun callback")
             builder.append(callback.name)
             builder.append("(${args.joinToString()}): ")
-            builder.append(callback.type.toKotlinType(callbackAsAny = true))
-            builder.append(" =\n\t\t\t(obj as (")
-            callback.args.joinTo(builder) { it.type.toKotlinType() }
-            builder.append(") -> ")
-            builder.append(callback.type.toKotlinType())
-            builder.append(")(")
-            callback.args.joinTo(builder) {
-                if(it.type.isCallback())
-                    "${it.name} as ${(it.type as ResolvedIdlType.Default).declaration.name}"
-                else it.name
-            }
-            builder.append(")\n")
+            builder.append(callback.type.toKotlinType(callbackAsAny = true, enumAsInt = true))
+            builder.append(" =\n\t\t\t")
+
+            val callArgs = callback.args.joinToString { castToJvm(it.type, it.name) }
+            val modelArgs = callback.args.joinToString { it.type.toKotlinType() }
+            val model = "($modelArgs) -> ${callback.type.toKotlinType()}"
+
+            val call = "(_obj as $model)($callArgs)"
+
+            builder.append(castToNative(callback.type, call))
+            builder.append("\n")
         }
         builder.append("${indent}\t}\n")
 
@@ -69,23 +66,39 @@ class KotlinJvmJniPrinter(
                 builder.append("\n${indent}\t")
                 printFunctionHeader(
                     builder, function,
-                    isExternal = false,
-                    isOverride = parentClass != null,
+                    isExternal = false, isOverride = parentClass != null,
                     name = "_${function.name}",
                     forcePrintVoid = true
                 )
                 builder.append(" = \n${indent}\t\t")
-                builder.append(function.name)
-                builder.append("(")
-                function.args.joinTo(builder) { it.name }
-                builder.append(")")
-                if(function.type.isCallback()) {
-                    builder.append(" as ")
-                    builder.append((function.type as ResolvedIdlType.Default).declaration.name)
-                }
+
+                val args = function.args.joinToString { castToNative(it.type, it.name) }
+                val call = "${function.name}(${args})"
+
+                builder.append(castToJvm(function.type, call))
                 builder.append("\n")
             }
         }
         builder.append("${indent}}")
     }
+
+    private fun castToNative(type: ResolvedIdlType, content: String) = when {
+        type.isEnum() -> "$content.ordinal"
+        type.isEnumArray() -> "$content.run { IntArray(size) { get(it).ordinal } }"
+        else -> content
+    }
+
+    private fun castToJvm(type: ResolvedIdlType, content: String) = when(type) {
+        is ResolvedIdlType.Default -> when {
+            type.isCallback() -> "$content as ${type.declaration.name}"
+            type.isEnum() -> "${type.declaration.name}.entries[$content]"
+            type.isEnumArray() -> {
+                val param = type.parameters[0] as ResolvedIdlType.Default
+                "$content.run { Array(size) { ${param.declaration.name}.entries[get(it)] } }"
+            }
+            else -> content
+        }
+        else -> content
+    }
+
 }

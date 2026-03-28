@@ -118,15 +118,21 @@ jobs:
 
       - name: Kotlin/JVM tests (Linux x64)
         if: runner.os == 'Linux'
-        run: ./gradlew :tests:jvmTest --continue
+        run: |
+          ./gradlew :tests:jvmTest --continue
+          ./gradlew :tests:jvmTest -DdisableForeign --continue
 
       - name: Kotlin/JVM tests (macOS arm64)
         if: runner.os == 'macOS'
-        run: ./gradlew :tests:jvmTest --continue
+        run: |
+          ./gradlew :tests:jvmTest --continue
+          ./gradlew :tests:jvmTest -DdisableForeign --continue
 
       - name: Kotlin/JVM tests (Windows x64)
         if: runner.os == 'Windows'
-        run: ./gradlew :tests:jvmTest --continue
+        run: |
+          ./gradlew :tests:jvmTest --continue
+          ./gradlew :tests:jvmTest -DdisableForeign --continue
 
       - name: Test Summary
         if: always()

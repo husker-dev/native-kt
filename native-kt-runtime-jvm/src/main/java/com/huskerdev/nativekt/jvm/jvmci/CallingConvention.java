@@ -1,9 +1,9 @@
-package com.huskerdev.nativekt.jvmci;
+package com.huskerdev.nativekt.jvm.jvmci;
 
-import com.huskerdev.nativekt.NativeKtUtils;
-import com.huskerdev.nativekt.jvmci.conventions.AMD64LinuxCallingConvention;
-import com.huskerdev.nativekt.jvmci.conventions.AMD64WindowsCallingConvention;
-import com.huskerdev.nativekt.jvmci.conventions.ARM64CallingConvention;
+import com.huskerdev.nativekt.jvm.NativeKtUtils;
+import com.huskerdev.nativekt.jvm.jvmci.conventions.AMD64LinuxCallingConvention;
+import com.huskerdev.nativekt.jvm.jvmci.conventions.AMD64WindowsCallingConvention;
+import com.huskerdev.nativekt.jvm.jvmci.conventions.ARM64CallingConvention;
 import jdk.vm.ci.hotspot.*;
 import jdk.vm.ci.meta.JavaKind;
 import jdk.vm.ci.meta.MetaAccessProvider;

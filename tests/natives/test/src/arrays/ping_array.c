@@ -31,3 +31,7 @@ KFloatArray pingFloatArray(KFloatArray arg) {
 KDoubleArray pingDoubleArray(KDoubleArray arg) {
     return arg;
 }
+
+KArray pingEnumArray(KArray arg) {
+    return arg;
+}

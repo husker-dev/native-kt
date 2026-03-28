@@ -1,7 +1,7 @@
-package com.huskerdev.nativekt.jvmci.conventions;
+package com.huskerdev.nativekt.jvm.jvmci.conventions;
 
 
-import com.huskerdev.nativekt.jvmci.Buffer;
+import com.huskerdev.nativekt.jvm.jvmci.Buffer;
 
 import java.lang.reflect.Method;
 

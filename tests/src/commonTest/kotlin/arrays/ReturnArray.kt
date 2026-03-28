@@ -1,5 +1,6 @@
 package arrays
 
+import natives.test.MyEnum
 import withLib
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -44,5 +45,10 @@ class ReturnArray {
     @Test
     fun returnDoubleArray() = withLib {
         assertContentEquals(doubleArrayOf(1.1, 2.2), natives.test.returnDoubleArray())
+    }
+
+    @Test
+    fun returnEnumArray() = withLib {
+        assertContentEquals(arrayOf(MyEnum.CASE1, MyEnum.CASE2), natives.test.returnEnumArray())
     }
 }

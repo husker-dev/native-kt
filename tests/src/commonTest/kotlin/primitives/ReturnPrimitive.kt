@@ -1,5 +1,6 @@
 package primitives
 
+import natives.test.MyEnum
 import withLib
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -59,5 +60,10 @@ class ReturnPrimitive {
     @Test
     fun returnString() = withLib {
         assertEquals("test string", natives.test.returnString())
+    }
+
+    @Test
+    fun returnEnum() = withLib {
+        assertEquals(MyEnum.CASE2, natives.test.returnEnum())
     }
 }

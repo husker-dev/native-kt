@@ -1,7 +1,7 @@
-package com.huskerdev.nativekt.jvmci.conventions;
+package com.huskerdev.nativekt.jvm.jvmci.conventions;
 
-import com.huskerdev.nativekt.jvmci.Buffer;
-import com.huskerdev.nativekt.jvmci.CallingConvention;
+import com.huskerdev.nativekt.jvm.jvmci.Buffer;
+import com.huskerdev.nativekt.jvm.jvmci.CallingConvention;
 import jdk.vm.ci.code.site.DataPatch;
 import jdk.vm.ci.code.site.Mark;
 import jdk.vm.ci.code.site.Site;

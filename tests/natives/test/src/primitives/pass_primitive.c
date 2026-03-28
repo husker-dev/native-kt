@@ -42,3 +42,7 @@ KBoolean passDouble(KDouble arg) {
 KBoolean passString(KString arg) {
     return arg.length == 11 && strncmp(arg.data, "test string", arg.length) == 0;
 }
+
+KBoolean passEnum(MyEnum arg) {
+    return arg == CASE2;
+}

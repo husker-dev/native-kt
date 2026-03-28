@@ -51,7 +51,7 @@ class CExportedPrinter(
 
     private fun printFunctionCritical(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
         append("\nJNIEXPORT ")
-        append(function.type.toCDefType())
+        append(function.type.toCDefType(enumAsInt = true))
         append(" EXPORTED_")
         append(classPath.replace(".", "_"))
         append("_")
@@ -61,10 +61,10 @@ class CExportedPrinter(
             if(it.type.isString())
                 listOf("const char* __arg_${it.name}", "int32_t __length_${it.name}")
             else if(it.type.isArray()) {
-                val type = (it.type as ResolvedIdlType.Default).firstParam { type, _ -> type.toCDefType() }
+                val type = (it.type as ResolvedIdlType.Default).firstParam { type, _ -> type.toCDefType(enumAsInt = true) }
                 listOf("$type* __arg_${it.name}", "int32_t __length_${it.name}")
             } else
-                listOf("${it.type.toCDefType()} __arg_${it.name}")
+                listOf("${it.type.toCDefType(enumAsInt = true)} __arg_${it.name}")
         }.joinTo(this)
         append(") {\n")
 

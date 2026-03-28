@@ -228,6 +228,18 @@ fun toKotlinDoubleArray(module: EmModule, struct: EmArray, dealloc: Boolean): Do
     return result
 }
 
+// Array: enum
+
+fun <T: Enum<T>> toNativeEnumArray(module: EmModule, arr: Array<T>): EmArray =
+    toNativeIntArray(module, IntArray(arr.size) { arr[it].ordinal })
+
+inline fun <reified T: Enum<T>> toKotlinEnumArray(
+    module: EmModule,
+    struct: EmArray,
+    dealloc: Boolean,
+    noinline create: (Int) -> T
+): Array<T> = toKotlinIntArray(module, struct, dealloc).run { Array(size, create) }
+
 
 // Callbacks
 

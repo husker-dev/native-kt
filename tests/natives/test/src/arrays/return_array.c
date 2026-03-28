@@ -56,3 +56,10 @@ KDoubleArray returnDoubleArray() {
     elements[1] = 2.2;
     return makeKDoubleArray(elements, 2);
 }
+
+KArray returnEnumArray() {
+    MyEnum* elements = malloc(2 * sizeof(MyEnum));
+    elements[0] = CASE1;
+    elements[1] = CASE2;
+    return makeKArray(elements, 2);
+}

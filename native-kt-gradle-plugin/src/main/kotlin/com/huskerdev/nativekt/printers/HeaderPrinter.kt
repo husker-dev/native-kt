@@ -5,6 +5,7 @@ import com.huskerdev.nativekt.utils.printLabel
 import com.huskerdev.nativekt.utils.toCDefType
 import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlCallbackFunction
+import com.huskerdev.webidl.resolver.ResolvedIdlEnum
 import com.huskerdev.webidl.resolver.ResolvedIdlOperation
 import java.io.File
 import kotlin.math.max
@@ -29,6 +30,12 @@ class HeaderPrinter(
             printLabel(builder, "Type defs")
             idl.callbacks.values.forEach { printCallbackTypedef(builder, it) }
             builder.append("\n")
+        }
+
+        if(idl.enums.isNotEmpty()) {
+            builder.append("\n")
+            printLabel(builder, "Enums")
+            idl.enums.values.forEach { printEnum(builder, it) }
         }
 
         printLabel(builder, "Functions")
@@ -57,6 +64,14 @@ class HeaderPrinter(
         }
 
         append(");")
+    }
+
+    private fun printEnum(builder: StringBuilder, enum: ResolvedIdlEnum) = builder.apply {
+        append("\ntypedef enum {\n\t")
+        enum.elements.joinTo(builder, separator = ",\n\t")
+        append("\n} ")
+        append(enum.name)
+        append(";\n")
     }
 
     private fun printCallbackTypedef(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
@@ -207,7 +222,7 @@ class HeaderPrinter(
             KArrayDef(KLongArray,	 KLong*)
             KArrayDef(KFloatArray,	 KFloat*)
             KArrayDef(KDoubleArray,  KDouble*)
-            KArrayDef(KObjectArray,  void*)
+            KArrayDef(KArray,        void*)
             #undef KArrayDef
 
             #define KCallbackDef(Name, Type, ...)		\

@@ -31,15 +31,15 @@ class KotlinAndroidPrinter(
             
             package $classPath
             
-            private var _isLibTestLoaded = false
+            private var _isLib${moduleName.capitalized()}Loaded = false
 
-            ${actual}val isLibTestLoaded: Boolean
-                get() = _isLibTestLoaded
+            ${actual}val isLib${moduleName.capitalized()}Loaded: Boolean
+                get() = _isLib${moduleName.capitalized()}Loaded
             
             @Throws(UnsupportedOperationException::class)
             ${actual}fun ${syncFunctionName(moduleName)}() {
-                if(_isLibTestLoaded) return
-                _isLibTestLoaded = true
+                if(_isLib${moduleName.capitalized()}Loaded) return
+                _isLib${moduleName.capitalized()}Loaded = true
     
                 System.loadLibrary("$moduleName")
             }

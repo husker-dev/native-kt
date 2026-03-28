@@ -2,6 +2,7 @@ package com.huskerdev.nativekt.printers.js
 
 import com.huskerdev.nativekt.utils.*
 import com.huskerdev.webidl.resolver.*
+import org.gradle.internal.extensions.stdlib.capitalized
 import java.io.File
 
 class KotlinJsPrinter(
@@ -52,21 +53,21 @@ class KotlinJsPrinter(
             
             fun wrapCallback(block: (JsNumber) -> Unit): JsAny = js("block")
             
-            private var isLibTestLoaded_: Boolean = false
-            ${actual}val isLibTestLoaded: Boolean
-                get() = isLibTestLoaded_
+            private var isLib${moduleName.capitalized()}Loaded_: Boolean = false
+            ${actual}val isLib${moduleName.capitalized()}Loaded: Boolean
+                get() = isLib${moduleName.capitalized()}Loaded_
             
             ${actual}fun ${syncFunctionName(moduleName)}(): Unit = 
                 throw UnsupportedOperationException("Synchronous library loading is not supported in JS")
                 
             ${actual}fun ${asyncFunctionName(moduleName)}(onReady: () -> Unit) {
-                if(isLibTestLoaded) 
+                if(isLib${moduleName.capitalized()}Loaded) 
                     return
                 
                 loadLib<Module>(_lib).then {
                     _module = it
                     $initCallbacks
-                    isLibTestLoaded_ = true
+                    isLib${moduleName.capitalized()}Loaded_ = true
                     onReady()
                     _lib // does nothing, but required
                 }
@@ -232,10 +233,13 @@ class KotlinJsPrinter(
                         val name = declaration.kind.simpleName()
                         if(useArena) "arena.toNative${name}Array($content)"
                         else "toNative${name}Array(_module, $content)"
+                    } else if(declaration is ResolvedIdlEnum) {
+                        "toNativeEnumArray(_module, $content)"
                     } else throw UnsupportedOperationException(type.toString())
                 }
                 else -> content
             }
+            is ResolvedIdlEnum -> "${content}.ordinal"
             is ResolvedIdlCallbackFunction ->
                 if(dealloc) "arena.callback($content.wrap${decl.name}())"
                 else "$content.wrap${decl.name}()"
@@ -258,10 +262,13 @@ class KotlinJsPrinter(
                         val name = declaration.kind.simpleName()
                         if(useArena) "arena.toKotlin${name}Array($content, $dealloc)"
                         else "toKotlin${name}Array(_module, $content, $dealloc)"
+                    } else if(declaration is ResolvedIdlEnum) {
+                        "toKotlinEnumArray(_module, $content, $dealloc, ${declaration.name}.entries::get)"
                     } else throw UnsupportedOperationException(type.toString())
                 }
                 else -> content
             }
+            is ResolvedIdlEnum -> "${decl.name}.entries[$content]"
             is ResolvedIdlCallbackFunction ->
                 if(useArena) "arena.unwrapCallback<${decl.name}>($content, $dealloc)"
                 else "unwrapCallback<${decl.name}>(_module, $content, $dealloc)"
@@ -286,6 +293,7 @@ class KotlinJsPrinter(
                 WebIDLBuiltinKind.LIST -> "EmArray"
                 else -> "JsNumber"
             }
+            is ResolvedIdlEnum -> "Int"
             is ResolvedIdlCallbackFunction -> "Int"
             else -> "JsNumber"
         }

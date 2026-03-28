@@ -46,3 +46,7 @@ KString returnString() {
     strcpy(str, "test string");
     return makeKString(str, 11);
 }
+
+MyEnum returnEnum() {
+    return CASE2;
+}

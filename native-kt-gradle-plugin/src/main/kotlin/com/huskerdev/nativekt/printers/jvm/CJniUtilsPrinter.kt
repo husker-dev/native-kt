@@ -96,6 +96,26 @@ class CJniUtilsPrinter(
             #undef KArrayCast
             
         """.trimIndent())
+        printLabel(builder, "Arrays")
+        builder.append("""
+            
+            KArray JNI_toNativeEnumArray(JNIEnv *env, jintArray arr) {
+                jsize size = (*env)->GetArrayLength(env, arr);
+                jint* tmp = (*env)->GetIntArrayElements(env, arr, NULL);
+                const jint* copy = (jint*)malloc(size * sizeof(jint));
+                memcpy((void*)copy, (void*)tmp, size * sizeof(jint));
+                (*env)->ReleaseIntArrayElements(env, arr, tmp, 0);
+                return (KArray) { (void*)copy, size };
+            }
+
+            jintArray JNI_toJvmEnumArray(JNIEnv *env, KArray arr, bool dealloc) {
+                jintArray result = (*env)->NewIntArray(env, arr.size);
+                (*env)->SetIntArrayRegion(env, result, 0, arr.size, (jint*)arr.elements);
+                if(dealloc) free((void*)arr.elements);
+                return result;
+            }
+            
+        """.trimIndent())
 
         if(idl.callbacks.isNotEmpty()) {
 
@@ -189,6 +209,7 @@ class CJniUtilsPrinter(
                     else -> "CallStaticObjectMethod"
                 }
                 is ResolvedIdlCallbackFunction -> "CallStaticObjectMethod"
+                is ResolvedIdlEnum -> "CallStaticIntMethod"
                 else -> throw UnsupportedOperationException(callback.type.toString())
             }
             else -> throw UnsupportedOperationException(callback.type.toString())

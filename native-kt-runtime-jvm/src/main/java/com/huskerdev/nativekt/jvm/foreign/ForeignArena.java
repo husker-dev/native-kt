@@ -1,10 +1,10 @@
-package com.huskerdev.nativekt.foreign;
+package com.huskerdev.nativekt.jvm.foreign;
 
 import java.io.Closeable;
 import java.lang.foreign.*;
 import java.util.ArrayList;
 
-import static com.huskerdev.nativekt.foreign.ForeignUtils.fromKString;
+import static com.huskerdev.nativekt.jvm.foreign.ForeignUtils.fromKString;
 
 @SuppressWarnings("unused")
 public class ForeignArena implements Closeable {
@@ -143,6 +143,23 @@ public class ForeignArena implements Closeable {
     public double[] toJvmDoubleArray(MemorySegment struct, boolean dealloc) throws Throwable {
         long address = ForeignUtils.arrayElementsAddress(struct);
         return ForeignUtils.toJvmDoubleArray(struct, dealloc && notContains(address));
+    }
+
+    // Array: enum
+
+    public <T extends Enum<T>> MemorySegment toNativeEnumArray(T[] arr) {
+        MemorySegment struct = ForeignUtils.toNativeEnumArray(arr, heap, heap);
+        allocated.add(ForeignUtils.arrayElementsAddress(struct));
+        return struct;
+    }
+
+    public <T extends Enum<T>> T[] toJvmEnumArray(
+            MemorySegment struct,
+            boolean dealloc,
+            Class<T> enumClass
+    ) throws Throwable {
+        long address = ForeignUtils.arrayElementsAddress(struct);
+        return ForeignUtils.toJvmEnumArray(struct, dealloc && notContains(address), enumClass);
     }
 
     // Callbacks

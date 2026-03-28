@@ -40,3 +40,7 @@ KBoolean callbackReturnString(CallbackReturnString* arg) {
 VoidCallback* callbackReturnCallback(CallbackReturnCallback* arg) {
     return arg->invoke(arg);
 }
+
+KBoolean callbackReturnEnum(CallbackReturnEnum* arg) {
+    return arg->invoke(arg) == CASE2;
+}

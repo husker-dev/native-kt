@@ -55,7 +55,7 @@ KArrayDef(KIntArray,	 KInt*)
 KArrayDef(KLongArray,	 KLong*)
 KArrayDef(KFloatArray,	 KFloat*)
 KArrayDef(KDoubleArray,  KDouble*)
-KArrayDef(KObjectArray,  void*)
+KArrayDef(KArray,        void*)
 #undef KArrayDef
 
 #define KCallbackDef(Name, Type, ...)		\

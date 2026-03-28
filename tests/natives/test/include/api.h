@@ -55,7 +55,7 @@ KArrayDef(KIntArray,	 KInt*)
 KArrayDef(KLongArray,	 KLong*)
 KArrayDef(KFloatArray,	 KFloat*)
 KArrayDef(KDoubleArray,  KDouble*)
-KArrayDef(KObjectArray,  void*)
+KArrayDef(KArray,        void*)
 #undef KArrayDef
 
 #define KCallbackDef(Name, Type, ...)		\
@@ -80,6 +80,7 @@ typedef struct CallbackPassFloat CallbackPassFloat;
 typedef struct CallbackPassDouble CallbackPassDouble;
 typedef struct CallbackPassString CallbackPassString;
 typedef struct CallbackPassCallback CallbackPassCallback;
+typedef struct CallbackPassEnum CallbackPassEnum;
 typedef struct CallbackReturnChar CallbackReturnChar;
 typedef struct CallbackReturnBoolean CallbackReturnBoolean;
 typedef struct CallbackReturnByte CallbackReturnByte;
@@ -90,6 +91,7 @@ typedef struct CallbackReturnFloat CallbackReturnFloat;
 typedef struct CallbackReturnDouble CallbackReturnDouble;
 typedef struct CallbackReturnString CallbackReturnString;
 typedef struct CallbackReturnCallback CallbackReturnCallback;
+typedef struct CallbackReturnEnum CallbackReturnEnum;
 typedef struct CallbackPassCharArray CallbackPassCharArray;
 typedef struct CallbackPassBooleanArray CallbackPassBooleanArray;
 typedef struct CallbackPassByteArray CallbackPassByteArray;
@@ -98,6 +100,7 @@ typedef struct CallbackPassIntArray CallbackPassIntArray;
 typedef struct CallbackPassLongArray CallbackPassLongArray;
 typedef struct CallbackPassFloatArray CallbackPassFloatArray;
 typedef struct CallbackPassDoubleArray CallbackPassDoubleArray;
+typedef struct CallbackPassEnumArray CallbackPassEnumArray;
 typedef struct CallbackReturnCharArray CallbackReturnCharArray;
 typedef struct CallbackReturnBooleanArray CallbackReturnBooleanArray;
 typedef struct CallbackReturnByteArray CallbackReturnByteArray;
@@ -106,6 +109,17 @@ typedef struct CallbackReturnIntArray CallbackReturnIntArray;
 typedef struct CallbackReturnLongArray CallbackReturnLongArray;
 typedef struct CallbackReturnFloatArray CallbackReturnFloatArray;
 typedef struct CallbackReturnDoubleArray CallbackReturnDoubleArray;
+typedef struct CallbackReturnEnumArray CallbackReturnEnumArray;
+
+
+// ╔═══════════════╗
+// ║     Enums     ║
+// ╚═══════════════╝
+
+typedef enum {
+	CASE1,
+	CASE2
+} MyEnum;
 
 // ╔═══════════════════╗
 // ║     Functions     ║
@@ -121,6 +135,7 @@ KBoolean passLong(KLong arg);
 KBoolean passFloat(KFloat arg);
 KBoolean passDouble(KDouble arg);
 KBoolean passString(KString arg);
+KBoolean passEnum(MyEnum arg);
 void returnVoid();
 KChar returnChar();
 KBoolean returnBoolean();
@@ -132,6 +147,7 @@ KFloat returnFloat();
 KDouble returnDouble();
 KString returnStringLiteral();
 KString returnString();
+MyEnum returnEnum();
 KChar pingChar(KChar arg);
 KBoolean pingBoolean(KBoolean arg);
 KByte pingByte(KByte arg);
@@ -141,6 +157,7 @@ KLong pingLong(KLong arg);
 KFloat pingFloat(KFloat arg);
 KDouble pingDouble(KDouble arg);
 KString pingString(KString arg);
+MyEnum pingEnum(MyEnum arg);
 void callbackVoid(VoidCallback* arg);
 KBoolean callbackArgChar(CallbackPassChar* arg);
 KBoolean callbackArgBoolean(CallbackPassBoolean* arg);
@@ -152,6 +169,7 @@ KBoolean callbackArgFloat(CallbackPassFloat* arg);
 KBoolean callbackArgDouble(CallbackPassDouble* arg);
 KBoolean callbackArgString(CallbackPassString* arg);
 KBoolean callbackArgCallback(VoidCallback* pass, CallbackPassCallback* arg);
+KBoolean callbackArgEnum(CallbackPassEnum* arg);
 KBoolean callbackReturnChar(CallbackReturnChar* arg);
 KBoolean callbackReturnBoolean(CallbackReturnBoolean* arg);
 KBoolean callbackReturnByte(CallbackReturnByte* arg);
@@ -162,6 +180,7 @@ KBoolean callbackReturnFloat(CallbackReturnFloat* arg);
 KBoolean callbackReturnDouble(CallbackReturnDouble* arg);
 KBoolean callbackReturnString(CallbackReturnString* arg);
 VoidCallback* callbackReturnCallback(CallbackReturnCallback* arg);
+KBoolean callbackReturnEnum(CallbackReturnEnum* arg);
 KBoolean passCharArray(KCharArray arg);
 KBoolean passBooleanArray(KBooleanArray arg);
 KBoolean passByteArray(KByteArray arg);
@@ -170,6 +189,7 @@ KBoolean passIntArray(KIntArray arg);
 KBoolean passLongArray(KLongArray arg);
 KBoolean passFloatArray(KFloatArray arg);
 KBoolean passDoubleArray(KDoubleArray arg);
+KBoolean passEnumArray(KArray arg);
 KCharArray returnCharArray();
 KBooleanArray returnBooleanArray();
 KByteArray returnByteArray();
@@ -178,6 +198,7 @@ KIntArray returnIntArray();
 KLongArray returnLongArray();
 KFloatArray returnFloatArray();
 KDoubleArray returnDoubleArray();
+KArray returnEnumArray();
 KCharArray pingCharArray(KCharArray arg);
 KBooleanArray pingBooleanArray(KBooleanArray arg);
 KByteArray pingByteArray(KByteArray arg);
@@ -186,6 +207,7 @@ KIntArray pingIntArray(KIntArray arg);
 KLongArray pingLongArray(KLongArray arg);
 KFloatArray pingFloatArray(KFloatArray arg);
 KDoubleArray pingDoubleArray(KDoubleArray arg);
+KArray pingEnumArray(KArray arg);
 KBoolean callbackArgCharArray(CallbackPassCharArray* arg);
 KBoolean callbackArgBooleanArray(CallbackPassBooleanArray* arg);
 KBoolean callbackArgByteArray(CallbackPassByteArray* arg);
@@ -194,6 +216,7 @@ KBoolean callbackArgIntArray(CallbackPassIntArray* arg);
 KBoolean callbackArgLongArray(CallbackPassLongArray* arg);
 KBoolean callbackArgFloatArray(CallbackPassFloatArray* arg);
 KBoolean callbackArgDoubleArray(CallbackPassDoubleArray* arg);
+KBoolean callbackArgEnumArray(CallbackPassEnumArray* arg);
 KBoolean callbackReturnCharArray(CallbackReturnCharArray* arg);
 KBoolean callbackReturnBooleanArray(CallbackReturnBooleanArray* arg);
 KBoolean callbackReturnByteArray(CallbackReturnByteArray* arg);
@@ -202,6 +225,7 @@ KBoolean callbackReturnIntArray(CallbackReturnIntArray* arg);
 KBoolean callbackReturnLongArray(CallbackReturnLongArray* arg);
 KBoolean callbackReturnFloatArray(CallbackReturnFloatArray* arg);
 KBoolean callbackReturnDoubleArray(CallbackReturnDoubleArray* arg);
+KBoolean callbackReturnEnumArray(CallbackReturnEnumArray* arg);
 KBoolean jvmci1();
 KBoolean jvmci2(KInt a1);
 KBoolean jvmci3(KInt a1, KInt a2);
@@ -219,6 +243,7 @@ KFloat jvmci14();
 KDouble jvmci15();
 KBoolean jvmciArray(KIntArray array);
 KBoolean jvmciSomeArrays(KIntArray array1, KFloatArray array2, KDoubleArray array3);
+KBoolean jvmciEnum(MyEnum enum1, MyEnum enum2, KArray enumArray);
 
 // ╔═══════════════════╗
 // ║     Callbacks     ║
@@ -237,6 +262,7 @@ KCallbackDef(CallbackPassFloat,          KBoolean,     KFloat arg       )
 KCallbackDef(CallbackPassDouble,         KBoolean,     KDouble arg      )
 KCallbackDef(CallbackPassString,         KBoolean,     KString arg      )
 KCallbackDef(CallbackPassCallback,       KBoolean,     VoidCallback* arg)
+KCallbackDef(CallbackPassEnum,           KBoolean,     MyEnum arg       )
 KCallbackDef(CallbackReturnChar,         KChar                          )
 KCallbackDef(CallbackReturnBoolean,      KBoolean                       )
 KCallbackDef(CallbackReturnByte,         KByte                          )
@@ -247,6 +273,7 @@ KCallbackDef(CallbackReturnFloat,        KFloat                         )
 KCallbackDef(CallbackReturnDouble,       KDouble                        )
 KCallbackDef(CallbackReturnString,       KString                        )
 KCallbackDef(CallbackReturnCallback,     VoidCallback*                  )
+KCallbackDef(CallbackReturnEnum,         MyEnum                         )
 KCallbackDef(CallbackPassCharArray,      KBoolean,     KCharArray arg   )
 KCallbackDef(CallbackPassBooleanArray,   KBoolean,     KBooleanArray arg)
 KCallbackDef(CallbackPassByteArray,      KBoolean,     KByteArray arg   )
@@ -255,6 +282,7 @@ KCallbackDef(CallbackPassIntArray,       KBoolean,     KIntArray arg    )
 KCallbackDef(CallbackPassLongArray,      KBoolean,     KLongArray arg   )
 KCallbackDef(CallbackPassFloatArray,     KBoolean,     KFloatArray arg  )
 KCallbackDef(CallbackPassDoubleArray,    KBoolean,     KDoubleArray arg )
+KCallbackDef(CallbackPassEnumArray,      KBoolean,     KArray arg       )
 KCallbackDef(CallbackReturnCharArray,    KCharArray                     )
 KCallbackDef(CallbackReturnBooleanArray, KBooleanArray                  )
 KCallbackDef(CallbackReturnByteArray,    KByteArray                     )
@@ -263,6 +291,7 @@ KCallbackDef(CallbackReturnIntArray,     KIntArray                      )
 KCallbackDef(CallbackReturnLongArray,    KLongArray                     )
 KCallbackDef(CallbackReturnFloatArray,   KFloatArray                    )
 KCallbackDef(CallbackReturnDoubleArray,  KDoubleArray                   )
+KCallbackDef(CallbackReturnEnumArray,    KArray                         )
 #undef KCallbackDef
 
 

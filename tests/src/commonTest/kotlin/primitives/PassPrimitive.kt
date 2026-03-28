@@ -1,5 +1,6 @@
 package primitives
 
+import natives.test.MyEnum
 import withLib
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -54,5 +55,10 @@ class PassPrimitive {
     @Test
     fun passString() = withLib {
         assertTrue(natives.test.passString("test string"))
+    }
+
+    @Test
+    fun passEnum() = withLib {
+        assertTrue(natives.test.passEnum(MyEnum.CASE2))
     }
 }

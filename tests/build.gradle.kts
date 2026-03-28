@@ -86,11 +86,6 @@ kotlin {
         }
     }
 
-    androidNativeX64()
-    androidNativeX86()
-    androidNativeArm32()
-    androidNativeArm64()
-
     sourceSets.commonMain.dependencies {
         implementation(libs.kotlinx.coroutines)
         implementation(project(":native-kt-runtime"))
@@ -107,6 +102,11 @@ kotlin {
 
 natives {
     useJsBigInt = true
+
+    if(project.hasProperty("disableForeign")) {
+        println("Foreign disabled")
+        useForeignApi = false
+    }
 
     create("test")
 }

@@ -6,6 +6,7 @@ import com.huskerdev.webidl.resolver.BuiltinIdlDeclaration
 import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlCallbackFunction
 import com.huskerdev.webidl.resolver.ResolvedIdlDeclaration
+import com.huskerdev.webidl.resolver.ResolvedIdlEnum
 import com.huskerdev.webidl.resolver.ResolvedIdlOperation
 import com.huskerdev.webidl.resolver.ResolvedIdlType
 import com.huskerdev.webidl.resolver.WebIDLBuiltinKind
@@ -20,7 +21,7 @@ fun syncFunctionName(moduleName: String) =
 fun ResolvedIdlType.toKotlinForeignType(): String {
     return if(isCallback() || isString() || isArray())
         "MemorySegment"
-    else toKotlinType()
+    else toKotlinType(enumAsInt = true)
 }
 
 fun <T> ResolvedIdlType.Default.firstParam(block: (type: ResolvedIdlType.Default, declaration: ResolvedIdlDeclaration) -> T): T {
@@ -45,7 +46,8 @@ internal fun WebIDLBuiltinKind.simpleName() = when(this) {
 
 fun ResolvedIdlType.toKotlinType(
     stringAsBytes: Boolean = false,
-    callbackAsAny: Boolean = false
+    callbackAsAny: Boolean = false,
+    enumAsInt: Boolean = false
 ): String = when(this) {
     is ResolvedIdlType.Void -> "Unit"
     is ResolvedIdlType.Default -> when(declaration) {
@@ -60,21 +62,26 @@ fun ResolvedIdlType.toKotlinType(
             WebIDLBuiltinKind.DOUBLE -> "Double"
             WebIDLBuiltinKind.STRING -> if(stringAsBytes) "ByteArray" else "String"
             WebIDLBuiltinKind.LIST -> firstParam { type, declaration ->
-                if(declaration is BuiltinIdlDeclaration) when(declaration.kind) {
-                    WebIDLBuiltinKind.CHAR -> "CharArray"
-                    WebIDLBuiltinKind.BOOLEAN -> "BooleanArray"
-                    WebIDLBuiltinKind.BYTE -> "ByteArray"
-                    WebIDLBuiltinKind.SHORT -> "ShortArray"
-                    WebIDLBuiltinKind.INT -> "IntArray"
-                    WebIDLBuiltinKind.LONG -> "LongArray"
-                    WebIDLBuiltinKind.FLOAT -> "FloatArray"
-                    WebIDLBuiltinKind.DOUBLE -> "DoubleArray"
+                when (declaration) {
+                    is BuiltinIdlDeclaration -> when (declaration.kind) {
+                        WebIDLBuiltinKind.CHAR -> "CharArray"
+                        WebIDLBuiltinKind.BOOLEAN -> "BooleanArray"
+                        WebIDLBuiltinKind.BYTE -> "ByteArray"
+                        WebIDLBuiltinKind.SHORT -> "ShortArray"
+                        WebIDLBuiltinKind.INT -> "IntArray"
+                        WebIDLBuiltinKind.LONG -> "LongArray"
+                        WebIDLBuiltinKind.FLOAT -> "FloatArray"
+                        WebIDLBuiltinKind.DOUBLE -> "DoubleArray"
+                        else -> "Array<${type.toKotlinType(stringAsBytes, callbackAsAny)}>"
+                    }
+                    is ResolvedIdlEnum -> if (enumAsInt)
+                        "IntArray" else "Array<${declaration.name}>"
                     else -> "Array<${type.toKotlinType(stringAsBytes, callbackAsAny)}>"
-                } else
-                    "Array<${type.toKotlinType(stringAsBytes, callbackAsAny)}>"
+                }
             }
             else -> throw UnsupportedOperationException(toString())
         }
+        is ResolvedIdlEnum -> if(enumAsInt) "Int" else declaration.name
         is ResolvedIdlCallbackFunction -> if(callbackAsAny) "Any" else declaration.name
         else -> declaration.name
     }
@@ -103,6 +110,7 @@ fun ResolvedIdlType.toCType(
             }
             else -> throw UnsupportedOperationException(toString())
         }
+        is ResolvedIdlEnum -> declaration.name
         is ResolvedIdlCallbackFunction ->
             if(callbackAsPtr) "intptr_t"
             else "${declaration.name}*"
@@ -112,7 +120,8 @@ fun ResolvedIdlType.toCType(
 }
 
 fun ResolvedIdlType.toCDefType(
-    longPtr: Boolean = false
+    longPtr: Boolean = false,
+    enumAsInt: Boolean = false
 ): String = when(this) {
     is ResolvedIdlType.Void -> "void"
     is ResolvedIdlType.Default -> when(declaration) {
@@ -126,23 +135,29 @@ fun ResolvedIdlType.toCDefType(
             WebIDLBuiltinKind.FLOAT -> "KFloat"
             WebIDLBuiltinKind.DOUBLE -> "KDouble"
             WebIDLBuiltinKind.STRING -> "KString${if (longPtr) "*" else ""}"
-            WebIDLBuiltinKind.LIST -> firstParam { type, declaration ->
-                if(declaration is BuiltinIdlDeclaration) when(declaration.kind) {
-                    WebIDLBuiltinKind.CHAR -> "KCharArray"
-                    WebIDLBuiltinKind.BOOLEAN -> "KBooleanArray"
-                    WebIDLBuiltinKind.BYTE -> "KByteArray"
-                    WebIDLBuiltinKind.SHORT -> "KShortArray"
-                    WebIDLBuiltinKind.INT -> "KIntArray"
-                    WebIDLBuiltinKind.LONG -> "KLongArray"
-                    WebIDLBuiltinKind.FLOAT -> "KFloatArray"
-                    WebIDLBuiltinKind.DOUBLE -> "KDoubleArray"
-                    WebIDLBuiltinKind.STRING -> "KStringArray"
-                    else -> "${type.toCDefType()}*"
-                } else "${type.toCDefType()}*"
+            WebIDLBuiltinKind.LIST -> firstParam { _, declaration ->
+                when (declaration) {
+                    is BuiltinIdlDeclaration -> when (declaration.kind) {
+                        WebIDLBuiltinKind.CHAR -> "KCharArray"
+                        WebIDLBuiltinKind.BOOLEAN -> "KBooleanArray"
+                        WebIDLBuiltinKind.BYTE -> "KByteArray"
+                        WebIDLBuiltinKind.SHORT -> "KShortArray"
+                        WebIDLBuiltinKind.INT -> "KIntArray"
+                        WebIDLBuiltinKind.LONG -> "KLongArray"
+                        WebIDLBuiltinKind.FLOAT -> "KFloatArray"
+                        WebIDLBuiltinKind.DOUBLE -> "KDoubleArray"
+                        WebIDLBuiltinKind.STRING -> "KStringArray"
+                        else -> throw UnsupportedOperationException()
+                    }
+                    is ResolvedIdlEnum -> "KArray"
+                    else -> throw UnsupportedOperationException(declaration.name)
+                }
             }
             else -> throw UnsupportedOperationException(toString())
         }
-        else -> "${declaration.name}*"
+        is ResolvedIdlEnum -> if(enumAsInt) "KInt" else declaration.name
+        is ResolvedIdlCallbackFunction -> "${declaration.name}*"
+        else -> throw UnsupportedOperationException(declaration.name)
     }
     else -> throw UnsupportedOperationException(toString())
 }
@@ -176,6 +191,7 @@ fun ResolvedIdlType.toJNIType(): String = when(this) {
             }
             else -> throw UnsupportedOperationException(toString())
         }
+        is ResolvedIdlEnum -> "jint"
         else -> "jobject"
     }
     else -> throw UnsupportedOperationException(toString())
@@ -199,6 +215,7 @@ fun ResolvedIdlType.toJavaDesc(): String = when(this) {
             }
             else -> throw UnsupportedOperationException(toString())
         }
+        is ResolvedIdlEnum -> "I"
         else -> "Ljava/lang/Object;"
     }
     else -> throw UnsupportedOperationException(toString())
@@ -234,6 +251,17 @@ fun ResolvedIdlType.isStringArray(): Boolean {
 
 fun ResolvedIdlType.isCallback(): Boolean =
     this is ResolvedIdlType.Default && declaration is ResolvedIdlCallbackFunction
+
+fun ResolvedIdlType.isEnum(): Boolean =
+    this is ResolvedIdlType.Default && declaration is ResolvedIdlEnum
+
+fun ResolvedIdlType.isEnumArray(): Boolean {
+    if (this !is ResolvedIdlType.Default ||
+        declaration !is BuiltinIdlDeclaration) return false
+    if((declaration as BuiltinIdlDeclaration).kind != WebIDLBuiltinKind.LIST)
+        return false
+    return firstParam { type, _ -> type.isEnum() }
+}
 
 fun ResolvedIdlOperation.isCritical(): Boolean =
     this.attributes.any {
@@ -282,6 +310,7 @@ fun printFunctionHeader(
     forcePrintVoid: Boolean = false,
     stringAsBytes: Boolean = false,
     callbackAsAny: Boolean = false,
+    enumAsInt: Boolean = false,
     arraysLen: Boolean = false,
 ) = builder.apply {
     if(isActual) append("actual ")
@@ -296,7 +325,7 @@ fun printFunctionHeader(
     function.args.forEachIndexed { index, arg ->
         append(arg.name)
         append(": ")
-        append(arg.type.toKotlinType(stringAsBytes, callbackAsAny))
+        append(arg.type.toKotlinType(stringAsBytes, callbackAsAny, enumAsInt))
 
         if((stringAsBytes && arg.type.isString()) || (arraysLen && arg.type.isArray())) {
             append(", __len_")
@@ -310,7 +339,7 @@ fun printFunctionHeader(
     append(")")
     if(forcePrintVoid || function.type !is ResolvedIdlType.Void) {
         append(": ")
-        append(function.type.toKotlinType(stringAsBytes, callbackAsAny))
+        append(function.type.toKotlinType(stringAsBytes, callbackAsAny, enumAsInt))
     }
 }
 

@@ -1,5 +1,6 @@
 package arrays
 
+import natives.test.MyEnum
 import withLib
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -44,5 +45,10 @@ class PassArray {
     @Test
     fun passDoubleArray() = withLib {
         assertTrue(natives.test.passDoubleArray(doubleArrayOf(1.1, 2.2)))
+    }
+
+    @Test
+    fun passEnumArray() = withLib {
+        assertTrue(natives.test.passEnumArray(arrayOf(MyEnum.CASE1, MyEnum.CASE2)))
     }
 }

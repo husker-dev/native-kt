@@ -46,29 +46,29 @@ class KotlinJvmPrinter(
         """.trimIndent())
 
         if(useJVMCI)
-            builder.append("import com.huskerdev.nativekt.jvmci.*")
+            builder.append("import com.huskerdev.nativekt.jvm.jvmci.*")
         if(useForeignApi)
             builder.append("""
                 
-                import com.huskerdev.nativekt.foreign.*
+                import com.huskerdev.nativekt.jvm.foreign.*
                 import java.lang.foreign.*
                 import java.lang.invoke.*
                 
             """.trimIndent())
 
         builder.append($$"""
-            import com.huskerdev.nativekt.*
+            import com.huskerdev.nativekt.jvm.*
             
             
-            private var isLibTestLoaded_ = false
+            private var isLib$${moduleName.capitalized()}Loaded_ = false
             
-            $${actual}val isLibTestLoaded: Boolean
-                get() = isLibTestLoaded_
+            $${actual}val isLib$${moduleName.capitalized()}Loaded: Boolean
+                get() = isLib$${moduleName.capitalized()}Loaded_
             
             @Throws(UnsupportedOperationException::class)
             $${actual}fun $${syncFunctionName(moduleName)}() {
-                if(isLibTestLoaded_) return
-                isLibTestLoaded_ = true
+                if(isLib$${moduleName.capitalized()}Loaded_) return
+                isLib$${moduleName.capitalized()}Loaded_ = true
                 
                 $${if(useJVMCI) "val fileName = " else ""}NativeKtUtils.loadLibrary("$$moduleName", $$useUniversalMacOSLib)
 

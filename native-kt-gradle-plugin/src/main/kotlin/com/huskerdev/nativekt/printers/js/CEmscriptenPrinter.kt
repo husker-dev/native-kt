@@ -59,9 +59,18 @@ class CEmscriptenPrinter(
                 K_ARRAY_DECL(KLongArray, KLong)
                 K_ARRAY_DECL(KFloatArray, KFloat)
                 K_ARRAY_DECL(KDoubleArray, KDouble)
-            
+                K_ARRAY_DECL(KArray, void)
             
         """.trimIndent())
+
+        if(idl.enums.isNotEmpty()) {
+            idl.enums.values.forEach { enum ->
+                builder.append("\n\tenum_<${enum.name}>(\"${enum.name}\", enum_value_type::number)\n\t\t")
+                enum.elements.joinTo(builder, separator = "\n\t\t") { ".value(\"$it\", $it)" }
+                builder.append("\n\t;\n")
+            }
+            builder.append("\n")
+        }
 
         if(idl.callbacks.isNotEmpty()) {
             builder.append("\tfunction(\"_setCallback\", &_setCallback);\n\n")

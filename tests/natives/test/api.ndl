@@ -12,6 +12,7 @@ namespace global {
     boolean passFloat(float arg);
     boolean passDouble(double arg);
     boolean passString(string arg);
+    boolean passEnum(MyEnum arg);
 
     // Primitives: return
     void returnVoid();
@@ -25,6 +26,7 @@ namespace global {
     double returnDouble();
     string returnStringLiteral();
     [Dealloc] string returnString();
+    MyEnum returnEnum();
 
     // Primitives: ping
     char pingChar(char arg);
@@ -36,6 +38,7 @@ namespace global {
     float pingFloat(float arg);
     double pingDouble(double arg);
     [Dealloc] string pingString(string arg);
+    MyEnum pingEnum(MyEnum arg);
 
     // Primitives: callback arg
     void callbackVoid(VoidCallback arg);
@@ -49,6 +52,7 @@ namespace global {
     boolean callbackArgDouble(CallbackPassDouble arg);
     boolean callbackArgString(CallbackPassString arg);
     boolean callbackArgCallback(VoidCallback pass, CallbackPassCallback arg);
+    boolean callbackArgEnum(CallbackPassEnum arg);
 
     // Primitives: callback return
     boolean callbackReturnChar(CallbackReturnChar arg);
@@ -61,6 +65,7 @@ namespace global {
     boolean callbackReturnDouble(CallbackReturnDouble arg);
     boolean callbackReturnString(CallbackReturnString arg);
     VoidCallback callbackReturnCallback(CallbackReturnCallback arg);
+    boolean callbackReturnEnum(CallbackReturnEnum arg);
 
     // Arrays: pass
     boolean passCharArray(Array<char> arg);
@@ -71,6 +76,7 @@ namespace global {
     boolean passLongArray(Array<long> arg);
     boolean passFloatArray(Array<float> arg);
     boolean passDoubleArray(Array<double> arg);
+    boolean passEnumArray(Array<MyEnum> arg);
 
     // Arrays: return
     [Dealloc] Array<char> returnCharArray();
@@ -81,6 +87,7 @@ namespace global {
     [Dealloc] Array<long> returnLongArray();
     [Dealloc] Array<float> returnFloatArray();
     [Dealloc] Array<double> returnDoubleArray();
+    [Dealloc] Array<MyEnum> returnEnumArray();
 
     // Arrays: ping
     Array<char> pingCharArray(Array<char> arg);
@@ -91,6 +98,7 @@ namespace global {
     Array<long> pingLongArray(Array<long> arg);
     Array<float> pingFloatArray(Array<float> arg);
     Array<double> pingDoubleArray(Array<double> arg);
+    Array<MyEnum> pingEnumArray(Array<MyEnum> arg);
 
      // Arrays: callback arg
     boolean callbackArgCharArray(CallbackPassCharArray arg);
@@ -101,6 +109,7 @@ namespace global {
     boolean callbackArgLongArray(CallbackPassLongArray arg);
     boolean callbackArgFloatArray(CallbackPassFloatArray arg);
     boolean callbackArgDoubleArray(CallbackPassDoubleArray arg);
+    boolean callbackArgEnumArray(CallbackPassEnumArray arg);
 
     // Arrays: callback arg
     boolean callbackReturnCharArray(CallbackReturnCharArray arg);
@@ -111,6 +120,7 @@ namespace global {
     boolean callbackReturnLongArray(CallbackReturnLongArray arg);
     boolean callbackReturnFloatArray(CallbackReturnFloatArray arg);
     boolean callbackReturnDoubleArray(CallbackReturnDoubleArray arg);
+    boolean callbackReturnEnumArray(CallbackReturnEnumArray arg);
 
     // JVMCI
     [Critical] boolean jvmci1();
@@ -130,6 +140,7 @@ namespace global {
     [Critical] double jvmci15();
     [Critical] boolean jvmciArray(Array<int> array);
     [Critical] boolean jvmciSomeArrays(Array<int> array1, Array<float> array2, Array<double> array3);
+    [Critical] boolean jvmciEnum(MyEnum enum1, MyEnum enum2, Array<MyEnum> enumArray);
 };
 
 callback VoidCallback = void ();
@@ -146,6 +157,7 @@ callback CallbackPassFloat = boolean (float arg);
 callback CallbackPassDouble = boolean (double arg);
 callback CallbackPassString = boolean (string arg);
 callback CallbackPassCallback = boolean (VoidCallback arg);
+callback CallbackPassEnum = boolean (MyEnum arg);
 
 callback CallbackReturnChar = char ();
 callback CallbackReturnBoolean = boolean ();
@@ -157,6 +169,7 @@ callback CallbackReturnFloat = float ();
 callback CallbackReturnDouble = double ();
 callback CallbackReturnString = string ();
 callback CallbackReturnCallback = VoidCallback ();
+callback CallbackReturnEnum = MyEnum ();
 
 // arrays
 
@@ -168,6 +181,7 @@ callback CallbackPassIntArray = boolean (Array<int> arg);
 callback CallbackPassLongArray = boolean (Array<long> arg);
 callback CallbackPassFloatArray = boolean (Array<float> arg);
 callback CallbackPassDoubleArray = boolean (Array<double> arg);
+callback CallbackPassEnumArray = boolean (Array<MyEnum> arg);
 
 callback CallbackReturnCharArray = Array<char> ();
 callback CallbackReturnBooleanArray = Array<boolean> ();
@@ -177,3 +191,11 @@ callback CallbackReturnIntArray = Array<int> ();
 callback CallbackReturnLongArray = Array<long> ();
 callback CallbackReturnFloatArray = Array<float> ();
 callback CallbackReturnDoubleArray = Array<double> ();
+callback CallbackReturnEnumArray = Array<MyEnum> ();
+
+// enum
+
+enum MyEnum {
+    "CASE1",
+    "CASE2"
+};

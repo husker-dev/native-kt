@@ -91,6 +91,35 @@ class CJniArenaPrinter(
 
             #undef KArrayCast
             
+            // Arrays
+            
+            static void ArenaNode__freeEnumArray(Arena* arena, ArenaNode* node){
+                JNIEnv *env = arena->env;
+                (*env)->ReleaseIntArrayElements(env, node->obj, (jint*)node->ptr, 0);
+            }
+
+            KArray Arena__unwrapEnumArray(Arena* arena, jintArray arr) {
+                JNIEnv *env = arena->env;
+                jsize size = (*env)->GetArrayLength(env, arr);
+
+                void* elements = Arena__push(arena,
+                    arr,
+                    (void*)(*env)->GetIntArrayElements(env, arr, NULL),
+                    ArenaNode__freeEnumArray
+                );
+                return (KArray) { elements, size };
+            }
+
+            jintArray Arena__wrapEnumArray(Arena* arena, KArray arr, bool dealloc) {
+                JNIEnv *env = arena->env;
+                jintArray result = (*env)->NewIntArray(env, arr.size);
+                (*env)->SetIntArrayRegion(env, result, 0, arr.size, (jint*)arr.elements);
+
+                if(dealloc && !Arena__contains(arena, (void*)arr.elements))
+                    free((void*)arr.elements);
+                return result;
+            }
+            
             // String
 
             void ArenaNode__freeString(Arena* arena, ArenaNode* node){

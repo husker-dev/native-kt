@@ -1,4 +1,4 @@
-package com.huskerdev.nativekt.foreign;
+package com.huskerdev.nativekt.jvm.foreign;
 
 import java.lang.foreign.*;
 import java.lang.invoke.MethodHandle;
@@ -311,6 +311,35 @@ public class ForeignUtils {
         MemorySegment elements = arrayElements(struct).reinterpret(result.length * C_DOUBLE.byteSize());
         MemorySegment.copy(elements, C_DOUBLE, 0L, result, 0, result.length);
         if(dealloc) freeHandle.invoke(elements);
+        return result;
+    }
+
+    // Array: enum
+
+    public static <T extends Enum<T>> MemorySegment toNativeEnumArray(T[] arr) {
+        return toNativeEnumArray(arr, Arena.global(), Arena.ofAuto());
+    }
+
+    public static <T extends Enum<T>> MemorySegment toNativeEnumArray(T[] arr, Arena elementsArena, Arena structArena) {
+        int[] intEnums = new int[arr.length];
+        for(int i = 0; i < arr.length; i++)
+            intEnums[i] = arr[i].ordinal();
+        return toNativeIntArray(intEnums, elementsArena, structArena);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T extends Enum<T>> T[] toJvmEnumArray(
+            MemorySegment struct,
+            boolean dealloc,
+            Class<T> enumClass
+    ) throws Throwable {
+        int[] ordinals = toJvmIntArray(struct, dealloc);
+
+        // Convert integers to enum values
+        T[] enumConstants = enumClass.getEnumConstants();
+        T[] result = (T[]) java.lang.reflect.Array.newInstance(enumClass, ordinals.length);
+        for(int i = 0; i < ordinals.length; i++)
+            result[i] = enumConstants[ordinals[i]];
         return result;
     }
 

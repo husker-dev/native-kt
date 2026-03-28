@@ -3,10 +3,13 @@ package com.huskerdev.nativekt.printers
 import com.huskerdev.nativekt.utils.asyncFunctionName
 import com.huskerdev.nativekt.utils.globalOperators
 import com.huskerdev.nativekt.utils.printFunctionHeader
+import com.huskerdev.nativekt.utils.printLabel
 import com.huskerdev.nativekt.utils.syncFunctionName
 import com.huskerdev.nativekt.utils.toKotlinType
 import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlCallbackFunction
+import com.huskerdev.webidl.resolver.ResolvedIdlEnum
+import org.gradle.internal.extensions.stdlib.capitalized
 import java.io.File
 
 class KotlinCommonPrinter(
@@ -24,16 +27,6 @@ class KotlinCommonPrinter(
             
             /**
              * Initializes the native library `${moduleName}` synchronously.
-             *
-             * ##### Kotlin/JVM + Android
-             * Loads dynamic library from resources using `System.load(...)`.
-             *
-             * ##### Kotlin/JS
-             * Synchronous loading is not supported!
-             *
-             * ##### Kotlin/Native
-             * Does nothing (yet).
-             *
              * @throws UnsupportedOperationException When called in Kotlin/JS
              */
             @Throws(UnsupportedOperationException::class)
@@ -41,16 +34,6 @@ class KotlinCommonPrinter(
             
             /**
              * Initializes the native library `${moduleName}` asynchronously.
-             *
-             * ##### Kotlin/JVM + Android
-             * Loads dynamic library from resources using `System.load(...)`.
-             *
-             * ##### Kotlin/JS
-             * Loads the `.wasm` file.
-             *
-             * ##### Kotlin/Native
-             * Does nothing (yet).
-             *
              * @param onReady Invoked when the native library is loaded.
              */
             expect fun ${asyncFunctionName(moduleName)}(onReady: () -> Unit)
@@ -61,15 +44,6 @@ class KotlinCommonPrinter(
                 
                 /**
                  * Initializes the native library `${moduleName}` asynchronously.
-                 *
-                 * ##### Kotlin/JVM + Android
-                 * Loads dynamic library from resources using `System.load(...)`.
-                 *
-                 * ##### Kotlin/JS
-                 * Loads the `.wasm` file.
-                 *
-                 * ##### Kotlin/Native
-                 * Does nothing (yet).
                  */
                 expect suspend fun ${asyncFunctionName(moduleName)}()
                 
@@ -78,32 +52,26 @@ class KotlinCommonPrinter(
         builder.append("""
             
             /**
-             * Indicates when library `test` is loaded
+             * Indicates when library `${moduleName}` is loaded
              */
-            expect val isLibTestLoaded: Boolean
+            expect val isLib${moduleName.capitalized()}Loaded: Boolean
             
         """.trimIndent())
 
-        if(idl.callbacks.isNotEmpty()) {
-            builder.append("""
-            
-                /* ================== *\
-                        Callbacks
-                \* ================== */
-                
-            """.trimIndent())
-
-            idl.callbacks.values.forEach { printCallback(builder, it) }
+        if(idl.enums.isNotEmpty()) {
+            printLabel(builder, "Enums")
+            idl.enums.values.forEach { printEnum(builder, it) }
         }
 
-        builder.append("""
-            
-            /* ================== *\
-                    Functions
-            \* ================== */
-            
-        """.trimIndent())
+        if(idl.callbacks.isNotEmpty()) {
+            printLabel(builder, "Callbacks")
+            val maxLength = idl.callbacks.values.maxOf { it.name.length }
 
+            idl.callbacks.values.forEach { printCallback(builder, maxLength, it) }
+            builder.append("\n")
+        }
+
+        printLabel(builder, "Functions")
         idl.globalOperators().forEach {
             builder.append("\n")
             printFunctionHeader(builder, it, isExpect = true)
@@ -113,11 +81,12 @@ class KotlinCommonPrinter(
         target.writeText(builder.toString())
     }
 
-    private fun printCallback(builder: StringBuilder, callbackFunction: ResolvedIdlCallbackFunction) = builder.apply {
+    private fun printCallback(builder: StringBuilder, maxLength: Int, callbackFunction: ResolvedIdlCallbackFunction) = builder.apply {
         // typealias TestCallback = (status: Int) -> Unit
 
         append("\ntypealias ")
         append(callbackFunction.name)
+        append(" ".repeat(maxLength - callbackFunction.name.length))
         append(" = (")
 
         callbackFunction.args.joinTo(builder) {
@@ -125,6 +94,16 @@ class KotlinCommonPrinter(
         }
         append(") -> ")
         append(callbackFunction.type.toKotlinType())
-        append("\n")
+
+    }
+
+    private fun printEnum(builder: StringBuilder, callbackFunction: ResolvedIdlEnum) = builder.apply {
+        append("\nenum class ")
+        append(callbackFunction.name)
+        append(" {\n\t")
+
+        callbackFunction.elements.joinTo(builder, separator = ",\n\t")
+
+        append("\n}\n")
     }
 }

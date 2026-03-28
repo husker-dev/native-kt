@@ -43,3 +43,7 @@ KBoolean callbackArgString(CallbackPassString* arg) {
 KBoolean callbackArgCallback(VoidCallback* pass, CallbackPassCallback* arg) {
     return arg->invoke(arg, pass);
 }
+
+KBoolean callbackArgEnum(CallbackPassEnum* arg) {
+    return arg->invoke(arg, CASE2);
+}

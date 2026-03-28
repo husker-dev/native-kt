@@ -35,3 +35,7 @@ KDouble pingDouble(KDouble arg) {
 KString pingString(KString arg) {
     return arg;
 }
+
+MyEnum pingEnum(MyEnum arg) {
+    return arg;
+}
