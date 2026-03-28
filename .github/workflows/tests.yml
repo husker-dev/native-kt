@@ -134,6 +134,9 @@ jobs:
           ./gradlew :tests:jvmTest --continue
           ./gradlew :tests:jvmTest -DdisableForeign --continue
 
+      - name: Stop Gradle deamon
+        run: ./gradlew --stop
+
       - name: Test Summary
         if: always()
         uses: test-summary/action@v2
