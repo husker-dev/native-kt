@@ -49,13 +49,13 @@ class KotlinJvmJniPrinter(
             builder.append(callback.type.toKotlinType(callbackAsAny = true, enumAsInt = true))
             builder.append(" =\n\t\t\t")
 
-            val callArgs = callback.args.joinToString { castToJvm(it.type, it.name) }
+            val callArgs = callback.args.joinToString { jniCastToJvm(it.type, it.name) }
             val modelArgs = callback.args.joinToString { it.type.toKotlinType() }
             val model = "($modelArgs) -> ${callback.type.toKotlinType()}"
 
             val call = "(_obj as $model)($callArgs)"
 
-            builder.append(castToNative(callback.type, call))
+            builder.append(jniCastToNative(callback.type, call))
             builder.append("\n")
         }
         builder.append("${indent}\t}\n")
@@ -72,33 +72,32 @@ class KotlinJvmJniPrinter(
                 )
                 builder.append(" = \n${indent}\t\t")
 
-                val args = function.args.joinToString { castToNative(it.type, it.name) }
+                val args = function.args.joinToString { jniCastToNative(it.type, it.name) }
                 val call = "${function.name}(${args})"
 
-                builder.append(castToJvm(function.type, call))
+                builder.append(jniCastToJvm(function.type, call))
                 builder.append("\n")
             }
         }
         builder.append("${indent}}")
     }
+}
 
-    private fun castToNative(type: ResolvedIdlType, content: String) = when {
-        type.isEnum() -> "$content.ordinal"
-        type.isEnumArray() -> "$content.run { IntArray(size) { get(it).ordinal } }"
-        else -> content
-    }
+internal fun jniCastToNative(type: ResolvedIdlType, content: String) = when {
+    type.isEnum() -> "$content.ordinal"
+    type.isEnumArray() -> "$content.run { IntArray(size) { get(it).ordinal } }"
+    else -> content
+}
 
-    private fun castToJvm(type: ResolvedIdlType, content: String) = when(type) {
-        is ResolvedIdlType.Default -> when {
-            type.isCallback() -> "$content as ${type.declaration.name}"
-            type.isEnum() -> "${type.declaration.name}.entries[$content]"
-            type.isEnumArray() -> {
-                val param = type.parameters[0] as ResolvedIdlType.Default
-                "$content.run { Array(size) { ${param.declaration.name}.entries[get(it)] } }"
-            }
-            else -> content
+internal fun jniCastToJvm(type: ResolvedIdlType, content: String) = when(type) {
+    is ResolvedIdlType.Default -> when {
+        type.isCallback() -> "$content as ${type.declaration.name}"
+        type.isEnum() -> "${type.declaration.name}.entries[$content]"
+        type.isEnumArray() -> {
+            val param = type.parameters[0] as ResolvedIdlType.Default
+            "$content.run { Array(size) { ${param.declaration.name}.entries[get(it)] } }"
         }
         else -> content
     }
-
+    else -> content
 }

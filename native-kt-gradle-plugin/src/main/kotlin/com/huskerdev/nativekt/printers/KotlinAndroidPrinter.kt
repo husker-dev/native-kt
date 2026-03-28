@@ -1,14 +1,14 @@
 package com.huskerdev.nativekt.printers
 
 import com.huskerdev.nativekt.printers.jvm.KotlinJvmJniPrinter
+import com.huskerdev.nativekt.printers.jvm.jniCastToJvm
+import com.huskerdev.nativekt.printers.jvm.jniCastToNative
 import com.huskerdev.nativekt.utils.asyncFunctionName
 import com.huskerdev.nativekt.utils.globalOperators
-import com.huskerdev.nativekt.utils.isCallback
 import com.huskerdev.nativekt.utils.printFunctionHeader
 import com.huskerdev.nativekt.utils.syncFunctionName
 import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlOperation
-import com.huskerdev.webidl.resolver.ResolvedIdlType
 import org.gradle.internal.extensions.stdlib.capitalized
 import java.io.File
 
@@ -73,12 +73,13 @@ class KotlinAndroidPrinter(
         append('\n')
         printFunctionHeader(builder, function, isActual = expectActual)
         append(" = \n\t$jniClassName.")
-        append(function.name)
-        append("(")
-        function.args.joinTo(this) { it.name }
-        append(")")
-        if(function.type.isCallback())
-            append(" as ${(function.type as ResolvedIdlType.Default).declaration.name}")
+
+        val args = function.args.joinToString {
+            jniCastToNative(it.type, it.name)
+        }
+        val call = "$jniClassName.${function.name}($args)"
+
+        append(jniCastToJvm(function.type, call))
         append("\n")
     }
 }
