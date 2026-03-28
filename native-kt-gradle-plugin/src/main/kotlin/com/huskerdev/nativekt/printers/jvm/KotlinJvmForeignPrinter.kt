@@ -44,17 +44,23 @@ class KotlinJvmForeignPrinter(
     }
 
     private fun printFunctionHandle(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
+        val isCriticalAlt = function.isCritical() && function.isCriticalCapable() && (function.hasString() || function.hasArray())
+
         append("${indent}\tprivate val handle")
         append(function.name.capitalized())
         append($$" = ForeignUtils.lookup(\"${prefix}")
         append(function.name)
+        if(isCriticalAlt)
+            append("_")
         append("\", ")
         append(function.isCritical())
         append(", ")
 
         val args = arrayListOf(function.type.toForeignType())
-        args += function.args.map {
-            it.type.toForeignType()
+        args += function.args.flatMap {
+            if(isCriticalAlt && it.type.isString())
+                listOf("ForeignUtils.C_ADDRESS", "ForeignUtils.C_INT")
+            else listOf(it.type.toForeignType())
         }
         args.joinTo(builder)
         append(")\n")
@@ -83,8 +89,12 @@ class KotlinJvmForeignPrinter(
         if(function.type.isString() || function.type.isArray())
             args += "arena.heap as SegmentAllocator"
 
-        args += function.args.map {
-            castToNative(it.type, it.name, function.isCritical(), it.isDealloc(), useArena)
+        args += function.args.flatMap {
+            val casted = castToNative(it.type, it.name, function.isCritical(), it.isDealloc(), useArena)
+
+            if(it.type.isString() && function.isCritical())
+                listOf(casted, "${it.name}.length")
+            else listOf(casted)
         }
 
         val call = "(handle${function.name.capitalized()}.invokeExact(${args.joinToString()}) as $type)"
