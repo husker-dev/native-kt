@@ -13,6 +13,7 @@ namespace global {
     boolean passDouble(double arg);
     boolean passString(string arg);
     boolean passEnum(MyEnum arg);
+    boolean passStruct(MyStruct arg);
 
     // Primitives: return
     void returnVoid();
@@ -27,6 +28,7 @@ namespace global {
     string returnStringLiteral();
     [Dealloc] string returnString();
     MyEnum returnEnum();
+    MyStruct returnStruct();
 
     // Primitives: ping
     char pingChar(char arg);
@@ -39,6 +41,7 @@ namespace global {
     double pingDouble(double arg);
     [Dealloc] string pingString(string arg);
     MyEnum pingEnum(MyEnum arg);
+    MyStruct pingStruct(MyStruct arg);
 
     // Primitives: callback arg
     void callbackVoid(VoidCallback arg);
@@ -53,6 +56,7 @@ namespace global {
     boolean callbackArgString(CallbackPassString arg);
     boolean callbackArgCallback(VoidCallback pass, CallbackPassCallback arg);
     boolean callbackArgEnum(CallbackPassEnum arg);
+    boolean callbackArgStruct(CallbackPassStruct arg);
 
     // Primitives: callback return
     boolean callbackReturnChar(CallbackReturnChar arg);
@@ -66,6 +70,7 @@ namespace global {
     boolean callbackReturnString(CallbackReturnString arg);
     VoidCallback callbackReturnCallback(CallbackReturnCallback arg);
     boolean callbackReturnEnum(CallbackReturnEnum arg);
+    boolean callbackReturnStruct(CallbackReturnStruct arg);
 
     // Arrays: pass
     boolean passCharArray(Array<char> arg);
@@ -77,6 +82,7 @@ namespace global {
     boolean passFloatArray(Array<float> arg);
     boolean passDoubleArray(Array<double> arg);
     boolean passEnumArray(Array<MyEnum> arg);
+    boolean passStructArray(Array<MyStruct> arg);
 
     // Arrays: return
     [Dealloc] Array<char> returnCharArray();
@@ -88,6 +94,7 @@ namespace global {
     [Dealloc] Array<float> returnFloatArray();
     [Dealloc] Array<double> returnDoubleArray();
     [Dealloc] Array<MyEnum> returnEnumArray();
+    [Dealloc] Array<MyStruct> returnStructArray();
 
     // Arrays: ping
     Array<char> pingCharArray(Array<char> arg);
@@ -99,6 +106,7 @@ namespace global {
     Array<float> pingFloatArray(Array<float> arg);
     Array<double> pingDoubleArray(Array<double> arg);
     Array<MyEnum> pingEnumArray(Array<MyEnum> arg);
+    Array<MyStruct> pingStructArray(Array<MyStruct> arg);
 
      // Arrays: callback arg
     boolean callbackArgCharArray(CallbackPassCharArray arg);
@@ -110,6 +118,7 @@ namespace global {
     boolean callbackArgFloatArray(CallbackPassFloatArray arg);
     boolean callbackArgDoubleArray(CallbackPassDoubleArray arg);
     boolean callbackArgEnumArray(CallbackPassEnumArray arg);
+    boolean callbackArgStructArray(CallbackPassStructArray arg);
 
     // Arrays: callback arg
     boolean callbackReturnCharArray(CallbackReturnCharArray arg);
@@ -121,6 +130,7 @@ namespace global {
     boolean callbackReturnFloatArray(CallbackReturnFloatArray arg);
     boolean callbackReturnDoubleArray(CallbackReturnDoubleArray arg);
     boolean callbackReturnEnumArray(CallbackReturnEnumArray arg);
+    boolean callbackReturnStructArray(CallbackReturnStructArray arg);
 
     // JVMCI
     [Critical] boolean jvmci1();
@@ -158,6 +168,7 @@ callback CallbackPassDouble = boolean (double arg);
 callback CallbackPassString = boolean (string arg);
 callback CallbackPassCallback = boolean (VoidCallback arg);
 callback CallbackPassEnum = boolean (MyEnum arg);
+callback CallbackPassStruct = boolean (MyStruct arg);
 
 callback CallbackReturnChar = char ();
 callback CallbackReturnBoolean = boolean ();
@@ -170,6 +181,7 @@ callback CallbackReturnDouble = double ();
 callback CallbackReturnString = string ();
 callback CallbackReturnCallback = VoidCallback ();
 callback CallbackReturnEnum = MyEnum ();
+callback CallbackReturnStruct = MyStruct ();
 
 // arrays
 
@@ -182,6 +194,7 @@ callback CallbackPassLongArray = boolean (Array<long> arg);
 callback CallbackPassFloatArray = boolean (Array<float> arg);
 callback CallbackPassDoubleArray = boolean (Array<double> arg);
 callback CallbackPassEnumArray = boolean (Array<MyEnum> arg);
+callback CallbackPassStructArray = boolean (Array<MyStruct> arg);
 
 callback CallbackReturnCharArray = Array<char> ();
 callback CallbackReturnBooleanArray = Array<boolean> ();
@@ -192,10 +205,28 @@ callback CallbackReturnLongArray = Array<long> ();
 callback CallbackReturnFloatArray = Array<float> ();
 callback CallbackReturnDoubleArray = Array<double> ();
 callback CallbackReturnEnumArray = Array<MyEnum> ();
+callback CallbackReturnStructArray = Array<MyStruct> ();
 
 // enum
 
 enum MyEnum {
     "CASE1",
     "CASE2"
+};
+
+// struct
+
+dictionary ParentStruct {
+    int a;
+    int b;
+};
+
+dictionary MyStruct: ParentStruct {
+    int c;
+    int d;
+};
+
+dictionary ChildStruct: MyStruct {
+    int e;
+    int f;
 };

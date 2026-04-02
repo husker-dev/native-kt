@@ -45,5 +45,9 @@ KBoolean callbackArgCallback(VoidCallback* pass, CallbackPassCallback* arg) {
 }
 
 KBoolean callbackArgEnum(CallbackPassEnum* arg) {
-    return arg->invoke(arg, CASE2);
+    return arg->invoke(arg, MyEnum_CASE2);
+}
+
+KBoolean callbackArgStruct(CallbackPassStruct* arg) {
+    return arg->invoke(arg, (MyStruct){ 1, 2, 3, 4 });
 }

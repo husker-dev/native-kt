@@ -6,7 +6,9 @@ import com.huskerdev.webidl.resolver.BuiltinIdlDeclaration
 import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlCallbackFunction
 import com.huskerdev.webidl.resolver.ResolvedIdlDeclaration
+import com.huskerdev.webidl.resolver.ResolvedIdlDictionary
 import com.huskerdev.webidl.resolver.ResolvedIdlEnum
+import com.huskerdev.webidl.resolver.ResolvedIdlField
 import com.huskerdev.webidl.resolver.ResolvedIdlOperation
 import com.huskerdev.webidl.resolver.ResolvedIdlType
 import com.huskerdev.webidl.resolver.WebIDLBuiltinKind
@@ -149,7 +151,8 @@ fun ResolvedIdlType.toCDefType(
                         WebIDLBuiltinKind.STRING -> "KStringArray"
                         else -> throw UnsupportedOperationException()
                     }
-                    is ResolvedIdlEnum -> "KArray"
+                    is ResolvedIdlEnum,
+                    is ResolvedIdlDictionary -> "KArray"
                     else -> throw UnsupportedOperationException(declaration.name)
                 }
             }
@@ -157,6 +160,7 @@ fun ResolvedIdlType.toCDefType(
         }
         is ResolvedIdlEnum -> if(enumAsInt) "KInt" else declaration.name
         is ResolvedIdlCallbackFunction -> "${declaration.name}*"
+        is ResolvedIdlDictionary -> declaration.name
         else -> throw UnsupportedOperationException(declaration.name)
     }
     else -> throw UnsupportedOperationException(toString())
@@ -284,6 +288,16 @@ fun ResolvedIdlOperation.hasArray(): Boolean =
 
 fun IdlResolver.globalOperators() =
     namespaces.values.flatMap { it.operations }
+
+fun ResolvedIdlDictionary.allFields(): List<ResolvedIdlField.Declaration> {
+    val result = arrayListOf<ResolvedIdlField.Declaration>()
+    var curDict: ResolvedIdlDictionary? = this
+    while(curDict != null) {
+        result.addAll(0, curDict.fields)
+        curDict = curDict.implements
+    }
+    return result
+}
 
 fun functionHeader(
     function: ResolvedIdlOperation,

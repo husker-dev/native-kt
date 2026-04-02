@@ -48,5 +48,9 @@ KString returnString() {
 }
 
 MyEnum returnEnum() {
-    return CASE2;
+    return MyEnum_CASE2;
+}
+
+MyStruct returnStruct() {
+    return (MyStruct){ 1, 2, 3, 4 };
 }

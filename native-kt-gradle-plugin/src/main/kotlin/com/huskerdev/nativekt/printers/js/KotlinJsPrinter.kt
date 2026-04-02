@@ -229,13 +229,17 @@ class KotlinJsPrinter(
                     if(useArena) "arena.allocCStr($content)"
                     else "allocCStr(_module, $content)"
                 WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
-                    if(declaration is BuiltinIdlDeclaration) {
-                        val name = declaration.kind.simpleName()
-                        if(useArena) "arena.toNative${name}Array($content)"
-                        else "toNative${name}Array(_module, $content)"
-                    } else if(declaration is ResolvedIdlEnum) {
-                        "toNativeEnumArray(_module, $content)"
-                    } else throw UnsupportedOperationException(type.toString())
+                    when (declaration) {
+                        is BuiltinIdlDeclaration -> {
+                            val name = declaration.kind.simpleName()
+                            if (useArena) "arena.toNative${name}Array($content)"
+                            else "toNative${name}Array(_module, $content)"
+                        }
+                        is ResolvedIdlEnum ->
+                            "toNativeEnumArray(_module, $content)"
+                        is ResolvedIdlDictionary -> content
+                        else -> throw UnsupportedOperationException(type.toString())
+                    }
                 }
                 else -> content
             }
@@ -243,6 +247,7 @@ class KotlinJsPrinter(
             is ResolvedIdlCallbackFunction ->
                 if(dealloc) "arena.callback($content.wrap${decl.name}())"
                 else "$content.wrap${decl.name}()"
+            is ResolvedIdlDictionary -> content
             else -> throw UnsupportedOperationException(type.toString())
         }
         is ResolvedIdlType.Union -> throw UnsupportedOperationException(type.toString())
@@ -258,13 +263,18 @@ class KotlinJsPrinter(
                     if(useArena) "arena.unwrapCStr($content, $dealloc)"
                     else "unwrapCStr(_module, $content, $dealloc)"
                 WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
-                    if(declaration is BuiltinIdlDeclaration) {
-                        val name = declaration.kind.simpleName()
-                        if(useArena) "arena.toKotlin${name}Array($content, $dealloc)"
-                        else "toKotlin${name}Array(_module, $content, $dealloc)"
-                    } else if(declaration is ResolvedIdlEnum) {
-                        "toKotlinEnumArray(_module, $content, $dealloc, ${declaration.name}.entries::get)"
-                    } else throw UnsupportedOperationException(type.toString())
+                    when (declaration) {
+                        is BuiltinIdlDeclaration -> {
+                            val name = declaration.kind.simpleName()
+                            if (useArena) "arena.toKotlin${name}Array($content, $dealloc)"
+                            else "toKotlin${name}Array(_module, $content, $dealloc)"
+                        }
+                        is ResolvedIdlEnum ->
+                            "toKotlinEnumArray(_module, $content, $dealloc, ${declaration.name}.entries::get)"
+                        is ResolvedIdlDictionary ->
+                            content
+                        else -> throw UnsupportedOperationException(type.toString())
+                    }
                 }
                 else -> content
             }
@@ -272,6 +282,7 @@ class KotlinJsPrinter(
             is ResolvedIdlCallbackFunction ->
                 if(useArena) "arena.unwrapCallback<${decl.name}>($content, $dealloc)"
                 else "unwrapCallback<${decl.name}>(_module, $content, $dealloc)"
+            is ResolvedIdlDictionary -> content
             else -> throw UnsupportedOperationException(type.toString())
         }
         else -> throw UnsupportedOperationException(type.toString())

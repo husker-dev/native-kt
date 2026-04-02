@@ -1,5 +1,6 @@
 package com.huskerdev.nativekt.printers
 
+import com.huskerdev.nativekt.utils.allFields
 import com.huskerdev.nativekt.utils.asyncFunctionName
 import com.huskerdev.nativekt.utils.globalOperators
 import com.huskerdev.nativekt.utils.printFunctionHeader
@@ -8,6 +9,7 @@ import com.huskerdev.nativekt.utils.syncFunctionName
 import com.huskerdev.nativekt.utils.toKotlinType
 import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlCallbackFunction
+import com.huskerdev.webidl.resolver.ResolvedIdlDictionary
 import com.huskerdev.webidl.resolver.ResolvedIdlEnum
 import org.gradle.internal.extensions.stdlib.capitalized
 import java.io.File
@@ -63,6 +65,11 @@ class KotlinCommonPrinter(
             idl.enums.values.forEach { printEnum(builder, it) }
         }
 
+        if(idl.dictionaries.isNotEmpty()) {
+            printLabel(builder, "Structs")
+            idl.dictionaries.values.forEach { printDictionary(builder, it) }
+        }
+
         if(idl.callbacks.isNotEmpty()) {
             printLabel(builder, "Callbacks")
             val maxLength = idl.callbacks.values.maxOf { it.name.length }
@@ -105,5 +112,61 @@ class KotlinCommonPrinter(
         callbackFunction.elements.joinTo(builder, separator = ",\n\t")
 
         append("\n}\n")
+    }
+
+    private fun printDictionary(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
+        append("\ninterface ")
+        append(dictionary.name)
+        if(dictionary.implements != null)
+            append(": ").append(dictionary.implements!!.name)
+        append(" {\n\t")
+
+        // Interface fields
+        dictionary.fields.joinTo(builder, separator = "\n\t") { field ->
+            "val ${field.name}: ${field.type.toKotlinType()}"
+        }
+
+        // Companion
+        append("\n\n\tcompanion object {\n\t\t")
+        append("@kotlin.jvm.JvmStatic\n\t\t")
+        append("@kotlin.jvm.JvmName(\"of\")\n\t\t")
+        append("operator fun invoke(")
+        dictionary.allFields().joinTo(builder) { field ->
+            "${field.name}: ${field.type.toKotlinType()}"
+        }
+        append("): ")
+        append(dictionary.name)
+        append(" =\n\t\t\t")
+        append("Impl(")
+        dictionary.allFields().joinTo(builder) { field -> field.name }
+        append(")")
+        append("\n\t}\n")
+
+        // Impl (data class)
+        append("\n\t@kotlin.jvm.JvmRecord")
+        append("\n\tdata class Impl(\n\t\t")
+        dictionary.allFields().joinTo(builder, separator = ",\n\t\t") { field ->
+            "override val ${field.name}: ${field.type.toKotlinType()}"
+        }
+        append("\n\t): ")
+        append(dictionary.name)
+        append("\n}\n")
+
+        /*
+        interface ParentStruct {
+            val a: Int
+            val b: Int
+
+            companion object {
+                operator fun invoke(a: Int, b: Int): ParentStruct =
+                    Impl(a, b)
+            }
+
+            data class Impl(
+                override val a: Int,
+                override val b: Int
+            ): ParentStruct
+        }
+         */
     }
 }

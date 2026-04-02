@@ -59,7 +59,14 @@ KDoubleArray returnDoubleArray() {
 
 KArray returnEnumArray() {
     MyEnum* elements = malloc(2 * sizeof(MyEnum));
-    elements[0] = CASE1;
-    elements[1] = CASE2;
+    elements[0] = MyEnum_CASE1;
+    elements[1] = MyEnum_CASE2;
+    return makeKArray(elements, 2);
+}
+
+KArray returnStructArray() {
+    MyStruct* elements = malloc(2 * sizeof(MyStruct));
+    elements[0] = (MyStruct){ 1, 2, 3, 4 };
+    elements[1] = (MyStruct){ 5, 6, 7, 8 };
     return makeKArray(elements, 2);
 }

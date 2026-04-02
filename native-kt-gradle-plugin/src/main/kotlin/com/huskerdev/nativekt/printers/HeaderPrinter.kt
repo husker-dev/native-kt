@@ -1,10 +1,12 @@
 package com.huskerdev.nativekt.printers
 
+import com.huskerdev.nativekt.utils.allFields
 import com.huskerdev.nativekt.utils.globalOperators
 import com.huskerdev.nativekt.utils.printLabel
 import com.huskerdev.nativekt.utils.toCDefType
 import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlCallbackFunction
+import com.huskerdev.webidl.resolver.ResolvedIdlDictionary
 import com.huskerdev.webidl.resolver.ResolvedIdlEnum
 import com.huskerdev.webidl.resolver.ResolvedIdlOperation
 import java.io.File
@@ -28,6 +30,7 @@ class HeaderPrinter(
 
         if(idl.callbacks.isNotEmpty()) {
             printLabel(builder, "Type defs")
+            idl.dictionaries.values.forEach { printStructTypedef(builder, it) }
             idl.callbacks.values.forEach { printCallbackTypedef(builder, it) }
             builder.append("\n")
         }
@@ -36,6 +39,12 @@ class HeaderPrinter(
             builder.append("\n")
             printLabel(builder, "Enums")
             idl.enums.values.forEach { printEnum(builder, it) }
+        }
+
+        if(idl.dictionaries.isNotEmpty()) {
+            builder.append("\n")
+            printLabel(builder, "Structs")
+            idl.dictionaries.values.forEach { printStruct(builder, it) }
         }
 
         printLabel(builder, "Functions")
@@ -68,10 +77,34 @@ class HeaderPrinter(
 
     private fun printEnum(builder: StringBuilder, enum: ResolvedIdlEnum) = builder.apply {
         append("\ntypedef enum {\n\t")
-        enum.elements.joinTo(builder, separator = ",\n\t")
+        enum.elements.joinTo(builder, separator = ",\n\t") {
+            "${enum.name}_${it}"
+        }
         append("\n} ")
         append(enum.name)
         append(";\n")
+    }
+
+    private fun printStruct(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
+        append("\nstruct ")
+        append(dictionary.name)
+        append(" {")
+        if(dictionary.implements != null)
+            append(" // : ").append(dictionary.implements!!.name)
+        append("\n\t")
+
+        dictionary.allFields().joinTo(builder, separator = "\n\t") { field ->
+            "${field.type.toCDefType()} ${field.name};"
+        }
+        append("\n};\n")
+    }
+
+    private fun printStructTypedef(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
+        append("\ntypedef struct ")
+        append(dictionary.name)
+        append(" ")
+        append(dictionary.name)
+        append(";")
     }
 
     private fun printCallbackTypedef(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {

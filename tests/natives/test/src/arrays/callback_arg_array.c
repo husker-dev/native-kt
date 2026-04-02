@@ -33,6 +33,13 @@ KBoolean callbackArgDoubleArray(CallbackPassDoubleArray* arg) {
 }
 
 KBoolean callbackArgEnumArray(CallbackPassEnumArray* arg) {
-    return arg->invoke(arg, makeKArray((MyEnum[]) { CASE1, CASE2 }, 2));
+    return arg->invoke(arg, makeKArray((MyEnum[]) { MyEnum_CASE1, MyEnum_CASE2 }, 2));
+}
+
+KBoolean callbackArgStructArray(CallbackPassStructArray* arg) {
+    return arg->invoke(arg, makeKArray((MyStruct[]) {
+        (MyStruct){ 1, 2, 3, 4 },
+        (MyStruct){ 5, 6, 7, 8 },
+    }, 2));
 }
 

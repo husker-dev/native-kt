@@ -35,3 +35,7 @@ KDoubleArray pingDoubleArray(KDoubleArray arg) {
 KArray pingEnumArray(KArray arg) {
     return arg;
 }
+
+KArray pingStructArray(KArray arg) {
+    return arg;
+}

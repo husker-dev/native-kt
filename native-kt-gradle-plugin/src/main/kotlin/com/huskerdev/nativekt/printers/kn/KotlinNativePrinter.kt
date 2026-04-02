@@ -319,14 +319,19 @@ class KotlinNativePrinter(
                     if(useArena) "$content.unwrapKString(arena, $dealloc)"
                     else "$content.unwrapKString($dealloc)"
                 WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
-                    if(declaration is BuiltinIdlDeclaration) {
-                        val name = declaration.kind.simpleName()
-                        if(useArena) "toKotlin${name}Array($content, arena, $dealloc)"
-                        else "toKotlin${name}Array($content, $dealloc)"
-                    } else if(declaration is ResolvedIdlEnum) {
-                        if(useArena) "toKotlinEnumArray($content, arena, $dealloc, _${declaration.name}ToKt)"
-                        else "toKotlinEnumArray($content, $dealloc, _${declaration.name}ToKt)"
-                    } else throw UnsupportedOperationException(type.toString())
+                    when (declaration) {
+                        is BuiltinIdlDeclaration -> {
+                            val name = declaration.kind.simpleName()
+                            if (useArena) "toKotlin${name}Array($content, arena, $dealloc)"
+                            else "toKotlin${name}Array($content, $dealloc)"
+                        }
+                        is ResolvedIdlEnum -> {
+                            if (useArena) "toKotlinEnumArray($content, arena, $dealloc, _${declaration.name}ToKt)"
+                            else "toKotlinEnumArray($content, $dealloc, _${declaration.name}ToKt)"
+                        }
+                        is ResolvedIdlDictionary -> content
+                        else -> throw UnsupportedOperationException(type.toString())
+                    }
                 }
                 else -> content
             }
@@ -334,6 +339,7 @@ class KotlinNativePrinter(
                 if(useArena) "arena.unwrapCallback<${decl.name}>($content!!.reinterpret(), $dealloc)"
                 else "unwrapCallback<${decl.name}>($content!!.reinterpret(), $dealloc)"
             is ResolvedIdlEnum -> "${decl.name}.entries[${content}.ordinal]"
+            is ResolvedIdlDictionary -> content
             else -> throw UnsupportedOperationException(type.toString())
         }
         else -> throw UnsupportedOperationException(type.toString())
@@ -348,14 +354,19 @@ class KotlinNativePrinter(
                     else "$content.makeKString()"
                 WebIDLBuiltinKind.CHAR -> "$content.code.toUShort()"
                 WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
-                    if(declaration is BuiltinIdlDeclaration) {
-                        val name = declaration.kind.simpleName()
-                        if(useArena) "toNative${name}Array($content, arena)"
-                        else "toNative${name}Array($content)"
-                    } else if(declaration is ResolvedIdlEnum) {
-                        if(useArena) "toNativeEnumArray($content, arena, sizeOf<${cinteropPath}.${declaration.name}.Var>(), _${declaration.name}ToNative)"
-                        else "toNativeEnumArray($content, sizeOf<${cinteropPath}.${declaration.name}.Var>(), _${declaration.name}ToNative)"
-                    } else throw UnsupportedOperationException(type.toString())
+                    when (declaration) {
+                        is BuiltinIdlDeclaration -> {
+                            val name = declaration.kind.simpleName()
+                            if (useArena) "toNative${name}Array($content, arena)"
+                            else "toNative${name}Array($content)"
+                        }
+                        is ResolvedIdlEnum -> {
+                            if (useArena) "toNativeEnumArray($content, arena, sizeOf<${cinteropPath}.${declaration.name}.Var>(), _${declaration.name}ToNative)"
+                            else "toNativeEnumArray($content, sizeOf<${cinteropPath}.${declaration.name}.Var>(), _${declaration.name}ToNative)"
+                        }
+                        is ResolvedIdlDictionary -> content
+                        else -> throw UnsupportedOperationException(type.toString())
+                    }
                 }
                 else -> content
             }
@@ -363,6 +374,7 @@ class KotlinNativePrinter(
             is ResolvedIdlCallbackFunction ->
                 if(dealloc) "arena.callback($content.wrap${decl.name}())"
                 else "$content.wrap${decl.name}()"
+            is ResolvedIdlDictionary -> content
             else -> throw UnsupportedOperationException(type.toString())
         }
         else -> throw UnsupportedOperationException(type.toString())

@@ -39,3 +39,7 @@ KString pingString(KString arg) {
 MyEnum pingEnum(MyEnum arg) {
     return arg;
 }
+
+MyStruct pingStruct(MyStruct arg) {
+    return arg;
+}

@@ -1,5 +1,7 @@
 package arrays
 
+import natives.test.ChildStruct
+import natives.test.ChildStruct.Companion.invoke
 import natives.test.MyEnum
 import withLib
 import kotlin.test.Test
@@ -50,5 +52,9 @@ class ReturnArray {
     @Test
     fun returnEnumArray() = withLib {
         assertContentEquals(arrayOf(MyEnum.CASE1, MyEnum.CASE2), natives.test.returnEnumArray())
+
+
+        val a = ChildStruct(1, 1, 1, 1, 1, 1)
+
     }
 }

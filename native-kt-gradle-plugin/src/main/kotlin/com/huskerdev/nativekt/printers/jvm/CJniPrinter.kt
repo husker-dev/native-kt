@@ -135,6 +135,7 @@ internal fun castJniToJava(type: ResolvedIdlType, content: String, dealloc: Bool
                             if (useArena) "Arena__wrapEnumArray(&arena, $content, $dealloc)"
                             else "JNI_toJvmEnumArray(env, $content, $dealloc)"
                         }
+                        is ResolvedIdlDictionary -> "JNI_STRUCT_ARRAY_toJvm${declaration.name}(env, $content, $dealloc)"
                         else -> throw UnsupportedOperationException(type.toString())
                     }
                 }
@@ -142,6 +143,7 @@ internal fun castJniToJava(type: ResolvedIdlType, content: String, dealloc: Bool
             }
             is ResolvedIdlCallbackFunction -> "JNI_toJvmCallback(env, (JNI_Callback*)$content, $dealloc)"
             is ResolvedIdlEnum -> content
+            is ResolvedIdlDictionary -> "JNI_STRUCT_toJvm${decl.name}(env, $content)"
             else -> throw UnsupportedOperationException(type.toString())
         }
         else -> throw UnsupportedOperationException(type.toString())
@@ -166,6 +168,7 @@ internal fun castJavaToJNI(type: ResolvedIdlType, content: String, critical: Boo
                             if (useArena) "Arena__unwrapEnumArray(&arena, $content)"
                             else "JNI_toNativeEnumArray(env, $content)"
                         }
+                        is ResolvedIdlDictionary -> "JNI_STRUCT_ARRAY_toNative${declaration.name}(env, $content)"
                         else -> throw UnsupportedOperationException(type.toString())
                     }
                 }
@@ -175,6 +178,7 @@ internal fun castJavaToJNI(type: ResolvedIdlType, content: String, critical: Boo
                 if(dealloc) "(${decl.name}*)Arena__callback(&arena, (JNI_Callback*)JNI_wrap${decl.name}(env, $content))"
                 else "JNI_wrap${decl.name}(env, $content)"
             is ResolvedIdlEnum -> content
+            is ResolvedIdlDictionary -> "JNI_STRUCT_toNative${decl.name}(env, $content)"
             else -> throw UnsupportedOperationException(type.toString())
         }
         else -> throw UnsupportedOperationException(type.toString())

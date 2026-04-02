@@ -205,6 +205,7 @@ class KotlinJvmForeignPrinter(
                             if (useArena) "arena.toJvmEnumArray($content, $dealloc, ${declaration.name}::class.java)"
                             else "ForeignUtils.toJvmEnumArray($content, $dealloc, ${declaration.name}::class.java)"
                         }
+                        is ResolvedIdlDictionary -> content
                         else -> throw UnsupportedOperationException(type.toString())
                     }
                 }
@@ -214,6 +215,7 @@ class KotlinJvmForeignPrinter(
                 if(useArena) "arena.asCallback<${type.declaration.name}>($content, $dealloc)"
                 else "ForeignUtils.asCallback<${type.declaration.name}>($content, $dealloc)"
             is ResolvedIdlEnum -> "${type.declaration.name}.entries[$content]"
+            is ResolvedIdlDictionary -> content
             else -> throw UnsupportedOperationException(type.toString())
         }
         else -> throw UnsupportedOperationException(type.toString())
@@ -238,6 +240,7 @@ class KotlinJvmForeignPrinter(
                             if (useArena) "arena.toNativeEnumArray($content)"
                             else "ForeignUtils.toNativeEnumArray($content)"
                         }
+                        is ResolvedIdlDictionary -> content
                         else -> throw UnsupportedOperationException(type.toString())
                     }
                 }
@@ -247,6 +250,7 @@ class KotlinJvmForeignPrinter(
                 if(dealloc) "arena.callback($content.wrap${type.declaration.name}())"
                 else "$content.wrap${type.declaration.name}()"
             is ResolvedIdlEnum -> "$content.ordinal"
+            is ResolvedIdlDictionary -> content
             else -> throw UnsupportedOperationException(type.toString())
         }
         else -> throw UnsupportedOperationException(type.toString())
