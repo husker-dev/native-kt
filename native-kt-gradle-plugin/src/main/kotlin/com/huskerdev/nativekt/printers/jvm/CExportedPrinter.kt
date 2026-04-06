@@ -84,8 +84,8 @@ class CExportedPrinter(
             is ResolvedIdlType.Void -> name
             is ResolvedIdlType.Default -> when(val decl = type.declaration) {
                 is BuiltinIdlDeclaration -> when(decl.kind) {
-                    WebIDLBuiltinKind.LIST -> "make${type.toCDefType()}(__arg_${name}, __length_${name})"
-                    WebIDLBuiltinKind.STRING -> "makeKString(__arg_${name}, __length_${name})"
+                    WebIDLBuiltinKind.LIST -> "${type.toCDefType()}_new(__arg_${name}, __length_${name})"
+                    WebIDLBuiltinKind.STRING -> "KString_new(__arg_${name}, __length_${name})"
                     else -> "__arg_$name"
                 }
                 else -> "__arg_$name"

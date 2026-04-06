@@ -105,7 +105,6 @@ natives {
     useJvmRecord = false
 
     useForeignApi = false
-    useJVMCI = false
 
     if(project.hasProperty("disableForeign")) {
         println("Foreign disabled")
