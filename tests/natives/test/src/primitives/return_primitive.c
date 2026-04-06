@@ -38,19 +38,19 @@ KDouble returnDouble() {
 }
 
 KString returnStringLiteral() {
-    return makeKString("test string", 11);
+    return KString_new("test string", 11);
 }
 
 KString returnString() {
     char* str = malloc(100);
     strcpy(str, "test string");
-    return makeKString(str, 11);
+    return KString_new(str, 11);
 }
 
 MyEnum returnEnum() {
     return MyEnum_CASE2;
 }
 
-MyStruct returnStruct() {
-    return (MyStruct){ 1, 2, 3, 4 };
+MyDictionary* returnDictionary() {
+    return MyDictionary_new(1, 2, 3 ,4);
 }

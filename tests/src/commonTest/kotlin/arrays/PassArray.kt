@@ -1,5 +1,6 @@
 package arrays
 
+import natives.test.MyDictionary
 import natives.test.MyEnum
 import withLib
 import kotlin.test.Test
@@ -50,5 +51,13 @@ class PassArray {
     @Test
     fun passEnumArray() = withLib {
         assertTrue(natives.test.passEnumArray(arrayOf(MyEnum.CASE1, MyEnum.CASE2)))
+    }
+
+    @Test
+    fun passDictionaryArray() = withLib {
+        assertTrue(natives.test.passDictionaryArray(arrayOf(
+            MyDictionary(1, 2, 3, 4),
+            MyDictionary(5, 6, 7, 8)
+        )))
     }
 }

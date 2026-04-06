@@ -40,6 +40,6 @@ MyEnum pingEnum(MyEnum arg) {
     return arg;
 }
 
-MyStruct pingStruct(MyStruct arg) {
+MyDictionary* pingDictionary(MyDictionary* arg) {
     return arg;
 }

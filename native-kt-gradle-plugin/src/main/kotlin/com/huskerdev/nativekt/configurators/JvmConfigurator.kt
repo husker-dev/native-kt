@@ -110,7 +110,7 @@ internal fun configureJvm(
 
         it.srcFile = srcDir
             .resolve(module.classPath.replace(".", "/"))
-            .resolve("${module.name}.native.kt").absolutePath
+            .resolve("${module.name}.jvm.kt").absolutePath
         it.cmakeDir = cmakeDir.absolutePath
         it.cmakeBuildDir = cmakeBuildDir.absolutePath
         it.jdkIncludeDir = jdkIncludeDir.absolutePath

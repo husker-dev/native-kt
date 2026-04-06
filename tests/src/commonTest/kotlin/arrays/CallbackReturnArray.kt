@@ -1,5 +1,6 @@
 package arrays
 
+import natives.test.MyDictionary
 import natives.test.MyEnum
 import withLib
 import kotlin.test.Test
@@ -50,5 +51,15 @@ class CallbackReturnArray {
     @Test
     fun callbackReturnEnumArray() = withLib {
         assertTrue(natives.test.callbackReturnEnumArray { arrayOf(MyEnum.CASE1, MyEnum.CASE2) })
+    }
+
+    @Test
+    fun callbackReturnDictionaryArray() = withLib {
+        assertTrue(natives.test.callbackReturnDictionaryArray {
+            arrayOf(
+                MyDictionary(1, 2, 3, 4),
+                MyDictionary(5, 6, 7, 8)
+            )
+        })
     }
 }

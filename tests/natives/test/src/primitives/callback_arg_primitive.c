@@ -37,7 +37,7 @@ KBoolean callbackArgDouble(CallbackPassDouble* arg) {
 }
 
 KBoolean callbackArgString(CallbackPassString* arg) {
-    return arg->invoke(arg, makeKString("test string", 11));
+    return arg->invoke(arg, KString_new("test string", 11));
 }
 
 KBoolean callbackArgCallback(VoidCallback* pass, CallbackPassCallback* arg) {
@@ -48,6 +48,6 @@ KBoolean callbackArgEnum(CallbackPassEnum* arg) {
     return arg->invoke(arg, MyEnum_CASE2);
 }
 
-KBoolean callbackArgStruct(CallbackPassStruct* arg) {
-    return arg->invoke(arg, (MyStruct){ 1, 2, 3, 4 });
+KBoolean callbackArgDictionary(CallbackPassDictionary* arg) {
+    return arg->invoke(arg, MyDictionary_new(1, 2, 3, 4));
 }

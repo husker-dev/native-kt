@@ -45,10 +45,10 @@ KBoolean callbackReturnEnum(CallbackReturnEnum* arg) {
     return arg->invoke(arg) == MyEnum_CASE2;
 }
 
-KBoolean callbackReturnStruct(CallbackReturnStruct* arg) {
-    MyStruct result = arg->invoke(arg);
-    return result.a == 1 &&
-        result.b == 2 &&
-        result.c == 3 &&
-        result.d == 4;
+KBoolean callbackReturnDictionary(CallbackReturnDictionary* arg) {
+    MyDictionary* result = arg->invoke(arg);
+    return result->a == 1 &&
+        result->b == 2 &&
+        result->c == 3 &&
+        result->d == 4;
 }

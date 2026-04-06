@@ -1,5 +1,6 @@
 package com.huskerdev.nativekt.printers.jvm
 
+import com.huskerdev.nativekt.utils.printLabel
 import java.io.File
 
 class CJniArenaPrinter(
@@ -50,15 +51,18 @@ class CJniArenaPrinter(
                 return false;
             }
             
-            // Primite arrays
-            
+        """.trimIndent())
+
+        printLabel(builder, "Primitive arrays")
+        builder.append("""
+             
             #define KArrayCast(Name, JType)		                                                    \
             static void ArenaNode__free##Name##Array(Arena* arena, ArenaNode* node){                \
                 JNIEnv *env = arena->env;                                                           \
                 (*env)->Release##Name##ArrayElements(env, node->obj, (JType*)node->ptr, 0);         \
             }                                                                                       \
                                                                                                     \
-            K##Name##Array Arena__unwrap##Name##Array(Arena* arena, JType##Array arr) {             \
+            K##Name##Array Arena__toNative##Name##Array(Arena* arena, JType##Array arr) {           \
                 JNIEnv *env = arena->env;                                                           \
                 jsize size = (*env)->GetArrayLength(env, arr);                                      \
                                                                                                     \
@@ -70,14 +74,11 @@ class CJniArenaPrinter(
                 return (K##Name##Array) { elements, size };                                         \
             }                                                                                       \
                                                                                                     \
-            JType##Array Arena__wrap##Name##Array(Arena* arena, K##Name##Array arr, bool dealloc) { \
-                JNIEnv *env = arena->env;                                                           \
-                JType##Array result = (*env)->New##Name##Array(env, arr.size);                      \
-                (*env)->Set##Name##ArrayRegion(env, result, 0, arr.size, (JType*)arr.elements);     \
-                                                                                                    \
-                if(dealloc && !Arena__contains(arena, (void*)arr.elements))                         \
-                    free((void*)arr.elements);                                                      \
-                return result;                                                                      \
+            JType##Array Arena__toJvm##Name##Array(Arena* arena, K##Name##Array arr, bool dealloc) {\
+                return JNI_toJvm##Name##Array(                                                      \
+                    arena->env, arr,                                                                \
+                    dealloc && !Arena__contains(arena, (void*)arr.elements)                         \
+                );                                                                                  \
             }
 
             KArrayCast(Char,    jchar)
@@ -91,43 +92,17 @@ class CJniArenaPrinter(
 
             #undef KArrayCast
             
-            // Arrays
-            
-            static void ArenaNode__freeEnumArray(Arena* arena, ArenaNode* node){
-                JNIEnv *env = arena->env;
-                (*env)->ReleaseIntArrayElements(env, node->obj, (jint*)node->ptr, 0);
-            }
+        """.trimIndent())
 
-            KArray Arena__unwrapEnumArray(Arena* arena, jintArray arr) {
-                JNIEnv *env = arena->env;
-                jsize size = (*env)->GetArrayLength(env, arr);
-
-                void* elements = Arena__push(arena,
-                    arr,
-                    (void*)(*env)->GetIntArrayElements(env, arr, NULL),
-                    ArenaNode__freeEnumArray
-                );
-                return (KArray) { elements, size };
-            }
-
-            jintArray Arena__wrapEnumArray(Arena* arena, KArray arr, bool dealloc) {
-                JNIEnv *env = arena->env;
-                jintArray result = (*env)->NewIntArray(env, arr.size);
-                (*env)->SetIntArrayRegion(env, result, 0, arr.size, (jint*)arr.elements);
-
-                if(dealloc && !Arena__contains(arena, (void*)arr.elements))
-                    free((void*)arr.elements);
-                return result;
-            }
-            
-            // String
+        printLabel(builder, "String")
+        builder.append("""
 
             void ArenaNode__freeString(Arena* arena, ArenaNode* node){
                 JNIEnv *env = arena->env;
                 (*env)->ReleaseStringUTFChars(env, node->obj, (const char*)node->ptr);
             }
             
-            KString Arena__unwrapString(Arena* arena, jstring str) {
+            KString Arena__toNativeString(Arena* arena, jstring str) {
                 JNIEnv *env = arena->env;
                 jsize length = (*env)->GetStringLength(env, str);
                 const char* data = (const char*) Arena__push(arena,
@@ -138,35 +113,15 @@ class CJniArenaPrinter(
                 return (KString) { data, length };
             }
             
-            jstring Arena__wrapString(Arena* arena, KString str, bool dealloc) {
-                JNIEnv *env = arena->env;
-                jstring result = JNI_createJString(env, str);
-                
-                if(dealloc && !Arena__contains(arena, (void*)str.data))
-                    free((void*)str.data);
-                return result;
+            jstring Arena__toJvmString(Arena* arena, KString str, bool dealloc) {
+                return JNI_toJvmString(arena->env, str, dealloc && !Arena__contains(arena, (void*)str.data));
             }
             
-            // String critical
-            
-            void ArenaNode__freeStringCritical(Arena* arena, ArenaNode* node){
-                JNIEnv *env = arena->env;
-                (*env)->ReleaseStringCritical(env, node->obj, (const jchar*)node->ptr);
-            }
-            
-            KString Arena__unwrapStringCritical(Arena* arena, jstring str) {
-                JNIEnv *env = arena->env;
-                jsize length = (*env)->GetStringLength(env, str);
-                const char* data = (const char*) Arena__push(arena,
-                    str,
-                    (void*)(*env)->GetStringCritical(env, str, 0),
-                    ArenaNode__freeStringCritical
-                );
-                return (KString) { data, length };
-            }
-            
-            // new/free
-            
+        """.trimIndent())
+
+        printLabel(builder, "new/free")
+        builder.append("""
+             
             void Arena__free(Arena* arena) {
                 for(int i = 0; i < arena->count; i++) {
                     ArenaNode node = arena->nodes[i];
@@ -180,25 +135,25 @@ class CJniArenaPrinter(
             }
         """.trimIndent())
 
-        if(callbacks) builder.append("""
-            
-            
-            // Callback
-
-            void ArenaNode__freeCallback(Arena* arena, ArenaNode* node){
-                JNI_CALLBACK_free((JNI_Callback*)node->ptr);
-            }
-
-            JNI_Callback* Arena__callback(Arena* arena, JNI_Callback* callback) {
-                Arena__push(arena,
-                    NULL,
-                    (void*)callback,
-                    ArenaNode__freeCallback
-                );
-                return callback;
-            }
-            
-        """.trimIndent())
+        if(callbacks) {
+            printLabel(builder, "Callback")
+            builder.append("""
+                
+                void ArenaNode__freeCallback(Arena* arena, ArenaNode* node){
+                    JNI_CALLBACK_free((JNI_Callback*)node->ptr);
+                }
+    
+                JNI_Callback* Arena__callback(Arena* arena, JNI_Callback* callback) {
+                    Arena__push(arena,
+                        NULL,
+                        (void*)callback,
+                        ArenaNode__freeCallback
+                    );
+                    return callback;
+                }
+                
+            """.trimIndent())
+        }
 
         target.writeText(builder.toString())
     }

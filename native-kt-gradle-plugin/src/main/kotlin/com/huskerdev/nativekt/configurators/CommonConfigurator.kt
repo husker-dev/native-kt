@@ -41,7 +41,9 @@ internal fun configureCommon(
         it.targetFile = File(classPathFile, "${module.name}.kt").absolutePath
         it.moduleName = module.name
         it.moduleClasspath = module.classPath
+
         it.useCoroutines = extension.useCoroutines
+        it.useJvmRecord = extension.useJvmRecord
     }
     prepareTask.dependsOnReload()
 
@@ -58,7 +60,9 @@ private abstract class PrepareNativesCommon: DefaultTask() {
     @get:Input abstract var targetFile: String
     @get:Input abstract var moduleName: String
     @get:Input abstract var moduleClasspath: String
+
     @get:Input abstract var useCoroutines: Boolean
+    @get:Input abstract var useJvmRecord: Boolean
 
     init {
         doLast {
@@ -68,7 +72,8 @@ private abstract class PrepareNativesCommon: DefaultTask() {
                 target = File(targetFile),
                 classPath = moduleClasspath,
                 moduleName = moduleName,
-                useCoroutines = useCoroutines
+                useCoroutines = useCoroutines,
+                useJvmRecord = useJvmRecord
             )
         }
     }

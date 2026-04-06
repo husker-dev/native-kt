@@ -49,7 +49,8 @@ internal fun WebIDLBuiltinKind.simpleName() = when(this) {
 fun ResolvedIdlType.toKotlinType(
     stringAsBytes: Boolean = false,
     callbackAsAny: Boolean = false,
-    enumAsInt: Boolean = false
+    enumAsInt: Boolean = false,
+    dictionaryAsAny: Boolean = false
 ): String = when(this) {
     is ResolvedIdlType.Void -> "Unit"
     is ResolvedIdlType.Default -> when(declaration) {
@@ -74,17 +75,18 @@ fun ResolvedIdlType.toKotlinType(
                         WebIDLBuiltinKind.LONG -> "LongArray"
                         WebIDLBuiltinKind.FLOAT -> "FloatArray"
                         WebIDLBuiltinKind.DOUBLE -> "DoubleArray"
-                        else -> "Array<${type.toKotlinType(stringAsBytes, callbackAsAny)}>"
+                        else -> "Array<${type.toKotlinType(stringAsBytes, callbackAsAny, enumAsInt, dictionaryAsAny)}>"
                     }
                     is ResolvedIdlEnum -> if (enumAsInt)
                         "IntArray" else "Array<${declaration.name}>"
-                    else -> "Array<${type.toKotlinType(stringAsBytes, callbackAsAny)}>"
+                    else -> "Array<${type.toKotlinType(stringAsBytes, callbackAsAny, enumAsInt, dictionaryAsAny)}>"
                 }
             }
             else -> throw UnsupportedOperationException(toString())
         }
         is ResolvedIdlEnum -> if(enumAsInt) "Int" else declaration.name
         is ResolvedIdlCallbackFunction -> if(callbackAsAny) "Any" else declaration.name
+        is ResolvedIdlDictionary -> if(dictionaryAsAny) "Any" else declaration.name
         else -> declaration.name
     }
     else -> throw UnsupportedOperationException(toString())
@@ -112,7 +114,7 @@ fun ResolvedIdlType.toCType(
             }
             else -> throw UnsupportedOperationException(toString())
         }
-        is ResolvedIdlEnum -> declaration.name
+        is ResolvedIdlEnum -> "${declaration.name}*"
         is ResolvedIdlCallbackFunction ->
             if(callbackAsPtr) "intptr_t"
             else "${declaration.name}*"
@@ -151,7 +153,7 @@ fun ResolvedIdlType.toCDefType(
                         WebIDLBuiltinKind.STRING -> "KStringArray"
                         else -> throw UnsupportedOperationException()
                     }
-                    is ResolvedIdlEnum,
+                    is ResolvedIdlEnum -> "KIntArray"
                     is ResolvedIdlDictionary -> "KArray"
                     else -> throw UnsupportedOperationException(declaration.name)
                 }
@@ -160,7 +162,7 @@ fun ResolvedIdlType.toCDefType(
         }
         is ResolvedIdlEnum -> if(enumAsInt) "KInt" else declaration.name
         is ResolvedIdlCallbackFunction -> "${declaration.name}*"
-        is ResolvedIdlDictionary -> declaration.name
+        is ResolvedIdlDictionary -> "${declaration.name}*"
         else -> throw UnsupportedOperationException(declaration.name)
     }
     else -> throw UnsupportedOperationException(toString())
@@ -267,6 +269,17 @@ fun ResolvedIdlType.isEnumArray(): Boolean {
     return firstParam { type, _ -> type.isEnum() }
 }
 
+fun ResolvedIdlType.isDictionary(): Boolean =
+    this is ResolvedIdlType.Default && declaration is ResolvedIdlDictionary
+
+fun ResolvedIdlType.isDictionaryArray(): Boolean {
+    if (this !is ResolvedIdlType.Default ||
+        declaration !is BuiltinIdlDeclaration) return false
+    if((declaration as BuiltinIdlDeclaration).kind != WebIDLBuiltinKind.LIST)
+        return false
+    return firstParam { type, _ -> type.isDictionary() }
+}
+
 fun ResolvedIdlOperation.isCritical(): Boolean =
     this.attributes.any {
         it is IdlExtendedAttribute.NoArgs && it.name == "Critical"
@@ -325,6 +338,7 @@ fun printFunctionHeader(
     stringAsBytes: Boolean = false,
     callbackAsAny: Boolean = false,
     enumAsInt: Boolean = false,
+    dictionaryAsAny: Boolean = false,
     arraysLen: Boolean = false,
 ) = builder.apply {
     if(isActual) append("actual ")
@@ -339,7 +353,7 @@ fun printFunctionHeader(
     function.args.forEachIndexed { index, arg ->
         append(arg.name)
         append(": ")
-        append(arg.type.toKotlinType(stringAsBytes, callbackAsAny, enumAsInt))
+        append(arg.type.toKotlinType(stringAsBytes, callbackAsAny, enumAsInt, dictionaryAsAny))
 
         if((stringAsBytes && arg.type.isString()) || (arraysLen && arg.type.isArray())) {
             append(", __len_")
@@ -353,7 +367,7 @@ fun printFunctionHeader(
     append(")")
     if(forcePrintVoid || function.type !is ResolvedIdlType.Void) {
         append(": ")
-        append(function.type.toKotlinType(stringAsBytes, callbackAsAny, enumAsInt))
+        append(function.type.toKotlinType(stringAsBytes, callbackAsAny, enumAsInt, dictionaryAsAny))
     }
 }
 

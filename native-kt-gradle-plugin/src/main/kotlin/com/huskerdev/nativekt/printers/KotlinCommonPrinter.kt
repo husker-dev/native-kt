@@ -19,7 +19,8 @@ class KotlinCommonPrinter(
     target: File,
     classPath: String,
     moduleName: String,
-    useCoroutines: Boolean
+    useCoroutines: Boolean,
+    val useJvmRecord: Boolean
 ) {
     init {
         val builder = StringBuilder()
@@ -143,7 +144,8 @@ class KotlinCommonPrinter(
         append("\n\t}\n")
 
         // Impl (data class)
-        append("\n\t@kotlin.jvm.JvmRecord")
+        if(useJvmRecord)
+            append("\n\t@kotlin.jvm.JvmRecord")
         append("\n\tdata class Impl(\n\t\t")
         dictionary.allFields().joinTo(builder, separator = ",\n\t\t") { field ->
             "override val ${field.name}: ${field.type.toKotlinType()}"
@@ -151,22 +153,5 @@ class KotlinCommonPrinter(
         append("\n\t): ")
         append(dictionary.name)
         append("\n}\n")
-
-        /*
-        interface ParentStruct {
-            val a: Int
-            val b: Int
-
-            companion object {
-                operator fun invoke(a: Int, b: Int): ParentStruct =
-                    Impl(a, b)
-            }
-
-            data class Impl(
-                override val a: Int,
-                override val b: Int
-            ): ParentStruct
-        }
-         */
     }
 }

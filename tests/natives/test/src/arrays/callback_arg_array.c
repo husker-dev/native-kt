@@ -1,45 +1,45 @@
 #include <api.h>
 
 KBoolean callbackArgCharArray(CallbackPassCharArray* arg) {
-    return arg->invoke(arg, makeKCharArray((KChar[]) { 'a', 'b' }, 2));
+    return arg->invoke(arg, KCharArray_of('a', 'b'));
 }
 
 KBoolean callbackArgBooleanArray(CallbackPassBooleanArray* arg) {
-    return arg->invoke(arg, makeKBooleanArray((KBoolean[]) { true, false }, 2));
+    return arg->invoke(arg, KBooleanArray_of(true, false));
 }
 
 KBoolean callbackArgByteArray(CallbackPassByteArray* arg) {
-    return arg->invoke(arg, makeKByteArray((KByte[]) { 1, 2 }, 2));
+    return arg->invoke(arg, KByteArray_of(1, 2));
 }
 
 KBoolean callbackArgShortArray(CallbackPassShortArray* arg) {
-    return arg->invoke(arg, makeKShortArray((KShort[]) { 1, 2 }, 2));
+    return arg->invoke(arg, KShortArray_of(1, 2));
 }
 
 KBoolean callbackArgIntArray(CallbackPassIntArray* arg) {
-    return arg->invoke(arg, makeKIntArray((KInt[]) { 1, 2 }, 2));
+    return arg->invoke(arg, KIntArray_of(1, 2));
 }
 
 KBoolean callbackArgLongArray(CallbackPassLongArray* arg) {
-    return arg->invoke(arg, makeKLongArray((KLong[]) { 1, 2 }, 2));
+    return arg->invoke(arg, KLongArray_of(1, 2));
 }
 
 KBoolean callbackArgFloatArray(CallbackPassFloatArray* arg) {
-    return arg->invoke(arg, makeKFloatArray((KFloat[]) { 1.1f, 2.2f }, 2));
+    return arg->invoke(arg, KFloatArray_of(1.1f, 2.2f));
 }
 
 KBoolean callbackArgDoubleArray(CallbackPassDoubleArray* arg) {
-    return arg->invoke(arg, makeKDoubleArray((KDouble[]) { 1.1, 2.2 }, 2));
+    return arg->invoke(arg, KDoubleArray_of(1.1, 2.2));
 }
 
 KBoolean callbackArgEnumArray(CallbackPassEnumArray* arg) {
-    return arg->invoke(arg, makeKArray((MyEnum[]) { MyEnum_CASE1, MyEnum_CASE2 }, 2));
+    return arg->invoke(arg, KIntArray_of(MyEnum_CASE1, MyEnum_CASE2));
 }
 
-KBoolean callbackArgStructArray(CallbackPassStructArray* arg) {
-    return arg->invoke(arg, makeKArray((MyStruct[]) {
-        (MyStruct){ 1, 2, 3, 4 },
-        (MyStruct){ 5, 6, 7, 8 },
-    }, 2));
+KBoolean callbackArgDictionaryArray(CallbackPassDictionaryArray* arg) {
+    return arg->invoke(arg, KArray_of(
+        MyDictionary_new(1, 2, 3, 4),
+        MyDictionary_new(5, 6, 7, 8)
+    ));
 }
 

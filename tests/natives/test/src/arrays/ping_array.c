@@ -32,10 +32,10 @@ KDoubleArray pingDoubleArray(KDoubleArray arg) {
     return arg;
 }
 
-KArray pingEnumArray(KArray arg) {
+KIntArray pingEnumArray(KIntArray arg) {
     return arg;
 }
 
-KArray pingStructArray(KArray arg) {
+KArray pingDictionaryArray(KArray arg) {
     return arg;
 }

@@ -1,7 +1,6 @@
 package arrays
 
-import natives.test.ChildStruct
-import natives.test.ChildStruct.Companion.invoke
+import natives.test.MyDictionary
 import natives.test.MyEnum
 import withLib
 import kotlin.test.Test
@@ -52,9 +51,13 @@ class ReturnArray {
     @Test
     fun returnEnumArray() = withLib {
         assertContentEquals(arrayOf(MyEnum.CASE1, MyEnum.CASE2), natives.test.returnEnumArray())
+    }
 
-
-        val a = ChildStruct(1, 1, 1, 1, 1, 1)
-
+    @Test
+    fun returnDictionaryArray() = withLib {
+        assertContentEquals(arrayOf(
+            MyDictionary(1, 2, 3, 4),
+            MyDictionary(5, 6, 7, 8)
+        ), natives.test.returnDictionaryArray())
     }
 }

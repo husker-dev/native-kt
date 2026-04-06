@@ -1,5 +1,6 @@
 package primitives
 
+import natives.test.MyDictionary
 import natives.test.MyEnum
 import withLib
 import kotlin.test.Test
@@ -68,5 +69,10 @@ class CallbackArgPrimitive {
     @Test
     fun callbackArgEnum() = withLib {
         assertTrue(natives.test.callbackArgEnum { it == MyEnum.CASE2 })
+    }
+
+    @Test
+    fun callbackArgDictionary() = withLib {
+        assertTrue(natives.test.callbackArgDictionary { it == MyDictionary(1, 2, 3, 4) })
     }
 }

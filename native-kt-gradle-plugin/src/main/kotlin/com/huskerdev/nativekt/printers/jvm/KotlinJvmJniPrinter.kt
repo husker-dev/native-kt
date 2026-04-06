@@ -33,20 +33,21 @@ class KotlinJvmJniPrinter(
                 builder, function,
                 isExternal = true,
                 callbackAsAny = true,
-                enumAsInt = true
+                enumAsInt = true,
+                dictionaryAsAny = true
             )
             builder.append("\n")
         }
 
         idl.callbacks.values.forEach { callback ->
             val args = listOf("_obj: Any") +
-                    callback.args.map { "${it.name}: ${it.type.toKotlinType(callbackAsAny = true, enumAsInt = true)}" }
+                    callback.args.map { "${it.name}: ${it.type.toKotlinType(callbackAsAny = true, enumAsInt = true, dictionaryAsAny = true)}" }
 
             builder.append("\n\t\t@Suppress(\"unchecked_cast\")\n")
             builder.append("\t\t@JvmStatic fun callback")
             builder.append(callback.name)
             builder.append("(${args.joinToString()}): ")
-            builder.append(callback.type.toKotlinType(callbackAsAny = true, enumAsInt = true))
+            builder.append(callback.type.toKotlinType(callbackAsAny = true, enumAsInt = true, dictionaryAsAny = true))
             builder.append(" =\n\t\t\t")
 
             val callArgs = callback.args.joinToString { jniCastToJvm(it.type, it.name) }
@@ -86,12 +87,14 @@ class KotlinJvmJniPrinter(
 internal fun jniCastToNative(type: ResolvedIdlType, content: String) = when {
     type.isEnum() -> "$content.ordinal"
     type.isEnumArray() -> "$content.run { IntArray(size) { get(it).ordinal } }"
+    type.isDictionaryArray() -> "$content as Array<Any>"
     else -> content
 }
 
 internal fun jniCastToJvm(type: ResolvedIdlType, content: String) = when(type) {
     is ResolvedIdlType.Default -> when {
-        type.isCallback() -> "$content as ${type.declaration.name}"
+        type.isDictionary() || type.isCallback() -> "$content as ${type.declaration.name}"
+        type.isDictionaryArray() -> "$content as Array<${(type.parameters[0] as ResolvedIdlType.Default).declaration.name}>"
         type.isEnum() -> "${type.declaration.name}.entries[$content]"
         type.isEnumArray() -> {
             val param = type.parameters[0] as ResolvedIdlType.Default

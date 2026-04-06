@@ -1,5 +1,6 @@
 package primitives
 
+import natives.test.MyDictionary
 import natives.test.MyEnum
 import withLib
 import kotlin.test.Test
@@ -60,5 +61,10 @@ class PassPrimitive {
     @Test
     fun passEnum() = withLib {
         assertTrue(natives.test.passEnum(MyEnum.CASE2))
+    }
+
+    @Test
+    fun passDictionary() = withLib {
+        assertTrue(natives.test.passDictionary(MyDictionary(1, 2, 3, 4)))
     }
 }

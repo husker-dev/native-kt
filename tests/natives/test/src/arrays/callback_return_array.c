@@ -57,7 +57,7 @@ KBoolean callbackReturnDoubleArray(CallbackReturnDoubleArray* arg) {
 }
 
 KBoolean callbackReturnEnumArray(CallbackReturnEnumArray* arg) {
-    const KArray array = arg->invoke(arg);
+    const KIntArray array = arg->invoke(arg);
     const MyEnum* elements = (MyEnum*)array.elements;
 
     return array.size == 2 &&
@@ -65,17 +65,17 @@ KBoolean callbackReturnEnumArray(CallbackReturnEnumArray* arg) {
         elements[1] == MyEnum_CASE2;
 }
 
-KBoolean callbackReturnStructArray(CallbackReturnStructArray* arg) {
+KBoolean callbackReturnDictionaryArray(CallbackReturnDictionaryArray* arg) {
     const KArray array = arg->invoke(arg);
-    const MyStruct* elements = (MyStruct*)array.elements;
+    MyDictionary** elements = (MyDictionary**)array.elements;
 
     return array.size == 2 &&
-        elements[0].a == 1 &&
-        elements[0].b == 2 &&
-        elements[0].c == 3 &&
-        elements[0].d == 4 &&
-        elements[1].a == 5 &&
-        elements[1].b == 6 &&
-        elements[1].c == 7 &&
-        elements[1].d == 8;
+        elements[0]->a == 1 &&
+        elements[0]->b == 2 &&
+        elements[0]->c == 3 &&
+        elements[0]->d == 4 &&
+        elements[1]->a == 5 &&
+        elements[1]->b == 6 &&
+        elements[1]->c == 7 &&
+        elements[1]->d == 8;
 }

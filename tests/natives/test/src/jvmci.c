@@ -108,7 +108,7 @@ KBoolean jvmciSomeArrays(KIntArray array1, KFloatArray array2, KDoubleArray arra
         array3.elements[2] == 9.0;
 }
 
-KBoolean jvmciEnum(MyEnum enum1, MyEnum enum2, KArray enumArray){
+KBoolean jvmciEnum(MyEnum enum1, MyEnum enum2, KIntArray enumArray){
     const MyEnum *elements = (MyEnum*)enumArray.elements;
 
     return enum1 == MyEnum_CASE1 && enum2 == MyEnum_CASE2 &&

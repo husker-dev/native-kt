@@ -1,5 +1,6 @@
 package primitives
 
+import natives.test.MyDictionary
 import natives.test.MyEnum
 import natives.test.pingBoolean
 import natives.test.pingByte
@@ -64,6 +65,14 @@ class PingPrimitive {
     @Test
     fun pingEnum() = withLib {
         assertEquals(MyEnum.CASE2, natives.test.pingEnum(MyEnum.CASE2))
+    }
+
+    @Test
+    fun pingDictionary() = withLib {
+        assertEquals(
+            MyDictionary(1, 2, 3, 4),
+            natives.test.pingDictionary(MyDictionary(1, 2, 3, 4))
+        )
     }
 
 }

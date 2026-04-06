@@ -47,9 +47,9 @@ KBoolean passEnum(MyEnum arg) {
     return arg == MyEnum_CASE2;
 }
 
-KBoolean passStruct(MyStruct arg) {
-    return arg.a == 1 &&
-        arg.b == 2 &&
-        arg.c == 3 &&
-        arg.d == 4;
+KBoolean passDictionary(MyDictionary* arg) {
+    return arg->a == 1 &&
+        arg->b == 2 &&
+        arg->c == 3 &&
+        arg->d == 4;
 }

@@ -1,5 +1,6 @@
 package primitives
 
+import natives.test.MyDictionary
 import natives.test.MyEnum
 import withLib
 import kotlin.test.Test
@@ -65,5 +66,10 @@ class ReturnPrimitive {
     @Test
     fun returnEnum() = withLib {
         assertEquals(MyEnum.CASE2, natives.test.returnEnum())
+    }
+
+    @Test
+    fun returnDictionary() = withLib {
+        assertEquals(MyDictionary(1, 2, 3, 4), natives.test.returnDictionary())
     }
 }

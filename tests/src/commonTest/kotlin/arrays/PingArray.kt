@@ -60,4 +60,13 @@ class PingArray {
         val arr = arrayOf(MyEnum.CASE1, MyEnum.CASE2)
         assertContentEquals(arr, pingEnumArray(arr))
     }
+
+    @Test
+    fun pingDictionaryArray() = withLib {
+        val arr = arrayOf(
+            MyDictionary(1, 2, 3, 4),
+            MyDictionary(5, 6, 7, 8)
+        )
+        assertContentEquals(arr, pingDictionaryArray(arr))
+    }
 }

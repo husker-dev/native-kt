@@ -60,7 +60,7 @@ fun ExecOperations.exec(command: String, workingDir: File? = null, silent: Boole
         errorOutput = errOut
     }.run {
         if(exitValue != 0)
-            throw Exception("Failed to execute command (code=${exitValue}): \n$command\nError:\n${stdOut}")
+            throw Exception("Failed to execute command (code=${exitValue}): \n$command\nError:\n${errOut}")
         stdOut.toString().trim()
     }
 }

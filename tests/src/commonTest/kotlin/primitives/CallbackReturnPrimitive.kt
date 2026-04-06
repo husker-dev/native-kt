@@ -1,5 +1,6 @@
 package primitives
 
+import natives.test.MyDictionary
 import natives.test.MyEnum
 import withLib
 import kotlin.test.Test
@@ -62,5 +63,10 @@ class CallbackReturnPrimitive {
     @Test
     fun callbackReturnEnum() = withLib {
         assertTrue(natives.test.callbackReturnEnum { MyEnum.CASE2 })
+    }
+
+    @Test
+    fun callbackReturnDictionary() = withLib {
+        assertTrue(natives.test.callbackReturnDictionary { MyDictionary(1, 2, 3, 4) })
     }
 }
