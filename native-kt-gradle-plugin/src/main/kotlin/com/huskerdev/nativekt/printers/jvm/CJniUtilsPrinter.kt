@@ -203,7 +203,7 @@ class CJniUtilsPrinter(
         idl.dictionaries.values
             .map { "struct${it.name}Class" }
             .chunked(3)
-            .joinTo(builder, prefix = "jmethodID ", separator = ",\n\t", postfix = ";\n") { it.joinToString() }
+            .joinTo(builder, prefix = "jclass ", separator = ",\n\t", postfix = ";\n") { it.joinToString() }
 
         idl.dictionaries.values
             .map { "struct${it.name}Constructor" }
@@ -254,21 +254,21 @@ class CJniUtilsPrinter(
                 val getter = when(field.type) {
                     is ResolvedIdlType.Default -> when(val decl = (field.type as ResolvedIdlType.Default).declaration) {
                         is BuiltinIdlDeclaration -> when(decl.kind) {
-                            WebIDLBuiltinKind.BOOLEAN -> "(*env)->CallBooleanMethod(env, src, $fieldVariable)"
-                            WebIDLBuiltinKind.BYTE -> "(*env)->CallByteMethod(env, src, $fieldVariable)"
-                            WebIDLBuiltinKind.CHAR -> "(*env)->CallCharMethod(env, src, $fieldVariable)"
-                            WebIDLBuiltinKind.SHORT -> "(*env)->CallShortMethod(env, src, $fieldVariable)"
-                            WebIDLBuiltinKind.INT -> "(*env)->CallIntMethod(env, src, $fieldVariable)"
-                            WebIDLBuiltinKind.LONG -> "(*env)->CallLongMethod(env, src, $fieldVariable)"
-                            WebIDLBuiltinKind.FLOAT -> "(*env)->CallFloatMethod(env, src, $fieldVariable)"
-                            WebIDLBuiltinKind.DOUBLE -> "(*env)->CallDoubleMethod(env, src, $fieldVariable)"
-                            else -> "(*env)->CallObjectMethod(env, src, $fieldVariable)"
+                            WebIDLBuiltinKind.BOOLEAN -> "CallBooleanMethod"
+                            WebIDLBuiltinKind.BYTE -> "CallByteMethod"
+                            WebIDLBuiltinKind.CHAR -> "CallCharMethod"
+                            WebIDLBuiltinKind.SHORT -> "CallShortMethod"
+                            WebIDLBuiltinKind.INT -> "CallIntMethod"
+                            WebIDLBuiltinKind.LONG -> "CallLongMethod"
+                            WebIDLBuiltinKind.FLOAT -> "CallFloatMethod"
+                            WebIDLBuiltinKind.DOUBLE -> "CallDoubleMethod"
+                            else -> "CallObjectMethod"
                         }
-                        else -> "(*env)->CallObjectMethod(env, src, $fieldVariable)"
+                        else -> "CallObjectMethod"
                     }
                     else -> throw UnsupportedOperationException(field.type.toString())
                 }
-                castJavaToJNI(field.type, getter, dealloc = false, useArena = false)
+                castJavaToJNI(field.type, "(*env)->$getter(env, src, $fieldVariable)", dealloc = false, useArena = false)
             }
             append("\n\t};")
             append("\n\treturn result;\n}\n")
