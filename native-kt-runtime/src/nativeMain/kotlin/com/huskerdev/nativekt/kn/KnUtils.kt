@@ -11,15 +11,15 @@ expect fun mallocExact(size: UInt): COpaquePointer
 expect inline fun <reified T: CVariable> allocStruct(): CPointer<T>
 
 
-fun CPointer<ByteVar>.unwrapCStr(dealloc: Boolean): String {
-    val result = toKString()
+fun toKotlinString(of: CPointer<ByteVar>, dealloc: Boolean): String {
+    val result = of.toKString()
     if(dealloc)
-        free(this)
+        free(of)
     return result
 }
 
 @Suppress("unchecked_cast")
-fun <T: Any> unwrapCallback(callback: CPointer<CStructVar>?, dealloc: Boolean): T {
+fun <T: Any> toKotlinCallback(callback: CPointer<CStructVar>?, dealloc: Boolean): T {
     val result = callback!!.pointed.memberAt<CPointerVar<*>>(0).value!!.asStableRef<Any>().get()
     if(dealloc)
         free(callback)

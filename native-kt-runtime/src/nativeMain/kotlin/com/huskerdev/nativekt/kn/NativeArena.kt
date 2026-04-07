@@ -33,15 +33,15 @@ class NativeArena(
         return ptr
     }
 
-    fun unwrapCStr(mem: CPointer<ByteVar>, dealloc: Boolean): String {
+    fun toKotlinString(mem: CPointer<ByteVar>, dealloc: Boolean): String {
         val result = mem.toKString()
         if(dealloc && mem.rawValue.toLong() !in allocated)
             free(mem)
         return result
     }
 
-    fun <T: Any> unwrapCallback(callback: CPointer<CStructVar>?, dealloc: Boolean): T {
-        val result = com.huskerdev.nativekt.kn.unwrapCallback<T>(callback, dealloc)
+    fun <T: Any> toKotlinCallback(callback: CPointer<CStructVar>?, dealloc: Boolean): T {
+        val result = com.huskerdev.nativekt.kn.toKotlinCallback<T>(callback, dealloc)
         if(dealloc && callback!!.rawValue.toLong() !in allocated)
             freeCallback(callback)
         return result
