@@ -1,5 +1,6 @@
 #include <api.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 KCharArray returnCharArray() {
     return KCharArray_of('a', 'b');
@@ -22,7 +23,10 @@ KIntArray returnIntArray() {
 }
 
 KLongArray returnLongArray() {
-    return KLongArray_of(1, 2);
+    KLong* elements = malloc(2 * sizeof(int64_t));
+    elements[0] = 1;
+    elements[1] = 2;
+    return KLongArray_new(elements, 2);
 }
 
 KFloatArray returnFloatArray() {

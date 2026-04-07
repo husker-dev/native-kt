@@ -319,7 +319,7 @@ class HeaderPrinter(
             #define KByteArray_of(...)    _KByteArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
             #define KShortArray_of(...)   _KShortArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
             #define KIntArray_of(...)     _KIntArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
-            #define KLongArray_of(...)    _KLongArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
+            //#define KLongArray_of(...)    _KLongArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
             #define KFloatArray_of(...)   _KFloatArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
             #define KDoubleArray_of(...)  _KDoubleArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
             #define KArray_of(...)        _KArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)

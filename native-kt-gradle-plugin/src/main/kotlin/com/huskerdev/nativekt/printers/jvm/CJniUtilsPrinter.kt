@@ -402,7 +402,7 @@ class CJniUtilsPrinter(
             }
         }
 
-        append("\n\treturn JNI_VERSION_1_8;\n")
+        append("\n\treturn JNI_VERSION_1_6;\n")
         append("}")
     }
 }
