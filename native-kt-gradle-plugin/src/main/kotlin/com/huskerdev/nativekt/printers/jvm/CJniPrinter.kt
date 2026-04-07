@@ -103,7 +103,7 @@ class CJniPrinter(
         // == Function call ==
         val args = function.args.joinToString { castJavaToJNI(it.type, "__arg_${it.name}", it.isDealloc(), useArena) }
         val call = "${function.name}($args)"
-        append(castJniToJava(function.type, call, function.isDealloc(), useArena))
+        append(castJniToJava(function.type, call, function.isDealloc(), function.isDeallocContent(), useArena))
         append(";\n")
 
         if(useArena) {
@@ -116,7 +116,7 @@ class CJniPrinter(
     }
 }
 
-internal fun castJniToJava(type: ResolvedIdlType, content: String, dealloc: Boolean, useArena: Boolean): String {
+internal fun castJniToJava(type: ResolvedIdlType, content: String, dealloc: Boolean, deallocContent: Boolean, useArena: Boolean): String {
     return when(type) {
         is ResolvedIdlType.Void -> content
         is ResolvedIdlType.Default -> when(val decl = type.declaration) {
@@ -135,7 +135,7 @@ internal fun castJniToJava(type: ResolvedIdlType, content: String, dealloc: Bool
                             if (useArena) "Arena__toJvmIntArray(&arena, $content, $dealloc)"
                             else "JNI_toJvmIntArray(env, $content, $dealloc)"
                         }
-                        is ResolvedIdlDictionary -> "JNI_toJvmArray(env, $content, (jobject(*)(JNIEnv*, void*))JNI_STRUCT_toJvm${declaration.name}, struct${declaration.name}Class, $dealloc)"
+                        is ResolvedIdlDictionary -> "JNI_toJvmArray(env, $content, (jobject(*)(JNIEnv*, void*, bool))JNI_STRUCT_toJvm${declaration.name}, struct${declaration.name}Class, $dealloc, $deallocContent)"
                         else -> throw UnsupportedOperationException(type.toString())
                     }
                 }
@@ -143,7 +143,7 @@ internal fun castJniToJava(type: ResolvedIdlType, content: String, dealloc: Bool
             }
             is ResolvedIdlCallbackFunction -> "JNI_toJvmCallback(env, (JNI_Callback*)$content, $dealloc)"
             is ResolvedIdlEnum -> content
-            is ResolvedIdlDictionary -> "JNI_STRUCT_toJvm${decl.name}(env, $content)"
+            is ResolvedIdlDictionary -> "JNI_STRUCT_toJvm${decl.name}(env, $content, $dealloc)"
             else -> throw UnsupportedOperationException(type.toString())
         }
         else -> throw UnsupportedOperationException(type.toString())

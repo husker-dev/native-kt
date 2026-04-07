@@ -4,8 +4,6 @@ import java.io.Closeable;
 import java.lang.foreign.*;
 import java.util.ArrayList;
 
-import static com.huskerdev.nativekt.jvm.foreign.ForeignUtils.fromKString;
-
 @SuppressWarnings("unused")
 public class ForeignArena implements Closeable {
 
@@ -22,7 +20,7 @@ public class ForeignArena implements Closeable {
 
     // String
 
-    public MemorySegment cstr(String of) {
+    public MemorySegment toNativeString(String of) {
         MemorySegment struct = heap.allocate(ForeignUtils.STRING_STRUCT);
         MemorySegment data = heap.allocateFrom(of);
         ForeignUtils.stringDataVarHandle.set(struct, 0L, data);
@@ -32,13 +30,9 @@ public class ForeignArena implements Closeable {
         return struct;
     }
 
-    public String asString(MemorySegment struct, boolean dealloc) throws Throwable {
+    public String toJvmString(MemorySegment struct, boolean dealloc) throws Throwable {
         MemorySegment data = (MemorySegment)ForeignUtils.stringDataVarHandle.get(struct, 0L);
-
-        String result = fromKString(struct);
-        if(dealloc && notContains(data.address()))
-            ForeignUtils.freeHandle.invoke(data);
-        return result;
+        return ForeignUtils.toJvmString(struct, dealloc && notContains(data.address()));
     }
 
     // Array: char
@@ -170,12 +164,8 @@ public class ForeignArena implements Closeable {
         return callback;
     }
 
-    @SuppressWarnings("unchecked")
-    public <T> T asCallback(MemorySegment segment, boolean dealloc) throws Throwable {
-        Object result = ForeignUtils.callbacks.get(segment.address());
-        if(dealloc && notContains(segment.address()))
-            ForeignUtils.freeHandle.invoke(segment);
-        return (T) result;
+    public <T> T toJvmCallback(MemorySegment segment, boolean dealloc) throws Throwable {
+        return ForeignUtils.toJvmCallback(segment, dealloc && notContains(segment.address()));
     }
 
     public void close() {

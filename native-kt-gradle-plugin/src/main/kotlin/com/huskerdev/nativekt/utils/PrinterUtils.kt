@@ -21,7 +21,7 @@ fun syncFunctionName(moduleName: String) =
     "loadLib${moduleName.capitalized()}Sync"
 
 fun ResolvedIdlType.toKotlinForeignType(): String {
-    return if(isCallback() || isString() || isArray())
+    return if(isCallback() || isString() || isArray() || isDictionary())
         "MemorySegment"
     else toKotlinType(enumAsInt = true)
 }
@@ -290,8 +290,14 @@ fun IdlAttributedHolder.isDealloc(): Boolean =
         it is IdlExtendedAttribute.NoArgs && it.name == "Dealloc"
     }
 
+fun IdlAttributedHolder.isDeallocContent(): Boolean =
+    this.attributes.any {
+        it is IdlExtendedAttribute.NoArgs && it.name == "DeallocContent"
+    }
+
 fun ResolvedIdlOperation.isCriticalCapable(): Boolean =
-    !type.isArray() && !type.isString() && !args.any { it.type.isStringArray() }
+    !type.isArray() && !type.isString() && !type.isDictionary() &&
+            !args.any { it.type.isStringArray() || it.type.isDictionaryArray() }
 
 fun ResolvedIdlOperation.hasString(): Boolean =
     args.any { it.type.isString() }

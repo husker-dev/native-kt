@@ -94,7 +94,7 @@ namespace global {
     [Dealloc] Array<float> returnFloatArray();
     [Dealloc] Array<double> returnDoubleArray();
     [Dealloc] Array<MyEnum> returnEnumArray();
-    [Dealloc] Array<MyDictionary> returnDictionaryArray();
+    [Dealloc, DeallocContent] Array<MyDictionary> returnDictionaryArray();
 
     // Arrays: ping
     Array<char> pingCharArray(Array<char> arg);

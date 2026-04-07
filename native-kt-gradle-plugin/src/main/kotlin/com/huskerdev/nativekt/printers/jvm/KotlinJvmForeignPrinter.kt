@@ -3,6 +3,8 @@ package com.huskerdev.nativekt.printers.jvm
 import com.huskerdev.nativekt.utils.*
 import com.huskerdev.webidl.resolver.*
 import org.gradle.internal.extensions.stdlib.capitalized
+import kotlin.math.ceil
+import kotlin.math.max
 
 class KotlinJvmForeignPrinter(
     idl: IdlResolver,
@@ -25,11 +27,14 @@ class KotlinJvmForeignPrinter(
         if(idl.callbacks.isNotEmpty()) {
             builder.append("\tcompanion object {\n")
 
+            idl.dictionaries.values.forEach { printDictionaryDesc(builder, it) }
+            idl.dictionaries.values.forEach { printDictionaryCasts(builder, it) }
+
             idl.callbacks.values.forEach { printCallbackInvoke(builder, it) }
             idl.callbacks.values.forEach { printCallbackMethodHandle(builder, it) }
             idl.callbacks.values.forEach { printCallbackDesc(builder, it) }
             builder.append("\n")
-            idl.callbacks.values.forEach { printCallbackWrap(builder, it) }
+            idl.callbacks.values.forEach { printCallbackToNative(builder, it) }
 
             builder.append("\t}\n\n")
         }
@@ -42,6 +47,74 @@ class KotlinJvmForeignPrinter(
         }
         builder.append("${indent}}")
     }
+
+    private fun ResolvedIdlDictionary.calcMem(): Pair<Int, Int> {
+        var sum = 0.0
+        var max = 0.0
+        allFields().forEach {
+            val cur = it.type.getAlignment().toDouble()
+            sum = (cur * ceil(sum / cur)) + cur
+            max = max(max, cur)
+        }
+        return Pair(sum.toInt(), max.toInt())
+    }
+
+    private fun printDictionaryDesc(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
+        val (sum, max) = dictionary.calcMem()
+        val padding = sum % max
+
+        val structName = "struct${dictionary.name.capitalized()}"
+
+        append("\n\t\tprivate val ")
+        append(structName)
+        append(" = MemoryLayout.structLayout(\n\t\t\t")
+        dictionary.allFields().joinTo(builder, separator = ",\n\t\t\t") {
+            "${it.type.toForeignType()}.withName(\"${it.name}\")"
+        }
+        if(padding != 0)
+            append(",\n\t\t\tMemoryLayout.paddingLayout(${padding})")
+        append("\n\t\t)\n\t\t")
+
+        dictionary.allFields().joinTo(builder, separator = "\n\t\t") {
+            val fieldName = "${structName}Field${it.name.capitalized()}"
+            "private val $fieldName = $structName.varHandle(MemoryLayout.PathElement.groupElement(\"${it.name}\"))"
+        }
+        append("\n")
+    }
+
+    private fun printDictionaryCasts(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
+        val (sum, max) = dictionary.calcMem()
+        val mem = (max * ceil(sum.toDouble() / max)).toInt()
+
+        val structName = "struct${dictionary.name.capitalized()}"
+
+        // to native
+        append("\n\t\tprivate fun toNativeDictionary")
+        append(dictionary.name.capitalized())
+        append("(of: ")
+        append(dictionary.name)
+        append(") = Arena.global().allocate(")
+        append(structName)
+        append(").apply {\n\t\t\t")
+        dictionary.allFields().joinTo(builder, separator = "\n\t\t\t") {
+            val fieldName = "${structName}Field${it.name.capitalized()}"
+            "$fieldName.set(this, 0L, of.${it.name})"
+        }
+        append("\n\t\t}\n")
+
+        // to jvm
+        append("\n\t\tprivate fun toJvmDictionary")
+        append(dictionary.name.capitalized())
+        append("(of: MemorySegment, dealloc: Boolean) = of.reinterpret(${mem}).run {\n\t\t\t")
+        append(dictionary.name)
+        append("(\n\t\t\t\t")
+        dictionary.allFields().joinTo(builder, separator = ",\n\t\t\t\t") {
+            val fieldName = "${structName}Field${it.name.capitalized()}"
+            "$fieldName.get(this, 0L) as ${it.type.toKotlinForeignType()}"
+        }
+        append("\n\t\t\t)\n\t\t}.also { if (dealloc) ForeignUtils.freeHandle.invoke(of) }\n")
+    }
+
 
     private fun printFunctionHandle(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
         val isCriticalAlt = function.isCritical() && function.isCriticalCapable() && (function.hasString() || function.hasArray())
@@ -77,7 +150,7 @@ class KotlinJvmForeignPrinter(
 
         val useArena = !function.isCritical() && (
                 function.type.isString() || function.type.isArray() ||
-                        function.args.any { it.type.isString() || it.type.isArray() || it.isDealloc() })
+                        function.args.any { !it.type.isDictionary() && !it.type.isDictionaryArray() && (it.type.isString() || it.type.isArray() || it.isDealloc()) })
 
         if(useArena)
             append("ForeignArena().use { arena ->\n\t\t")
@@ -98,7 +171,7 @@ class KotlinJvmForeignPrinter(
         }
 
         val call = "(handle${function.name.capitalized()}.invokeExact(${args.joinToString()}) as $type)"
-        append(castFromNative(function.type, call, function.isDealloc(), useArena))
+        append(castFromNative(function.type, call, function.isDealloc(), function.isDeallocContent(), useArena))
 
         if(useArena)
             append("\n\t}")
@@ -110,7 +183,7 @@ class KotlinJvmForeignPrinter(
                 callback.args.map { "${it.name}: ${it.type.toKotlinForeignType()}" }
 
         val lambdaArgTypes = callback.args.map { it.type.toKotlinType() }
-        val lambdaArgs = callback.args.map { castFromNative(it.type, it.name, it.isDealloc(), false) }
+        val lambdaArgs = callback.args.map { castFromNative(it.type, it.name, it.isDealloc(), it.isDeallocContent(), false) }
 
         val type = callback.type.toKotlinForeignType()
 
@@ -174,26 +247,27 @@ class KotlinJvmForeignPrinter(
         append(")")
     }
 
-    private fun printCallbackWrap(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
+    private fun printCallbackToNative(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
         append("\n\t\tfun ")
+        append("toNativeCallback")
         append(callback.name)
-        append(".wrap")
+        append("(c: ")
         append(callback.name)
-        append("(): MemorySegment =\n\t\t\t")
-        append("ForeignUtils.createCallback(this, methodHandle")
+        append("): MemorySegment =\n\t\t\t")
+        append("ForeignUtils.createCallback(c, methodHandle")
         append(callback.name)
         append(", methodDesc")
         append(callback.name)
         append(")\n")
     }
 
-    private fun castFromNative(type: ResolvedIdlType, content: String, dealloc: Boolean, useArena: Boolean): String = when(type) {
+    private fun castFromNative(type: ResolvedIdlType, content: String, dealloc: Boolean, deallocContent: Boolean, useArena: Boolean): String = when(type) {
         is ResolvedIdlType.Void -> content
         is ResolvedIdlType.Default -> when(type.declaration) {
             is BuiltinIdlDeclaration -> when((type.declaration as BuiltinIdlDeclaration).kind) {
                 WebIDLBuiltinKind.STRING ->
-                    if(useArena) "arena.asString($content, $dealloc)"
-                    else "ForeignUtils.asString($content, $dealloc)"
+                    if(useArena) "arena.toJvmString($content, $dealloc)"
+                    else "ForeignUtils.toJvmString($content, $dealloc)"
                 WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
                     when (declaration) {
                         is BuiltinIdlDeclaration -> {
@@ -205,17 +279,17 @@ class KotlinJvmForeignPrinter(
                             if (useArena) "arena.toJvmEnumArray($content, $dealloc, ${declaration.name}::class.java)"
                             else "ForeignUtils.toJvmEnumArray($content, $dealloc, ${declaration.name}::class.java)"
                         }
-                        is ResolvedIdlDictionary -> content
+                        is ResolvedIdlDictionary -> "ForeignUtils.toJvmArray($content, ::toJvmDictionary${declaration.name}, ${declaration.name}::class.java, $dealloc, $deallocContent)"
                         else -> throw UnsupportedOperationException(type.toString())
                     }
                 }
                 else -> content
             }
             is ResolvedIdlCallbackFunction ->
-                if(useArena) "arena.asCallback<${type.declaration.name}>($content, $dealloc)"
-                else "ForeignUtils.asCallback<${type.declaration.name}>($content, $dealloc)"
+                if(useArena) "arena.toJvmCallback<${type.declaration.name}>($content, $dealloc)"
+                else "ForeignUtils.toJvmCallback<${type.declaration.name}>($content, $dealloc)"
             is ResolvedIdlEnum -> "${type.declaration.name}.entries[$content]"
-            is ResolvedIdlDictionary -> content
+            is ResolvedIdlDictionary -> "toJvmDictionary${type.declaration.name}(${content}, $dealloc)"
             else -> throw UnsupportedOperationException(type.toString())
         }
         else -> throw UnsupportedOperationException(type.toString())
@@ -226,9 +300,9 @@ class KotlinJvmForeignPrinter(
         is ResolvedIdlType.Default -> when(type.declaration) {
             is BuiltinIdlDeclaration -> when((type.declaration as BuiltinIdlDeclaration).kind) {
                 WebIDLBuiltinKind.STRING ->
-                    if(critical) "ForeignUtils.heapStr($content)"
-                    else if(useArena) "arena.cstr($content)"
-                    else "ForeignUtils.cstr($content)"
+                    if(critical) "ForeignUtils.toNativeHeapString($content)"
+                    else if(useArena) "arena.toNativeString($content)"
+                    else "ForeignUtils.toNativeString($content)"
                 WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
                     when (declaration) {
                         is BuiltinIdlDeclaration -> {
@@ -240,22 +314,21 @@ class KotlinJvmForeignPrinter(
                             if (useArena) "arena.toNativeEnumArray($content)"
                             else "ForeignUtils.toNativeEnumArray($content)"
                         }
-                        is ResolvedIdlDictionary -> content
+                        is ResolvedIdlDictionary -> "ForeignUtils.toNativeArray($content, ::toNativeDictionary${declaration.name})"
                         else -> throw UnsupportedOperationException(type.toString())
                     }
                 }
                 else -> content
             }
             is ResolvedIdlCallbackFunction ->
-                if(dealloc) "arena.callback($content.wrap${type.declaration.name}())"
-                else "$content.wrap${type.declaration.name}()"
+                if(dealloc) "arena.callback(toNativeCallback${type.declaration.name}($content))"
+                else "toNativeCallback${type.declaration.name}($content)"
             is ResolvedIdlEnum -> "$content.ordinal"
-            is ResolvedIdlDictionary -> content
+            is ResolvedIdlDictionary -> "toNativeDictionary${type.declaration.name}(${content})"
             else -> throw UnsupportedOperationException(type.toString())
         }
         else -> throw UnsupportedOperationException(type.toString())
     }
-
 
     fun ResolvedIdlType.toForeignType(): String = when(this) {
         is ResolvedIdlType.Union -> throw UnsupportedOperationException("Union type are not unsupported")
@@ -276,6 +349,28 @@ class KotlinJvmForeignPrinter(
             }
             is ResolvedIdlEnum -> "ForeignUtils.C_INT"
             else -> "ForeignUtils.C_ADDRESS"
+        }
+    }
+
+    fun ResolvedIdlType.getAlignment(): Int = when(this) {
+        is ResolvedIdlType.Union,
+        is ResolvedIdlType.Void -> throw UnsupportedOperationException()
+        is ResolvedIdlType.Default -> when(declaration) {
+            is BuiltinIdlDeclaration -> when(val a = (declaration as BuiltinIdlDeclaration).kind) {
+                WebIDLBuiltinKind.CHAR -> 2
+                WebIDLBuiltinKind.BOOLEAN -> 1
+                WebIDLBuiltinKind.BYTE -> 1
+                WebIDLBuiltinKind.SHORT -> 2
+                WebIDLBuiltinKind.INT -> 4
+                WebIDLBuiltinKind.LONG -> 8
+                WebIDLBuiltinKind.FLOAT -> 4
+                WebIDLBuiltinKind.DOUBLE -> 8
+                WebIDLBuiltinKind.STRING -> 8
+                WebIDLBuiltinKind.LIST -> 8
+                else -> throw UnsupportedOperationException(a.toString())
+            }
+            is ResolvedIdlEnum -> 4
+            else -> 8
         }
     }
 }

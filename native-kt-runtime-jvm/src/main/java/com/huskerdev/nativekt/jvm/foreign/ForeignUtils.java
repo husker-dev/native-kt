@@ -7,6 +7,8 @@ import java.lang.invoke.MethodType;
 import java.lang.invoke.VarHandle;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import static java.lang.foreign.ValueLayout.JAVA_BYTE;
 
@@ -68,11 +70,6 @@ public class ForeignUtils {
             FunctionDescriptor.ofVoid(ValueLayout.ADDRESS)
     );
 
-
-    public static MemorySegment heapStr(String str) {
-        return MemorySegment.ofArray(str.getBytes());
-    }
-
     public static MethodHandle lookup(String name, boolean isCritical, MemoryLayout retType, MemoryLayout... argTypes) {
         FunctionDescriptor function = retType == null ?
                 FunctionDescriptor.ofVoid(argTypes) :
@@ -88,24 +85,25 @@ public class ForeignUtils {
 
     // String
 
-    public static String fromKString(MemorySegment struct) {
-        MemorySegment data = (MemorySegment)stringDataVarHandle.get(struct, 0L);
-        int length = (int)stringLengthVarHandle.get(struct, 0L);
-
-        final byte[] bytes = new byte[length];
-        MemorySegment.copy(data.reinterpret(length), JAVA_BYTE, 0, bytes, 0, length);
-        return new String(bytes, StandardCharsets.UTF_8);
+    public static MemorySegment toNativeHeapString(String str) {
+        return MemorySegment.ofArray(str.getBytes());
     }
 
-    public static MemorySegment cstr(String of) {
+    public static MemorySegment toNativeString(String of) {
         MemorySegment struct = Arena.ofAuto().allocate(STRING_STRUCT);
         stringDataVarHandle.set(struct, 0L, Arena.global().allocateFrom(of));
         stringLengthVarHandle.set(struct, 0L, of.length());
         return struct;
     }
 
-    public static String asString(MemorySegment struct, boolean dealloc) throws Throwable {
-        String result = fromKString(struct);
+    public static String toJvmString(MemorySegment struct, boolean dealloc) throws Throwable {
+        MemorySegment data = (MemorySegment)stringDataVarHandle.get(struct, 0L);
+        int length = (int)stringLengthVarHandle.get(struct, 0L);
+
+        final byte[] bytes = new byte[length];
+        MemorySegment.copy(data.reinterpret(length), JAVA_BYTE, 0, bytes, 0, length);
+        String result = new String(bytes, StandardCharsets.UTF_8);
+
         if(dealloc)
             freeHandle.invoke((MemorySegment)ForeignUtils.stringDataVarHandle.get(struct, 0L));
         return result;
@@ -343,6 +341,33 @@ public class ForeignUtils {
         return result;
     }
 
+    // Array: object
+
+    public static <T> MemorySegment toNativeArray(T[] elements, Function<T, MemorySegment> cast) {
+        MemorySegment elementsPtr = Arena.global().allocate(MemoryLayout.sequenceLayout(elements.length, ValueLayout.ADDRESS));
+        VarHandle ptrHandle = ValueLayout.ADDRESS.arrayElementVarHandle();
+        for(int i = 0; i < elements.length; i++)
+            ptrHandle.set(elementsPtr, 0L, (long)i, cast.apply(elements[i]));
+
+        MemorySegment struct = Arena.ofAuto().allocate(ARRAY_STRUCT);
+        arrayElementsVarHandle.set(struct, 0L, elementsPtr);
+        arraySizeVarHandle.set(struct, 0L, elements.length);
+        return struct;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T> T[] toJvmArray(MemorySegment struct, BiFunction<MemorySegment, Boolean, T> cast, Class<T> clazz, boolean dealloc, boolean deallocContent) throws Throwable {
+        T[] result = (T[]) java.lang.reflect.Array.newInstance(clazz, arraySize(struct));
+
+        MemorySegment elementsPtr = arrayElements(struct).reinterpret(result.length * C_ADDRESS.byteSize());
+        VarHandle ptrHandle = ValueLayout.ADDRESS.arrayElementVarHandle();
+        for(int i = 0; i < result.length; i++)
+            result[i] = cast.apply((MemorySegment) ptrHandle.get(elementsPtr, 0L, (long)i), deallocContent);
+
+        if(dealloc) freeHandle.invoke(elementsPtr);
+        return result;
+    }
+
     // Callbacks
 
     public static MemorySegment createCallback(
@@ -373,7 +398,7 @@ public class ForeignUtils {
     }
 
     @SuppressWarnings("unchecked")
-    public static <T> T asCallback(MemorySegment segment, boolean dealloc) throws Throwable{
+    public static <T> T toJvmCallback(MemorySegment segment, boolean dealloc) throws Throwable{
         Object result = callbacks.get(segment.address());
         if(dealloc)
             freeHandle.invoke(segment);

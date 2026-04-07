@@ -2,6 +2,7 @@ package com.huskerdev.nativekt.printers.jvm
 
 import com.huskerdev.nativekt.utils.allFields
 import com.huskerdev.nativekt.utils.isDealloc
+import com.huskerdev.nativekt.utils.isDeallocContent
 import com.huskerdev.nativekt.utils.printLabel
 import com.huskerdev.nativekt.utils.toCDefType
 import com.huskerdev.nativekt.utils.toJavaDesc
@@ -106,14 +107,15 @@ class CJniUtilsPrinter(
             jobjectArray JNI_toJvmArray(
                 JNIEnv *env, 
                 KArray src, 
-                jobject (*converter)(JNIEnv*, void*),
+                jobject (*converter)(JNIEnv*, void*, bool),
                 jclass clazz,
-                bool dealloc
+                bool dealloc,
+                bool deallocContent
             ) {
                 jobjectArray result = (*env)->NewObjectArray(env, src.size, clazz, NULL);
                 void** elements = (void**)src.elements;
                 for(int i = 0; i < src.size; i++)
-                    (*env)->SetObjectArrayElement(env, result, i, converter(env, elements[i]));
+                    (*env)->SetObjectArrayElement(env, result, i, converter(env, elements[i], deallocContent));
                 if(dealloc) free((void*) src.elements);
                 return result;
             }
@@ -228,17 +230,20 @@ class CJniUtilsPrinter(
             append(struct.name)
             append("(JNIEnv *env, ")
             append(struct.name)
-            append("* src) {\n\t")
-            append("return (*env)->CallStaticObjectMethod(env, ")
+            append("* src, bool dealloc) {\n\t")
+            append("jobject result = (*env)->CallStaticObjectMethod(env, ")
             append("struct")
             append(struct.name)
             append("Class, struct")
             append(struct.name)
             append("Constructor, \n\t\t")
             struct.allFields().joinTo(builder, separator = ",\n\t\t") {
-                castJniToJava(it.type, "src->${it.name}", dealloc = false, useArena = false)
+                castJniToJava(it.type, "src->${it.name}", dealloc = false, deallocContent = false, useArena = false)
             }
-            append("\n\t);\n}\n")
+            append("\n\t);\n\t")
+            append("if (dealloc) free((void*) src);\n\t")
+            append("return result;\n")
+            append("}\n")
 
             // to Native
             append("\n")
@@ -280,7 +285,7 @@ class CJniUtilsPrinter(
                 callback.args.map { "${it.type.toCDefType()} ${it.name}" }
 
         val jvmArgs = listOf("(jobject)_callback->m") +
-                callback.args.map { castJniToJava(it.type, it.name, it.isDealloc(), false) }
+                callback.args.map { castJniToJava(it.type, it.name, it.isDealloc(), it.isDeallocContent(), false) }
 
         append("""
             
