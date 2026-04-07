@@ -26,7 +26,7 @@ fun <T: JsAny> loadLib(lib: JsAny): Promise<T> =
 
 fun Boolean.toInt() = if(this) 1 else 0
 
-fun allocCStr(module: EmModule, str: String): EmString {
+fun toNativeCallback(module: EmModule, str: String): EmString {
     val len = module.lengthBytesUTF8(str) + 1
     val strMem = module._malloc(len)
     module.stringToUTF8(str, strMem, len)
@@ -37,7 +37,7 @@ fun allocCStr(module: EmModule, str: String): EmString {
     }
 }
 
-fun unwrapCStr(module: EmModule, struct: EmString, dealloc: Boolean): String {
+fun toKotlinString(module: EmModule, struct: EmString, dealloc: Boolean): String {
     val result = module.UTF8ToString(struct.data, struct.length)
     if(dealloc)
         module._free(struct.data)
@@ -240,6 +240,22 @@ inline fun <reified T: Enum<T>> toKotlinEnumArray(
     noinline create: (Int) -> T
 ): Array<T> = toKotlinIntArray(module, struct, dealloc).run { Array(size, create) }
 
+// Array: objects
+
+fun <T> toNativeArray(
+    module: EmModule,
+    arr: Array<T>,
+    converter: (T) -> Int
+) = toNativeIntArray(module, IntArray(arr.size) { converter(arr[it]) })
+
+fun <T: Any> toKotlinArray(
+    module: EmModule,
+    struct: EmArray,
+    converter: (Int, Boolean) -> T,
+    dealloc: Boolean,
+    deallocContent: Boolean
+) = toKotlinIntArray(module, struct, dealloc).run { Array<Any>(size) { converter(this[it], deallocContent) } as Array<T> }
+
 
 // Callbacks
 
@@ -260,7 +276,7 @@ fun mallocCallback(
 }
 
 @Suppress("UNCHECKED_CAST")
-fun <T> unwrapCallback(
+fun <T> toKotlinCallback(
     module: EmModule,
     ptr: Int,
     dealloc: Boolean

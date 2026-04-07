@@ -25,7 +25,7 @@ class EmArena(
     fun malloc(size: Int): Int =
         ptr(module._malloc(size))
 
-    fun allocCStr(str: String): EmString {
+    fun toNativeCallback(str: String): EmString {
         val len = module.lengthBytesUTF8(str) + 1
         val strMem = malloc(len)
         module.stringToUTF8(str, strMem, len)
@@ -36,7 +36,7 @@ class EmArena(
         }
     }
 
-    fun unwrapCStr(struct: EmString, dealloc: Boolean): String {
+    fun toKotlinString(struct: EmString, dealloc: Boolean): String {
         val struct = struct.unsafeCast<EmString>()
 
         val result = module.UTF8ToString(struct.data, struct.length)
@@ -115,12 +115,8 @@ class EmArena(
 
     // Callbacks
 
-    fun <T> unwrapCallback(ptr: Int, dealloc: Boolean): T {
-        val result = unwrapCallback<T>(module, ptr, dealloc)
-        if(dealloc && ptr !in allocated)
-            module._free(ptr)
-        return result
-    }
+    fun <T> toKotlinCallback(ptr: Int, dealloc: Boolean): T =
+        toKotlinCallback(module, ptr, dealloc && ptr !in allocated)
 
     fun callback(callback: Int): Int {
         callbacks += callback

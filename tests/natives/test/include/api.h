@@ -66,7 +66,7 @@ static Name Name##_new(const Type* elements, const KInt size) { \
 static Name _##Name##_of(const int n, ...) {                    \
     va_list args;                                               \
     va_start(args, n);                                          \
-    Type* elements = malloc(n * sizeof(Type));                  \
+    Type* elements = (Type*)malloc(n * sizeof(Type));           \
     for (int i = 0; i < n; i++)                                 \
         elements[i] = (Type)va_arg(args, VarargType);           \
     va_end(args);                                               \
@@ -191,19 +191,19 @@ struct ChildDictionary { // : MyDictionary
 };
 
 static ParentDictionary* ParentDictionary_new(KInt a, KInt b) {
-	ParentDictionary* result = malloc(sizeof(ParentDictionary));
+	ParentDictionary* result = (ParentDictionary*)malloc(sizeof(ParentDictionary));
 	*result = (ParentDictionary){ a, b };
 	return result;
 }
 
 static MyDictionary* MyDictionary_new(KInt a, KInt b, KInt c, KInt d) {
-	MyDictionary* result = malloc(sizeof(MyDictionary));
+	MyDictionary* result = (MyDictionary*)malloc(sizeof(MyDictionary));
 	*result = (MyDictionary){ a, b, c, d };
 	return result;
 }
 
 static ChildDictionary* ChildDictionary_new(KInt a, KInt b, KInt c, KInt d, KInt e, KInt f) {
-	ChildDictionary* result = malloc(sizeof(ChildDictionary));
+	ChildDictionary* result = (ChildDictionary*)malloc(sizeof(ChildDictionary));
 	*result = (ChildDictionary){ a, b, c, d, e, f };
 	return result;
 }

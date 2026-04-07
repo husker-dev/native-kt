@@ -3,8 +3,10 @@ package com.huskerdev.nativekt.printers.js
 import com.huskerdev.nativekt.utils.*
 import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlCallbackFunction
+import com.huskerdev.webidl.resolver.ResolvedIdlDictionary
 import com.huskerdev.webidl.resolver.ResolvedIdlOperation
 import com.huskerdev.webidl.resolver.ResolvedIdlType
+import org.gradle.internal.extensions.stdlib.capitalized
 import java.io.File
 
 class CEmscriptenPrinter(
@@ -31,7 +33,7 @@ class CEmscriptenPrinter(
             
             #define K_ARRAY_DECL(Name, Type)							 \
             value_object<Name>(#Name)									 \
-                .field("elements", POINTER_FIELD(elements, Name, Type*)) \
+                .field("elements", POINTER_FIELD(elements, Name, Type))  \
                 .field("size", &Name::size);							 \
 
         """.trimIndent())
@@ -51,23 +53,27 @@ class CEmscriptenPrinter(
                     .field("data", POINTER_FIELD(data, KString, const char*))
                     .field("length", &KString::length);
                     
-                K_ARRAY_DECL(KCharArray, KChar)
-                K_ARRAY_DECL(KBooleanArray, KBoolean)
-                K_ARRAY_DECL(KByteArray, KByte)
-                K_ARRAY_DECL(KShortArray, KShort)
-                K_ARRAY_DECL(KIntArray, KInt)
-                K_ARRAY_DECL(KLongArray, KLong)
-                K_ARRAY_DECL(KFloatArray, KFloat)
-                K_ARRAY_DECL(KDoubleArray, KDouble)
-                K_ARRAY_DECL(KArray, void)
+                K_ARRAY_DECL(KCharArray,	KChar*)
+                K_ARRAY_DECL(KBooleanArray, KBoolean*)
+                K_ARRAY_DECL(KByteArray,	KByte*)
+                K_ARRAY_DECL(KShortArray,	KShort*)
+                K_ARRAY_DECL(KIntArray,		KInt*)
+                K_ARRAY_DECL(KLongArray,	KLong*)
+                K_ARRAY_DECL(KFloatArray,	KFloat*)
+                K_ARRAY_DECL(KDoubleArray,  KDouble*)
+                K_ARRAY_DECL(KArray,		const void**)
             
         """.trimIndent())
+
+        idl.dictionaries.values.forEach { printDictionary(builder, it) }
 
         if(idl.enums.isNotEmpty()) {
             idl.enums.values.forEach { enum ->
                 builder.append("\n\tenum_<${enum.name}>(\"${enum.name}\", enum_value_type::number)\n\t\t")
-                enum.elements.joinTo(builder, separator = "\n\t\t") { ".value(\"$it\", $it)" }
-                builder.append("\n\t;\n")
+                enum.elements.joinTo(builder, separator = "\n\t\t") {
+                    ".value(\"$it\", ${enum.name.capitalized()}_$it)"
+                }
+                builder.append(";\n")
             }
             builder.append("\n")
         }
@@ -78,20 +84,26 @@ class CEmscriptenPrinter(
 
         idl.globalOperators().forEach {
             if(it.hasPointers())
-                printOverride(builder, it)
+                printFunctionOverride(builder, it)
             else
-                printSimple(builder, it)
+                printFunctionSimple(builder, it)
         }
 
         builder.append("\n}")
         target.writeText(builder.toString())
     }
 
-    private fun ResolvedIdlOperation.hasPointers() =
-        type.isCallback() || args.any { it.type.isCallback() }
+    private fun printDictionary(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
+        append("\n\tvalue_object<")
+        append(dictionary.name)
+        append(">(\"")
+        append(dictionary.name)
+        append("\")\n\t\t")
 
-    private fun printSimple(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
-        append("\tfunction(\"${function.name}\", &${function.name});\n")
+        dictionary.allFields().joinTo(builder, separator = "\n\t\t") {
+            ".field(\"${it.name}\", &${dictionary.name}::${it.name})"
+        }
+        append(";\n")
     }
 
     private fun printCallbacks(builder: StringBuilder, callbacks: Collection<ResolvedIdlCallbackFunction>) = builder.apply {
@@ -121,18 +133,18 @@ class CEmscriptenPrinter(
 
             if(callback.type !is ResolvedIdlType.Void)
                 append("return ")
-            if(callback.type.isCallback())
+            if(callback.type.isPointer())
                 append("(${callback.type.toCDefType()})")
 
             val args = listOf("(intptr_t)_c") + callback.args.map {
-                if(it.type.isCallback())
+                if(it.type.isPointer())
                     "(intptr_t)${it.name}"
                 else it.name
             }
 
             append("${valNames[callback]}(${args.joinToString()})")
 
-            if(callback.type.isCallback())
+            if(callback.type.isPointer())
                 append(".as<intptr_t>()")
             else
                 append(".as<${callback.type.toCDefType()}>()")
@@ -152,29 +164,33 @@ class CEmscriptenPrinter(
         append("\treturn 0;\n}\n")
     }
 
-    private fun printOverride(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
+    private fun printFunctionSimple(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
+        append("\tfunction(\"${function.name}\", &${function.name});\n")
+    }
+
+    private fun printFunctionOverride(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
         append("\tfunction(\"")
         append(function.name)
         append("\", optional_override([](")
 
         function.args.joinTo(builder) {
-            "${it.type.toCType(callbackAsPtr = true)} ${it.name}"
+            "${it.type.toCType(callbackAsPtr = true, dictionaryAsPtr = true)} ${it.name}"
         }
         append(")")
 
         if(function.type !is ResolvedIdlType.Void) {
             append(" -> ")
-            append(function.type.toCType(callbackAsPtr = true))
+            append(function.type.toCType(callbackAsPtr = true, dictionaryAsPtr = true))
         }
         append(" {\n\t\t")
 
         if(function.type !is ResolvedIdlType.Void)
             append("return ")
-        if(function.type.isCallback())
+        if(function.type.isPointer())
             append("(intptr_t)")
 
         val args = function.args.joinToString {
-            if(it.type.isCallback())
+            if(it.type.isPointer())
                 "(${(it.type as ResolvedIdlType.Default).declaration.name}*)${it.name}"
             else it.name
         }
@@ -182,4 +198,10 @@ class CEmscriptenPrinter(
         append("${function.name}($args);\n")
         append("\t}));\n")
     }
+
+    private fun ResolvedIdlType.isPointer() =
+        isCallback() || isDictionary()
+
+    private fun ResolvedIdlOperation.hasPointers() =
+        type.isPointer() || args.any { it.type.isPointer() }
 }

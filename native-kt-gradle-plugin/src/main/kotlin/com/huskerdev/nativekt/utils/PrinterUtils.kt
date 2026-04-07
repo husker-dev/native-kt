@@ -13,6 +13,8 @@ import com.huskerdev.webidl.resolver.ResolvedIdlOperation
 import com.huskerdev.webidl.resolver.ResolvedIdlType
 import com.huskerdev.webidl.resolver.WebIDLBuiltinKind
 import org.gradle.internal.extensions.stdlib.capitalized
+import kotlin.math.ceil
+import kotlin.math.max
 
 fun asyncFunctionName(moduleName: String) =
     "loadLib${moduleName.capitalized()}"
@@ -95,7 +97,8 @@ fun ResolvedIdlType.toKotlinType(
 fun ResolvedIdlType.toCType(
     longPtr: Boolean = false,
     constChar: Boolean = true,
-    callbackAsPtr: Boolean = true
+    callbackAsPtr: Boolean = false,
+    dictionaryAsPtr: Boolean = false
 ): String = when(this) {
     is ResolvedIdlType.Void -> "void"
     is ResolvedIdlType.Default -> when(declaration) {
@@ -117,6 +120,9 @@ fun ResolvedIdlType.toCType(
         is ResolvedIdlEnum -> "${declaration.name}*"
         is ResolvedIdlCallbackFunction ->
             if(callbackAsPtr) "intptr_t"
+            else "${declaration.name}*"
+        is ResolvedIdlDictionary ->
+            if(dictionaryAsPtr) "intptr_t"
             else "${declaration.name}*"
         else -> "${declaration.name}*"
     }
@@ -225,6 +231,39 @@ fun ResolvedIdlType.toJavaDesc(): String = when(this) {
         else -> "Ljava/lang/Object;"
     }
     else -> throw UnsupportedOperationException(toString())
+}
+
+fun ResolvedIdlDictionary.calcMem(): Pair<Int, Int> {
+    var sum = 0.0
+    var max = 0.0
+    allFields().forEach {
+        val cur = it.type.getAlignment().toDouble()
+        sum = (cur * ceil(sum / cur)) + cur
+        max = max(max, cur)
+    }
+    return Pair(sum.toInt(), max.toInt())
+}
+
+fun ResolvedIdlType.getAlignment(): Int = when(this) {
+    is ResolvedIdlType.Union,
+    is ResolvedIdlType.Void -> throw UnsupportedOperationException()
+    is ResolvedIdlType.Default -> when(declaration) {
+        is BuiltinIdlDeclaration -> when(val a = (declaration as BuiltinIdlDeclaration).kind) {
+            WebIDLBuiltinKind.CHAR -> 2
+            WebIDLBuiltinKind.BOOLEAN -> 1
+            WebIDLBuiltinKind.BYTE -> 1
+            WebIDLBuiltinKind.SHORT -> 2
+            WebIDLBuiltinKind.INT -> 4
+            WebIDLBuiltinKind.LONG -> 8
+            WebIDLBuiltinKind.FLOAT -> 4
+            WebIDLBuiltinKind.DOUBLE -> 8
+            WebIDLBuiltinKind.STRING -> 8
+            WebIDLBuiltinKind.LIST -> 8
+            else -> throw UnsupportedOperationException(a.toString())
+        }
+        is ResolvedIdlEnum -> 4
+        else -> 8
+    }
 }
 
 

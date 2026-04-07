@@ -112,7 +112,9 @@ class HeaderPrinter(
         append(") {\n\t")
         // malloc
         append(dictionary.name)
-        append("* result = malloc(sizeof(")
+        append("* result = (")
+        append(dictionary.name)
+        append("*)malloc(sizeof(")
         append(dictionary.name)
         append("));\n\t")
         // set
@@ -125,14 +127,6 @@ class HeaderPrinter(
         append(" };\n\t")
         // return
         append("return result;\n}\n")
-
-        /*
-        ParentStruct* ParentStruct_new(KInt a, KInt b) {
-            ParentStruct *result = malloc(sizeof(ParentStruct));
-            *result = (ParentStruct){ x, y, name };
-            return result;
-        }
-         */
     }
 
     private fun printStructTypedef(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
@@ -302,7 +296,7 @@ class HeaderPrinter(
             static Name _##Name##_of(const int n, ...) {                    \
                 va_list args;                                               \
                 va_start(args, n);                                          \
-                Type* elements = malloc(n * sizeof(Type));                  \
+                Type* elements = (Type*)malloc(n * sizeof(Type));           \
                 for (int i = 0; i < n; i++)                                 \
                     elements[i] = (Type)va_arg(args, VarargType);           \
                 va_end(args);                                               \

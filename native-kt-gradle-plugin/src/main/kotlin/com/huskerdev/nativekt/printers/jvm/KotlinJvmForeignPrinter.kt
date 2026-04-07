@@ -4,7 +4,6 @@ import com.huskerdev.nativekt.utils.*
 import com.huskerdev.webidl.resolver.*
 import org.gradle.internal.extensions.stdlib.capitalized
 import kotlin.math.ceil
-import kotlin.math.max
 
 class KotlinJvmForeignPrinter(
     idl: IdlResolver,
@@ -46,17 +45,6 @@ class KotlinJvmForeignPrinter(
             printFunctionCall(builder, it)
         }
         builder.append("${indent}}")
-    }
-
-    private fun ResolvedIdlDictionary.calcMem(): Pair<Int, Int> {
-        var sum = 0.0
-        var max = 0.0
-        allFields().forEach {
-            val cur = it.type.getAlignment().toDouble()
-            sum = (cur * ceil(sum / cur)) + cur
-            max = max(max, cur)
-        }
-        return Pair(sum.toInt(), max.toInt())
     }
 
     private fun printDictionaryDesc(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
@@ -349,28 +337,6 @@ class KotlinJvmForeignPrinter(
             }
             is ResolvedIdlEnum -> "ForeignUtils.C_INT"
             else -> "ForeignUtils.C_ADDRESS"
-        }
-    }
-
-    fun ResolvedIdlType.getAlignment(): Int = when(this) {
-        is ResolvedIdlType.Union,
-        is ResolvedIdlType.Void -> throw UnsupportedOperationException()
-        is ResolvedIdlType.Default -> when(declaration) {
-            is BuiltinIdlDeclaration -> when(val a = (declaration as BuiltinIdlDeclaration).kind) {
-                WebIDLBuiltinKind.CHAR -> 2
-                WebIDLBuiltinKind.BOOLEAN -> 1
-                WebIDLBuiltinKind.BYTE -> 1
-                WebIDLBuiltinKind.SHORT -> 2
-                WebIDLBuiltinKind.INT -> 4
-                WebIDLBuiltinKind.LONG -> 8
-                WebIDLBuiltinKind.FLOAT -> 4
-                WebIDLBuiltinKind.DOUBLE -> 8
-                WebIDLBuiltinKind.STRING -> 8
-                WebIDLBuiltinKind.LIST -> 8
-                else -> throw UnsupportedOperationException(a.toString())
-            }
-            is ResolvedIdlEnum -> 4
-            else -> 8
         }
     }
 }

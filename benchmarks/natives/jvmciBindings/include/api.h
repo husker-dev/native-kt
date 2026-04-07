@@ -66,7 +66,7 @@ static Name Name##_new(const Type* elements, const KInt size) { \
 static Name _##Name##_of(const int n, ...) {                    \
     va_list args;                                               \
     va_start(args, n);                                          \
-    Type* elements = malloc(n * sizeof(Type));                  \
+    Type* elements = (Type*)malloc(n * sizeof(Type));           \
     for (int i = 0; i < n; i++)                                 \
         elements[i] = (Type)va_arg(args, VarargType);           \
     va_end(args);                                               \

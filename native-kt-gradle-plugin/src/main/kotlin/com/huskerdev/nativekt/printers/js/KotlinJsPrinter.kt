@@ -4,9 +4,10 @@ import com.huskerdev.nativekt.utils.*
 import com.huskerdev.webidl.resolver.*
 import org.gradle.internal.extensions.stdlib.capitalized
 import java.io.File
+import kotlin.math.ceil
 
 class KotlinJsPrinter(
-    idl: IdlResolver,
+    val idl: IdlResolver,
     target: File,
     classPath: String,
     val moduleName: String,
@@ -123,24 +124,57 @@ class KotlinJsPrinter(
             builder.append("}\n")
 
             // wrap
-            idl.callbacks.values.forEach { callback -> printCallbackWrap(builder, callback) }
+            idl.callbacks.values.forEach { callback -> printCallbackCast(builder, callback) }
         }
-
+        idl.dictionaries.values.forEach { printDictionaryCasts(builder, it) }
         idl.globalOperators().forEach { printFunction(builder, it) }
 
-        printTypes(builder, idl.globalOperators())
+        printTypes(builder)
 
         target.parentFile.mkdirs()
         target.writeText(builder.toString())
     }
 
-    private fun printCallbackWrap(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
-        append("\nprivate fun ")
+    private fun printDictionaryCasts(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
+        val (sum, _) = dictionary.calcMem()
+
+        // to native
+        append("\nfun toNativeDictionary")
+        append(dictionary.name)
+        append("(of: ")
+        append(dictionary.name)
+        append(") = _module._malloc(")
+        append(sum)
+        append(").apply {\n\t")
+        append("val ptr = this shr 2")
+
+        var i = 0
+        dictionary.allFields().forEach {
+            append("\n\t_module.HEAP32[ptr + $i] = of.${it.name}")
+            i += ceil(it.type.getAlignment() / 4.0).toInt()
+        }
+        append("\n}\n")
+
+        // to kotlin
+        append("\nfun toKotlinDictionary")
+        append(dictionary.name)
+        append("(of: Int, dealloc: Boolean) = (of shr 2).run {\n\t")
+        append(dictionary.name)
+        append("(")
+
+        i = 0
+        dictionary.allFields().forEach {
+            append("\n\t\t_module.HEAP32[this + $i],")
+            i += ceil(it.type.getAlignment() / 4.0).toInt()
+        }
+        append("\n\t)\n}.also { if(dealloc) _module._free(of) }\n")
+    }
+
+    private fun printCallbackCast(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
+        append("\nprivate fun toNativeCallback")
         append(callback.name)
-        append(".wrap")
-        append(callback.name)
-        append("() =\n\t")
-        append("mallocCallback(_module, this, _invoke")
+        append("(of: ${callback.name}) =\n\t")
+        append("mallocCallback(_module, of, _invoke")
         append(callback.name)
         append(", _freeCallback)\n")
     }
@@ -151,7 +185,7 @@ class KotlinJsPrinter(
         index: Int
     ) = builder.apply {
         val args = listOf("_c: Int") + callback.args.map { "${it.name}: ${toSimpleJsType(it.type)}" }
-        val castedArgs = callback.args.map { castToJS(it.type, it.name, it.isDealloc(), false) }
+        val castedArgs = callback.args.map { castToJS(it.type, it.name, it.isDealloc(), it.isDeallocContent(), false) }
 
         // header
         append("\n\t// ").append(callback.name)
@@ -162,7 +196,7 @@ class KotlinJsPrinter(
         append(" ->\n\t\t")
 
         // body
-        val call = "unwrapCallback<${callback.name}>(_module, _c, false)(${castedArgs.joinToString()})"
+        val call = "toKotlinCallback<${callback.name}>(_module, _c, false)(${castedArgs.joinToString()})"
         append(castToNative(callback.type, call, dealloc = false, useArena = false))
         append("\n\t")
 
@@ -185,7 +219,7 @@ class KotlinJsPrinter(
             castToNative(it.type, it.name, it.isDealloc(), useArena)
         }
         val func = "_module.${function.name}"
-        append(castToJS(function.type, "$func($args)", function.isDealloc(), useArena))
+        append(castToJS(function.type, "$func($args)", function.isDealloc(), function.isDeallocContent(), useArena))
 
         if(useArena)
             append("\n}")
@@ -193,7 +227,7 @@ class KotlinJsPrinter(
         append("\n")
     }
 
-    private fun printTypes(buffer: StringBuilder, functions: List<ResolvedIdlOperation>) = buffer.apply {
+    private fun printTypes(buffer: StringBuilder) = buffer.apply {
         append("""
             
             private external interface Lib: JsAny {
@@ -205,7 +239,7 @@ class KotlinJsPrinter(
 
         """.trimIndent())
 
-        functions.forEach { function ->
+        idl.globalOperators().forEach { function ->
             append("\tfun ")
             append(function.name)
             append("(")
@@ -226,8 +260,8 @@ class KotlinJsPrinter(
             is BuiltinIdlDeclaration -> when(decl.kind) {
                 WebIDLBuiltinKind.CHAR -> "${content}.code"
                 WebIDLBuiltinKind.STRING ->
-                    if(useArena) "arena.allocCStr($content)"
-                    else "allocCStr(_module, $content)"
+                    if(useArena) "arena.toNativeCallback($content)"
+                    else "toNativeCallback(_module, $content)"
                 WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
                     when (declaration) {
                         is BuiltinIdlDeclaration -> {
@@ -237,7 +271,8 @@ class KotlinJsPrinter(
                         }
                         is ResolvedIdlEnum ->
                             "toNativeEnumArray(_module, $content)"
-                        is ResolvedIdlDictionary -> content
+                        is ResolvedIdlDictionary ->
+                            "toNativeArray(_module, $content, ::toNativeDictionary${declaration.name})"
                         else -> throw UnsupportedOperationException(type.toString())
                     }
                 }
@@ -245,23 +280,23 @@ class KotlinJsPrinter(
             }
             is ResolvedIdlEnum -> "${content}.ordinal"
             is ResolvedIdlCallbackFunction ->
-                if(dealloc) "arena.callback($content.wrap${decl.name}())"
-                else "$content.wrap${decl.name}()"
-            is ResolvedIdlDictionary -> content
+                if(dealloc) "arena.callback(toNativeCallback${decl.name}($content))"
+                else "toNativeCallback${decl.name}($content)"
+            is ResolvedIdlDictionary -> "toNativeDictionary${decl.name}($content)"
             else -> throw UnsupportedOperationException(type.toString())
         }
         is ResolvedIdlType.Union -> throw UnsupportedOperationException(type.toString())
     }
 
-    private fun castToJS(type: ResolvedIdlType, content: String, dealloc: Boolean, useArena: Boolean): String = when(type) {
+    private fun castToJS(type: ResolvedIdlType, content: String, dealloc: Boolean, deallocContent: Boolean, useArena: Boolean): String = when(type) {
         is ResolvedIdlType.Void -> content
         is ResolvedIdlType.Default -> when(val decl = type.declaration) {
             is BuiltinIdlDeclaration -> when(decl.kind) {
                 WebIDLBuiltinKind.FLOAT -> "$content.truncF32()"
                 WebIDLBuiltinKind.CHAR -> "$content.toChar()"
                 WebIDLBuiltinKind.STRING ->
-                    if(useArena) "arena.unwrapCStr($content, $dealloc)"
-                    else "unwrapCStr(_module, $content, $dealloc)"
+                    if(useArena) "arena.toKotlinString($content, $dealloc)"
+                    else "toKotlinString(_module, $content, $dealloc)"
                 WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
                     when (declaration) {
                         is BuiltinIdlDeclaration -> {
@@ -272,7 +307,7 @@ class KotlinJsPrinter(
                         is ResolvedIdlEnum ->
                             "toKotlinEnumArray(_module, $content, $dealloc, ${declaration.name}.entries::get)"
                         is ResolvedIdlDictionary ->
-                            content
+                            "toKotlinArray(_module, $content, ::toKotlinDictionary${declaration.name}, $dealloc, $deallocContent)"
                         else -> throw UnsupportedOperationException(type.toString())
                     }
                 }
@@ -280,9 +315,9 @@ class KotlinJsPrinter(
             }
             is ResolvedIdlEnum -> "${decl.name}.entries[$content]"
             is ResolvedIdlCallbackFunction ->
-                if(useArena) "arena.unwrapCallback<${decl.name}>($content, $dealloc)"
-                else "unwrapCallback<${decl.name}>(_module, $content, $dealloc)"
-            is ResolvedIdlDictionary -> content
+                if(useArena) "arena.toKotlinCallback<${decl.name}>($content, $dealloc)"
+                else "toKotlinCallback<${decl.name}>(_module, $content, $dealloc)"
+            is ResolvedIdlDictionary -> "toKotlinDictionary${decl.name}($content, $dealloc)"
             else -> throw UnsupportedOperationException(type.toString())
         }
         else -> throw UnsupportedOperationException(type.toString())
@@ -302,11 +337,12 @@ class KotlinJsPrinter(
                 WebIDLBuiltinKind.LONG -> "Long"
                 WebIDLBuiltinKind.STRING -> "EmString"
                 WebIDLBuiltinKind.LIST -> "EmArray"
-                else -> "JsNumber"
+                else -> throw UnsupportedOperationException()
             }
             is ResolvedIdlEnum -> "Int"
             is ResolvedIdlCallbackFunction -> "Int"
-            else -> "JsNumber"
+            is ResolvedIdlDictionary -> "Int"
+            else -> "Int"
         }
         else -> throw UnsupportedOperationException(type.toString())
     }
