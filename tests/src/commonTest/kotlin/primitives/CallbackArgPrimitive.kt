@@ -2,6 +2,7 @@ package primitives
 
 import natives.test.MyDictionary
 import natives.test.MyEnum
+import natives.test.VoidCallback
 import withLib
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -62,7 +63,7 @@ class CallbackArgPrimitive {
 
     @Test
     fun callbackArgCallback() = withLib {
-        val toPass = {}
+        val toPass = VoidCallback {}
         assertTrue(natives.test.callbackArgCallback(toPass) { it == toPass })
     }
 

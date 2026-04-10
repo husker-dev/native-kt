@@ -2,6 +2,7 @@ package primitives
 
 import natives.test.MyDictionary
 import natives.test.MyEnum
+import natives.test.VoidCallback
 import withLib
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -56,7 +57,7 @@ class CallbackReturnPrimitive {
 
     @Test
     fun callbackReturnCallback() = withLib {
-        val toPass = {}
+        val toPass = VoidCallback {}
         assertEquals(toPass, natives.test.callbackReturnCallback { toPass })
     }
 

@@ -1,8 +1,6 @@
 package com.huskerdev.nativekt.printers
 
 import com.huskerdev.nativekt.printers.jvm.KotlinJvmJniPrinter
-import com.huskerdev.nativekt.printers.jvm.jniCastToJvm
-import com.huskerdev.nativekt.printers.jvm.jniCastToNative
 import com.huskerdev.nativekt.utils.asyncFunctionName
 import com.huskerdev.nativekt.utils.globalOperators
 import com.huskerdev.nativekt.utils.printFunctionHeader
@@ -63,7 +61,7 @@ class KotlinAndroidPrinter(
         idl.globalOperators().forEach { printFunction(builder, it) }
 
         builder.append("\n\n")
-        KotlinJvmJniPrinter(idl, builder, parentClass = null, instanceMethods = false, name = jniClassName)
+        KotlinJvmJniPrinter(idl, builder, name = jniClassName, parentClass = null, forAndroid = true)
 
         target.parentFile.mkdirs()
         target.writeText(builder.toString())
@@ -74,12 +72,10 @@ class KotlinAndroidPrinter(
         printFunctionHeader(builder, function, isActual = expectActual)
         append(" = \n\t")
 
-        val args = function.args.joinToString {
-            jniCastToNative(it.type, it.name)
-        }
+        val args = function.args.joinToString { it.name }
         val call = "$jniClassName.${function.name}($args)"
 
-        append(jniCastToJvm(function.type, call))
+        append(call)
         append("\n")
     }
 }

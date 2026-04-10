@@ -25,7 +25,7 @@ class KotlinJvmCIPrinter(
                         
                         private fun linkFunction(lib: String, name: String, alt: Boolean, vararg types: Class<*>) {
                             JVMCIUtils.linkNativeCall(
-                                $$name::class.java.getDeclaredMethod(name, *types),
+                                $$name::class.java.getDeclaredMethod("_$name", *types),
                                 getFunctionAddress(lib, "EXPORTED_$${classPath.replace(".", "_")}_$name${if (alt) "_" else ""}")
                             )
                         }
@@ -34,7 +34,13 @@ class KotlinJvmCIPrinter(
 
             operators.forEach {
                 append("\n\t\t@JvmStatic ")
-                printFunctionHeader(builder, it, isExternal = true, stringAsBytes = true, arraysLen = true, enumAsInt = true)
+                printFunctionHeader(builder, it,
+                    name = "_${it.name}",
+                    isExternal = true,
+                    stringAsBytes = true,
+                    arraysLen = true,
+                    enumAsInt = true
+                )
             }
             append("\n\t}\n\n")
             append("\tinit {")
@@ -70,7 +76,6 @@ class KotlinJvmCIPrinter(
         append("\n\t")
         printFunctionHeader(builder, function,
             isOverride = true,
-            name = "_${function.name}",
             forcePrintVoid = true
         )
         append(" =\n\t\t")
@@ -86,7 +91,7 @@ class KotlinJvmCIPrinter(
                 "${it.name}, ${it.name}.size"
             else it.name
         }
-        append("${function.name}(${args})")
+        append("_${function.name}(${args})")
         append("\n")
     }
 

@@ -74,8 +74,8 @@ class CJniArenaPrinter(
                 return (K##Name##Array) { elements, size };                                         \
             }                                                                                       \
                                                                                                     \
-            JType##Array Arena__toJvm##Name##Array(Arena* arena, K##Name##Array arr, bool dealloc) {\
-                return JNI_toJvm##Name##Array(                                                      \
+            JType##Array Arena__toKotlin##Name##Array(Arena* arena, K##Name##Array arr, bool dealloc) {\
+                return JNI_toKotlin##Name##Array(                                                      \
                     arena->env, arr,                                                                \
                     dealloc && !Arena__contains(arena, (void*)arr.elements)                         \
                 );                                                                                  \
@@ -113,8 +113,8 @@ class CJniArenaPrinter(
                 return (KString) { data, length };
             }
             
-            jstring Arena__toJvmString(Arena* arena, KString str, bool dealloc) {
-                return JNI_toJvmString(arena->env, str, dealloc && !Arena__contains(arena, (void*)str.data));
+            jstring Arena__toKotlinString(Arena* arena, KString str, bool dealloc) {
+                return JNI_toKotlinString(arena->env, str, dealloc && !Arena__contains(arena, (void*)str.data));
             }
             
         """.trimIndent())
@@ -140,7 +140,7 @@ class CJniArenaPrinter(
             builder.append("""
                 
                 void ArenaNode__freeCallback(Arena* arena, ArenaNode* node){
-                    JNI_CALLBACK_free((JNI_Callback*)node->ptr);
+                    JNI_freeCallback((JNI_Callback*)node->ptr);
                 }
     
                 JNI_Callback* Arena__callback(Arena* arena, JNI_Callback* callback) {

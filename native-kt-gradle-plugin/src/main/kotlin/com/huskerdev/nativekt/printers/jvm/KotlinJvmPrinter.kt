@@ -114,7 +114,7 @@ class KotlinJvmPrinter(
         """.trimIndent())
 
         idl.globalOperators().joinTo(builder, "\n\t") {
-            functionHeader(it, name = "_${it.name}")
+            functionHeader(it, name = it.name)
         }
         builder.append("\n}")
 
@@ -123,7 +123,7 @@ class KotlinJvmPrinter(
         KotlinJvmJniPrinter(idl, builder,
             name = "${moduleName.capitalized()}JNI",
             parentClass = nativeInvoker,
-            instanceMethods = true,
+            forAndroid = false,
         )
 
         // Foreign
@@ -156,7 +156,7 @@ class KotlinJvmPrinter(
     private fun printFunctionProxy(builder: StringBuilder, function: ResolvedIdlOperation, implName: String) = builder.apply {
         append('\n')
         printFunctionHeader(builder, function, isActual = expectActual, forcePrintVoid = true)
-        append(" = \n\t$implName!!._")
+        append(" = \n\t$implName!!.")
         append(function.name)
         function.args.joinTo(this, prefix = "(", postfix = ")\n") { it.name }
     }

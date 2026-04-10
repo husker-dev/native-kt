@@ -56,16 +56,29 @@ class KotlinJvmForeignPrinter(
         append("\n\t\tprivate val ")
         append(structName)
         append(" = MemoryLayout.structLayout(\n\t\t\t")
-        dictionary.allFields().joinTo(builder, separator = ",\n\t\t\t") {
-            "${it.type.toForeignType()}.withName(\"${it.name}\")"
-        }
+
+        var bytes = 0
+        dictionary.allFields().flatMap {
+            val alignment = it.type.getAlignment()
+            val padding = bytes % alignment % 8
+            bytes += padding + alignment
+
+            val field = "${it.type.toForeignType()}.withName(\"${it.name}\")"
+            if(padding == 0)
+                listOf(field)
+            else
+                listOf("MemoryLayout.paddingLayout(${padding})", field)
+        }.joinTo(builder, separator = ",\n\t\t\t")
+
         if(padding != 0)
             append(",\n\t\t\tMemoryLayout.paddingLayout(${padding})")
         append("\n\t\t)\n\t\t")
 
         dictionary.allFields().joinTo(builder, separator = "\n\t\t") {
             val fieldName = "${structName}Field${it.name.capitalized()}"
-            "private val $fieldName = $structName.varHandle(MemoryLayout.PathElement.groupElement(\"${it.name}\"))"
+            val func = if(it.type.isString() || it.type.isArray())
+                "byteOffset" else "varHandle"
+            "private val $fieldName = $structName.$func(MemoryLayout.PathElement.groupElement(\"${it.name}\"))"
         }
         append("\n")
     }
@@ -86,7 +99,12 @@ class KotlinJvmForeignPrinter(
         append(").apply {\n\t\t\t")
         dictionary.allFields().joinTo(builder, separator = "\n\t\t\t") {
             val fieldName = "${structName}Field${it.name.capitalized()}"
-            "$fieldName.set(this, 0L, of.${it.name})"
+            if(it.type.isString() || it.type.isArray()) {
+                castToNative(it.type, "of.${it.name}", false, dealloc = false, useArena = false, slice = "asSlice($fieldName)")
+            } else {
+                val set = castToNative(it.type, "of.${it.name}", critical = false, dealloc = false, useArena = false)
+                "$fieldName.set(this, 0L, $set)"
+            }
         }
         append("\n\t\t}\n")
 
@@ -98,7 +116,12 @@ class KotlinJvmForeignPrinter(
         append("(\n\t\t\t\t")
         dictionary.allFields().joinTo(builder, separator = ",\n\t\t\t\t") {
             val fieldName = "${structName}Field${it.name.capitalized()}"
-            "$fieldName.get(this, 0L) as ${it.type.toKotlinForeignType()}"
+            val get = if(it.type.isString() || it.type.isArray())
+                "asSlice($fieldName)"
+            else
+                "$fieldName.get(this, 0L) as ${it.type.toKotlinForeignType()}"
+
+            castFromNative(it.type, get, dealloc = false, deallocContent = false, useArena = false)
         }
         append("\n\t\t\t)\n\t\t}.also { if (dealloc) ForeignUtils.freeHandle.invoke(of) }\n")
     }
@@ -131,7 +154,6 @@ class KotlinJvmForeignPrinter(
         append("\n${indent}\t")
         printFunctionHeader(builder, function,
             isOverride = true,
-            name = "_${function.name}",
             forcePrintVoid = true
         )
         append(" = ")
@@ -170,7 +192,6 @@ class KotlinJvmForeignPrinter(
         val args = listOf("_callback: MemorySegment") +
                 callback.args.map { "${it.name}: ${it.type.toKotlinForeignType()}" }
 
-        val lambdaArgTypes = callback.args.map { it.type.toKotlinType() }
         val lambdaArgs = callback.args.map { castFromNative(it.type, it.name, it.isDealloc(), it.isDeallocContent(), false) }
 
         val type = callback.type.toKotlinForeignType()
@@ -185,10 +206,8 @@ class KotlinJvmForeignPrinter(
 
         // body
         val call = StringBuilder().apply {
-            append("(ForeignUtils.callbacks[_callback.address()] as (")
-            lambdaArgTypes.joinTo(this)
-            append(") -> ")
-            append(callback.type.toKotlinType())
+            append("(ForeignUtils.callbacks[_callback.address()] as ")
+            append(callback.name)
             append(")(")
             lambdaArgs.joinTo(this)
             append(")")
@@ -283,39 +302,42 @@ class KotlinJvmForeignPrinter(
         else -> throw UnsupportedOperationException(type.toString())
     }
 
-    private fun castToNative(type: ResolvedIdlType, content: String, critical: Boolean, dealloc: Boolean, useArena: Boolean): String = when(type) {
-        is ResolvedIdlType.Void -> content
-        is ResolvedIdlType.Default -> when(type.declaration) {
-            is BuiltinIdlDeclaration -> when((type.declaration as BuiltinIdlDeclaration).kind) {
-                WebIDLBuiltinKind.STRING ->
-                    if(critical) "ForeignUtils.toNativeHeapString($content)"
-                    else if(useArena) "arena.toNativeString($content)"
-                    else "ForeignUtils.toNativeString($content)"
-                WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
-                    when (declaration) {
-                        is BuiltinIdlDeclaration -> {
-                            val name = declaration.kind.simpleName()
-                            if (useArena) "arena.toNative${name}Array($content)"
-                            else "ForeignUtils.toNative${name}Array($content)"
+    private fun castToNative(type: ResolvedIdlType, content: String, critical: Boolean, dealloc: Boolean, useArena: Boolean, slice: String? = null): String {
+        val slice = if(slice != null) ", $slice" else ""
+        return when (type) {
+            is ResolvedIdlType.Void -> content
+            is ResolvedIdlType.Default -> when (type.declaration) {
+                is BuiltinIdlDeclaration -> when ((type.declaration as BuiltinIdlDeclaration).kind) {
+                    WebIDLBuiltinKind.STRING ->
+                        if (critical) "ForeignUtils.toNativeHeapString($content)"
+                        else if (useArena) "arena.toNativeString($content)"
+                        else "ForeignUtils.toNativeString($content$slice)"
+                    WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
+                        when (declaration) {
+                            is BuiltinIdlDeclaration -> {
+                                val name = declaration.kind.simpleName()
+                                if (useArena) "arena.toNative${name}Array($content)"
+                                else "ForeignUtils.toNative${name}Array($content$slice)"
+                            }
+                            is ResolvedIdlEnum -> {
+                                if (useArena) "arena.toNativeEnumArray($content)"
+                                else "ForeignUtils.toNativeEnumArray($content$slice)"
+                            }
+                            is ResolvedIdlDictionary -> "ForeignUtils.toNativeArray($content, ::toNativeDictionary${declaration.name}$slice)"
+                            else -> throw UnsupportedOperationException(type.toString())
                         }
-                        is ResolvedIdlEnum -> {
-                            if (useArena) "arena.toNativeEnumArray($content)"
-                            else "ForeignUtils.toNativeEnumArray($content)"
-                        }
-                        is ResolvedIdlDictionary -> "ForeignUtils.toNativeArray($content, ::toNativeDictionary${declaration.name})"
-                        else -> throw UnsupportedOperationException(type.toString())
                     }
+                    else -> content
                 }
-                else -> content
+                is ResolvedIdlCallbackFunction ->
+                    if (dealloc) "arena.callback(toNativeCallback${type.declaration.name}($content))"
+                    else "toNativeCallback${type.declaration.name}($content)"
+                is ResolvedIdlEnum -> "$content.ordinal"
+                is ResolvedIdlDictionary -> "toNativeDictionary${type.declaration.name}(${content})"
+                else -> throw UnsupportedOperationException(type.toString())
             }
-            is ResolvedIdlCallbackFunction ->
-                if(dealloc) "arena.callback(toNativeCallback${type.declaration.name}($content))"
-                else "toNativeCallback${type.declaration.name}($content)"
-            is ResolvedIdlEnum -> "$content.ordinal"
-            is ResolvedIdlDictionary -> "toNativeDictionary${type.declaration.name}(${content})"
             else -> throw UnsupportedOperationException(type.toString())
         }
-        else -> throw UnsupportedOperationException(type.toString())
     }
 
     fun ResolvedIdlType.toForeignType(): String = when(this) {

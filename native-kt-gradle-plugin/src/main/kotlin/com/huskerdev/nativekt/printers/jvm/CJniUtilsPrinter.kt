@@ -33,11 +33,6 @@ class CJniUtilsPrinter(
             
         """.trimIndent())
 
-        if(idl.dictionaries.isNotEmpty()) {
-            printLabel(builder, "Structs")
-            printStructs(builder)
-        }
-
         printLabel(builder, "String")
         builder.append("""
             
@@ -45,7 +40,7 @@ class CJniUtilsPrinter(
             jmethodID stringConstructor;
             typedef struct KString KString;
             
-            jstring JNI_toJvmString(JNIEnv *env, KString str, bool dealloc) {
+            jstring JNI_toKotlinString(JNIEnv *env, KString str, bool dealloc) {
                 int32_t length = str.length;
             
                 jbyteArray bytes = (*env)->NewByteArray(env, length);
@@ -81,7 +76,7 @@ class CJniUtilsPrinter(
                 return (K##Name##Array) { (K##Name*)copy, size };                                   \
             }                                                                                       \
                                                                                                     \
-            JType##Array JNI_toJvm##Name##Array(JNIEnv *env, K##Name##Array arr, bool dealloc) {    \
+            JType##Array JNI_toKotlin##Name##Array(JNIEnv *env, K##Name##Array arr, bool dealloc) {    \
                 JType##Array result = (*env)->New##Name##Array(env, arr.size);                      \
                 (*env)->Set##Name##ArrayRegion(env, result, 0, arr.size, (JType*)arr.elements);     \
                 if(dealloc) free((void*)arr.elements);                                              \
@@ -104,7 +99,7 @@ class CJniUtilsPrinter(
         printLabel(builder, "Object array")
         builder.append("""
                 
-            jobjectArray JNI_toJvmArray(
+            jobjectArray JNI_toKotlinArray(
                 JNIEnv *env, 
                 KArray src, 
                 jobject (*converter)(JNIEnv*, void*, bool),
@@ -134,15 +129,61 @@ class CJniUtilsPrinter(
             
         """.trimIndent())
 
-        if(idl.callbacks.isNotEmpty()) {
-            printLabel(builder, "Callbacks")
-            builder.append("\n")
-            idl.callbacks.values
-                .map { "callback${it.name}" }
-                .chunked(4)
-                .joinTo(builder, prefix = "jmethodID ", separator = ",\n\t", postfix = ";\n") { it.joinToString() }
+        if(idl.enums.isNotEmpty()) {
+            printLabel(builder, "Enum casts")
+            builder.append("\njmethodID enumOrdinal;")
 
-            builder.append("\n")
+            idl.enums.values.joinTo(builder, prefix = "\njclass ", postfix = ";") {
+                "enum${it.name}Class"
+            }
+            idl.enums.values.joinTo(builder, prefix = "\njmethodID ", postfix = ";") {
+                "enum${it.name}Values"
+            }
+            builder.append("""
+                
+                
+                KInt JNI_toNativeEnum(JNIEnv* env, jobject of) {
+                	return (*env)->CallIntMethod(env, of, enumOrdinal);
+                }
+                
+                jobject JNI_toKotlinEnum(JNIEnv* env, KInt of, jclass clazz, jmethodID valuesMethod) {
+                	jobjectArray values = (jobjectArray) (*env)->CallStaticObjectMethod(env, clazz, valuesMethod);
+                	jobject result = (*env)->GetObjectArrayElement(env, values, of);
+                	(*env)->DeleteLocalRef(env, values);
+                	return result;
+                }
+
+                KIntArray JNI_toNativeEnumArray(
+                	JNIEnv *env,
+                	jobjectArray src
+                ) {
+                	int length = (*env)->GetArrayLength(env, src);
+                	KInt* elements = malloc(length * sizeof(KInt));
+                	for(int i = 0; i < length; i++)
+                		elements[i] = JNI_toNativeEnum(env, (*env)->GetObjectArrayElement(env, src, i));
+                	return (KIntArray){ elements, length };
+                }
+                
+                jobjectArray JNI_toKotlinEnumArray(
+                    JNIEnv *env,
+                    KIntArray src,
+                    jclass clazz,
+                    jmethodID valuesMethod,
+                    bool dealloc
+                ) {
+                    jobjectArray result = (*env)->NewObjectArray(env, src.size, clazz, NULL);
+                    const KInt* elements = src.elements;
+                    for(int i = 0; i < src.size; i++)
+                        (*env)->SetObjectArrayElement(env, result, i, JNI_toKotlinEnum(env, elements[i], clazz, valuesMethod));
+                    if(dealloc) free((void*) src.elements);
+                    return result;
+                }
+                
+            """.trimIndent())
+        }
+
+        if(idl.callbacks.isNotEmpty()) {
+            printLabel(builder, "Callback casts")
             builder.append("""
                 
                 typedef struct JNI_Callback {
@@ -163,7 +204,7 @@ class CJniUtilsPrinter(
                         (*jvm)->DetachCurrentThread(jvm);
                 }
                 
-                void JNI_CALLBACK_free(JNI_Callback* callback) {
+                void JNI_freeCallback(JNI_Callback* callback) {
                     JNIEnv *env;
                     jint status = JVM_attach(&env);
                 
@@ -173,21 +214,38 @@ class CJniUtilsPrinter(
                     JVM_detach(status);
                 }
                 
-                jobject JNI_toJvmCallback(JNIEnv *env, JNI_Callback* callback, bool dealloc) {
+                jobject JNI_toKotlinCallback(JNIEnv *env, JNI_Callback* callback, bool dealloc) {
                     jobject result = (jobject)callback->m;
-                    if(dealloc) JNI_CALLBACK_free(callback);
+                    if(dealloc) JNI_freeCallback(callback);
                     return result;
                 }
                 
                 JNI_Callback* JNI_toNativeCallback(JNIEnv *env, jobject obj, void (*invoke)()) {
                 	JNI_Callback* callback = (JNI_Callback*)malloc(sizeof(JNI_Callback));
                 	callback->invoke = invoke;
-                	callback->free = JNI_CALLBACK_free;
+                	callback->free = JNI_freeCallback;
                 	callback->m = (void*)(*env)->NewGlobalRef(env, obj);
                 	return callback;
                 }
                 
+                
             """.trimIndent())
+            idl.callbacks.values.forEach { printCallbackInvokeDef(builder, it) }
+        }
+
+        if(idl.dictionaries.isNotEmpty()) {
+            printLabel(builder, "Structs")
+            printStructs(builder)
+        }
+
+        if(idl.callbacks.isNotEmpty()) {
+            printLabel(builder, "Callback invokes")
+            builder.append("\n")
+            idl.callbacks.values
+                .map { "callback${it.name}Invoke" }
+                .chunked(4)
+                .joinTo(builder, prefix = "jmethodID ", separator = ",\n\t", postfix = ";\n") { it.joinToString() }
+
             idl.callbacks.values.forEach { callback ->
                 printCallbackInvoke(builder, callback)
             }
@@ -226,7 +284,7 @@ class CJniUtilsPrinter(
 
             // to JVM
             append("\n")
-            append("jobject JNI_STRUCT_toJvm")
+            append("jobject JNI_toKotlinDictionary")
             append(struct.name)
             append("(JNIEnv *env, ")
             append(struct.name)
@@ -248,7 +306,7 @@ class CJniUtilsPrinter(
             // to Native
             append("\n")
             append(struct.name)
-            append("* JNI_STRUCT_toNative")
+            append("* JNI_toNativeDictionary")
             append(struct.name)
             append("(JNIEnv *env, jobject src) {\n\t")
             append(struct.name)
@@ -256,23 +314,7 @@ class CJniUtilsPrinter(
             append("*result = (").append(struct.name).append(") {\n\t\t")
             struct.allFields().joinTo(builder, separator = ",\n\t\t") { field ->
                 val fieldVariable = "struct${struct.name}Field${field.name.capitalized()}"
-                val getter = when(field.type) {
-                    is ResolvedIdlType.Default -> when(val decl = (field.type as ResolvedIdlType.Default).declaration) {
-                        is BuiltinIdlDeclaration -> when(decl.kind) {
-                            WebIDLBuiltinKind.BOOLEAN -> "CallBooleanMethod"
-                            WebIDLBuiltinKind.BYTE -> "CallByteMethod"
-                            WebIDLBuiltinKind.CHAR -> "CallCharMethod"
-                            WebIDLBuiltinKind.SHORT -> "CallShortMethod"
-                            WebIDLBuiltinKind.INT -> "CallIntMethod"
-                            WebIDLBuiltinKind.LONG -> "CallLongMethod"
-                            WebIDLBuiltinKind.FLOAT -> "CallFloatMethod"
-                            WebIDLBuiltinKind.DOUBLE -> "CallDoubleMethod"
-                            else -> "CallObjectMethod"
-                        }
-                        else -> "CallObjectMethod"
-                    }
-                    else -> throw UnsupportedOperationException(field.type.toString())
-                }
+                val getter = field.type.toMethodCall()
                 castJavaToJNI(field.type, "(*env)->$getter(env, src, $fieldVariable)", dealloc = false, useArena = false)
             }
             append("\n\t};")
@@ -280,12 +322,22 @@ class CJniUtilsPrinter(
         }
     }
 
+    private fun printCallbackInvokeDef(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
+        val args = listOf("${callback.name}* _callback") +
+                callback.args.map { "${it.type.toCDefType()} ${it.name}" }
+
+        append("${callback.type.toCDefType()} JNI_CALLBACK_INVOKE_${callback.name}(${args.joinToString()});\n")
+    }
+
     private fun printCallbackInvoke(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
         val args = listOf("${callback.name}* _callback") +
                 callback.args.map { "${it.type.toCDefType()} ${it.name}" }
 
-        val jvmArgs = listOf("(jobject)_callback->m") +
-                callback.args.map { castJniToJava(it.type, it.name, it.isDealloc(), it.isDeallocContent(), false) }
+        var jvmArgs = callback.args.joinToString {
+            castJniToJava(it.type, it.name, it.isDealloc(), it.isDeallocContent(), false)
+        }
+        if(jvmArgs.isNotEmpty())
+            jvmArgs = ", $jvmArgs"
 
         append("""
             
@@ -295,29 +347,8 @@ class CJniUtilsPrinter(
                 
         """.trimIndent())
 
-        val funcName = when(callback.type) {
-            is ResolvedIdlType.Void -> "CallStaticVoidMethod"
-            is ResolvedIdlType.Default -> when(val decl = (callback.type as ResolvedIdlType.Default).declaration) {
-                is BuiltinIdlDeclaration -> when(decl.kind) {
-                    WebIDLBuiltinKind.BOOLEAN -> "CallStaticBooleanMethod"
-                    WebIDLBuiltinKind.BYTE -> "CallStaticByteMethod"
-                    WebIDLBuiltinKind.CHAR -> "CallStaticCharMethod"
-                    WebIDLBuiltinKind.SHORT -> "CallStaticShortMethod"
-                    WebIDLBuiltinKind.INT -> "CallStaticIntMethod"
-                    WebIDLBuiltinKind.LONG -> "CallStaticLongMethod"
-                    WebIDLBuiltinKind.FLOAT -> "CallStaticFloatMethod"
-                    WebIDLBuiltinKind.DOUBLE -> "CallStaticDoubleMethod"
-                    else -> "CallStaticObjectMethod"
-                }
-                is ResolvedIdlCallbackFunction -> "CallStaticObjectMethod"
-                is ResolvedIdlEnum -> "CallStaticIntMethod"
-                is ResolvedIdlDictionary -> "CallStaticObjectMethod"
-                else -> throw UnsupportedOperationException(callback.type.toString())
-            }
-            else -> throw UnsupportedOperationException(callback.type.toString())
-        }
-
-        val call = "(*env)->$funcName(env, jniClass, callback${callback.name}, ${jvmArgs.joinToString()})"
+        val funcName = callback.type.toMethodCall()
+        val call = "(*env)->$funcName(env, (jobject)_callback->m, callback${callback.name}Invoke$jvmArgs)"
 
         if(callback.type !is ResolvedIdlType.Void) {
             append(callback.type.toCDefType())
@@ -354,6 +385,20 @@ class CJniUtilsPrinter(
                 
         """.replaceIndent())
 
+        if(idl.enums.isNotEmpty()) {
+            append("\n\t")
+            append("// Enums")
+            append("\n\tenumOrdinal = (*env)->GetMethodID(env, (*env)->FindClass(env, \"java/lang/Enum\"), \"ordinal\", \"()I\");\n")
+            idl.enums.values.forEach { enum ->
+                val classPath = "${classPath.replace(".", "/")}/${enum.name}"
+                val classFieldName = "enum${enum.name}Class"
+                val valuesFieldName = "enum${enum.name}Values"
+
+                append("\n\t$classFieldName = (*env)->NewGlobalRef(env, (*env)->FindClass(env, \"$classPath\"));")
+                append("\n\t$valuesFieldName = (*env)->GetStaticMethodID(env, $classFieldName, \"values\", \"()[L$classPath;\");\n")
+            }
+        }
+
         if(idl.dictionaries.isNotEmpty()) {
             append("\n\t")
             append("// Struct")
@@ -372,14 +417,14 @@ class CJniUtilsPrinter(
                 append(" = (*env)->GetStaticMethodID(env, ")
                 append(classFieldName)
                 append(", \"of\", \"(")
-                struct.allFields().joinTo(builder, separator = "") { d -> d.type.toJavaDesc() }
+                struct.allFields().joinTo(builder, separator = "") { d -> d.type.toJavaDesc(classPath) }
                 append(")L")
                 append(structClassPath)
                 append(";\");\n\t")
 
                 struct.allFields().joinTo(builder, separator = "\n\t") { field ->
                     val fieldVariableName = "struct${struct.name}Field${field.name.capitalized()}"
-                    "$fieldVariableName = (*env)->GetMethodID(env, $classFieldName, \"get${field.name.capitalized()}\", \"()${field.type.toJavaDesc()}\");"
+                    "$fieldVariableName = (*env)->GetMethodID(env, $classFieldName, \"get${field.name.capitalized()}\", \"()${field.type.toJavaDesc(classPath)}\");"
                 }
                 append("\n")
             }
@@ -390,19 +435,37 @@ class CJniUtilsPrinter(
             append("\n\t")
             append("// Callbacks\n\t")
             idl.callbacks.values.forEach {
-                append("callback")
-                append(it.name)
-                append(" = (*env)->GetStaticMethodID(env, jniClass, \"callback")
-                append(it.name)
-                append("\", \"(Ljava/lang/Object;")
-                it.args.joinTo(builder, separator = "") { d -> d.type.toJavaDesc() }
-                append(")")
-                append(it.type.toJavaDesc())
-                append("\");\n\t")
+                val args = it.args.joinToString(separator = "") { d -> d.type.toJavaDesc(classPath) }
+                val ret = it.type.toJavaDesc(classPath)
+                val path = classPath.replace(".", "/") + "/" + it.name
+
+                append("callback${it.name}Invoke = (*env)->GetMethodID(env, (*env)->FindClass(env, \"$path\"), \"invoke\", \"($args)$ret\");\n\t")
             }
         }
 
         append("\n\treturn JNI_VERSION_1_6;\n")
         append("}")
     }
+}
+
+private fun ResolvedIdlType.toMethodCall() = when(this) {
+    is ResolvedIdlType.Void -> "CallVoidMethod"
+    is ResolvedIdlType.Default -> when(val decl = declaration) {
+        is BuiltinIdlDeclaration -> when(decl.kind) {
+            WebIDLBuiltinKind.BOOLEAN -> "CallBooleanMethod"
+            WebIDLBuiltinKind.BYTE -> "CallByteMethod"
+            WebIDLBuiltinKind.CHAR -> "CallCharMethod"
+            WebIDLBuiltinKind.SHORT -> "CallShortMethod"
+            WebIDLBuiltinKind.INT -> "CallIntMethod"
+            WebIDLBuiltinKind.LONG -> "CallLongMethod"
+            WebIDLBuiltinKind.FLOAT -> "CallFloatMethod"
+            WebIDLBuiltinKind.DOUBLE -> "CallDoubleMethod"
+            else -> "CallObjectMethod"
+        }
+        is ResolvedIdlCallbackFunction -> "CallObjectMethod"
+        is ResolvedIdlEnum -> "CallObjectMethod"
+        is ResolvedIdlDictionary -> "CallObjectMethod"
+        else -> "CallObjectMethod"
+    }
+    else -> throw UnsupportedOperationException(toString())
 }

@@ -107,7 +107,7 @@ struct Name {								\
 
 typedef struct ParentDictionary ParentDictionary;
 typedef struct MyDictionary MyDictionary;
-typedef struct ChildDictionary ChildDictionary;
+typedef struct TypeDictionary TypeDictionary;
 typedef struct VoidCallback VoidCallback;
 typedef struct CallbackPassChar CallbackPassChar;
 typedef struct CallbackPassBoolean CallbackPassBoolean;
@@ -181,13 +181,29 @@ struct MyDictionary { // : ParentDictionary
 	KInt d;
 };
 
-struct ChildDictionary { // : MyDictionary
-	KInt a;
-	KInt b;
-	KInt c;
-	KInt d;
-	KInt e;
-	KInt f;
+struct TypeDictionary {
+	KChar a1;
+	KBoolean a2;
+	KByte a3;
+	KShort a4;
+	KInt a5;
+	KLong a6;
+	KFloat a7;
+	KDouble a8;
+	KString a9;
+	MyEnum a10;
+	MyDictionary* a11;
+	VoidCallback* a12;
+	KCharArray a13;
+	KBooleanArray a14;
+	KByteArray a15;
+	KShortArray a16;
+	KIntArray a17;
+	KLongArray a18;
+	KFloatArray a19;
+	KDoubleArray a20;
+	KIntArray a22;
+	KArray a23;
 };
 
 static ParentDictionary* ParentDictionary_new(KInt a, KInt b) {
@@ -202,9 +218,9 @@ static MyDictionary* MyDictionary_new(KInt a, KInt b, KInt c, KInt d) {
 	return result;
 }
 
-static ChildDictionary* ChildDictionary_new(KInt a, KInt b, KInt c, KInt d, KInt e, KInt f) {
-	ChildDictionary* result = (ChildDictionary*)malloc(sizeof(ChildDictionary));
-	*result = (ChildDictionary){ a, b, c, d, e, f };
+static TypeDictionary* TypeDictionary_new(KChar a1, KBoolean a2, KByte a3, KShort a4, KInt a5, KLong a6, KFloat a7, KDouble a8, KString a9, MyEnum a10, MyDictionary* a11, VoidCallback* a12, KCharArray a13, KBooleanArray a14, KByteArray a15, KShortArray a16, KIntArray a17, KLongArray a18, KFloatArray a19, KDoubleArray a20, KIntArray a22, KArray a23) {
+	TypeDictionary* result = (TypeDictionary*)malloc(sizeof(TypeDictionary));
+	*result = (TypeDictionary){ a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a22, a23 };
 	return result;
 }
 

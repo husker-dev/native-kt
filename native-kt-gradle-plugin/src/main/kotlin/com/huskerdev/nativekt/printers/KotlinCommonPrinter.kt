@@ -3,6 +3,7 @@ package com.huskerdev.nativekt.printers
 import com.huskerdev.nativekt.utils.allFields
 import com.huskerdev.nativekt.utils.asyncFunctionName
 import com.huskerdev.nativekt.utils.globalOperators
+import com.huskerdev.nativekt.utils.isArray
 import com.huskerdev.nativekt.utils.printFunctionHeader
 import com.huskerdev.nativekt.utils.printLabel
 import com.huskerdev.nativekt.utils.syncFunctionName
@@ -11,6 +12,8 @@ import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlCallbackFunction
 import com.huskerdev.webidl.resolver.ResolvedIdlDictionary
 import com.huskerdev.webidl.resolver.ResolvedIdlEnum
+import com.huskerdev.webidl.resolver.ResolvedIdlField
+import com.huskerdev.webidl.resolver.ResolvedIdlType
 import org.gradle.internal.extensions.stdlib.capitalized
 import java.io.File
 
@@ -90,19 +93,20 @@ class KotlinCommonPrinter(
     }
 
     private fun printCallback(builder: StringBuilder, maxLength: Int, callbackFunction: ResolvedIdlCallbackFunction) = builder.apply {
-        // typealias TestCallback = (status: Int) -> Unit
-
-        append("\ntypealias ")
+        append("\nfun interface ")
         append(callbackFunction.name)
         append(" ".repeat(maxLength - callbackFunction.name.length))
-        append(" = (")
+        append(" { operator fun invoke(")
 
         callbackFunction.args.joinTo(builder) {
             "${it.name}: ${it.type.toKotlinType()}"
         }
-        append(") -> ")
-        append(callbackFunction.type.toKotlinType())
-
+        append(")")
+        if(callbackFunction.type !is ResolvedIdlType.Void) {
+            append(": ")
+            append(callbackFunction.type.toKotlinType())
+        }
+        append(" }")
     }
 
     private fun printEnum(builder: StringBuilder, callbackFunction: ResolvedIdlEnum) = builder.apply {
@@ -152,6 +156,40 @@ class KotlinCommonPrinter(
         }
         append("\n\t): ")
         append(dictionary.name)
+
+        if(dictionary.allFields().any { it.type.isArray() }) {
+            append("{\n")
+            // equals
+            append("""
+                override fun equals(other: Any?): Boolean {
+                    if (this === other) return true
+                    if (other == null || other !is Impl) return false
+                    
+            """.replaceIndent("\t\t"))
+            dictionary.allFields().joinTo(builder, separator = "\n\t\t\t") {
+                if(it.type.isArray())
+                    "if (!${it.name}.contentEquals(other.${it.name})) return false"
+                else "if (${it.name} != other.${it.name}) return false"
+            }
+            append("\n\t\t\treturn true\n\t\t}\n\n")
+
+            // hashCode
+            fun hashFunc(field: ResolvedIdlField.Declaration) = if(field.type.isArray())
+                "${field.name}.contentHashCode()"
+            else "${field.name}.hashCode()"
+
+            append("""
+                override fun hashCode(): Int {
+                    var result = ${hashFunc(dictionary.allFields()[0])}
+                    
+            """.replaceIndent("\t\t"))
+            dictionary.allFields().drop(1).joinTo(builder, separator = "\n\t\t\t") {
+                "result = 31 * result + ${hashFunc(it)}"
+            }
+            append("\n\t\t\treturn result\n\t\t}")
+            append("\n\t}")
+        }
+
         append("\n}\n")
     }
 }

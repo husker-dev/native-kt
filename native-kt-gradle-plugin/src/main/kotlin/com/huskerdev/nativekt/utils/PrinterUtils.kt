@@ -203,16 +203,16 @@ fun ResolvedIdlType.toJNIType(): String = when(this) {
             }
             else -> throw UnsupportedOperationException(toString())
         }
-        is ResolvedIdlEnum -> "jint"
+        is ResolvedIdlEnum -> "jobject"
         else -> "jobject"
     }
     else -> throw UnsupportedOperationException(toString())
 }
 
-fun ResolvedIdlType.toJavaDesc(): String = when(this) {
+fun ResolvedIdlType.toJavaDesc(classpath: String): String = when(this) {
     is ResolvedIdlType.Void -> "V"
-    is ResolvedIdlType.Default -> when(declaration) {
-        is BuiltinIdlDeclaration -> when((declaration as BuiltinIdlDeclaration).kind) {
+    is ResolvedIdlType.Default -> when(val declaration = declaration) {
+        is BuiltinIdlDeclaration -> when(declaration.kind) {
             WebIDLBuiltinKind.CHAR -> "C"
             WebIDLBuiltinKind.BOOLEAN -> "Z"
             WebIDLBuiltinKind.BYTE -> "B"
@@ -223,11 +223,13 @@ fun ResolvedIdlType.toJavaDesc(): String = when(this) {
             WebIDLBuiltinKind.DOUBLE -> "D"
             WebIDLBuiltinKind.STRING -> "Ljava/lang/String;"
             WebIDLBuiltinKind.LIST -> firstParam { type, _ ->
-                "[${type.toJavaDesc()}"
+                "[${type.toJavaDesc(classpath)}"
             }
             else -> throw UnsupportedOperationException(toString())
         }
-        is ResolvedIdlEnum -> "I"
+        is ResolvedIdlEnum,
+        is ResolvedIdlDictionary,
+        is ResolvedIdlCallbackFunction -> "L${classpath.replace(".", "/")}/${declaration.name};"
         else -> "Ljava/lang/Object;"
     }
     else -> throw UnsupportedOperationException(toString())
