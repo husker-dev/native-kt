@@ -132,6 +132,11 @@ namespace global {
     boolean callbackReturnEnumArray(CallbackReturnEnumArray arg);
     boolean callbackReturnDictionaryArray(CallbackReturnDictionaryArray arg);
 
+    // Dictionary
+    boolean passBigDictionary(TypeDictionary arg);
+    [Dealloc] TypeDictionary returnBigDictionary(VoidCallback callback);
+    [Dealloc] TypeDictionary pingBigDictionary(TypeDictionary arg);
+
     // JVMCI
     [Critical] boolean jvmci1();
     [Critical] boolean jvmci2(int a1);
@@ -248,6 +253,6 @@ dictionary TypeDictionary {
     Array<long> a18;
     Array<float> a19;
     Array<double> a20;
-    Array<MyEnum> a22;
-    Array<MyDictionary> a23;
+    Array<MyEnum> a21;
+    Array<MyDictionary> a22;
 };

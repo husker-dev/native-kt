@@ -43,7 +43,7 @@ external object JsArrayTools {
 }
 
 external class ArrayBuffer: JsAny {
-    val length: Int
+    val byteLength: Int
 }
 
 abstract external class TypedArray: JsAny {

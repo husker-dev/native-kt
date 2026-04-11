@@ -135,11 +135,11 @@ class KotlinJsPrinter(
     }
 
     private fun printDictionaryCasts(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
-        val structLayout = CStructLayout(dictionary)
+        val structLayout = CStructLayout(dictionary, true)
 
         val heaps = StringBuilder()
         if(dictionary.allFields().any { it.type.isLong() })
-            heaps.append("val HEAP64 = BigInt64Array(_module.HEAP8.buffer, 0, _module.HEAP8.buffer.length / 8)\n\t")
+            heaps.append("val HEAP64 = BigInt64Array(_module.HEAP8.buffer, 0, _module.HEAP8.buffer.byteLength / 8)\n\t")
         if(dictionary.allFields().any { it.type.isDouble() })
             heaps.append("val HEAPF64 = _module.HEAPF64\n\t")
         if(dictionary.allFields().any { it.type.isInt() || it.type.isDictionary() || it.type.isEnum() })

@@ -224,7 +224,9 @@ fun ResolvedIdlType.toJavaDesc(classpath: String): String = when(this) {
     else -> throw UnsupportedOperationException(toString())
 }
 
-fun ResolvedIdlType.getAlignment(): Int = when(this) {
+fun ResolvedIdlType.getAlignment(
+    x86: Boolean = false
+): Int = when(this) {
     is ResolvedIdlType.Union,
     is ResolvedIdlType.Void -> throw UnsupportedOperationException()
     is ResolvedIdlType.Default -> when(declaration) {
@@ -237,12 +239,12 @@ fun ResolvedIdlType.getAlignment(): Int = when(this) {
             WebIDLBuiltinKind.LONG -> 8
             WebIDLBuiltinKind.FLOAT -> 4
             WebIDLBuiltinKind.DOUBLE -> 8
-            WebIDLBuiltinKind.STRING -> 16
-            WebIDLBuiltinKind.LIST -> 16
+            WebIDLBuiltinKind.STRING -> if(x86) 4 else 8
+            WebIDLBuiltinKind.LIST -> if(x86) 4 else 8
             else -> throw UnsupportedOperationException(a.toString())
         }
         is ResolvedIdlEnum -> 4
-        else -> 8
+        else -> if(x86) 4 else 8
     }
 }
 

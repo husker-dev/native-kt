@@ -46,24 +46,24 @@ fun toKotlinString(module: EmModule, struct: EmString, dealloc: Boolean): String
 
 fun fillEmString(module: EmModule, ptr: Int, str: EmString) {
     module.HEAP32[ptr shr 2] = str.data
-    module.HEAP32[(ptr + 1) shr 2] = str.length
+    module.HEAP32[(ptr shr 2) + 1] = str.length
 }
 
 fun extractEmString(module: EmModule, ptr: Int): EmString = createJsObject {
     data = module.HEAP32[ptr shr 2]
-    length = module.HEAP32[(ptr + 1) shr 2]
+    length = module.HEAP32[(ptr shr 2) + 1]
 }
 
 // Array
 
 fun fillEmArray(module: EmModule, ptr: Int, arr: EmArray) {
     module.HEAP32[ptr shr 2] = arr.elements
-    module.HEAP32[(ptr + 1) shr 2] = arr.size
+    module.HEAP32[(ptr shr 2) + 1] = arr.size
 }
 
 fun extractEmArray(module: EmModule, ptr: Int): EmArray = createJsObject {
     elements = module.HEAP32[ptr shr 2]
-    size = module.HEAP32[(ptr + 1) shr 2]
+    size = module.HEAP32[(ptr shr 2) + 1]
 }
 
 // Array: char
@@ -270,6 +270,7 @@ fun <T> toNativeArray(
     converter: (T) -> Int
 ) = toNativeIntArray(module, IntArray(arr.size) { converter(arr[it]) })
 
+@Suppress("unchecked_cast")
 fun <T: Any> toKotlinArray(
     module: EmModule,
     struct: EmArray,

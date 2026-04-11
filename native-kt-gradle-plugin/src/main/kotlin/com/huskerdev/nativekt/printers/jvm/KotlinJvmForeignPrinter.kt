@@ -47,7 +47,7 @@ class KotlinJvmForeignPrinter(
     }
 
     private fun printDictionaryDesc(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
-        val structLayout = CStructLayout(dictionary)
+        val structLayout = CStructLayout(dictionary, false)
 
         val structName = "struct${dictionary.name.capitalized()}"
 
@@ -78,7 +78,7 @@ class KotlinJvmForeignPrinter(
     }
 
     private fun printDictionaryCasts(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
-        val structLayout = CStructLayout(dictionary)
+        val structLayout = CStructLayout(dictionary, false)
 
         val structName = "struct${dictionary.name.capitalized()}"
 

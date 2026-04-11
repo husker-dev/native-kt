@@ -5,7 +5,8 @@ import com.huskerdev.webidl.resolver.ResolvedIdlType
 import kotlin.math.max
 
 class CStructLayout(
-    types: List<ResolvedIdlType>
+    types: List<ResolvedIdlType>,
+    x86: Boolean
 ) {
     var size: Int = 0
         private set
@@ -16,12 +17,18 @@ class CStructLayout(
     private val address = arrayListOf<Int>()
     private val padding = arrayListOf<Int>()
 
-    constructor(dictionary: ResolvedIdlDictionary): this(dictionary.allFields().map { it.type })
+    constructor(
+        dictionary: ResolvedIdlDictionary,
+        x86: Boolean
+    ): this(dictionary.allFields().map { it.type }, x86)
 
     init {
         var maxAlignment = 0
         types.forEach { type ->
-            val alignment = type.getAlignment()
+            val alignment = type.getAlignment(x86)
+            val typeSize = if(type.isString() || type.isArray()) {
+                if (x86) 8 else 16
+            } else alignment
 
             val rem = size % alignment
             val padding = if (rem == 0) 0 else alignment - rem
@@ -30,7 +37,7 @@ class CStructLayout(
 
             this.padding += padding
             this.address += size + padding
-            size += padding + alignment
+            size += padding + typeSize
         }
 
         val rem = size % maxAlignment
