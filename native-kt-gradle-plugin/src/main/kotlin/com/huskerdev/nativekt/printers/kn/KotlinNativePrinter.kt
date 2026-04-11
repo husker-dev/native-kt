@@ -48,13 +48,19 @@ class KotlinNativePrinter(
                 arena.ptr(data!!)
             }
             
-            private fun toNativeString(of: String) = cValue<$cinteropPath.KString> {
-                data = strdup(of)
-                length = of.length
+            private fun toNativeString(of: String) = 
+            	cValue<$cinteropPath.KString> { toNativeString(of, this) }
+
+            private fun toNativeString(of: String, struct: $cinteropPath.KString) = struct.apply {
+            	data = strdup(of)
+            	length = of.length
             }
             
+            private fun toKotlinString(of: $cinteropPath.KString, dealloc: Boolean): String =
+                toKotlinString(of.data!!, dealloc)
+            
             private fun toKotlinString(of: CValue<$cinteropPath.KString>, dealloc: Boolean): String =
-                toKotlinString(of.useContents { data }!!, dealloc)
+                of.useContents { toKotlinString(data!!, dealloc) }
             
             private fun toKotlinString(of: CValue<$cinteropPath.KString>, arena: NativeArena, dealloc: Boolean): String =
                 arena.toKotlinString(of.useContents { data }!!, dealloc)
@@ -92,7 +98,7 @@ class KotlinNativePrinter(
         append("(\n\t\t")
 
         dictionary.allFields().joinTo(builder, separator = ",\n\t\t") {
-            it.name
+            castFromNative(it.type, it.name, dealloc = false, deallocContent = false, useArena = false)
         }
         append("\n\t)\n")
         append("}.also { if(dealloc) free(of) }\n")
@@ -110,27 +116,12 @@ class KotlinNativePrinter(
         append("val struct = pointed\n\t")
 
         dictionary.allFields().joinTo(builder, separator = "\n\t") {
-            "struct.${it.name} = of.${it.name}"
+            if(it.type.isArray() || it.type.isString())
+                castToNative(it.type, "of.${it.name}", dealloc = false, useArena = false, struct = "struct.${it.name}")
+            else
+                "struct.${it.name} = ${castToNative(it.type, "of.${it.name}", dealloc = false, useArena = false)}"
         }
         append("\n}\n")
-
-
-//        fun toJvmDictionaryMyDictionary(of: CPointer<cinterop.natives.test.MyDictionary>?, dealloc: Boolean) = of!!.pointed.run {
-//            MyDictionary(
-//                a,
-//                b,
-//                c,
-//                d
-//            )
-//        }.also { if(dealloc) free(of) }
-//
-//        fun toNativeDictionaryMyDictionary(of: MyDictionary) = allocStruct<cinterop.natives.test.MyDictionary>().apply {
-//            val struct = pointed
-//            struct.a = of.a
-//            struct.b = of.b
-//            struct.c = of.c
-//            struct.d = of.d
-//        }
     }
 
     private fun printCallbackWrap(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
@@ -208,7 +199,10 @@ class KotlinNativePrinter(
                     arena.ptr(elements!!)
                 }
     
-                private fun toNative${type}Array(array: ${type}Array) = cValue<$cinteropPath.K${type}Array> {
+                private fun toNative${type}Array(array: ${type}Array) = 
+                    cValue<$cinteropPath.K${type}Array> { toNative${type}Array(array, this) }
+                
+                private fun toNative${type}Array(array: ${type}Array, struct: $cinteropPath.K${type}Array) = struct.apply {
                     val bytes = array.size * ${type}.SIZE_BYTES
                     elements = mallocExact(bytes.toUInt()).reinterpret()
                     size = array.size
@@ -220,12 +214,13 @@ class KotlinNativePrinter(
                         if(dealloc) arena.freeMem(elements!!)
                     }
                 }
+                
+                private fun toKotlin${type}Array(struct: CValue<$cinteropPath.K${type}Array>, dealloc: Boolean) = 
+                    struct.useContents { toKotlin${type}Array(this, dealloc) }
     
-                private fun toKotlin${type}Array(struct: CValue<$cinteropPath.K${type}Array>, dealloc: Boolean) = struct.useContents {
-                    ${type}Array(size) { elements!![it] }.also {
-                        if(dealloc) free(elements!!)
-                    }
-                }
+                private fun toKotlin${type}Array(struct: $cinteropPath.K${type}Array, dealloc: Boolean) =
+                    ${type}Array(struct.size) { struct.elements!![it] }
+                        .also { if(dealloc) free(struct.elements!!) }
                 
             """.trimIndent())
         }
@@ -242,12 +237,15 @@ class KotlinNativePrinter(
                 size = array.size
                 arena.ptr(elements!!)
             }
+            
+            private fun toNativeCharArray(array: CharArray) = 
+                cValue<$cinteropPath.KCharArray> { toNativeCharArray(array, this) }
 
-            private fun toNativeCharArray(array: CharArray) = cValue<$cinteropPath.KCharArray> {
-                val bytes = array.size * Char.SIZE_BYTES
-                elements = mallocExact(bytes.toUInt()).reinterpret()
-                size = array.size
-                array.usePinned { memcpy(elements, it.addressOf(0), bytes.toULong()) }
+            private fun toNativeCharArray(array: CharArray, struct: $cinteropPath.KCharArray) = struct.apply {
+            	val bytes = array.size * Char.SIZE_BYTES
+            	elements = mallocExact(bytes.toUInt()).reinterpret()
+            	size = array.size
+            	array.usePinned { memcpy(elements, it.addressOf(0), bytes.toULong()) }
             }
 
             private fun toKotlinCharArray(struct: CValue<$cinteropPath.KCharArray>, arena: NativeArena, dealloc: Boolean) = struct.useContents {
@@ -255,12 +253,13 @@ class KotlinNativePrinter(
                     if(dealloc) arena.freeMem(elements!!)
                 }
             }
+            
+            private fun toKotlinCharArray(struct: CValue<$cinteropPath.KCharArray>, dealloc: Boolean) = 
+            	struct.useContents { toKotlinCharArray(this, dealloc) }
 
-            private fun toKotlinCharArray(struct: CValue<$cinteropPath.KCharArray>, dealloc: Boolean) = struct.useContents {
-                CharArray(size) { elements!![it].toInt().toChar() }.also {
-                    if(dealloc) free(elements!!)
-                }
-            }
+            private fun toKotlinCharArray(struct: $cinteropPath.KCharArray, dealloc: Boolean) =
+                CharArray(struct.size) { struct.elements!![it].toInt().toChar() }
+                    .also { if(dealloc) free(struct.elements!!) }
             
         """.trimIndent())
 
@@ -276,7 +275,10 @@ class KotlinNativePrinter(
             	arena.ptr(elements!!)
             }
 
-            private fun toNativeBooleanArray(array: BooleanArray) = cValue<$cinteropPath.KBooleanArray> {
+            private fun toNativeBooleanArray(array: BooleanArray) = 
+                cValue<$cinteropPath.KBooleanArray> { toNativeBooleanArray(array, this) }
+            
+            private fun toNativeBooleanArray(array: BooleanArray, struct: $cinteropPath.KBooleanArray) = struct.apply {
             	val bytes = array.size * Byte.SIZE_BYTES
             	elements = mallocExact(bytes.toUInt()).reinterpret()
             	size = array.size
@@ -290,11 +292,12 @@ class KotlinNativePrinter(
             	}
             }
 
-            private fun toKotlinBooleanArray(struct: CValue<$cinteropPath.KBooleanArray>, dealloc: Boolean) = struct.useContents {
-            	BooleanArray(size) { elements!![it].value }.also {
-            		if(dealloc) free(elements!!)
-            	}
-            }
+            private fun toKotlinBooleanArray(struct: CValue<$cinteropPath.KBooleanArray>, dealloc: Boolean) = 
+                struct.useContents { toKotlinBooleanArray(this, dealloc) }
+            
+            private fun toKotlinBooleanArray(struct: $cinteropPath.KBooleanArray, dealloc: Boolean) =
+            	BooleanArray(struct.size) { struct.elements!![it].value }
+                    .also { if(dealloc) free(struct.elements!!) }
             
         """.trimIndent())
 
@@ -319,6 +322,15 @@ class KotlinNativePrinter(
                 typeSize: Long,
                 setter: (from: Array<T>, to: CPointer<N>) -> Unit
             ) = cValue<cinterop.natives.test.KIntArray> {
+                toNativeEnumArray(array, typeSize, setter, this)
+            }
+            
+            private fun <T: Enum<T>, N: CPrimitiveVar> toNativeEnumArray(
+                array: Array<T>,
+                typeSize: Long,
+                setter: (from: Array<T>, to: CPointer<N>) -> Unit,
+                struct: cinterop.natives.test.KIntArray
+            ) = struct.apply {
                 val bytes = array.size * typeSize
                 elements = mallocExact(bytes.toUInt()).reinterpret()
                 size = array.size
@@ -340,11 +352,14 @@ class KotlinNativePrinter(
                 struct: CValue<cinterop.natives.test.KIntArray>,
                 dealloc: Boolean,
                 converter: (size: Int, elements: CPointer<N>) -> Array<T>
-            ) = struct.useContents {
-                converter(size, this.elements!!.reinterpret()).also {
-                    if(dealloc) free(this.elements!!)
-                }
-            }
+            ) = struct.useContents { toKotlinEnumArray(this, dealloc, converter) }
+            
+            private fun <T: Enum<T>, N: CPrimitiveVar> toKotlinEnumArray(
+                struct: cinterop.natives.test.KIntArray,
+                dealloc: Boolean,
+                converter: (size: Int, elements: CPointer<N>) -> Array<T>
+            ) = converter(struct.size, struct.elements!!.reinterpret())
+                    .also { if(dealloc) free(struct.elements!!) }
             
             // Object array
             
@@ -353,6 +368,15 @@ class KotlinNativePrinter(
                 converter: (from: T) -> CPointer<N>,
                 arena: NativeArena? = null
             ) = cValue<cinterop.natives.test.KArray> {
+                toNativeArray(array, converter, arena, this)
+            }
+            
+             private fun <T: Any, N: CPointed> toNativeArray(
+                array: Array<T>,
+                converter: (from: T) -> CPointer<N>,
+                arena: NativeArena? = null,
+                struct: cinterop.natives.test.KArray
+            ) = struct.apply {
                 elements = mallocExact((array.size * size_t.SIZE_BYTES).toUInt()).reinterpret()
                 size = array.size
                 for(i in array.indices)
@@ -360,7 +384,6 @@ class KotlinNativePrinter(
                 arena?.ptr(elements!!.reinterpret())
             }
             
-            @Suppress("unchecked_cast")
             private fun <T: Any, N: CPointed> toKotlinArray(
                 struct: CValue<cinterop.natives.test.KArray>,
                 converter: (from: CPointer<N>, dealloc: Boolean) -> T,
@@ -368,11 +391,22 @@ class KotlinNativePrinter(
                 deallocContent: Boolean,
                 arena: NativeArena? = null
             ) = struct.useContents {
-                val result = Array<Any>(size) { 
-                    converter(elements!![it]!!.reinterpret(), deallocContent) 
-                }
-                if(dealloc) arena?.freeMem(elements!!) ?: free(elements!!)
-                result as Array<T>
+                toKotlinArray(this, converter, dealloc, deallocContent, arena)
+            }
+            
+            @Suppress("unchecked_cast")
+            private fun <T: Any, N: CPointed> toKotlinArray(
+                struct: cinterop.natives.test.KArray,
+                converter: (from: CPointer<N>, dealloc: Boolean) -> T,
+                dealloc: Boolean,
+                deallocContent: Boolean,
+                arena: NativeArena? = null
+            ): Array<T> {
+                return Array<Any>(struct.size) { 
+                    converter(struct.elements!![it]!!.reinterpret(), deallocContent) 
+                }.also {
+                    if(dealloc) arena?.freeMem(struct.elements!!) ?: free(struct.elements!!)
+                } as Array<T>
             }
             
         """.trimIndent())
@@ -428,38 +462,41 @@ class KotlinNativePrinter(
         else -> throw UnsupportedOperationException(type.toString())
     }
 
-    private fun castToNative(type: ResolvedIdlType, content: String, dealloc: Boolean, useArena: Boolean): String = when(type) {
-        is ResolvedIdlType.Void -> content
-        is ResolvedIdlType.Default -> when(val decl = type.declaration) {
-            is BuiltinIdlDeclaration -> when(decl.kind) {
-                WebIDLBuiltinKind.STRING ->
-                    if(useArena) "toNativeString($content, arena)"
-                    else "toNativeString($content)"
-                WebIDLBuiltinKind.CHAR -> "$content.code.toUShort()"
-                WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
-                    when (declaration) {
-                        is BuiltinIdlDeclaration -> {
-                            val name = declaration.kind.simpleName()
-                            if (useArena) "toNative${name}Array($content, arena)"
-                            else "toNative${name}Array($content)"
+    private fun castToNative(type: ResolvedIdlType, content: String, dealloc: Boolean, useArena: Boolean, struct: String? = null): String {
+        val struct = if(struct != null) ", struct = $struct" else ""
+        return when(type) {
+            is ResolvedIdlType.Void -> content
+            is ResolvedIdlType.Default -> when(val decl = type.declaration) {
+                is BuiltinIdlDeclaration -> when(decl.kind) {
+                    WebIDLBuiltinKind.STRING ->
+                        if(useArena) "toNativeString($content, arena)"
+                        else "toNativeString($content$struct)"
+                    WebIDLBuiltinKind.CHAR -> "$content.code.toUShort()"
+                    WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
+                        when (declaration) {
+                            is BuiltinIdlDeclaration -> {
+                                val name = declaration.kind.simpleName()
+                                if (useArena) "toNative${name}Array($content, arena)"
+                                else "toNative${name}Array($content$struct)"
+                            }
+                            is ResolvedIdlEnum -> {
+                                if (useArena) "toNativeEnumArray($content, arena, sizeOf<${cinteropPath}.${declaration.name}.Var>(), _${declaration.name}ToNative)"
+                                else "toNativeEnumArray($content, sizeOf<${cinteropPath}.${declaration.name}.Var>(), _${declaration.name}ToNative$struct)"
+                            }
+                            is ResolvedIdlDictionary -> "toNativeArray($content, ::toNativeDictionary${declaration.name}${if(useArena) ", arena" else ""}$struct)"
+                            else -> throw UnsupportedOperationException(type.toString())
                         }
-                        is ResolvedIdlEnum -> {
-                            if (useArena) "toNativeEnumArray($content, arena, sizeOf<${cinteropPath}.${declaration.name}.Var>(), _${declaration.name}ToNative)"
-                            else "toNativeEnumArray($content, sizeOf<${cinteropPath}.${declaration.name}.Var>(), _${declaration.name}ToNative)"
-                        }
-                        is ResolvedIdlDictionary -> "toNativeArray($content, ::toNativeDictionary${declaration.name}${if(useArena) ", arena" else ""})"
-                        else -> throw UnsupportedOperationException(type.toString())
                     }
+                    else -> content
                 }
-                else -> content
+                is ResolvedIdlEnum -> "${cinteropPath}.${decl.name}.entries[${content}.ordinal]"
+                is ResolvedIdlCallbackFunction ->
+                    if(dealloc) "arena.callback(toNativeCallback${decl.name}($content))"
+                    else "toNativeCallback${decl.name}($content)"
+                is ResolvedIdlDictionary -> "toNativeDictionary${decl.name}(${content})"
+                else -> throw UnsupportedOperationException(type.toString())
             }
-            is ResolvedIdlEnum -> "${cinteropPath}.${decl.name}.entries[${content}.ordinal]"
-            is ResolvedIdlCallbackFunction ->
-                if(dealloc) "arena.callback(toNativeCallback${decl.name}($content))"
-                else "toNativeCallback${decl.name}($content)"
-            is ResolvedIdlDictionary -> "toNativeDictionary${decl.name}(${content})"
             else -> throw UnsupportedOperationException(type.toString())
         }
-        else -> throw UnsupportedOperationException(type.toString())
     }
 }
