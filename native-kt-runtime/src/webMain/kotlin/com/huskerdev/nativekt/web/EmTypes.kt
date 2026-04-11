@@ -16,8 +16,10 @@ external interface EmModule: JsAny {
     fun addFunction(func: JsAny, s: String): Int
 
     val HEAP8: Int8Array
+    val HEAP16: Int16Array
     val HEAP32: Int32Array
     val HEAPF32: Float32Array
+    val HEAPF64: Float64Array
 
     fun _malloc(size: Int): Int
     fun _free(mem: Int)
@@ -40,25 +42,29 @@ external object JsArrayTools {
     fun <T: JsAny> from(arrayLike: JsAny): JsArray<T>
 }
 
-external class ArrayBuffer: JsAny
+external class ArrayBuffer: JsAny {
+    val length: Int
+}
 
 abstract external class TypedArray: JsAny {
     fun set(array: JsArray<JsNumber>)
 }
 
 @Suppress("unused")
-private fun setTypedArray(array: TypedArray, index: Int, value: Int): Unit =
+private fun setTypedArray(array: TypedArray, index: Int, value: Double): Unit =
     js("array[index] = value")
 
 @Suppress("unused")
-private fun getTypedArray(array: TypedArray, index: Int): Int =
+private fun getTypedArray(array: TypedArray, index: Any): Double =
     js("array[index]")
 
-operator fun TypedArray.set(index: Int, value: Int) =
-    setTypedArray(this, index, value)
+@Suppress("unused")
+private fun setBigIntArray(array: BigInt64Array, index: Int, value: Long): Unit =
+    js("array[index] = value")
 
-operator fun TypedArray.get(index: Int): Int =
-    getTypedArray(this, index)
+@Suppress("unused")
+private fun getBigIntArray(array: BigInt64Array, index: Any): Long =
+    js("array[index]")
 
 external class Int8Array(
     val buffer: ArrayBuffer,
@@ -66,11 +72,32 @@ external class Int8Array(
     length: Int
 ): TypedArray
 
+operator fun Int8Array.set(index: Int, value: Byte) =
+    setTypedArray(this, index, value.toDouble())
+
+operator fun Int8Array.set(index: Int, value: Boolean) =
+    setTypedArray(this, index, value.toInt().toDouble())
+
+operator fun Int8Array.get(index: Int): Byte =
+    getTypedArray(this, index).toInt().toByte()
+
 external class Int16Array(
     val buffer: ArrayBuffer,
     byteOffset: Int,
     length: Int
 ): TypedArray
+
+operator fun Int16Array.set(index: Int, value: Char) =
+    setTypedArray(this, index, value.code.toDouble())
+
+operator fun Int16Array.set(index: Int, value: Short) =
+    setTypedArray(this, index, value.toDouble())
+
+operator fun Int16Array.set(index: Int, value: Int) =
+    setTypedArray(this, index, value.toDouble())
+
+operator fun Int16Array.get(index: Int): Int =
+    getTypedArray(this, index).toInt()
 
 external class Int32Array(
     val buffer: ArrayBuffer,
@@ -78,17 +105,35 @@ external class Int32Array(
     length: Int
 ): TypedArray
 
+operator fun Int32Array.set(index: Int, value: Int) =
+    setTypedArray(this, index, value.toDouble())
+
+operator fun Int32Array.get(index: Int): Int =
+    getTypedArray(this, index).toInt()
+
 external class Float32Array(
     val buffer: ArrayBuffer,
     byteOffset: Int,
     length: Int
 ): TypedArray
 
+operator fun Float32Array.set(index: Int, value: Float) =
+    setTypedArray(this, index, value.toDouble())
+
+operator fun Float32Array.get(index: Int): Float =
+    getTypedArray(this, index).toFloat()
+
 external class Float64Array(
     val buffer: ArrayBuffer,
     byteOffset: Int,
     length: Int
 ): TypedArray
+
+operator fun Float64Array.set(index: Int, value: Double) =
+    setTypedArray(this, index, value)
+
+operator fun Float64Array.get(index: Int): Double =
+    getTypedArray(this, index)
 
 external class BigInt64Array(
     val buffer: ArrayBuffer,
@@ -97,3 +142,9 @@ external class BigInt64Array(
 ): JsAny {
     fun set(array: JsArray<JsBigInt>)
 }
+
+operator fun BigInt64Array.set(index: Int, value: Long) =
+    setBigIntArray(this, index, value)
+
+operator fun BigInt64Array.get(index: Int): Long =
+    getBigIntArray(this, index)

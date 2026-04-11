@@ -26,7 +26,7 @@ fun <T: JsAny> loadLib(lib: JsAny): Promise<T> =
 
 fun Boolean.toInt() = if(this) 1 else 0
 
-fun toNativeCallback(module: EmModule, str: String): EmString {
+fun toNativeString(module: EmModule, str: String): EmString {
     val len = module.lengthBytesUTF8(str) + 1
     val strMem = module._malloc(len)
     module.stringToUTF8(str, strMem, len)
@@ -42,6 +42,28 @@ fun toKotlinString(module: EmModule, struct: EmString, dealloc: Boolean): String
     if(dealloc)
         module._free(struct.data)
     return result
+}
+
+fun fillEmString(module: EmModule, ptr: Int, str: EmString) {
+    module.HEAP32[ptr shr 2] = str.data
+    module.HEAP32[(ptr + 1) shr 2] = str.length
+}
+
+fun extractEmString(module: EmModule, ptr: Int): EmString = createJsObject {
+    data = module.HEAP32[ptr shr 2]
+    length = module.HEAP32[(ptr + 1) shr 2]
+}
+
+// Array
+
+fun fillEmArray(module: EmModule, ptr: Int, arr: EmArray) {
+    module.HEAP32[ptr shr 2] = arr.elements
+    module.HEAP32[(ptr + 1) shr 2] = arr.size
+}
+
+fun extractEmArray(module: EmModule, ptr: Int): EmArray = createJsObject {
+    elements = module.HEAP32[ptr shr 2]
+    size = module.HEAP32[(ptr + 1) shr 2]
 }
 
 // Array: char

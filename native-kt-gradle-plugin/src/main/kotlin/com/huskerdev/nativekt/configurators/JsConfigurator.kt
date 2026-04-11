@@ -162,7 +162,7 @@ private abstract class PrepareNativesJs: DefaultTask() {
                 add_executable(lib$$moduleName $<TARGET_OBJECTS:$$moduleName> emscripten_bindings.cpp)
                 set_target_properties(lib$$moduleName PROPERTIES CXX_STANDARD 17)
                 
-                set_target_properties(lib$$moduleName PROPERTIES LINK_FLAGS "-s -lembind -s --no-entry -s ALLOW_MEMORY_GROWTH=1 -s ALLOW_TABLE_GROWTH=1 -s MODULARIZE=1 -s EXPORT_ES6=1 -s WASM_BIGINT=$${if(useJsBigInt) "1" else "0"} -s EXPORTED_RUNTIME_METHODS=UTF8ToString,stringToUTF8,lengthBytesUTF8,HEAP32,HEAP8,HEAPF32,addFunction -s EXPORTED_FUNCTIONS=_free,_malloc")
+                set_target_properties(lib$$moduleName PROPERTIES LINK_FLAGS "-s -lembind -s --no-entry -s ALLOW_MEMORY_GROWTH=1 -s ALLOW_TABLE_GROWTH=1 -s MODULARIZE=1 -s EXPORT_ES6=1 -s WASM_BIGINT=$${if(useJsBigInt) "1" else "0"} -s EXPORTED_RUNTIME_METHODS=UTF8ToString,stringToUTF8,lengthBytesUTF8,HEAP8,HEAP16,HEAP32,HEAPF32,HEAPF64,addFunction -s EXPORTED_FUNCTIONS=_free,_malloc")
             """.trimIndent())
 
             // Create Kotlin/JS bindings

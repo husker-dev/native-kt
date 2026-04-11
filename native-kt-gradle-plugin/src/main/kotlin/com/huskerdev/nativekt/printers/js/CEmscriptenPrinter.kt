@@ -101,7 +101,10 @@ class CEmscriptenPrinter(
         append("\")\n\t\t")
 
         dictionary.allFields().joinTo(builder, separator = "\n\t\t") {
-            ".field(\"${it.name}\", &${dictionary.name}::${it.name})"
+            val link = if(it.type.isDictionary() || it.type.isCallback())
+                "POINTER_FIELD(${it.name}, ${dictionary.name}, ${it.type.toCType()})"
+            else "&${dictionary.name}::${it.name}"
+            ".field(\"${it.name}\", $link)"
         }
         append(";\n")
     }

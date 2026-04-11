@@ -2,19 +2,8 @@ package com.huskerdev.nativekt.utils
 
 import com.huskerdev.webidl.parser.IdlAttributedHolder
 import com.huskerdev.webidl.parser.IdlExtendedAttribute
-import com.huskerdev.webidl.resolver.BuiltinIdlDeclaration
-import com.huskerdev.webidl.resolver.IdlResolver
-import com.huskerdev.webidl.resolver.ResolvedIdlCallbackFunction
-import com.huskerdev.webidl.resolver.ResolvedIdlDeclaration
-import com.huskerdev.webidl.resolver.ResolvedIdlDictionary
-import com.huskerdev.webidl.resolver.ResolvedIdlEnum
-import com.huskerdev.webidl.resolver.ResolvedIdlField
-import com.huskerdev.webidl.resolver.ResolvedIdlOperation
-import com.huskerdev.webidl.resolver.ResolvedIdlType
-import com.huskerdev.webidl.resolver.WebIDLBuiltinKind
+import com.huskerdev.webidl.resolver.*
 import org.gradle.internal.extensions.stdlib.capitalized
-import kotlin.math.ceil
-import kotlin.math.max
 
 fun asyncFunctionName(moduleName: String) =
     "loadLib${moduleName.capitalized()}"
@@ -235,17 +224,6 @@ fun ResolvedIdlType.toJavaDesc(classpath: String): String = when(this) {
     else -> throw UnsupportedOperationException(toString())
 }
 
-fun ResolvedIdlDictionary.calcMem(): Pair<Int, Int> {
-    var sum = 0.0
-    var max = 0.0
-    allFields().forEach {
-        val cur = it.type.getAlignment().toDouble()
-        sum = (cur * ceil(sum / cur)) + cur
-        max = max(max, cur)
-    }
-    return Pair(sum.toInt(), max.toInt())
-}
-
 fun ResolvedIdlType.getAlignment(): Int = when(this) {
     is ResolvedIdlType.Union,
     is ResolvedIdlType.Void -> throw UnsupportedOperationException()
@@ -259,8 +237,8 @@ fun ResolvedIdlType.getAlignment(): Int = when(this) {
             WebIDLBuiltinKind.LONG -> 8
             WebIDLBuiltinKind.FLOAT -> 4
             WebIDLBuiltinKind.DOUBLE -> 8
-            WebIDLBuiltinKind.STRING -> 8
-            WebIDLBuiltinKind.LIST -> 8
+            WebIDLBuiltinKind.STRING -> 16
+            WebIDLBuiltinKind.LIST -> 16
             else -> throw UnsupportedOperationException(a.toString())
         }
         is ResolvedIdlEnum -> 4
@@ -280,6 +258,24 @@ fun ResolvedIdlType.isLong(): Boolean {
     if (this !is ResolvedIdlType.Default ||
         declaration !is BuiltinIdlDeclaration) return false
     return (declaration as BuiltinIdlDeclaration).kind == WebIDLBuiltinKind.LONG
+}
+
+fun ResolvedIdlType.isInt(): Boolean {
+    if (this !is ResolvedIdlType.Default ||
+        declaration !is BuiltinIdlDeclaration) return false
+    return (declaration as BuiltinIdlDeclaration).kind == WebIDLBuiltinKind.INT
+}
+
+fun ResolvedIdlType.isDouble(): Boolean {
+    if (this !is ResolvedIdlType.Default ||
+        declaration !is BuiltinIdlDeclaration) return false
+    return (declaration as BuiltinIdlDeclaration).kind == WebIDLBuiltinKind.DOUBLE
+}
+
+fun ResolvedIdlType.isFloat(): Boolean {
+    if (this !is ResolvedIdlType.Default ||
+        declaration !is BuiltinIdlDeclaration) return false
+    return (declaration as BuiltinIdlDeclaration).kind == WebIDLBuiltinKind.FLOAT
 }
 
 fun ResolvedIdlType.isArray(): Boolean {

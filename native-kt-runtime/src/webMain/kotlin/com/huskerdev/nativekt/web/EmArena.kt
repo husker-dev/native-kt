@@ -25,7 +25,7 @@ class EmArena(
     fun malloc(size: Int): Int =
         ptr(module._malloc(size))
 
-    fun toNativeCallback(str: String): EmString {
+    fun toNativeString(str: String): EmString {
         val len = module.lengthBytesUTF8(str) + 1
         val strMem = malloc(len)
         module.stringToUTF8(str, strMem, len)

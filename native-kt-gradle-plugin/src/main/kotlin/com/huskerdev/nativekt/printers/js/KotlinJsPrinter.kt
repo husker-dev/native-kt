@@ -4,7 +4,6 @@ import com.huskerdev.nativekt.utils.*
 import com.huskerdev.webidl.resolver.*
 import org.gradle.internal.extensions.stdlib.capitalized
 import java.io.File
-import kotlin.math.ceil
 
 class KotlinJsPrinter(
     val idl: IdlResolver,
@@ -136,7 +135,21 @@ class KotlinJsPrinter(
     }
 
     private fun printDictionaryCasts(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
-        val (sum, _) = dictionary.calcMem()
+        val structLayout = CStructLayout(dictionary)
+
+        val heaps = StringBuilder()
+        if(dictionary.allFields().any { it.type.isLong() })
+            heaps.append("val HEAP64 = BigInt64Array(_module.HEAP8.buffer, 0, _module.HEAP8.buffer.length / 8)\n\t")
+        if(dictionary.allFields().any { it.type.isDouble() })
+            heaps.append("val HEAPF64 = _module.HEAPF64\n\t")
+        if(dictionary.allFields().any { it.type.isInt() || it.type.isDictionary() || it.type.isEnum() })
+            heaps.append("val HEAP32 = _module.HEAP32\n\t")
+        if(dictionary.allFields().any { it.type.isFloat() })
+            heaps.append("val HEAPF32 = _module.HEAPF32\n\t")
+        if(dictionary.allFields().any { it.type.getAlignment() == 2 })
+            heaps.append("val HEAP16 = _module.HEAP16\n\t")
+        if(dictionary.allFields().any { it.type.getAlignment() == 1 })
+            heaps.append("val HEAP8 = _module.HEAP8\n\t")
 
         // to native
         append("\nfun toNativeDictionary")
@@ -144,30 +157,75 @@ class KotlinJsPrinter(
         append("(of: ")
         append(dictionary.name)
         append(") = _module._malloc(")
-        append(sum)
+        append(structLayout.size)
         append(").apply {\n\t")
-        append("val ptr = this shr 2")
+        append(heaps)
 
-        var i = 0
-        dictionary.allFields().forEach {
-            append("\n\t_module.HEAP32[ptr + $i] = of.${it.name}")
-            i += ceil(it.type.getAlignment() / 4.0).toInt()
+        dictionary.allFields().forEachIndexed { i, field ->
+            append("\n\t")
+            val fieldRef = castToNative(field.type, "of.${field.name}", dealloc = false, useArena = false)
+            val address = "this + ${structLayout.addressOf(i)}"
+
+            append(when(val declaration = (field.type as ResolvedIdlType.Default).declaration) {
+                is BuiltinIdlDeclaration -> when(declaration.kind) {
+                    WebIDLBuiltinKind.BYTE,
+                    WebIDLBuiltinKind.BOOLEAN -> "HEAP8[$address] = $fieldRef"
+                    WebIDLBuiltinKind.SHORT,
+                    WebIDLBuiltinKind.CHAR -> "HEAP16[($address) shr 1] = $fieldRef"
+                    WebIDLBuiltinKind.INT -> "HEAP32[($address) shr 2] = $fieldRef"
+                    WebIDLBuiltinKind.LONG -> "HEAP64[($address) shr 3] = $fieldRef"
+                    WebIDLBuiltinKind.FLOAT -> "HEAPF32[($address) shr 2] = $fieldRef"
+                    WebIDLBuiltinKind.DOUBLE -> "HEAPF64[($address) shr 3] = $fieldRef"
+                    WebIDLBuiltinKind.STRING -> "fillEmString(_module, $address, $fieldRef)"
+                    WebIDLBuiltinKind.LIST -> "fillEmArray(_module, $address, $fieldRef)"
+                    else -> throw UnsupportedOperationException(field.type.toString())
+                }
+                is ResolvedIdlEnum -> "HEAP32[($address) shr 2] = $fieldRef"
+                is ResolvedIdlCallbackFunction,
+                is ResolvedIdlDictionary -> "HEAP32[($address) shr 2] = $fieldRef"
+                else -> throw UnsupportedOperationException(field.type.toString())
+            })
         }
+        append("\n\t// padding: ${structLayout.postPadding}")
         append("\n}\n")
 
         // to kotlin
         append("\nfun toKotlinDictionary")
         append(dictionary.name)
-        append("(of: Int, dealloc: Boolean) = (of shr 2).run {\n\t")
+        append("(of: Int, dealloc: Boolean): ")
+        append(dictionary.name)
+        append(" {\n\t")
+        append(heaps)
+        append("return ")
         append(dictionary.name)
         append("(")
 
-        i = 0
-        dictionary.allFields().forEach {
-            append("\n\t\t_module.HEAP32[this + $i],")
-            i += ceil(it.type.getAlignment() / 4.0).toInt()
+        dictionary.allFields().forEachIndexed { i, field ->
+            append("\n\t\t")
+            val address = "of + ${structLayout.addressOf(i)}"
+            val target = when(val declaration = (field.type as ResolvedIdlType.Default).declaration) {
+                is BuiltinIdlDeclaration -> when(declaration.kind) {
+                    WebIDLBuiltinKind.BYTE -> "HEAP8[$address]"
+                    WebIDLBuiltinKind.BOOLEAN -> "HEAP8[$address] == 1.toByte()"
+                    WebIDLBuiltinKind.SHORT -> "HEAP16[($address) shr 1].toShort()"
+                    WebIDLBuiltinKind.CHAR -> "HEAP16[($address) shr 1]"
+                    WebIDLBuiltinKind.INT -> "HEAP32[($address) shr 2]"
+                    WebIDLBuiltinKind.LONG -> "HEAP64[($address) shr 3]"
+                    WebIDLBuiltinKind.FLOAT -> "HEAPF32[($address) shr 2]"
+                    WebIDLBuiltinKind.DOUBLE -> "HEAPF64[($address) shr 3]"
+                    WebIDLBuiltinKind.STRING -> "extractEmString(_module, $address)"
+                    WebIDLBuiltinKind.LIST -> "extractEmArray(_module, $address)"
+                    else -> throw UnsupportedOperationException(field.type.toString())
+                }
+                is ResolvedIdlEnum -> "HEAP32[($address) shr 2]"
+                is ResolvedIdlCallbackFunction,
+                is ResolvedIdlDictionary -> "HEAP32[($address) shr 2]"
+                else -> throw UnsupportedOperationException(field.type.toString())
+            }
+            append(castToJS(field.type, target, dealloc = false, deallocContent = false, useArena = false))
+            append(",")
         }
-        append("\n\t)\n}.also { if(dealloc) _module._free(of) }\n")
+        append("\n\t).also { if(dealloc) _module._free(of) }\n}\n")
     }
 
     private fun printCallbackCast(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
@@ -260,8 +318,8 @@ class KotlinJsPrinter(
             is BuiltinIdlDeclaration -> when(decl.kind) {
                 WebIDLBuiltinKind.CHAR -> "${content}.code"
                 WebIDLBuiltinKind.STRING ->
-                    if(useArena) "arena.toNativeCallback($content)"
-                    else "toNativeCallback(_module, $content)"
+                    if(useArena) "arena.toNativeString($content)"
+                    else "toNativeString(_module, $content)"
                 WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
                     when (declaration) {
                         is BuiltinIdlDeclaration -> {

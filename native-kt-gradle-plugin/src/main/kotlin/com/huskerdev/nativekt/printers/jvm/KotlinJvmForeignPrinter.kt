@@ -3,7 +3,6 @@ package com.huskerdev.nativekt.printers.jvm
 import com.huskerdev.nativekt.utils.*
 import com.huskerdev.webidl.resolver.*
 import org.gradle.internal.extensions.stdlib.capitalized
-import kotlin.math.ceil
 
 class KotlinJvmForeignPrinter(
     idl: IdlResolver,
@@ -48,8 +47,7 @@ class KotlinJvmForeignPrinter(
     }
 
     private fun printDictionaryDesc(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
-        val (sum, max) = dictionary.calcMem()
-        val padding = sum % max
+        val structLayout = CStructLayout(dictionary)
 
         val structName = "struct${dictionary.name.capitalized()}"
 
@@ -57,21 +55,17 @@ class KotlinJvmForeignPrinter(
         append(structName)
         append(" = MemoryLayout.structLayout(\n\t\t\t")
 
-        var bytes = 0
-        dictionary.allFields().flatMap {
-            val alignment = it.type.getAlignment()
-            val padding = bytes % alignment % 8
-            bytes += padding + alignment
-
+        dictionary.allFields().flatMapIndexed { i, it ->
             val field = "${it.type.toForeignType()}.withName(\"${it.name}\")"
-            if(padding == 0)
+
+            if(structLayout.paddingOf(i) == 0)
                 listOf(field)
             else
-                listOf("MemoryLayout.paddingLayout(${padding})", field)
+                listOf("MemoryLayout.paddingLayout(${structLayout.paddingOf(i)})", field)
         }.joinTo(builder, separator = ",\n\t\t\t")
 
-        if(padding != 0)
-            append(",\n\t\t\tMemoryLayout.paddingLayout(${padding})")
+        if(structLayout.postPadding != 0)
+            append(",\n\t\t\tMemoryLayout.paddingLayout(${structLayout.postPadding})")
         append("\n\t\t)\n\t\t")
 
         dictionary.allFields().joinTo(builder, separator = "\n\t\t") {
@@ -84,8 +78,7 @@ class KotlinJvmForeignPrinter(
     }
 
     private fun printDictionaryCasts(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
-        val (sum, max) = dictionary.calcMem()
-        val mem = (max * ceil(sum.toDouble() / max)).toInt()
+        val structLayout = CStructLayout(dictionary)
 
         val structName = "struct${dictionary.name.capitalized()}"
 
@@ -111,7 +104,7 @@ class KotlinJvmForeignPrinter(
         // to jvm
         append("\n\t\tprivate fun toJvmDictionary")
         append(dictionary.name.capitalized())
-        append("(of: MemorySegment, dealloc: Boolean) = of.reinterpret(${mem}).run {\n\t\t\t")
+        append("(of: MemorySegment, dealloc: Boolean) = of.reinterpret(${structLayout.size}).run {\n\t\t\t")
         append(dictionary.name)
         append("(\n\t\t\t\t")
         dictionary.allFields().joinTo(builder, separator = ",\n\t\t\t\t") {
