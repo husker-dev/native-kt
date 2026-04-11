@@ -55,7 +55,7 @@ private fun setTypedArray(array: TypedArray, index: Int, value: Double): Unit =
     js("array[index] = value")
 
 @Suppress("unused")
-private fun getTypedArray(array: TypedArray, index: Any): Double =
+private fun getTypedArray(array: TypedArray, index: Int): Double =
     js("array[index]")
 
 @Suppress("unused")
@@ -63,7 +63,7 @@ private fun setBigIntArray(array: BigInt64Array, index: Int, value: Long): Unit 
     js("array[index] = value")
 
 @Suppress("unused")
-private fun getBigIntArray(array: BigInt64Array, index: Any): Long =
+private fun getBigIntArray(array: BigInt64Array, index: Int): Long =
     js("array[index]")
 
 external class Int8Array(
