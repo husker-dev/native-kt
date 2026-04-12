@@ -67,18 +67,24 @@ class KotlinNativePrinter(
             
         """.trimIndent())
 
-        printLabel(builder, "Dictionary")
-        idl.dictionaries.values.forEach { printDictionaryCasts(builder, it) }
+        if(idl.dictionaries.isNotEmpty()) {
+            printLabel(builder, "Dictionary")
+            idl.dictionaries.values.forEach { printDictionaryCasts(builder, it) }
+        }
 
         printLabel(builder, "Arrays")
         printArrayCasts(builder)
         idl.enums.values.forEach { printEnumCast(builder, it) }
 
-        printLabel(builder, "Callbacks")
-        idl.callbacks.values.forEach { printCallbackWrap(builder, it) }
+        if(idl.callbacks.isNotEmpty()) {
+            printLabel(builder, "Callbacks")
+            idl.callbacks.values.forEach { printCallbackWrap(builder, it) }
+        }
 
-        printLabel(builder, "Functions")
-        idl.globalOperators().forEach { printFunction(builder, it) }
+        if(idl.globalOperators().isNotEmpty()) {
+            printLabel(builder, "Functions")
+            idl.globalOperators().forEach { printFunction(builder, it) }
+        }
 
         target.parentFile.mkdirs()
         target.writeText(builder.toString())
@@ -310,7 +316,7 @@ class KotlinNativePrinter(
                 arena: NativeArena,
                 typeSize: Long,
                 setter: (from: Array<T>, to: CPointer<N>) -> Unit
-            ) = cValue<cinterop.natives.test.KIntArray> {
+            ) = cValue<$cinteropPath.KIntArray> {
                 val bytes = array.size * typeSize
                 elements = arena.ptr(mallocExact(bytes.toUInt()).reinterpret())
                 size = array.size
@@ -321,7 +327,7 @@ class KotlinNativePrinter(
                 array: Array<T>,
                 typeSize: Long,
                 setter: (from: Array<T>, to: CPointer<N>) -> Unit
-            ) = cValue<cinterop.natives.test.KIntArray> {
+            ) = cValue<$cinteropPath.KIntArray> {
                 toNativeEnumArray(array, typeSize, setter, this)
             }
             
@@ -329,7 +335,7 @@ class KotlinNativePrinter(
                 array: Array<T>,
                 typeSize: Long,
                 setter: (from: Array<T>, to: CPointer<N>) -> Unit,
-                struct: cinterop.natives.test.KIntArray
+                struct: $cinteropPath.KIntArray
             ) = struct.apply {
                 val bytes = array.size * typeSize
                 elements = mallocExact(bytes.toUInt()).reinterpret()
@@ -338,7 +344,7 @@ class KotlinNativePrinter(
             }
             
             private fun <T: Enum<T>, N: CPrimitiveVar> toKotlinEnumArray(
-                struct: CValue<cinterop.natives.test.KIntArray>,
+                struct: CValue<$cinteropPath.KIntArray>,
                 arena: NativeArena, 
                 dealloc: Boolean,
                 converter: (size: Int, elements: CPointer<N>) -> Array<T>
@@ -349,13 +355,13 @@ class KotlinNativePrinter(
             }
             
             private fun <T: Enum<T>, N: CPrimitiveVar> toKotlinEnumArray(
-                struct: CValue<cinterop.natives.test.KIntArray>,
+                struct: CValue<$cinteropPath.KIntArray>,
                 dealloc: Boolean,
                 converter: (size: Int, elements: CPointer<N>) -> Array<T>
             ) = struct.useContents { toKotlinEnumArray(this, dealloc, converter) }
             
             private fun <T: Enum<T>, N: CPrimitiveVar> toKotlinEnumArray(
-                struct: cinterop.natives.test.KIntArray,
+                struct: $cinteropPath.KIntArray,
                 dealloc: Boolean,
                 converter: (size: Int, elements: CPointer<N>) -> Array<T>
             ) = converter(struct.size, struct.elements!!.reinterpret())
@@ -367,7 +373,7 @@ class KotlinNativePrinter(
                 array: Array<T>,
                 converter: (from: T) -> CPointer<N>,
                 arena: NativeArena? = null
-            ) = cValue<cinterop.natives.test.KArray> {
+            ) = cValue<$cinteropPath.KArray> {
                 toNativeArray(array, converter, arena, this)
             }
             
@@ -375,7 +381,7 @@ class KotlinNativePrinter(
                 array: Array<T>,
                 converter: (from: T) -> CPointer<N>,
                 arena: NativeArena? = null,
-                struct: cinterop.natives.test.KArray
+                struct: $cinteropPath.KArray
             ) = struct.apply {
                 elements = mallocExact((array.size * size_t.SIZE_BYTES).toUInt()).reinterpret()
                 size = array.size
@@ -385,7 +391,7 @@ class KotlinNativePrinter(
             }
             
             private fun <T: Any, N: CPointed> toKotlinArray(
-                struct: CValue<cinterop.natives.test.KArray>,
+                struct: CValue<$cinteropPath.KArray>,
                 converter: (from: CPointer<N>, dealloc: Boolean) -> T,
                 dealloc: Boolean,
                 deallocContent: Boolean,
@@ -396,7 +402,7 @@ class KotlinNativePrinter(
             
             @Suppress("unchecked_cast")
             private fun <T: Any, N: CPointed> toKotlinArray(
-                struct: cinterop.natives.test.KArray,
+                struct: $cinteropPath.KArray,
                 converter: (from: CPointer<N>, dealloc: Boolean) -> T,
                 dealloc: Boolean,
                 deallocContent: Boolean,

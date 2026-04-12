@@ -44,5 +44,5 @@ project.afterEvaluate {
         object NativeKtInfo {
             const val VERSION = "$version"
         }
-    """.trimIndent())
+    """.trimIndent().replace("\n", System.lineSeparator()))
 }

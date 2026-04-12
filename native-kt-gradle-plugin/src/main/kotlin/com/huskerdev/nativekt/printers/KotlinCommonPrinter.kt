@@ -70,7 +70,7 @@ class KotlinCommonPrinter(
         }
 
         if(idl.dictionaries.isNotEmpty()) {
-            printLabel(builder, "Structs")
+            printLabel(builder, "Dictionaries")
             idl.dictionaries.values.forEach { printDictionary(builder, it) }
         }
 
