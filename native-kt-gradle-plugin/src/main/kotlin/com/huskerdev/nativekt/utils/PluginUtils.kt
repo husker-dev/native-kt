@@ -5,6 +5,8 @@ import com.huskerdev.nativekt.TargetType
 import com.huskerdev.nativekt.plugin.NativeModule
 import com.huskerdev.webidl.WebIDL
 import com.huskerdev.webidl.jvm.iterator
+import com.huskerdev.webidl.resolver.*
+import com.huskerdev.webidl.resolver.WebIDLBuiltinKind.*
 import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.api.Project
 import org.gradle.api.tasks.TaskProvider
@@ -81,4 +83,104 @@ fun currentTargetType(): TargetType = when {
 fun File.fresh(){
     deleteRecursively()
     mkdirs()
+}
+
+fun validateIDL(idl: IdlResolver) {
+    fun checkType(type: ResolvedIdlType, isInsideArray: Boolean = false) {
+        when(type) {
+            is ResolvedIdlType.Union ->
+                throw UnsupportedOperationException("Union types are not supported: $type")
+            is ResolvedIdlType.Default -> when(val declaration = type.declaration) {
+                is ResolvedIdlInterface ->
+                    throw UnsupportedOperationException("Interfaces are not supported yet: $type")
+                is BuiltinIdlDeclaration -> when(declaration.kind) {
+                    ANY,
+                    MUTABLE_LIST,
+                    MAP,
+                    PROMISE,
+                    USV_STRING,
+                    UNSIGNED_INT,
+                    BIG_INT,
+                    UNRESTRICTED_FLOAT,
+                    UNRESTRICTED_DOUBLE,
+                    UNSIGNED_BYTE,
+                    BYTE_SEQUENCE,
+                    UNSIGNED_SHORT,
+                    UNSIGNED_LONG,
+                    OBJECT -> throw UnsupportedOperationException("Unsupported type: ${declaration.kind}")
+                    STRING -> {
+                        if(isInsideArray)
+                            throw UnsupportedOperationException("String arrays are not supported yet")
+                    }
+                    VOID,
+                    BOOLEAN,
+                    CHAR,
+                    INT,
+                    FLOAT,
+                    DOUBLE,
+                    BYTE,
+                    SHORT,
+                    LONG -> Unit // ok
+                    LIST -> {
+                        if(isInsideArray)
+                            throw UnsupportedOperationException("Nested arrays are not supported: $type")
+                        checkType(type.parameters[0], true)
+                    }
+                }
+                is ResolvedIdlCallbackFunction -> {
+                    if(isInsideArray)
+                        throw UnsupportedOperationException("Callback arrays are not supported yet")
+                }
+                is ResolvedIdlDictionary,
+                is ResolvedIdlEnum,
+                is ResolvedIdlNamespace,
+                is ResolvedIdlTypeDef -> Unit // ok
+            }
+            is ResolvedIdlType.Void -> Unit // ok
+        }
+    }
+    fun checkName(name: String) {
+        if(name.startsWith("_"))
+            throw UnsupportedOperationException("Identifiers cannot begin with an underscore: $name")
+    }
+    fun checkField(field: ResolvedIdlField) {
+        checkType(field.type)
+        checkName(field.name)
+    }
+    fun checkOperation(operation: ResolvedIdlOperation) {
+        checkType(operation.type)
+        checkName(operation.name)
+        operation.args.forEach { checkField(it) }
+    }
+
+    if(idl.interfaces.isNotEmpty())
+        throw UnsupportedOperationException("Interfaces are not supported yet")
+
+    idl.namespaces.values.forEach { namespace ->
+        if(namespace.name != "global")
+            throw UnsupportedOperationException("Only 'global' namespace is supported yet")
+        namespace.operations.forEach { checkOperation(it) }
+    }
+
+    idl.callbacks.values.forEach { callback ->
+        checkType(callback.type)
+        checkName(callback.name)
+        callback.args.forEach { checkField(it) }
+    }
+
+    idl.dictionaries.values.forEach { dictionary ->
+        checkName(dictionary.name)
+        dictionary.fields.forEach { checkField(it) }
+    }
+
+    idl.enums.values.forEach { enum ->
+        checkName(enum.name)
+        enum.elements.forEach { checkName(it) }
+    }
+
+    idl.globalOperators().forEach { operation ->
+        checkType(operation.type)
+        checkName(operation.name)
+        operation.args.forEach { checkField(it) }
+    }
 }

@@ -4,6 +4,7 @@ import com.android.build.api.variant.KotlinMultiplatformAndroidComponentsExtensi
 import com.huskerdev.nativekt.TargetType
 import com.huskerdev.nativekt.configurators.*
 import com.huskerdev.nativekt.printers.HeaderPrinter
+import com.huskerdev.nativekt.utils.validateIDL
 import com.huskerdev.nativekt.utils.dir
 import com.huskerdev.nativekt.utils.idl
 import com.huskerdev.nativekt.utils.idlFile
@@ -48,6 +49,8 @@ fun NativeKtPlugin.configureKotlin(
         }
 
         val idl = module.idl(project)
+        validateIDL(idl)
+
         val cmakeModuleDir = File(cmakeDir, module.name)
         val srcGenModuleDir = File(srcGenDir, module.name)
 
