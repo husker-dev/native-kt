@@ -12,8 +12,10 @@ android_test_juint = "1.3.0"
 webidl = "1.0.2"
 
 plugin_publish = "2.1.0"
-intellij_platform = "2.13.1"
+intellij_platform = "2.14.0"
 grammarkit = "2023.3.0.3"
+
+maven_publish = "0.36.0"
 
 [libraries]
 
@@ -39,3 +41,5 @@ kotlinx-benchmark       = { id = "org.jetbrains.kotlinx.benchmark", version.ref 
 plugin-publish          = { id = "com.gradle.plugin-publish", version.ref = "plugin_publish" }
 intellij-platform       = { id = "org.jetbrains.intellij.platform", version.ref = "intellij_platform" }
 grammarkit              = { id = "org.jetbrains.grammarkit", version.ref = "grammarkit" }
+
+maven-publish           = { id = "com.vanniktech.maven.publish", version.ref = "maven_publish" }
