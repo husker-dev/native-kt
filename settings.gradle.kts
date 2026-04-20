@@ -2,7 +2,6 @@
 rootProject.name = "native-kt"
 
 include("modules:runtime")
-include("modules:runtime-jvm")
 include("modules:intellij-plugin")
 
 include("modules:tests")

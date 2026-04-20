@@ -32,6 +32,7 @@ kotlin {
 
     android {
         namespace = group.toString()
+        minSdk = 5
         compileSdk {
             version = release(26)
         }
@@ -63,9 +64,34 @@ kotlin {
     androidNativeX86()
     androidNativeArm32()
     androidNativeArm64()
+}
 
-    sourceSets.jvmMain.dependencies {
-        api(project(":modules:runtime-jvm"))
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
+tasks.withType<JavaCompile>().configureEach {
+    options.compilerArgs.addAll(listOf(
+        "--add-modules", "jdk.internal.vm.ci",
+        "--add-exports", "jdk.internal.vm.ci/jdk.vm.ci.code=ALL-UNNAMED",
+        "--add-exports", "jdk.internal.vm.ci/jdk.vm.ci.code.site=ALL-UNNAMED",
+        "--add-exports", "jdk.internal.vm.ci/jdk.vm.ci.hotspot=ALL-UNNAMED",
+        "--add-exports", "jdk.internal.vm.ci/jdk.vm.ci.meta=ALL-UNNAMED",
+        "--add-exports", "jdk.internal.vm.ci/jdk.vm.ci.runtime=ALL-UNNAMED",
+    ))
+}
+
+tasks.withType<Javadoc>().configureEach {
+    (options as StandardJavadocDocletOptions).apply {
+        addStringOption("-add-modules", "jdk.internal.vm.ci")
+        addMultilineStringsOption("-add-exports").value = listOf(
+            "jdk.internal.vm.ci/jdk.vm.ci.code=ALL-UNNAMED",
+            "jdk.internal.vm.ci/jdk.vm.ci.code.site=ALL-UNNAMED",
+            "jdk.internal.vm.ci/jdk.vm.ci.hotspot=ALL-UNNAMED",
+            "jdk.internal.vm.ci/jdk.vm.ci.meta=ALL-UNNAMED",
+            "jdk.internal.vm.ci/jdk.vm.ci.runtime=ALL-UNNAMED"
+        )
     }
 }
 
