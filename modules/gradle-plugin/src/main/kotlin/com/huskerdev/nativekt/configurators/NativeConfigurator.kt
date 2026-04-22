@@ -188,6 +188,15 @@ private fun extractLinkerOpts(
     // Try to resolve libs from 'PkgConfig'
 
     val cmakeCacheText = cmakeCache.readLines()
+
+    if(cmakeCacheText.any { "_STATIC_LDFLAGS:INTERNAL=" in it && !it.endsWith("=") }) {
+        this += cmakeCacheText
+            .filter { "_STATIC_LDFLAGS:INTERNAL=" in it }
+            .flatMap { it.split("_STATIC_LDFLAGS:INTERNAL=")[1].split(";") }
+            .toSet().sorted()
+        return@buildList
+    }
+
     if(cmakeCacheText.any { "_STATIC_LIBRARY_DIRS:INTERNAL=" in it }) {
 
         val libDirs = cmakeCacheText

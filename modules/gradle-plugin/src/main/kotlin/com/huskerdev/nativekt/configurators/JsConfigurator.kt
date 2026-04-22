@@ -152,6 +152,8 @@ private abstract class PrepareNativesJs: DefaultTask() {
                 cmake_minimum_required(VERSION 3.15)
         
                 project("$$moduleName")
+                
+                set(EXTRA_LINK_FLAGS "" CACHE STRING "Extra linker flags")
         
                 add_subdirectory("$${
                     nativeProjectDir.replace("\\", "/")
@@ -162,7 +164,7 @@ private abstract class PrepareNativesJs: DefaultTask() {
                 add_executable(lib$$moduleName $<TARGET_OBJECTS:$$moduleName> emscripten_bindings.cpp)
                 set_target_properties(lib$$moduleName PROPERTIES CXX_STANDARD 17)
                 
-                set_target_properties(lib$$moduleName PROPERTIES LINK_FLAGS "-s -lembind -s --no-entry -s ALLOW_MEMORY_GROWTH=1 -s ALLOW_TABLE_GROWTH=1 -s MODULARIZE=1 -s EXPORT_ES6=1 -s WASM_BIGINT=$${if(useJsBigInt) "1" else "0"} -s EXPORTED_RUNTIME_METHODS=UTF8ToString,stringToUTF8,lengthBytesUTF8,HEAP8,HEAP16,HEAP32,HEAPF32,HEAPF64,addFunction -s EXPORTED_FUNCTIONS=_free,_malloc")
+                set_target_properties(lib$$moduleName PROPERTIES LINK_FLAGS "${EXTRA_LINK_FLAGS} -s -lembind -s --no-entry -s ALLOW_MEMORY_GROWTH=1 -s ALLOW_TABLE_GROWTH=1 -s MODULARIZE=1 -s EXPORT_ES6=1 -s WASM_BIGINT=$${if(useJsBigInt) "1" else "0"} -s EXPORTED_RUNTIME_METHODS=UTF8ToString,stringToUTF8,lengthBytesUTF8,HEAP8,HEAP16,HEAP32,HEAPF32,HEAPF64,addFunction -s EXPORTED_FUNCTIONS=_free,_malloc")
             """.trimIndent())
 
             // Create Kotlin/JS bindings
@@ -214,6 +216,25 @@ private abstract class CompileNativesJs @Inject constructor(
                 cmakeBuildType,
                 args = setOf("-DCMAKE_TOOLCHAIN_FILE=\"$toolchain\"")
             )
+
+            // Reload with extra flags
+            val extraFlags = File(cmakeBuildDir, "sub/CMakeFiles/${moduleName}.dir/flags.make")
+                .readLines()
+                .firstOrNull { it.startsWith("C_FLAGS =") }
+                ?.replace("C_FLAGS =", "")
+                ?.replace("-O3", "")
+                ?.replace("-DNDEBUG", "")
+                ?.trim()
+                ?: ""
+            if(extraFlags.isNotEmpty()) {
+                cmakeGen(
+                    execOps, File(cmakeDir), cmakeBuildDir,
+                    cmakeBuildType,
+                    args = setOf("-DCMAKE_TOOLCHAIN_FILE=\"$toolchain\"", "-DEXTRA_LINK_FLAGS=\"${extraFlags}\"")
+                )
+            }
+
+            // -DEXTRA_LINK_FLAGS=
 
             // Build
             cmakeBuild(execOps, cmakeBuildDir)

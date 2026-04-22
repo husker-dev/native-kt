@@ -1,6 +1,9 @@
 @file:OptIn(ExperimentalKotlinGradlePluginApi::class)
 
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+import org.jetbrains.kotlin.gradle.dsl.JsModuleKind
+import org.jetbrains.kotlin.gradle.targets.js.npm.LockFileMismatchReport
+import org.jetbrains.kotlin.gradle.targets.js.npm.NpmExtension
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -28,6 +31,22 @@ kotlin {
             executable {
                 entryPoint = "main"
             }
+        }
+    }
+
+    js {
+        nodejs()
+        browser()
+        binaries.executable()
+        compilerOptions {
+            target = "es2015"
+            moduleKind = JsModuleKind.MODULE_COMMONJS
+        }
+        // Disable npm package-lock file errors
+        rootProject.the<NpmExtension>().apply {
+            packageLockMismatchReport = LockFileMismatchReport.NONE
+            reportNewPackageLock = true
+            packageLockAutoReplace = true
         }
     }
 
