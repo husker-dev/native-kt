@@ -1,9 +1,8 @@
 @file:OptIn(ExperimentalWasmDsl::class)
 
-import org.apache.tools.ant.taskdefs.condition.Os
+import com.huskerdev.nativekt.plugin.*
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
-import org.jetbrains.kotlin.gradle.dsl.JsMainFunctionExecutionMode
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.dsl.*
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -24,9 +23,7 @@ kotlin {
         }
     }
 
-    configure(listOf(
-        wasmJs(), js()
-    )) {
+    webTargets {
         browser()
         nodejs()
 
@@ -36,6 +33,8 @@ kotlin {
             main = JsMainFunctionExecutionMode.NO_CALL
         }
     }
+
+    currentNativeTargets()
 
     android {
         namespace = group.toString()
@@ -57,32 +56,6 @@ kotlin {
                     }
                 }
             }
-        }
-
-    }
-
-    when {
-        Os.isFamily(Os.FAMILY_WINDOWS) -> {
-            mingwX64()
-        }
-        Os.isFamily(Os.FAMILY_MAC) -> {
-            macosArm64()
-
-            iosArm64()
-            iosSimulatorArm64()
-
-            watchosArm32()
-            watchosArm64()
-            watchosDeviceArm64()
-            watchosSimulatorArm64()
-
-            tvosArm64()
-            tvosSimulatorArm64()
-        }
-        Os.isFamily(Os.FAMILY_UNIX) -> {
-            if(Os.isArch("amd64"))
-                linuxX64()
-            else linuxArm64()
         }
     }
 

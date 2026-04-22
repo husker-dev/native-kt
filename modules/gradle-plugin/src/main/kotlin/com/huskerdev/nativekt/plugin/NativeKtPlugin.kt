@@ -1,9 +1,14 @@
 package com.huskerdev.nativekt.plugin
 
+import com.huskerdev.nativekt.TargetType
+import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.the
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
+import org.jetbrains.kotlin.gradle.targets.js.dsl.KotlinJsTargetDsl
 import java.io.File
 
 class NativeKtPlugin: Plugin<Project> {
@@ -27,6 +32,65 @@ class NativeKtPlugin: Plugin<Project> {
 
         project.plugins.withId("org.jetbrains.kotlin.multiplatform") {
             configureKotlin(cmakeDir, srcGenDir)
+        }
+    }
+}
+
+@OptIn(ExperimentalWasmDsl::class)
+@Suppress("unused")
+fun KotlinMultiplatformExtension.webTargets(
+    configure: KotlinJsTargetDsl.() -> Unit = {}
+) {
+    wasmJs(configure)
+    js(configure)
+}
+
+@Suppress("unused")
+fun KotlinMultiplatformExtension.currentNativeDesktopTargets(
+    configure: KotlinNativeTarget.() -> Unit = {}
+) = currentNativeTargets(listOf(
+    TargetType.MINGW_X64,
+    TargetType.MACOS_ARM64,
+    TargetType.LINUX_X64,
+    TargetType.LINUX_ARM64
+), configure)
+
+
+fun KotlinMultiplatformExtension.currentNativeTargets(
+    available: List<TargetType> = listOf(
+        TargetType.MINGW_X64,
+        TargetType.MACOS_ARM64,
+        TargetType.IOS_ARM64,
+        TargetType.IOS_SIMULATOR_ARM64,
+        TargetType.WATCHOS_ARM32,
+        TargetType.WATCHOS_ARM64,
+        TargetType.WATCHOS_DEVICE_ARM64,
+        TargetType.WATCHOS_SIMULATOR_ARM64,
+        TargetType.TVOS_ARM64,
+        TargetType.TVOS_SIMULATOR_ARM64,
+        TargetType.LINUX_X64,
+        TargetType.LINUX_ARM64
+    ),
+    configure: KotlinNativeTarget.() -> Unit = {}
+) {
+    when {
+        Os.isFamily(Os.FAMILY_WINDOWS) -> when {
+            TargetType.MINGW_X64 in available -> mingwX64(configure)
+        }
+        Os.isFamily(Os.FAMILY_MAC) -> when {
+            TargetType.MACOS_ARM64 in available -> macosArm64(configure)
+            TargetType.IOS_ARM64 in available -> iosArm64(configure)
+            TargetType.IOS_SIMULATOR_ARM64 in available -> iosSimulatorArm64(configure)
+            TargetType.WATCHOS_ARM32 in available -> watchosArm32(configure)
+            TargetType.WATCHOS_ARM64 in available -> watchosArm64(configure)
+            TargetType.WATCHOS_DEVICE_ARM64 in available -> watchosDeviceArm64(configure)
+            TargetType.WATCHOS_SIMULATOR_ARM64 in available -> watchosSimulatorArm64(configure)
+            TargetType.TVOS_ARM64 in available -> tvosArm64(configure)
+            TargetType.TVOS_SIMULATOR_ARM64 in available -> tvosSimulatorArm64(configure)
+        }
+        Os.isFamily(Os.FAMILY_UNIX) -> when {
+            Os.isArch("amd64") && TargetType.LINUX_X64 in available -> linuxX64(configure)
+            !Os.isArch("amd64") && TargetType.LINUX_ARM64 in available -> linuxArm64(configure)
         }
     }
 }
