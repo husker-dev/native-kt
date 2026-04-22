@@ -1,17 +1,17 @@
 [versions]
 
 kotlin = "2.3.20"
-kotlin_serialization = "1.10.0"
+kotlin_serialization = "1.11.0"
 coroutines = "1.10.2"
 benchmark = "0.4.16"
 
-android_plugin = "9.1.0"
+android_plugin = "9.1.1"
 android_test_runner = "1.7.0"
 android_test_juint = "1.3.0"
 
 webidl = "1.0.2"
 
-plugin_publish = "2.1.0"
+plugin_publish = "2.1.1"
 intellij_platform = "2.14.0"
 grammarkit = "2023.3.0.3"
 
