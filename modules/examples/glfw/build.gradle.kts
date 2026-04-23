@@ -1,6 +1,8 @@
 @file:OptIn(ExperimentalKotlinGradlePluginApi::class)
 
+import com.huskerdev.nativekt.plugin.currentNativeDesktopTargets
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+import org.jetbrains.kotlin.konan.target.KonanTarget
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -19,14 +21,10 @@ kotlin {
         }
     }
 
-    setOf(
-        mingwX64(),
-        macosArm64(),
-        linuxX64(), linuxArm64()
-    ).forEach {
-        it.binaries {
+    currentNativeDesktopTargets {
+        binaries {
             executable {
-                if(it == mingwX64())
+                if(this@currentNativeDesktopTargets.konanTarget == KonanTarget.MINGW_X64)
                     linkerOpts += "-mwindows"
                 entryPoint = "main"
             }
@@ -39,9 +37,10 @@ kotlin {
 }
 
 natives {
-    applyRuntime = false
     useCoroutines = false
-    useUniversalMacOSLib = false
+
+    // Remove auto runtime applying to use local version
+    applyRuntime = false
 
     create("glfwBindings")
 }

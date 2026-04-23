@@ -1,5 +1,6 @@
 @file:OptIn(ExperimentalKotlinGradlePluginApi::class)
 
+import com.huskerdev.nativekt.plugin.currentNativeDesktopTargets
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JsModuleKind
 import org.jetbrains.kotlin.gradle.targets.js.npm.LockFileMismatchReport
@@ -22,12 +23,8 @@ kotlin {
         }
     }
 
-    setOf(
-        mingwX64(),
-        macosArm64(),
-        linuxX64(), linuxArm64()
-    ).forEach {
-        it.binaries {
+    currentNativeDesktopTargets {
+        binaries {
             executable {
                 entryPoint = "main"
             }
@@ -37,6 +34,7 @@ kotlin {
     js {
         nodejs()
         browser()
+
         binaries.executable()
         compilerOptions {
             target = "es2015"
@@ -56,9 +54,11 @@ kotlin {
 }
 
 natives {
-    applyRuntime = false
     useCoroutines = false
     useUniversalMacOSLib = false
+
+    // Remove auto runtime applying to use local version
+    applyRuntime = false
 
     create("freetypeBindings")
 }
