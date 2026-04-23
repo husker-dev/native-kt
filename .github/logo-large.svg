@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="100" viewBox="0 0 30 10" fill="none">
+  <style>
+    text {
+      font: bold 5px monospace;
+      fill: #7E53FE;
+    }
+  </style>
+
+  <path d="M 2 0 L 0 0 0 8 2 8" stroke="#7E53FE" stroke-linecap="round" stroke-linejoin="round" stroke-width="0.8" transform="translate(1, 1)"/>
+
+  <text x="50%" y="53%" dominant-baseline="middle" text-anchor="middle">native-kt</text>
+  
+  <path d="M 0 0 L 2 0 2 8 0 8" stroke="#7E53FE" stroke-linecap="round" stroke-linejoin="round" stroke-width="0.8" transform="translate(27, 1)"/>
+</svg>
