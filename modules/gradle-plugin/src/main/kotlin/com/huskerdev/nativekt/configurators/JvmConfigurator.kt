@@ -68,9 +68,6 @@ internal fun configureJvm(
         }
     }
 
-    val jdkPath = System.getProperty("java.home").replace("\\", "/")
-    val jdkIncludeDir = File(jdkPath, "include/${jdkPlatformName()}")
-
     val libArch = libArch(extension.useUniversalMacOSLib)
     val libOutFileName = "liblib_${module.name}.${libExtension}"
     val libFullFileName = "lib${module.name}-$libArch.${libExtension}"
@@ -113,7 +110,6 @@ internal fun configureJvm(
             .resolve("${module.name}.jvm.kt").absolutePath
         it.cmakeDir = cmakeDir.absolutePath
         it.cmakeBuildDir = cmakeBuildDir.absolutePath
-        it.jdkIncludeDir = jdkIncludeDir.absolutePath
         it.nativeProjectDir = module.dir(project).absolutePath
     }
     if(commonTask != null)
@@ -171,7 +167,6 @@ private abstract class PrepareNativesJvm: DefaultTask() {
     @get:Input abstract var srcFile: String
     @get:Input abstract var cmakeDir: String
     @get:Input abstract var cmakeBuildDir: String
-    @get:Input abstract var jdkIncludeDir: String
     @get:Input abstract var nativeProjectDir: String
 
     init {
@@ -190,6 +185,36 @@ private abstract class PrepareNativesJvm: DefaultTask() {
             if(useJVMCI)
                 srcList += "jvmci.c"
 
+            // unpack jni headers
+            val includeDir = File(cmakeDir, "include")
+            if(!includeDir.exists()) {
+                arrayOf(
+                    "darwin/jawt_md.h",
+                    "darwin/jni_md.h",
+                    "linux/jawt_md.h",
+                    "linux/jni_md.h",
+                    "win32/jawt_md.h",
+                    "win32/jni_md.h",
+                    "win32/bridge/AccessBridgeCallbacks.h",
+                    "win32/bridge/AccessBridgeCalls.h",
+                    "win32/bridge/AccessBridgePackages.h",
+                    "classfile_constants.h",
+                    "jawt.h",
+                    "jdwpTransport.h",
+                    "jni.h",
+                    "jvmti.h",
+                    "jvmticmlr.h",
+                ).forEach { path ->
+                    this::class.java.getResourceAsStream("/com/huskerdev/nativekt/include/${path}").use { ins ->
+                        if(ins == null)
+                            throw NullPointerException("Can not find header: ${path}")
+                        val file = File(includeDir, path)
+                        file.parentFile.mkdirs()
+                        file.outputStream().use { ins.copyTo(it) }
+                    }
+                }
+            }
+
             File(cmakeDir, "CMakeLists.txt").writeText($$"""
                 cmake_minimum_required(VERSION 3.15)
         
@@ -202,8 +227,7 @@ private abstract class PrepareNativesJvm: DefaultTask() {
                 
                 target_link_libraries(lib_$$moduleName PRIVATE $$moduleName)
                 
-                target_include_directories(lib_$$moduleName PRIVATE "$${jdkIncludeDir.replace("\\", "/")}")
-                target_include_directories(lib_$$moduleName PRIVATE "$${File(jdkIncludeDir).parent.replace("\\", "/")}")
+                target_include_directories(lib_$$moduleName PRIVATE "include" "include/$${jdkPlatformName()}")
             """.trimIndent())
 
             KotlinJvmPrinter(
