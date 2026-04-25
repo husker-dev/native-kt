@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1996, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1996, 2020, Oracle and/or its affiliates. All rights reserved.
  * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
  *
  *
@@ -51,6 +51,8 @@
 #else
   #define JNIIMPORT
 #endif
+
+#define JNICALL
 
 typedef int jint;
 #ifdef _LP64
