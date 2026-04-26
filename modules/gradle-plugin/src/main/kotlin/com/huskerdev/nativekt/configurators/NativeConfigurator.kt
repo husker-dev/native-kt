@@ -81,32 +81,35 @@ internal fun configureNative(
         it.inputs.dir(module.dir(project))
         it.outputs.dirs(srcDir, cmakeDir)
 
-        it.idl = Json.encodeToString(idl)
-        it.useCoroutines = extension.useCoroutines
-        it.expectActual = expectActual
+        it.idl              = Json.encodeToString(idl)
+        it.useCoroutines    = extension.useCoroutines
+        it.expectActual     = expectActual
 
-        it.srcDir = srcDir.absolutePath
+        it.srcDir           = srcDir.absolutePath
 
-        it.cmakeBuildType = module.buildType
-        it.targetType = targetType
-        it.cmakeDir = cmakeDir.absolutePath
-        it.cmakeBuildDir = cmakeBuildDir.absolutePath
-        it.headerFile = headerFile.absolutePath
-        it.moduleName = module.name
-        it.moduleClasspath = module.classPath
-        it.srcFile = srcDir.resolve(module.classPath.replace(".", "/")).resolve("${module.name}.native.kt").absolutePath
+        it.cmakeArgs        = LinkedHashSet(extension.cmakeArgs)
+        it.cmakeBuildType   = module.buildType
+        it.targetType       = targetType
+        it.cmakeDir         = cmakeDir.absolutePath
+        it.cmakeBuildDir    = cmakeBuildDir.absolutePath
+        it.headerFile       = headerFile.absolutePath
+        it.moduleName       = module.name
+        it.moduleClasspath  = module.classPath
+        it.srcFile          = srcDir.resolve(module.classPath.replace(".", "/")).resolve("${module.name}.native.kt").absolutePath
         it.nativeProjectDir = module.dir(project).absolutePath.replace("\\", "/")
     }
     if(commonTask != null)
         prepareTask.dependsOn(commonTask)
 
+    // Init cmake only when compiling project
     project.gradle.taskGraph.whenReady {
         if (hasTask("${project.path}:compileKotlin${targetName.capitalized()}"))
             prepareTask.get().shouldInit = true
     }
 
+    // Add cinterop
     compilation.cinterops {
-        create("natives_${module.name}").definitionFile.set(prepareTask.flatMap { it.defFile })
+        create("nativekt${module.name.capitalized()}").definitionFile.set(prepareTask.flatMap { it.defFile })
     }
 
     // Compilation task
@@ -228,6 +231,7 @@ private fun extractLinkerOpts(
 private fun configureCMake(
     execOps: ExecOperations,
     targetType: TargetType,
+    cmakeArgs: LinkedHashSet<String>,
     cmakeDir: File,
     cmakeBuildDir: File,
     cmakeBuildType: CMakeBuildType
@@ -242,10 +246,11 @@ private fun configureCMake(
         execOps.exec("xcrun --sdk $sdk --show-sdk-path", silent = true)
 
 
-    val args = hashSetOf(
+    val args = linkedSetOf(
         "-DCMAKE_C_COMPILER=clang",
         "-DCMAKE_CXX_COMPILER=clang++",
     )
+    args += cmakeArgs
     args += when(targetType) {
         TargetType.IOS_SIMULATOR_ARM64 -> flags(
             "-arch arm64",
@@ -306,7 +311,12 @@ private fun configureCMake(
         TargetType.MACOS_X64 -> flags("-arch x86_64")
         else -> emptySet()
     }
-    cmakeGen(execOps, cmakeDir, cmakeBuildDir, cmakeBuildType, args)
+    cmakeGen(execOps,
+        dir = cmakeDir,
+        buildDir = cmakeBuildDir,
+        buildType = cmakeBuildType,
+        args = args
+    )
 }
 
 private abstract class PrepareNativesKn @Inject constructor(
@@ -323,6 +333,7 @@ private abstract class PrepareNativesKn @Inject constructor(
 
     @get:Input abstract var srcDir: String
 
+    @get:Input abstract var cmakeArgs: LinkedHashSet<String>
     @get:Input abstract var cmakeBuildType: CMakeBuildType
     @get:Input abstract var targetType: TargetType
     @get:Input abstract var cmakeDir: String
@@ -374,7 +385,7 @@ private abstract class PrepareNativesKn @Inject constructor(
 
             // Configure CMake (if needed)
             if(shouldInit)
-                configureCMake(execOps, targetType, cmakeDir, cmakeBuildDir, cmakeBuildType)
+                configureCMake(execOps, targetType, cmakeArgs, cmakeDir, cmakeBuildDir, cmakeBuildType)
 
             // Get linker opts
             val linkerOpts = if(shouldInit)

@@ -124,6 +124,7 @@ internal fun configureAndroidSourceSet(
 
         it.outputFolder.set(jniLibsDir)
 
+        it.cmakeArgs      = LinkedHashSet(extension.cmakeArgs)
         it.cmakeBuildType = module.buildType
         it.androidTargets = extension.androidTargets.toTypedArray()
         it.cmakeDir       = cmakeDir.absolutePath
@@ -226,6 +227,7 @@ private abstract class CompileNativesAndroid @Inject constructor(
     @get:OutputDirectory
     abstract val outputFolder: DirectoryProperty
 
+    @get:Input abstract var cmakeArgs: LinkedHashSet<String>
     @get:Input abstract var cmakeBuildType: CMakeBuildType
     @get:Input abstract var androidTargets: Array<String>
     @get:Input abstract var cmakeDir: String
@@ -241,12 +243,15 @@ private abstract class CompileNativesAndroid @Inject constructor(
                 val targetBuildDir = File(cmakeBuildDir, abi)
 
                 // Generate CMake build
-                cmakeGen(execOps, File(cmakeDir), targetBuildDir, cmakeBuildType,
-                    args = setOf(
-                        "-DCMAKE_TOOLCHAIN_FILE=\"$toolchain\"",
-                        "-DANDROID_ABI=$abi",
-                        "-DANDROID_PLATFORM=android-$compileSdk"
-                    )
+                cmakeGen(execOps,
+                    dir = File(cmakeDir),
+                    buildDir = targetBuildDir,
+                    buildType = cmakeBuildType,
+                    args = LinkedHashSet(cmakeArgs).apply {
+                        this += "-DCMAKE_TOOLCHAIN_FILE=\"$toolchain\""
+                        this += "-DANDROID_ABI=$abi"
+                        this += "-DANDROID_PLATFORM=android-$compileSdk"
+                    }
                 )
 
                 // Build

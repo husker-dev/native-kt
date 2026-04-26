@@ -10,7 +10,7 @@ internal fun cmakeGen(
     dir: File,
     buildDir: File,
     buildType: CMakeBuildType,
-    args: Set<String> = emptySet()
+    args: LinkedHashSet<String> = linkedSetOf()
 ){
     buildDir.mkdirs()
     val command = arrayListOf(

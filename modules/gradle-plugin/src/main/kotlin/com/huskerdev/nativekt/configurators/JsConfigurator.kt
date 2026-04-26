@@ -108,6 +108,7 @@ internal fun configureJs(
         it.inputs.dir(module.dir(project))
         it.outputs.dirs(cmakeDir, resourcesDir)
 
+        it.cmakeArgs      = LinkedHashSet(extension.cmakeArgs)
         it.cmakeBuildType = module.buildType
         it.cmakeDir       = cmakeDir.absolutePath
         it.cmakeBuildDir  = cmakeBuildDir.absolutePath
@@ -193,6 +194,7 @@ private abstract class PrepareNativesJs: DefaultTask() {
 private abstract class CompileNativesJs @Inject constructor(
     private val execOps: ExecOperations,
 ): DefaultTask() {
+    @get:Input abstract var cmakeArgs: LinkedHashSet<String>
     @get:Input abstract var cmakeBuildType: CMakeBuildType
     @get:Input abstract var cmakeDir: String
     @get:Input abstract var cmakeBuildDir: String
@@ -211,10 +213,15 @@ private abstract class CompileNativesJs @Inject constructor(
             // Generate CMake build
             val toolchain = File(System.getenv()["EMSDK"],
                 "upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake")
+
             cmakeGen(
-                execOps, File(cmakeDir), cmakeBuildDir,
-                cmakeBuildType,
-                args = setOf("-DCMAKE_TOOLCHAIN_FILE=\"$toolchain\"")
+                execOps,
+                dir = File(cmakeDir),
+                buildDir = cmakeBuildDir,
+                buildType = cmakeBuildType,
+                args = LinkedHashSet(cmakeArgs).apply {
+                    this += "-DCMAKE_TOOLCHAIN_FILE=\"$toolchain\""
+                }
             )
 
             // Reload with extra flags
@@ -228,13 +235,16 @@ private abstract class CompileNativesJs @Inject constructor(
                 ?: ""
             if(extraFlags.isNotEmpty()) {
                 cmakeGen(
-                    execOps, File(cmakeDir), cmakeBuildDir,
-                    cmakeBuildType,
-                    args = setOf("-DCMAKE_TOOLCHAIN_FILE=\"$toolchain\"", "-DEXTRA_LINK_FLAGS=\"${extraFlags}\"")
+                    execOps,
+                    dir = File(cmakeDir),
+                    buildDir = cmakeBuildDir,
+                    buildType = cmakeBuildType,
+                    args = LinkedHashSet(cmakeArgs).apply {
+                        this += "-DCMAKE_TOOLCHAIN_FILE=\"$toolchain\""
+                        this += "-DEXTRA_LINK_FLAGS=\"${extraFlags}\""
+                    }
                 )
             }
-
-            // -DEXTRA_LINK_FLAGS=
 
             // Build
             cmakeBuild(execOps, cmakeBuildDir)

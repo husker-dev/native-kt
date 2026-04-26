@@ -124,6 +124,7 @@ internal fun configureJvm(
         it.inputs.dir(module.dir(project))
         it.outputs.dir(cmakeDir)
 
+        it.cmakeArgs            = LinkedHashSet(extension.cmakeArgs)
         it.cmakeBuildType       = module.buildType
         it.useUniversalMacOSLib = extension.useUniversalMacOSLib
         it.cmakeDir             = cmakeDir.absolutePath
@@ -207,7 +208,7 @@ private abstract class PrepareNativesJvm: DefaultTask() {
                 ).forEach { path ->
                     this::class.java.getResourceAsStream("/com/huskerdev/nativekt/include/${path}").use { ins ->
                         if(ins == null)
-                            throw NullPointerException("Can not find header: ${path}")
+                            throw NullPointerException("Can not find header: $path")
                         val file = File(includeDir, path)
                         file.parentFile.mkdirs()
                         file.outputStream().use { ins.copyTo(it) }
@@ -289,6 +290,7 @@ private abstract class PrepareNativesJvm: DefaultTask() {
 private abstract class CompileNativesJvm @Inject constructor(
     private val execOps: ExecOperations,
 ): DefaultTask() {
+    @get:Input abstract var cmakeArgs: LinkedHashSet<String>
     @get:Input abstract var cmakeBuildType: CMakeBuildType
     @get:Input abstract var useUniversalMacOSLib: Boolean
     @get:Input abstract var cmakeDir: String
@@ -300,17 +302,23 @@ private abstract class CompileNativesJvm @Inject constructor(
         group = "native"
         doLast {
             // Generate CMake build
-            val args = hashSetOf(
+            val args = linkedSetOf(
                 "-DCMAKE_C_COMPILER=clang",
                 "-DCMAKE_CXX_COMPILER=clang++"
             )
+            args += cmakeArgs
             if (Os.isFamily(Os.FAMILY_MAC) && useUniversalMacOSLib) {
                 args += setOf(
                     "-DCMAKE_C_FLAGS=\"-arch x86_64 -arch arm64\"",
                     "-DCMAKE_CXX_FLAGS=\"-arch x86_64 -arch arm64\""
                 )
             }
-            cmakeGen(execOps, File(cmakeDir), File(cmakeBuildDir), cmakeBuildType, args)
+            cmakeGen(execOps,
+                dir = File(cmakeDir),
+                buildDir = File(cmakeBuildDir),
+                buildType = cmakeBuildType,
+                args = args
+            )
 
             // Build
             cmakeBuild(execOps, File(cmakeBuildDir))

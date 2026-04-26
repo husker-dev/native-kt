@@ -9,6 +9,7 @@ import javax.inject.Inject
 
 const val NDK_LATEST = "~latest~"
 
+@Suppress("JavaDefaultMethodsNotOverriddenByDelegation")
 open class NativeKtExtension @Inject constructor(
     objects: ObjectFactory
 ): ExtensiblePolymorphicDomainObjectContainer<NativeModule> by objects.polymorphicDomainObjectContainer(NativeModule::class.java) {
@@ -23,6 +24,8 @@ open class NativeKtExtension @Inject constructor(
             objects.newInstance(Multiplatform::class.java, name)
         }
     }
+
+    var cmakeArgs = arrayListOf<String>()
 
     var useCoroutines = true
     var useJvmRecord = true
