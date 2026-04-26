@@ -10,9 +10,11 @@ import javax.inject.Inject
 const val NDK_LATEST = "~latest~"
 
 @Suppress("JavaDefaultMethodsNotOverriddenByDelegation")
-open class NativeKtExtension @Inject constructor(
+open class NativeKtMultiplatformExtension @Inject constructor(
     objects: ObjectFactory
-): ExtensiblePolymorphicDomainObjectContainer<NativeModule> by objects.polymorphicDomainObjectContainer(NativeModule::class.java) {
+): ExtensiblePolymorphicDomainObjectContainer<NativeModule> by objects.polymorphicDomainObjectContainer(NativeModule::class.java),
+    NativeKtJvmInterface, NativeKtJsInterface, NativeKtAndroidInterface, NativeKtNativeInterface, NativeKtCommonInterface
+{
     init {
         registerFactory(Multiplatform::class.java) { name ->
             objects.newInstance(Multiplatform::class.java, name)
@@ -25,27 +27,85 @@ open class NativeKtExtension @Inject constructor(
         }
     }
 
-    var cmakeArgs = arrayListOf<String>()
+    override var useCoroutines = true
+    override var useJvmRecord = true
 
-    var useCoroutines = true
-    var useJvmRecord = true
+    override var useJNI = true
+    override var useForeignApi = true
+    override var useJVMCI = true
 
-    var useJNI = true
-    var useForeignApi = true
-    var useJVMCI = true
+    override var useUniversalMacOSLib = false
 
-    var useUniversalMacOSLib = false
+    override var ndkVersion: String = NDK_LATEST
+    override var androidTargets = arrayListOf("arm64-v8a", "armeabi-v7a", "x86_64")
 
-    var ndkVersion: String = NDK_LATEST
-    var androidTargets = arrayListOf("arm64-v8a", "armeabi-v7a", "x86_64")
+    override var applyRuntime = true
 
-    var applyRuntime = true
+    override var useJsBigInt = false
 
-    var useJsBigInt = false
-
-    var jvmNativesJarTask: Jar? = null
-        internal set
+    override var jvmNativesJarTask: Jar? = null
 }
+
+@Suppress("JavaDefaultMethodsNotOverriddenByDelegation")
+open class NativeKtJvmExtension @Inject constructor(
+    objects: ObjectFactory
+): ExtensiblePolymorphicDomainObjectContainer<SinglePlatform> by objects.polymorphicDomainObjectContainer(SinglePlatform::class.java),
+    NativeKtJvmInterface
+{
+    init {
+        registerFactory(SinglePlatform::class.java) { name ->
+            objects.newInstance(SinglePlatform::class.java, name).also {
+                it.targetSourceSet = "main"
+            }
+        }
+    }
+    override var useCoroutines = true
+    override var useJvmRecord = true
+
+    override var useJNI = true
+    override var useForeignApi = true
+    override var useJVMCI = true
+
+    override var useUniversalMacOSLib = false
+
+    override var applyRuntime = true
+
+    override var jvmNativesJarTask: Jar? = null
+}
+
+interface NativeKtNativeInterface: NativeKtCommonInterface {
+
+}
+
+interface NativeKtAndroidInterface: NativeKtCommonInterface {
+    var ndkVersion: String
+    var androidTargets: ArrayList<String>
+}
+
+interface NativeKtJsInterface: NativeKtCommonInterface {
+    var useJsBigInt: Boolean
+}
+
+interface NativeKtJvmInterface: NativeKtCommonInterface {
+    var useJvmRecord: Boolean
+
+    var useJNI: Boolean
+    var useForeignApi: Boolean
+    var useJVMCI: Boolean
+
+    var useUniversalMacOSLib: Boolean
+
+    var jvmNativesJarTask: Jar?
+}
+
+interface NativeKtCommonInterface {
+    var useCoroutines: Boolean
+    var applyRuntime: Boolean
+}
+
+// ==============
+//    Modules
+// ==============
 
 sealed class NativeModule @Inject constructor(
     @get:JvmName("_name")
@@ -66,6 +126,11 @@ sealed class NativeModule @Inject constructor(
      * Default value: `RELEASE`
      */
     var buildType: CMakeBuildType = CMakeBuildType.RELEASE
+
+    /**
+     * Cmake command-line args
+     */
+    var cmakeArgs = arrayListOf<String>()
 
     /**
      * Classpath where bindings will be generated.

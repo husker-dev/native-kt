@@ -3,10 +3,7 @@ package com.huskerdev.nativekt.configurators
 import com.android.build.api.dsl.KotlinMultiplatformAndroidLibraryExtension
 import com.android.build.api.variant.KotlinMultiplatformAndroidComponentsExtension
 import com.android.build.gradle.internal.tasks.factory.dependsOn
-import com.huskerdev.nativekt.plugin.CMakeBuildType
-import com.huskerdev.nativekt.plugin.NDK_LATEST
-import com.huskerdev.nativekt.plugin.NativeKtExtension
-import com.huskerdev.nativekt.plugin.NativeModule
+import com.huskerdev.nativekt.plugin.*
 import com.huskerdev.nativekt.printers.HeaderPrinter
 import com.huskerdev.nativekt.printers.KotlinAndroidPrinter
 import com.huskerdev.nativekt.printers.jvm.CJniArenaPrinter
@@ -30,7 +27,7 @@ import javax.inject.Inject
 
 internal fun configureAndroidSourceSet(
     project: Project,
-    extension: NativeKtExtension,
+    extension: NativeKtAndroidInterface,
     androidExtension: KotlinMultiplatformAndroidLibraryExtension,
     commonTask: TaskProvider<*>?,
     idl: IdlResolver,
@@ -124,7 +121,7 @@ internal fun configureAndroidSourceSet(
 
         it.outputFolder.set(jniLibsDir)
 
-        it.cmakeArgs      = LinkedHashSet(extension.cmakeArgs)
+        it.cmakeArgs      = LinkedHashSet(module.cmakeArgs)
         it.cmakeBuildType = module.buildType
         it.androidTargets = extension.androidTargets.toTypedArray()
         it.cmakeDir       = cmakeDir.absolutePath
@@ -238,7 +235,7 @@ private abstract class CompileNativesAndroid @Inject constructor(
     @get:Input abstract var compileSdk: Int
 
     init {
-        group = "native"
+        group = NATIVE_TASK_GROUP
         doLast {
             androidTargets.forEach { abi ->
                 val targetBuildDir = File(cmakeBuildDir, abi)

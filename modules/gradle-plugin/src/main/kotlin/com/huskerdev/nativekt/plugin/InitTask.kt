@@ -13,7 +13,7 @@ abstract class InitTask: DefaultTask() {
     @get:Input abstract var moduleName: String
 
     init {
-        group = "native"
+        group = NATIVE_TASK_GROUP
         doLast {
             val dir = File(dir)
 

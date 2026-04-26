@@ -2,7 +2,8 @@ package com.huskerdev.nativekt.configurators
 
 import com.android.build.gradle.internal.tasks.factory.dependsOn
 import com.huskerdev.nativekt.plugin.CMakeBuildType
-import com.huskerdev.nativekt.plugin.NativeKtExtension
+import com.huskerdev.nativekt.plugin.NATIVE_TASK_GROUP
+import com.huskerdev.nativekt.plugin.NativeKtJvmInterface
 import com.huskerdev.nativekt.plugin.NativeModule
 import com.huskerdev.nativekt.printers.HeaderPrinter
 import com.huskerdev.nativekt.printers.jvm.*
@@ -16,7 +17,6 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.internal.extensions.stdlib.capitalized
 import org.gradle.jvm.tasks.Jar
-import org.gradle.kotlin.dsl.get
 import org.gradle.process.ExecOperations
 import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
 import java.io.File
@@ -48,7 +48,7 @@ private fun libArch(useUniversalMacOSLib: Boolean) = when {
 
 internal fun configureJvm(
     project: Project,
-    extension: NativeKtExtension,
+    extension: NativeKtJvmInterface,
     commonTask: TaskProvider<*>?,
     idl: IdlResolver,
     module: NativeModule,
@@ -65,9 +65,15 @@ internal fun configureJvm(
             isCanBeConsumed = false
             isCanBeResolved = true
         }.apply {
-            project.configurations["jvmRuntimeClasspath"].extendsFrom(this)
-            project.configurations["jvmTestRuntimeClasspath"].extendsFrom(this)
-            project.configurations["jvmMainRuntimeClasspath"].extendsFrom(this)
+            // multi-target
+            project.configurations.findByName("jvmRuntimeClasspath")?.extendsFrom(this)
+            project.configurations.findByName("jvmTestRuntimeClasspath")?.extendsFrom(this)
+            project.configurations.findByName("jvmMainRuntimeClasspath")?.extendsFrom(this)
+
+            // jvm-only
+            project.configurations.findByName("runtimeClasspath")?.extendsFrom(this)
+            project.configurations.findByName("testRuntimeClasspath")?.extendsFrom(this)
+            project.configurations.findByName("mainRuntimeClasspath")?.extendsFrom(this)
         }
     }
 
@@ -128,7 +134,7 @@ internal fun configureJvm(
         it.inputs.dir(module.dir(project))
         it.outputs.dir(cmakeDir)
 
-        it.cmakeArgs            = LinkedHashSet(extension.cmakeArgs)
+        it.cmakeArgs            = LinkedHashSet(module.cmakeArgs)
         it.cmakeBuildType       = module.buildType
         it.useUniversalMacOSLib = extension.useUniversalMacOSLib
         it.cmakeDir             = cmakeDir.absolutePath
@@ -141,7 +147,7 @@ internal fun configureJvm(
     // Pack task
     val packNativeJar = project.tasks.findByName("packNativesJvm") as Jar?
         ?: project.tasks.register("packNativesJvm", Jar::class.java) {
-            group = "native"
+            group = NATIVE_TASK_GROUP
             archiveAppendix.set("jvm")
             archiveClassifier.set("${platformName()}-$libArch")
 
@@ -299,7 +305,7 @@ private abstract class CompileNativesJvm @Inject constructor(
     @get:Input abstract var targetLibFile: String
 
     init {
-        group = "native"
+        group = NATIVE_TASK_GROUP
         doLast {
             // Generate CMake build
             val args = linkedSetOf(

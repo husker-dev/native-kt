@@ -1,7 +1,7 @@
 package com.huskerdev.nativekt.configurators
 
 import com.android.build.gradle.internal.tasks.factory.dependsOn
-import com.huskerdev.nativekt.plugin.NativeKtExtension
+import com.huskerdev.nativekt.plugin.NativeKtCommonInterface
 import com.huskerdev.nativekt.plugin.NativeModule
 import com.huskerdev.nativekt.printers.KotlinStubPrinter
 import com.huskerdev.nativekt.utils.dependsOnReload
@@ -22,7 +22,7 @@ import java.io.File
 internal fun configureStub(
     project: Project,
     commonTask: TaskProvider<*>?,
-    extension: NativeKtExtension,
+    extension: NativeKtCommonInterface,
     idl: IdlResolver,
     module: NativeModule,
     sourceSet: KotlinSourceSet,

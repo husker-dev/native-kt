@@ -28,9 +28,11 @@ fun NativeModule.idl(project: Project) = WebIDL.resolve(
 
 fun TaskProvider<*>.dependsOnReload() {
     // Invoke task when reloading using IDEA
-    get().project.tasks.matching { it.name == "prepareKotlinIdeaImport" }.configureEach {
-        dependsOn(this@dependsOnReload)
-    }
+    get().project.rootProject.tasks
+        .matching { it.name == "prepareKotlinBuildScriptModel" }
+        .configureEach {
+            dependsOn(this@dependsOnReload)
+        }
 }
 
 fun ExecOperations.exec(command: String, workingDir: File? = null, silent: Boolean = false): String {

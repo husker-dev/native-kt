@@ -30,50 +30,52 @@ class KotlinJvmCIPrinter(
                 """.trimIndent())
             }
 
-            append($$"""
-                companion object {
-                    private fun linkFunction(name: String, alt: Boolean, vararg types: Class<*>) {
-                        JVMCIUtils.linkNativeCall(
-                            $$name::class.java.getDeclaredMethod("_$name", *types),
-                            NativeKtUtils.findAddress("EXPORTED_$${classPath.replace(".", "_")}_$name${if (alt) "_" else ""}")
-                        )
+            if(operators.isNotEmpty()) {
+                append($$"""
+                    companion object {
+                        private fun linkFunction(name: String, alt: Boolean, vararg types: Class<*>) {
+                            JVMCIUtils.linkNativeCall(
+                                $$name::class.java.getDeclaredMethod("_$name", *types),
+                                NativeKtUtils.findAddress("EXPORTED_$${classPath.replace(".", "_")}_$name${if (alt) "_" else ""}")
+                            )
+                        }
+                        
+                """.replaceIndent("\t"))
+
+                operators.forEach {
+                    append("\n\t\t@JvmStatic ")
+                    printFunctionHeader(
+                        builder, it,
+                        name = "_${it.name}",
+                        isExternal = true,
+                        stringAsBytes = true,
+                        arraysLen = true,
+                        enumAsInt = true
+                    )
+                }
+                append("\n\t}\n\n")
+                append("\tinit {")
+
+                operators.forEach {
+                    printFunctionBinding(builder, it)
+                }
+
+                append("\n\t}\n")
+
+                operators.forEach {
+                    printFunctionCall(builder, it)
+                }
+
+                if (implementFields) {
+                    val nonCritical = idl.globalOperators()
+                        .filter { !it.isCritical() }
+
+                    if (nonCritical.isNotEmpty()) {
+                        val list = nonCritical.joinToString(separator = "") { "\n\t- ${it.name}" }
+                        throw UnsupportedOperationException("JVMCI can not operate with non-critical operations: $list")
                     }
-                    
-            """.replaceIndent("\t"))
-
-            operators.forEach {
-                append("\n\t\t@JvmStatic ")
-                printFunctionHeader(builder, it,
-                    name = "_${it.name}",
-                    isExternal = true,
-                    stringAsBytes = true,
-                    arraysLen = true,
-                    enumAsInt = true
-                )
-            }
-            append("\n\t}\n\n")
-            append("\tinit {")
-
-            operators.forEach {
-                printFunctionBinding(builder, it)
-            }
-
-            append("\n\t}\n")
-
-            operators.forEach {
-                printFunctionCall(builder, it)
-            }
-
-            if(implementFields) {
-                val nonCritical = idl.globalOperators()
-                    .filter { !it.isCritical() }
-
-                if(nonCritical.isNotEmpty()) {
-                    val list = nonCritical.joinToString(separator = "") { "\n\t- ${it.name}" }
-                    throw UnsupportedOperationException("JVMCI can not operate with non-critical operations: $list")
                 }
             }
-
             append("\n}\n")
         }
     }

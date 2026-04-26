@@ -2,25 +2,28 @@ package com.huskerdev.nativekt.plugin
 
 import com.huskerdev.nativekt.TargetType
 import org.apache.tools.ant.taskdefs.condition.Os
+import org.gradle.api.ExtensiblePolymorphicDomainObjectContainer
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.the
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
+import org.jetbrains.kotlin.gradle.dsl.KotlinProjectExtension
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.targets.js.dsl.KotlinJsTargetDsl
 import java.io.File
 
+internal const val NATIVE_TASK_GROUP = "natives"
+
 class NativeKtPlugin: Plugin<Project> {
     lateinit var project: Project
-    lateinit var extension: NativeKtExtension
+    lateinit var extension: ExtensiblePolymorphicDomainObjectContainer<*>
 
-    val kotlin: KotlinMultiplatformExtension
-        get() = project.the<KotlinMultiplatformExtension>()
+    val kotlin: KotlinProjectExtension
+        get() = project.the<KotlinProjectExtension>()
 
     override fun apply(project: Project) {
         this.project = project
-        extension = project.extensions.create("natives", NativeKtExtension::class.java)
 
         val buildDir = project.layout.buildDirectory.get().asFile
         val cmakeDir = File(buildDir, "cmake")
@@ -31,6 +34,12 @@ class NativeKtPlugin: Plugin<Project> {
         }
 
         project.plugins.withId("org.jetbrains.kotlin.multiplatform") {
+            extension = project.extensions.create("natives", NativeKtMultiplatformExtension::class.java)
+            configureKotlin(cmakeDir, srcGenDir)
+        }
+
+        project.plugins.withId("org.jetbrains.kotlin.jvm") {
+            extension = project.extensions.create("natives", NativeKtJvmExtension::class.java)
             configureKotlin(cmakeDir, srcGenDir)
         }
     }

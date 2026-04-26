@@ -53,10 +53,9 @@ class KotlinJvmPrinter(
         """.trimIndent())
 
         if(useJVMCI)
-            builder.append("import com.huskerdev.nativekt.jvm.jvmci.*")
+            builder.append("import com.huskerdev.nativekt.jvm.jvmci.*\n")
         if(useForeignApi)
             builder.append("""
-                
                 import com.huskerdev.nativekt.jvm.foreign.*
                 import java.lang.foreign.*
                 import java.lang.invoke.*

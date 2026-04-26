@@ -2,7 +2,8 @@ package com.huskerdev.nativekt.configurators
 
 import com.android.build.gradle.internal.tasks.factory.dependsOn
 import com.huskerdev.nativekt.plugin.CMakeBuildType
-import com.huskerdev.nativekt.plugin.NativeKtExtension
+import com.huskerdev.nativekt.plugin.NATIVE_TASK_GROUP
+import com.huskerdev.nativekt.plugin.NativeKtJsInterface
 import com.huskerdev.nativekt.plugin.NativeModule
 import com.huskerdev.nativekt.printers.HeaderPrinter
 import com.huskerdev.nativekt.printers.js.CEmscriptenPrinter
@@ -25,7 +26,7 @@ import javax.inject.Inject
 
 internal fun configureJs(
     project: Project,
-    extension: NativeKtExtension,
+    extension: NativeKtJsInterface,
     commonTask: TaskProvider<*>?,
     idl: IdlResolver,
     module: NativeModule,
@@ -108,7 +109,7 @@ internal fun configureJs(
         it.inputs.dir(module.dir(project))
         it.outputs.dirs(cmakeDir, resourcesDir)
 
-        it.cmakeArgs      = LinkedHashSet(extension.cmakeArgs)
+        it.cmakeArgs      = LinkedHashSet(module.cmakeArgs)
         it.cmakeBuildType = module.buildType
         it.cmakeDir       = cmakeDir.absolutePath
         it.cmakeBuildDir  = cmakeBuildDir.absolutePath
@@ -202,7 +203,7 @@ private abstract class CompileNativesJs @Inject constructor(
     @get:Input abstract var moduleName: String
 
     init {
-        group = "native"
+        group = NATIVE_TASK_GROUP
         doLast {
             if(System.getenv()["EMSDK"] == null)
                 throw UnsupportedOperationException("Environment variable 'EMSDK' is not specified")

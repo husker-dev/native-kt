@@ -13,9 +13,14 @@ import org.gradle.api.Project
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.internal.extensions.stdlib.capitalized
 import org.gradle.kotlin.dsl.the
+import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
+import org.jetbrains.kotlin.gradle.dsl.KotlinJsProjectExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
+import org.jetbrains.kotlin.gradle.dsl.KotlinProjectExtension
+import org.jetbrains.kotlin.gradle.dsl.KotlinSingleJavaTargetExtension
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
+import org.jetbrains.kotlin.gradle.plugin.KotlinTargetsContainer
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.konan.target.KonanTarget
 import java.io.File
@@ -24,32 +29,37 @@ import kotlin.concurrent.getOrSet
 
 private val tmpCommonTasks = ThreadLocal<MutableMap<Project, TaskProvider<*>>>()
 
+private fun NativeKtPlugin.validateModule(module: NativeModule): IdlResolver? {
+    val initTask = project.tasks.register("cmakeInit${module.name.capitalized()}", InitTask::class.java)
+    initTask.get().apply {
+        this.dir = module.dir(project).absolutePath
+        this.moduleName = module.name
+    }
+
+    if(!module.idlFile(project).exists()) {
+        project.logger.error("""
+            Native module '${module.name}' is not loaded:
+              'api.ndl' file not found.
+            
+            Possible solution: 
+              run './gradlew :${initTask.name}'
+        """.trimIndent())
+        return null
+    }
+
+    return module.idl(project)
+        .also { validateIDL(it) }
+}
+
 fun NativeKtPlugin.configureKotlin(
     cmakeDir: File,
     srcGenDir: File
 ){
     extension.whenObjectAdded {
-        val module = this
+        val module = this as NativeModule
 
-        val initTask = project.tasks.register("cmakeInit${module.name.capitalized()}", InitTask::class.java)
-        initTask.get().apply {
-            this.dir = module.dir(project).absolutePath
-            this.moduleName = module.name
-        }
-
-        if(!module.idlFile(project).exists()) {
-            project.logger.error("""
-                Native module '${module.name}' is not loaded:
-                  'api.ndl' file not found.
-                
-                Possible solution: 
-                  run './gradlew :${initTask.name}'
-            """.trimIndent())
-            return@whenObjectAdded
-        }
-
-        val idl = module.idl(project)
-        validateIDL(idl)
+        val idl = validateModule(module)
+            ?: return@whenObjectAdded
 
         val cmakeModuleDir = File(cmakeDir, module.name)
         val srcGenModuleDir = File(srcGenDir, module.name)
@@ -75,6 +85,8 @@ fun NativeKtPlugin.configureAndroid(
 
     androidComponents.finalizeDsl { androidExtension ->
         extension.forEach { module ->
+            module as NativeModule
+
             if(!module.idlFile(project).exists())
                 return@forEach
 
@@ -88,14 +100,14 @@ fun NativeKtPlugin.configureAndroid(
                     module.getActiveSourceSets(kotlin)
                         .filter { getTargetType(kotlin, it) == TargetType.ANDROID }
                         .forEach {
-                            configureAndroidSourceSet(project, extension, androidExtension, commonTask, idl, module, it, srcGenModuleDir, cmakeModuleDir, true)
+                            configureAndroidSourceSet(project, extension as NativeKtAndroidInterface, androidExtension, commonTask, idl, module, it, srcGenModuleDir, cmakeModuleDir, true)
                         }
                 }
                 is SinglePlatform -> {
                     val sourceSet = kotlin.findSourceSet(module.targetSourceSet)
 
                     if(getTargetType(kotlin, sourceSet) == TargetType.ANDROID)
-                        configureAndroidSourceSet(project, extension, androidExtension, null, idl, module, sourceSet, srcGenModuleDir, cmakeModuleDir, false)
+                        configureAndroidSourceSet(project, extension as NativeKtAndroidInterface, androidExtension, null, idl, module, sourceSet, srcGenModuleDir, cmakeModuleDir, false)
                 }
             }
         }
@@ -119,6 +131,7 @@ private fun NativeKtPlugin.configureMultiplatform(
     srcGenDir: File,
     module: Multiplatform
 ){
+    val extension = extension as NativeKtCommonInterface
     val kotlin = project.the<KotlinMultiplatformExtension>()
 
     val commonSourceSet = kotlin.sourceSets.findByName(module.commonSourceSet)
@@ -135,7 +148,13 @@ private fun NativeKtPlugin.configureMultiplatform(
         srcRootDir = srcGenDir
     )
     tmpCommonTasks.getOrSet { hashMapOf() }[project] = commonTask
-    applyRuntime(extension, commonSourceSet)
+
+    // Apply runtime
+    if(extension.applyRuntime) {
+        commonSourceSet.dependencies {
+            implementation("com.huskerdev:native-kt-runtime:${NativeKtInfo.VERSION}")
+        }
+    }
 
     targetSourceSets.forEach {
         configureKotlinSourceSet(kotlin, commonTask, idl, cmakeRootDir, srcGenDir, module, it, true)
@@ -147,7 +166,7 @@ private fun NativeKtPlugin.configureMultiplatform(
 }
 
 private fun NativeKtPlugin.configureKotlinSourceSet(
-    kotlin: KotlinMultiplatformExtension,
+    kotlin: KotlinProjectExtension,
     commonTask: TaskProvider<*>?,
     idl: IdlResolver,
     cmakeRootDir: File,
@@ -156,27 +175,34 @@ private fun NativeKtPlugin.configureKotlinSourceSet(
     sourceSet: KotlinSourceSet,
     expectActual: Boolean
 ) = when(val targetType = getTargetType(kotlin, sourceSet)) {
-    TargetType.JVM -> configureJvm(project, extension, commonTask, idl, module, sourceSet, srcGenDir, cmakeRootDir, expectActual)
-    TargetType.JS -> configureJs(project, extension, commonTask, idl, module, sourceSet, srcGenDir, cmakeRootDir, expectActual, false)
-    TargetType.WASM_JS -> configureJs(project, extension, commonTask, idl, module, sourceSet, srcGenDir, cmakeRootDir, expectActual, true)
+    TargetType.JVM -> configureJvm(project, extension as NativeKtJvmInterface, commonTask, idl, module, sourceSet, srcGenDir, cmakeRootDir, expectActual)
+    TargetType.JS -> configureJs(project, extension as NativeKtJsInterface, commonTask, idl, module, sourceSet, srcGenDir, cmakeRootDir, expectActual, false)
+    TargetType.WASM_JS -> configureJs(project, extension as NativeKtJsInterface, commonTask, idl, module, sourceSet, srcGenDir, cmakeRootDir, expectActual, true)
     TargetType.ANDROID -> { }
-    else -> configureNative(project, extension, commonTask, idl, module, sourceSet, targetType, srcGenDir, cmakeRootDir, expectActual)
+    else -> configureNative(project, extension as NativeKtNativeInterface, commonTask, idl, module, sourceSet, targetType, srcGenDir, cmakeRootDir, expectActual)
 }
 
-private fun Multiplatform.getActiveSourceSets(kotlin: KotlinMultiplatformExtension): List<KotlinSourceSet> {
+private fun Multiplatform.getActiveSourceSets(kotlin: KotlinProjectExtension): List<KotlinSourceSet> {
     return targetSourceSets
         .mapNotNull { kotlin.sourceSets.findByName(it) }
 }
 
-private fun Multiplatform.getActiveStubs(kotlin: KotlinMultiplatformExtension): List<KotlinSourceSet> {
+private fun Multiplatform.getActiveStubs(kotlin: KotlinProjectExtension): List<KotlinSourceSet> {
     return stubSourceSets
         .mapNotNull { kotlin.sourceSets.findByName(it) }
 }
 
 private fun getTargetType(
-    kotlin: KotlinMultiplatformExtension,
+    kotlin: KotlinProjectExtension,
     sourceSet: KotlinSourceSet
 ): TargetType {
+    when (kotlin) {
+        is KotlinSingleJavaTargetExtension -> return TargetType.JVM
+        is KotlinJsProjectExtension -> return TargetType.JS
+        is KotlinAndroidProjectExtension -> return TargetType.ANDROID
+    }
+    kotlin as KotlinTargetsContainer
+
     val target = kotlin.targets.first { target ->
         target.compilations.forEach { compilation ->
             if(compilation.allKotlinSourceSets.any { it == sourceSet })
@@ -222,15 +248,7 @@ private fun getTargetType(
     }
 }
 
-private fun KotlinMultiplatformExtension.findSourceSet(name: String): KotlinSourceSet {
+private fun KotlinProjectExtension.findSourceSet(name: String): KotlinSourceSet {
     return sourceSets.findByName(name)
         ?: throw Exception("Source set '$name:' was not found")
-}
-
-private fun applyRuntime(extension: NativeKtExtension, sourceSet: KotlinSourceSet) {
-    if(extension.applyRuntime) {
-        sourceSet.dependencies {
-            implementation("com.huskerdev:native-kt-runtime:${NativeKtInfo.VERSION}")
-        }
-    }
 }

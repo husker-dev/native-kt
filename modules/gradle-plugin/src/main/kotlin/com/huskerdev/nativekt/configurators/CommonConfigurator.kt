@@ -1,7 +1,8 @@
 package com.huskerdev.nativekt.configurators
 
 import com.huskerdev.nativekt.plugin.Multiplatform
-import com.huskerdev.nativekt.plugin.NativeKtExtension
+import com.huskerdev.nativekt.plugin.NativeKtCommonInterface
+import com.huskerdev.nativekt.plugin.NativeKtJvmInterface
 import com.huskerdev.nativekt.printers.KotlinCommonPrinter
 import com.huskerdev.nativekt.utils.dependsOnReload
 import com.huskerdev.nativekt.utils.dir
@@ -22,7 +23,7 @@ import java.io.File
 @OptIn(ExperimentalKotlinGradlePluginApi::class)
 internal fun configureCommon(
     project: Project,
-    extension: NativeKtExtension,
+    extension: NativeKtCommonInterface,
     idl: IdlResolver,
     module: Multiplatform,
     sourceSet: KotlinSourceSet,
@@ -43,7 +44,7 @@ internal fun configureCommon(
         it.moduleClasspath = module.classPath
 
         it.useCoroutines = extension.useCoroutines
-        it.useJvmRecord = extension.useJvmRecord
+        it.useJvmRecord = (extension as? NativeKtJvmInterface)?.useJvmRecord ?: false
     }
     prepareTask.dependsOnReload()
 

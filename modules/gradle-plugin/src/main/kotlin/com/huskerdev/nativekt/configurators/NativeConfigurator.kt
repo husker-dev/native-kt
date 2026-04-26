@@ -3,7 +3,8 @@ package com.huskerdev.nativekt.configurators
 import com.android.build.gradle.internal.tasks.factory.dependsOn
 import com.huskerdev.nativekt.TargetType
 import com.huskerdev.nativekt.plugin.CMakeBuildType
-import com.huskerdev.nativekt.plugin.NativeKtExtension
+import com.huskerdev.nativekt.plugin.NATIVE_TASK_GROUP
+import com.huskerdev.nativekt.plugin.NativeKtNativeInterface
 import com.huskerdev.nativekt.plugin.NativeModule
 import com.huskerdev.nativekt.printers.HeaderPrinter
 import com.huskerdev.nativekt.printers.kn.DefPrinter
@@ -31,7 +32,7 @@ import javax.inject.Inject
 @OptIn(KotlinNativeCacheApi::class)
 internal fun configureNative(
     project: Project,
-    extension: NativeKtExtension,
+    extension: NativeKtNativeInterface,
     commonTask: TaskProvider<*>?,
     idl: IdlResolver,
     module: NativeModule,
@@ -87,7 +88,7 @@ internal fun configureNative(
 
         it.srcDir           = srcDir.absolutePath
 
-        it.cmakeArgs        = LinkedHashSet(extension.cmakeArgs)
+        it.cmakeArgs        = LinkedHashSet(module.cmakeArgs)
         it.cmakeBuildType   = module.buildType
         it.targetType       = targetType
         it.cmakeDir         = cmakeDir.absolutePath
@@ -420,7 +421,7 @@ private abstract class CompileNativesKn @Inject constructor(
     @get:Input abstract var cmakeBuildDir: String
 
     init {
-        group = "native"
+        group = NATIVE_TASK_GROUP
         doLast {
             cmakeBuild(execOps, File(cmakeBuildDir))
         }
