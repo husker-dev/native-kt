@@ -79,7 +79,7 @@ class KotlinJsPrinter(
             builder.append("""
                 
                 ${actual}suspend fun ${asyncFunctionName(moduleName)}() {
-                    if(isLibTestLoaded)
+                    if(isLib${moduleName.capitalized()}Loaded)
                         return
                     suspendCancellableCoroutine { continuation ->
                         ${asyncFunctionName(moduleName)} {

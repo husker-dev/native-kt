@@ -42,6 +42,11 @@ class NativeKtPlugin: Plugin<Project> {
             extension = project.extensions.create("natives", NativeKtJvmExtension::class.java)
             configureKotlin(cmakeDir, srcGenDir)
         }
+
+        project.plugins.withId("org.jetbrains.kotlin.js") {
+            extension = project.extensions.create("natives", NativeKtJsExtension::class.java)
+            configureKotlin(cmakeDir, srcGenDir)
+        }
     }
 }
 

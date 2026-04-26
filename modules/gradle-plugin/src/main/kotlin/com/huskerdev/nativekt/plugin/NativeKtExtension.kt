@@ -73,6 +73,26 @@ open class NativeKtJvmExtension @Inject constructor(
     override var jvmNativesJarTask: Jar? = null
 }
 
+@Suppress("JavaDefaultMethodsNotOverriddenByDelegation")
+open class NativeKtJsExtension @Inject constructor(
+    objects: ObjectFactory
+): ExtensiblePolymorphicDomainObjectContainer<SinglePlatform> by objects.polymorphicDomainObjectContainer(SinglePlatform::class.java),
+    NativeKtJsInterface
+{
+    init {
+        registerFactory(SinglePlatform::class.java) { name ->
+            objects.newInstance(SinglePlatform::class.java, name).also {
+                it.targetSourceSet = "main"
+            }
+        }
+    }
+
+    override var useCoroutines = true
+    override var applyRuntime = true
+
+    override var useJsBigInt = false
+}
+
 interface NativeKtNativeInterface: NativeKtCommonInterface {
 
 }

@@ -6,6 +6,7 @@ include("modules:intellij-plugin")
 
 include("modules:tests")
 include("modules:test-jvm-only")
+include("modules:test-js-only")
 include("modules:benchmarks")
 
 include("modules:examples:glfw")
