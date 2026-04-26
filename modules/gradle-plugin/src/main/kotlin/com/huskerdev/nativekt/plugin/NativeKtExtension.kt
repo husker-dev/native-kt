@@ -30,6 +30,7 @@ open class NativeKtExtension @Inject constructor(
     var useCoroutines = true
     var useJvmRecord = true
 
+    var useJNI = true
     var useForeignApi = true
     var useJVMCI = true
 

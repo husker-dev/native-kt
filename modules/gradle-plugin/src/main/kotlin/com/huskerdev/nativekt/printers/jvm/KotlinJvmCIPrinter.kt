@@ -6,6 +6,7 @@ import com.huskerdev.webidl.resolver.*
 class KotlinJvmCIPrinter(
     idl: IdlResolver,
     builder: StringBuilder,
+    val implementFields: Boolean,
     val classPath: String,
     name: String = "JVMCI",
     parentClass: String
@@ -15,22 +16,30 @@ class KotlinJvmCIPrinter(
             val operators = idl.globalOperators()
                 .filter { it.isCritical() }
 
+            if(implementFields) {
+                append("""
+                    private class $name: $parentClass {
+                    
+                """.trimIndent())
+            } else {
+                append("""
+                    private class $name(
+                        parent: $parentClass
+                    ): $parentClass by parent {
+                    
+                """.trimIndent())
+            }
+
             append($$"""
-                private class $$name(
-                	fileName: String,
-                	parent: $$parentClass
-                ): $$parentClass by parent {
-                    companion object {
-                        @JvmStatic external fun getFunctionAddress(libName: String, funcName: String): Long
-                        
-                        private fun linkFunction(lib: String, name: String, alt: Boolean, vararg types: Class<*>) {
-                            JVMCIUtils.linkNativeCall(
-                                $$name::class.java.getDeclaredMethod("_$name", *types),
-                                getFunctionAddress(lib, "EXPORTED_$${classPath.replace(".", "_")}_$name${if (alt) "_" else ""}")
-                            )
-                        }
-                        
-            """.trimIndent())
+                companion object {
+                    private fun linkFunction(name: String, alt: Boolean, vararg types: Class<*>) {
+                        JVMCIUtils.linkNativeCall(
+                            $$name::class.java.getDeclaredMethod("_$name", *types),
+                            NativeKtUtils.findAddress("EXPORTED_$${classPath.replace(".", "_")}_$name${if (alt) "_" else ""}")
+                        )
+                    }
+                    
+            """.replaceIndent("\t"))
 
             operators.forEach {
                 append("\n\t\t@JvmStatic ")
@@ -55,6 +64,16 @@ class KotlinJvmCIPrinter(
                 printFunctionCall(builder, it)
             }
 
+            if(implementFields) {
+                val nonCritical = idl.globalOperators()
+                    .filter { !it.isCritical() }
+
+                if(nonCritical.isNotEmpty()) {
+                    val list = nonCritical.joinToString(separator = "") { "\n\t- ${it.name}" }
+                    throw UnsupportedOperationException("JVMCI can not operate with non-critical operations: $list")
+                }
+            }
+
             append("\n}\n")
         }
     }
@@ -69,7 +88,7 @@ class KotlinJvmCIPrinter(
                     else listOf(clazz)
                 }
 
-        append("\n\t\tlinkFunction(fileName, ${args.joinToString()})")
+        append("\n\t\tlinkFunction(${args.joinToString()})")
     }
 
     private fun printFunctionCall(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {

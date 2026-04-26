@@ -23,9 +23,17 @@ class KotlinJvmJniPrinter(
             builder.append(": $parentClass")
         builder.append(" {\n")
 
-        // Static functions
         if(forAndroid) {
+            // Static functions
             builder.append("${indent}\tcompanion object {\n")
+            builder.append("""
+                @JvmStatic external fun JNILoad()
+                init {
+                    JNILoad()
+                }
+            """.replaceIndent("$indent\t\t"))
+            builder.append("\n")
+
             idl.globalOperators().forEach { function ->
                 builder.append("${indent}\t\t@JvmStatic ")
                 printFunctionHeader(
@@ -35,10 +43,18 @@ class KotlinJvmJniPrinter(
                 builder.append("\n")
             }
             builder.append("${indent}\t}\n")
-        }
+        } else {
+            // Instance methods
+            builder.append("""
+                companion object {
+                    @JvmStatic external fun JNILoad()
+                    init {
+                        JNILoad()
+                    }
+                }
+            """.replaceIndent("$indent\t"))
+            builder.append("\n")
 
-        // Instance methods
-        if(!forAndroid) {
             idl.globalOperators().forEach { function ->
                 builder.append("${indent}\t")
                 printFunctionHeader(

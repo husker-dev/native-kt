@@ -370,11 +370,8 @@ class CJniUtilsPrinter(
         printLabel(builder, "Init function")
         append("""
             
-            jint JNI_Init(JavaVM *vm, JNINativeMethod *methods, jint count) {
-                jvm = vm;
-                
-                JNIEnv *env;
-                (*vm)->GetEnv(vm, (void**)&env, JNI_VERSION_1_6);
+            void JNI_Init(JNIEnv *env, JNINativeMethod *methods, jint count) {
+                (*env)->GetJavaVM(env, &jvm);
                 
                 jniClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "${(classPath.split(".") + name).joinToString(separator = "/")}"));
                 (*env)->RegisterNatives(env, jniClass, methods, count);
@@ -443,8 +440,7 @@ class CJniUtilsPrinter(
             }
         }
 
-        append("\n\treturn JNI_VERSION_1_6;\n")
-        append("}")
+        append("\n}")
     }
 }
 

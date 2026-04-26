@@ -18,6 +18,7 @@ class KotlinJvmPrinter(
     moduleName: String,
     useCoroutines: Boolean,
     val expectActual: Boolean,
+    useJNI: Boolean,
     useForeignApi: Boolean,
     useJVMCI: Boolean,
     useUniversalMacOSLib: Boolean
@@ -28,15 +29,21 @@ class KotlinJvmPrinter(
         val nativeInvoker = "${moduleName.capitalized()}NativeInvoker"
         val implName = "${moduleName}Impl"
 
-        fun invokerChooser(indent: String) = if(useForeignApi) """
-            $implName = when(NativeKtUtils.getInvoker()) {
-                NativeKtUtils.Invoker.FOREIGN -> ${moduleName.capitalized()}Foreign()
-                NativeKtUtils.Invoker.JNI     -> ${moduleName.capitalized()}JNI()
-            }
+        fun invokerChooser(indent: String) = when {
+            useForeignApi && useJNI -> """
+                $implName = when(NativeKtUtils.getInvoker()) {
+                    NativeKtUtils.Invoker.FOREIGN -> ${moduleName.capitalized()}Foreign()
+                    NativeKtUtils.Invoker.JNI     -> ${moduleName.capitalized()}JNI()
+                }
             """.replaceIndent(indent)
-        else """
-            $implName = ${moduleName.capitalized()}JNI()
+            useJNI -> """
+                $implName = ${moduleName.capitalized()}JNI()
             """.replaceIndent(indent)
+            useForeignApi -> """
+                $implName = ${moduleName.capitalized()}Foreign()
+            """.replaceIndent(indent)
+           else -> ""
+        }
 
         builder.append("""
             @file:Suppress("unused", "unchecked_cast")
@@ -70,18 +77,24 @@ class KotlinJvmPrinter(
                 if(isLib$${moduleName.capitalized()}Loaded_) return
                 isLib$${moduleName.capitalized()}Loaded_ = true
                 
-                $${if(useJVMCI) "val fileName = " else ""}NativeKtUtils.loadLibrary("$$moduleName", $$useUniversalMacOSLib)
+                NativeKtUtils.loadLibrary("$$moduleName", $$useUniversalMacOSLib)
 
 
         """.trimIndent())
 
         builder.append(invokerChooser("\t"))
         if(useJVMCI) {
-            builder.append("""
+            if(useJNI || useForeignApi) {
+                builder.append("""
                 
-                if(NativeKtUtils.isJvmciAvailable()) 
-                    $implName = ${moduleName.capitalized()}JVMCI(fileName, $implName!!)
-            """.replaceIndent("\t"))
+                    if(NativeKtUtils.isJvmciAvailable()) 
+                        $implName = ${moduleName.capitalized()}JVMCI($implName!!)
+                """.replaceIndent("\t"))
+            } else {
+                builder.append("""
+                    $implName = ${moduleName.capitalized()}JVMCI()
+                """.replaceIndent("\t"))
+            }
         }
         builder.append("""
             
@@ -119,12 +132,15 @@ class KotlinJvmPrinter(
         builder.append("\n}")
 
         // JNI
-        builder.append("\n\n")
-        KotlinJvmJniPrinter(idl, builder,
-            name = "${moduleName.capitalized()}JNI",
-            parentClass = nativeInvoker,
-            forAndroid = false,
-        )
+        if(useJNI) {
+            builder.append("\n\n")
+            KotlinJvmJniPrinter(
+                idl, builder,
+                name = "${moduleName.capitalized()}JNI",
+                parentClass = nativeInvoker,
+                forAndroid = false,
+            )
+        }
 
         // Foreign
         if(useForeignApi) {
@@ -142,12 +158,12 @@ class KotlinJvmPrinter(
             builder.append("\n\n")
             KotlinJvmCIPrinter(
                 idl, builder,
+                implementFields = !useJNI && !useForeignApi,
                 classPath = classPath,
                 name = "${moduleName.capitalized()}JVMCI",
                 parentClass = nativeInvoker,
             )
         }
-
 
         target.parentFile.mkdirs()
         target.writeText(builder.toString())

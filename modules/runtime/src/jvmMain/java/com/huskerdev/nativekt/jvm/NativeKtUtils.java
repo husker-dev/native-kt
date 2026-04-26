@@ -7,6 +7,7 @@ import sun.misc.Unsafe;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
@@ -24,6 +25,12 @@ public class NativeKtUtils {
         JNI,
         FOREIGN
     }
+
+    private static Unsafe unsafe;
+    private static Method putBooleanMethod;
+    private static long firstFieldOffset;
+
+    private static Method findNativeMethod, findNativeMethod1;
 
     /***
      * @return true if can use "addExports" function
@@ -156,19 +163,8 @@ public class NativeKtUtils {
             Module moduleOpt = ModuleLayer.boot().findModule(ofModule)
                 .orElseThrow(() -> new NullPointerException("Module '" + ofModule + "' is not presented"));
 
-            Class<?> unsafeClass = Class.forName("sun.misc.Unsafe");
-
-            Field unsafeField = unsafeClass.getDeclaredField("theUnsafe");
-            unsafeField.trySetAccessible();
-            Unsafe unsafe = (Unsafe) unsafeField.get(null);
-
-            long firstFieldOffset = (long) unsafeClass.getDeclaredMethod("objectFieldOffset", Field.class)
-                    .invoke(unsafe, OffsetProvider.class.getDeclaredField("first"));
-
             Method addOpensMethodImpl = Module.class.getDeclaredMethod("implAddExports", String.class, Module.class);
-
-            unsafeClass.getDeclaredMethod("putBoolean", Object.class, long.class, boolean.class)
-                    .invoke(unsafe, addOpensMethodImpl, firstFieldOffset, true);
+            setAccessible(addOpensMethodImpl);
 
             for(String pkg : paths)
                 addOpensMethodImpl.invoke(moduleOpt, pkg, forModule);
@@ -176,6 +172,63 @@ public class NativeKtUtils {
         } catch (Throwable e) {
             throw new UnsupportedOperationException("Could not add exports of '" + ofModule + "' to '" + forModule + "'", e);
         }
+    }
+
+    /**
+     * Returns native function address from loaded libraries
+     * @param funcName Function name
+     * @return Native address
+     * @throws Exception When Unsafe or reflection is not available
+     */
+    public static long findAddress(String funcName) throws Exception {
+        if(findNativeMethod == null && findNativeMethod1 == null) {
+            try {
+                findNativeMethod = ClassLoader.class.getDeclaredMethod("findNative", ClassLoader.class, Class.class, String.class, String.class);
+                setAccessible(findNativeMethod);
+            } catch (Exception e) {
+                findNativeMethod1 = ClassLoader.class.getDeclaredMethod("findNative", ClassLoader.class, String.class);
+                setAccessible(findNativeMethod1);
+            }
+        }
+        if(findNativeMethod != null) {
+            return (long) findNativeMethod.invoke(
+                    null,
+                    NativeKtUtils.class.getClassLoader(),
+                    NativeKtUtils.class,
+                    funcName,
+                    funcName
+            );
+        } else {
+            return (long) findNativeMethod1.invoke(
+                    null,
+                    NativeKtUtils.class.getClassLoader(),
+                    funcName
+            );
+        }
+    }
+
+    /**
+     * Set accessible flag to true
+     * @param obj AccessibleObject to access
+     * @throws Exception When Unsafe or reflection is not available
+     */
+    public static void setAccessible(AccessibleObject obj) throws Exception {
+        // Init unsafe and methods
+        if(unsafe == null) {
+            Class<?> unsafeClass = Class.forName("sun.misc.Unsafe");
+
+            Field unsafeField = unsafeClass.getDeclaredField("theUnsafe");
+            unsafeField.trySetAccessible();
+            unsafe = (Unsafe) unsafeField.get(null);
+
+            putBooleanMethod = unsafeClass.getDeclaredMethod("putBoolean", Object.class, long.class, boolean.class);
+
+            firstFieldOffset = (long) unsafeClass.getDeclaredMethod("objectFieldOffset", Field.class)
+                    .invoke(unsafe, OffsetProvider.class.getDeclaredField("first"));
+        }
+
+        // Invoke
+        putBooleanMethod.invoke(unsafe, obj, firstFieldOffset, true);
     }
 
     private static class OffsetProvider {

@@ -57,6 +57,9 @@ internal fun configureJvm(
     cmakeRootDir: File,
     expectActual: Boolean
 ) {
+    if(!extension.useJNI && !extension.useForeignApi && !extension.useJVMCI)
+        throw UnsupportedOperationException("All JVM native implementation are disabled (JNI, Foreign, JVMCI)")
+
     if(project.configurations.findByName(LOCAL_RUN_CONFIGURATION) == null) {
         project.configurations.create(LOCAL_RUN_CONFIGURATION) {
             isCanBeConsumed = false
@@ -91,26 +94,27 @@ internal fun configureJvm(
         it.inputs.dir(module.dir(project))
         it.outputs.dirs(cmakeDir, srcDir)
 
-        it.idl = Json.encodeToString(idl)
+        it.idl                  = Json.encodeToString(idl)
 
-        it.moduleName = module.name
-        it.moduleClasspath = module.classPath
+        it.moduleName           = module.name
+        it.moduleClasspath      = module.classPath
 
-        it.useForeignApi = extension.useForeignApi
-        it.useJVMCI = extension.useJVMCI
+        it.useJNI               = extension.useJNI
+        it.useForeignApi        = extension.useForeignApi
+        it.useJVMCI             = extension.useJVMCI
         it.useUniversalMacOSLib = extension.useUniversalMacOSLib
-        it.useCoroutines = extension.useCoroutines
-        it.expectActual = expectActual
+        it.useCoroutines        = extension.useCoroutines
+        it.expectActual         = expectActual
 
-        it.srcDir = srcDir.absolutePath
-        it.libsDir = libsDir.absolutePath
+        it.srcDir               = srcDir.absolutePath
+        it.libsDir              = libsDir.absolutePath
 
         it.srcFile = srcDir
             .resolve(module.classPath.replace(".", "/"))
             .resolve("${module.name}.jvm.kt").absolutePath
-        it.cmakeDir = cmakeDir.absolutePath
-        it.cmakeBuildDir = cmakeBuildDir.absolutePath
-        it.nativeProjectDir = module.dir(project).absolutePath
+        it.cmakeDir             = cmakeDir.absolutePath
+        it.cmakeBuildDir        = cmakeBuildDir.absolutePath
+        it.nativeProjectDir     = module.dir(project).absolutePath
     }
     if(commonTask != null)
         prepareTask.dependsOn(commonTask)
@@ -156,6 +160,7 @@ private abstract class PrepareNativesJvm: DefaultTask() {
     @get:Input abstract var moduleName: String
     @get:Input abstract var moduleClasspath: String
 
+    @get:Input abstract var useJNI: Boolean
     @get:Input abstract var useForeignApi: Boolean
     @get:Input abstract var useJVMCI: Boolean
     @get:Input abstract var useUniversalMacOSLib: Boolean
@@ -180,41 +185,11 @@ private abstract class PrepareNativesJvm: DefaultTask() {
             val cmakeDir = File(cmakeDir)
             cmakeDir.fresh()
 
-            val srcList = arrayListOf("jni_bindings.c")
+            val srcList = arrayListOf<String>()
+            if(useJNI)
+                srcList += "jni_bindings.c"
             if(useForeignApi || useJVMCI)
                 srcList += "externals.c"
-            if(useJVMCI)
-                srcList += "jvmci.c"
-
-            // unpack jni headers
-            val includeDir = File(cmakeDir, "include")
-            if(!includeDir.exists()) {
-                arrayOf(
-                    "darwin/jawt_md.h",
-                    "darwin/jni_md.h",
-                    "linux/jawt_md.h",
-                    "linux/jni_md.h",
-                    "win32/jawt_md.h",
-                    "win32/jni_md.h",
-                    "win32/bridge/AccessBridgeCallbacks.h",
-                    "win32/bridge/AccessBridgeCalls.h",
-                    "win32/bridge/AccessBridgePackages.h",
-                    "classfile_constants.h",
-                    "jawt.h",
-                    "jdwpTransport.h",
-                    "jni.h",
-                    "jvmti.h",
-                    "jvmticmlr.h",
-                ).forEach { path ->
-                    this::class.java.getResourceAsStream("/com/huskerdev/nativekt/include/${path}").use { ins ->
-                        if(ins == null)
-                            throw NullPointerException("Can not find header: $path")
-                        val file = File(includeDir, path)
-                        file.parentFile.mkdirs()
-                        file.outputStream().use { ins.copyTo(it) }
-                    }
-                }
-            }
 
             File(cmakeDir, "CMakeLists.txt").writeText($$"""
                 cmake_minimum_required(VERSION 3.15)
@@ -238,44 +213,69 @@ private abstract class PrepareNativesJvm: DefaultTask() {
                 moduleName = moduleName,
                 useCoroutines = useCoroutines,
                 expectActual = expectActual,
+                useJNI = useJNI,
                 useForeignApi = useForeignApi,
                 useJVMCI = useJVMCI,
                 useUniversalMacOSLib = useUniversalMacOSLib
             )
 
-            CJniUtilsPrinter(
-                idl = idl,
-                target = File(cmakeDir, "jni_utils.h"),
-                classPath = moduleClasspath,
-                name = "${moduleName.capitalized()}JNI",
-                isAndroid = false
-            )
+            if(useJNI) {
+                CJniUtilsPrinter(
+                    idl = idl,
+                    target = File(cmakeDir, "jni_utils.h"),
+                    classPath = moduleClasspath,
+                    name = "${moduleName.capitalized()}JNI",
+                    isAndroid = false
+                )
 
-            CJniPrinter(
-                idl = idl,
-                target = File(cmakeDir, "jni_bindings.c"),
-                classPath = moduleClasspath,
-                name = "${moduleName.capitalized()}JNI"
-            )
+                CJniPrinter(
+                    idl = idl,
+                    target = File(cmakeDir, "jni_bindings.c"),
+                    classPath = moduleClasspath,
+                    name = "${moduleName.capitalized()}JNI"
+                )
 
-            CJniArenaPrinter(
-                target = File(cmakeDir, "jni_arena.h"),
-                callbacks = idl.callbacks.isNotEmpty()
-            )
+                CJniArenaPrinter(
+                    target = File(cmakeDir, "jni_arena.h"),
+                    callbacks = idl.callbacks.isNotEmpty()
+                )
+
+                // unpack jni headers
+                val includeDir = File(cmakeDir, "include")
+                if(!includeDir.exists()) {
+                    arrayOf(
+                        "darwin/jawt_md.h",
+                        "darwin/jni_md.h",
+                        "linux/jawt_md.h",
+                        "linux/jni_md.h",
+                        "win32/jawt_md.h",
+                        "win32/jni_md.h",
+                        "win32/bridge/AccessBridgeCallbacks.h",
+                        "win32/bridge/AccessBridgeCalls.h",
+                        "win32/bridge/AccessBridgePackages.h",
+                        "classfile_constants.h",
+                        "jawt.h",
+                        "jdwpTransport.h",
+                        "jni.h",
+                        "jvmti.h",
+                        "jvmticmlr.h",
+                    ).forEach { path ->
+                        this::class.java.getResourceAsStream("/com/huskerdev/nativekt/include/${path}").use { ins ->
+                            if(ins == null)
+                                throw NullPointerException("Can not find header: $path")
+                            val file = File(includeDir, path)
+                            file.parentFile.mkdirs()
+                            file.outputStream().use { ins.copyTo(it) }
+                        }
+                    }
+                }
+            }
 
             if(useForeignApi || useJVMCI) {
                 CExportedPrinter(
                     idl = idl,
                     target = File(cmakeDir, "externals.c"),
                     classPath = moduleClasspath
-                )
-            }
-
-            if(useJVMCI) {
-                CJvmciPrinter(
-                    target = File(cmakeDir, "jvmci.c"),
-                    classPath = moduleClasspath,
-                    name = "${moduleName.capitalized()}JVMCI"
                 )
             }
 

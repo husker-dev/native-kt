@@ -13,7 +13,12 @@ class CExportedPrinter(
         val builder = StringBuilder()
         builder.append("""
             #include "api.h"
-            #include <jni.h>
+            
+            #if defined(_WIN32) || defined(__CYGWIN__)
+              #define NATIVEKT_EXPORT __declspec(dllexport)
+            #else
+              #define NATIVEKT_EXPORT __attribute__((visibility("default")))
+            #endif
             
         """.trimIndent())
 
@@ -27,7 +32,7 @@ class CExportedPrinter(
     }
 
     private fun printFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
-        append("\nJNIEXPORT ")
+        append("\nNATIVEKT_EXPORT ")
         append(function.type.toCDefType())
         append(" EXPORTED_")
         append(classPath.replace(".", "_"))
@@ -50,7 +55,7 @@ class CExportedPrinter(
 
 
     private fun printFunctionCritical(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
-        append("\nJNIEXPORT ")
+        append("\nNATIVEKT_EXPORT ")
         append(function.type.toCDefType(enumAsInt = true))
         append(" EXPORTED_")
         append(classPath.replace(".", "_"))
@@ -93,6 +98,4 @@ class CExportedPrinter(
             else -> throw UnsupportedOperationException(type.toString())
         }
     }
-
-
 }

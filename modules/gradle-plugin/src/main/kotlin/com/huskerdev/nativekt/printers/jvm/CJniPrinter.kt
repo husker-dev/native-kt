@@ -29,7 +29,7 @@ class CJniPrinter(
         printLabel(builder, "Load")
         append("""
             
-            JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
+            JNIEXPORT void JNICALL Java_${classPath.replace(".", "_")}_${name}_JNILoad(JNIEnv *env, jclass clazz) {
                 JNINativeMethod methods[] = {
             
         """.trimIndent())
@@ -60,7 +60,7 @@ class CJniPrinter(
         // Get env
         append("""
             
-                return JNI_Init(vm, methods, ${idl.globalOperators().size});
+                return JNI_Init(env, methods, ${idl.globalOperators().size});
             }
         """.trimIndent())
     }
