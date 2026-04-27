@@ -29,5 +29,9 @@
         <lang.syntaxHighlighterFactory
                 implementationClass="com.huskerdev.nativekt.intellij.highlight.NdlSyntaxHighlighterFactory"
                 language="NDL"/>
+        <dependencySupport
+                kind="kotlin"
+                coordinate="com.huskerdev:native-kt-runtime"
+                displayName="native-kt"/>
     </extensions>
 </idea-plugin>
