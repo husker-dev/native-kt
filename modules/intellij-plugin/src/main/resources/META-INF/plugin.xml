@@ -6,6 +6,7 @@
 
     <depends>com.intellij.modules.platform</depends>
     <depends>org.jetbrains.kotlin</depends>
+    <depends>org.jetbrains.plugins.gradle</depends>
 
     <!-- K2 mode compatibility -->
     <extensions defaultExtensionNs="org.jetbrains.kotlin">
@@ -13,17 +14,20 @@
     </extensions>
 
     <extensions defaultExtensionNs="com.intellij">
+        <projectService
+                serviceImplementation="com.huskerdev.nativekt.intellij.NativeKtService"/>
+        <postStartupActivity
+                implementation="com.huskerdev.nativekt.intellij.StartupActivity"/>
+        <projectViewNodeDecorator
+                implementation="com.huskerdev.nativekt.intellij.NativeKtTreeDecorator"/>
         <fileType
                 name="NDL File"
                 implementationClass="com.huskerdev.nativekt.intellij.NdlFileType"
                 fieldName="INSTANCE"
                 language="NDL"
                 extensions="ndl"/>
-<!--        <lang.parserDefinition-->
-<!--                language="NDL"-->
-<!--                implementationClass="com.huskerdev.nativekt.intellij.parser.NdlParserDefinition"/>-->
         <lang.syntaxHighlighterFactory
-                language="NDL"
-                implementationClass="com.huskerdev.nativekt.intellij.highlight.NdlSyntaxHighlighterFactory"/>
+                implementationClass="com.huskerdev.nativekt.intellij.highlight.NdlSyntaxHighlighterFactory"
+                language="NDL"/>
     </extensions>
 </idea-plugin>

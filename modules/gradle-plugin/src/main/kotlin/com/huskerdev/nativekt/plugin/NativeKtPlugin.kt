@@ -1,6 +1,7 @@
 package com.huskerdev.nativekt.plugin
 
 import com.huskerdev.nativekt.TargetType
+import com.huskerdev.nativekt.utils.dir
 import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.api.ExtensiblePolymorphicDomainObjectContainer
 import org.gradle.api.Plugin
@@ -46,6 +47,17 @@ class NativeKtPlugin: Plugin<Project> {
         project.plugins.withId("org.jetbrains.kotlin.js") {
             extension = project.extensions.create("natives", NativeKtJsExtension::class.java)
             configureKotlin(cmakeDir, srcGenDir)
+        }
+
+        project.afterEvaluate {
+            val content = extension.joinToString(separator = "\n") {
+                (it as NativeModule).dir(project).absolutePath
+            }
+            val file = File(project.layout.buildDirectory.get().asFile, "nativekt.txt")
+
+            if(content.isNotEmpty())
+                file.writeText(content)
+            else file.delete()
         }
     }
 }
