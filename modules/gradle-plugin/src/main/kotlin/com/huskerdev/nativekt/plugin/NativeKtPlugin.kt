@@ -55,9 +55,11 @@ class NativeKtPlugin: Plugin<Project> {
             }
             val file = File(project.layout.buildDirectory.get().asFile, "nativekt.txt")
 
-            if(content.isNotEmpty())
+            if(content.isNotEmpty()) {
+                file.parentFile.mkdirs()
                 file.writeText(content)
-            else file.delete()
+            } else if(file.exists())
+                file.delete()
         }
     }
 }
