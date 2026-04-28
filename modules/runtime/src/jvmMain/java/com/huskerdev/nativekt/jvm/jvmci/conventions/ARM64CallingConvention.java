@@ -20,11 +20,6 @@ public class ARM64CallingConvention extends CallingConvention {
 
     @Override
     public HotSpotCompiledNmethod createNMethod(String name, byte[] code, HotSpotResolvedJavaMethod resolvedMethod) {
-        System.out.println(name);
-        for(byte b : code)
-            System.out.print(b + " ");
-        System.out.println();
-
         DataSectionReference a = new DataSectionReference();
         a.setOffset(0);
 
