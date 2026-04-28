@@ -230,9 +230,10 @@ public abstract class AbstractAMD64CallingConvention extends CallingConvention {
 
         void emit(Buffer buf){
             int reg = isFloatingPointType(type) ? XMM15 : RAX;
+            Class<?> transferType = type.isArray() ? long.class : type;
 
             new StackToReg(from, reg, type).emit(buf);
-            new RegToStack(reg, to, type).emit(buf);
+            new RegToStack(reg, to, transferType).emit(buf);
         }
     }
 
