@@ -5,6 +5,7 @@ project("test")
 add_library(${PROJECT_NAME} OBJECT
         src/jvmci.c
         src/dictionaries.c
+        src/critical.c
         src/primitives/pass_primitive.c
         src/primitives/ping_primitive.c
         src/primitives/return_primitive.c

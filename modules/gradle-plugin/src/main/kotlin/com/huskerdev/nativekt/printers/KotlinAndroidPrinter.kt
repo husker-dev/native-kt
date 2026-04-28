@@ -1,13 +1,9 @@
 package com.huskerdev.nativekt.printers
 
 import com.huskerdev.nativekt.printers.jvm.KotlinJvmJniPrinter
+import com.huskerdev.nativekt.printers.jvm.toKotlinCriticalType
 import com.huskerdev.nativekt.printers.jvm.toNativeCriticalType
-import com.huskerdev.nativekt.utils.asyncFunctionName
-import com.huskerdev.nativekt.utils.globalOperators
-import com.huskerdev.nativekt.utils.isAndroidCriticalCapable
-import com.huskerdev.nativekt.utils.isCritical
-import com.huskerdev.nativekt.utils.printFunctionHeader
-import com.huskerdev.nativekt.utils.syncFunctionName
+import com.huskerdev.nativekt.utils.*
 import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlOperation
 import org.gradle.internal.extensions.stdlib.capitalized
@@ -97,11 +93,13 @@ class KotlinAndroidPrinter(
         append(" = \n\t")
 
         if(isAndroidCriticalEnabled && function.isCritical() && function.isAndroidCriticalCapable()) {
-            append("if(supportsCritical) $jniClassName.${function.name}_(")
-            function.args.joinTo(builder) {
+            val args = function.args.joinToString {
                 toNativeCriticalType(it.type, it.name)
             }
-            append(")\n\telse ")
+            val call = "$jniClassName.${function.name}_($args)"
+
+            val castedCall = toKotlinCriticalType(function.type, call)
+            append("if(supportsCritical) $castedCall\n\telse ")
         }
 
         val args = function.args.joinToString { it.name }

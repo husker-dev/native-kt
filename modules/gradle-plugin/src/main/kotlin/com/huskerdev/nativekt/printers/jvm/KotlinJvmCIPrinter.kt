@@ -104,10 +104,10 @@ class KotlinJvmCIPrinter(
         val args = function.args.joinToString {
             toNativeCriticalType(it.type, it.name)
         }
-        append("_${function.name}(${args})")
+        val call = "_${function.name}(${args})"
+        append(toKotlinCriticalType(function.type, call))
         append("\n")
     }
-
 }
 
 internal fun toNativeCriticalType(type: ResolvedIdlType, name: String) = when {
@@ -115,5 +115,13 @@ internal fun toNativeCriticalType(type: ResolvedIdlType, name: String) = when {
     type.isEnum() -> "${name}.ordinal"
     type.isEnumArray() -> "IntArray(${name}.size) { ${name}[it].ordinal }, ${name}.size"
     type.isArray() -> "${name}, ${name}.size"
+    else -> name
+}
+
+internal fun toKotlinCriticalType(type: ResolvedIdlType, name: String) = when(type) {
+    is ResolvedIdlType.Default -> when (val decl = type.declaration){
+        is ResolvedIdlEnum -> "${decl.name}.entries[${name}]"
+        else -> name
+    }
     else -> name
 }
