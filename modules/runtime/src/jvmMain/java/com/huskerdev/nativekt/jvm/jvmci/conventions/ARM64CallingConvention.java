@@ -20,6 +20,11 @@ public class ARM64CallingConvention extends CallingConvention {
 
     @Override
     public HotSpotCompiledNmethod createNMethod(String name, byte[] code, HotSpotResolvedJavaMethod resolvedMethod) {
+        System.out.println(name);
+        for(byte b : code)
+            System.out.print(b + " ");
+        System.out.println();
+
         DataSectionReference a = new DataSectionReference();
         a.setOffset(0);
 
@@ -71,14 +76,14 @@ public class ARM64CallingConvention extends CallingConvention {
             if(type.isArray()) {
                 int offset = getArrayOffset(type);
 
-                if(ints < 9) {
+                if(ints < 8) {
                     // in registers
                     int dst = ints;
                     int src = ++ints;
                     emitAddImm(buf, dst, src, offset);
                 } else {
                     // in stack (stack -> reg -> stack)
-                    int stackOffset = (ints - 9) * 8;
+                    int stackOffset = (ints++ - 8) * 8;
                     emitLdrSpOffset(buf, 15, stackOffset);
                     emitAddImm(buf, 15, 15, offset);
                     emitStrSpOffset(buf, 15, stackOffset);
