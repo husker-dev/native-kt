@@ -86,22 +86,23 @@ internal fun configureAndroidSourceSet(
         it.inputs.dir(module.dir(project))
         it.outputs.dirs(cmakeDir, srcDir)
 
-        it.useCoroutines = extension.useCoroutines
-        it.expectActual = expectActual
+        it.useCoroutines            = extension.useCoroutines
+        it.expectActual             = expectActual
+        it.useAndroidCriticalNative = extension.useAndroidCriticalNative
 
-        it.idl = Json.encodeToString(idl)
-        it.moduleName = module.name
-        it.moduleClasspath = module.classPath
+        it.idl                      = Json.encodeToString(idl)
+        it.moduleName               = module.name
+        it.moduleClasspath          = module.classPath
 
-        it.srcDir = srcDir.absolutePath
-        it.jniLibsDir = jniLibsDir.absolutePath
+        it.srcDir                   = srcDir.absolutePath
+        it.jniLibsDir               = jniLibsDir.absolutePath
 
-        it.cmakeDir = cmakeDir.absolutePath
-        it.cmakeBuildDir = cmakeBuildDir.absolutePath
+        it.cmakeDir                 = cmakeDir.absolutePath
+        it.cmakeBuildDir            = cmakeBuildDir.absolutePath
         it.srcFile = srcDir
             .resolve(module.classPath.replace(".", "/"))
             .resolve("${module.name}.android.kt").absolutePath
-        it.nativeProjectDir = module.dir(project).absolutePath
+        it.nativeProjectDir         = module.dir(project).absolutePath
     }
     if(commonTask != null)
         prepareTask.dependsOn(commonTask)
@@ -138,15 +139,23 @@ internal fun configureAndroidSourceSet(
             CompileNativesAndroid::outputFolder
         )
     }
+
+    // Apply critical stub lib
+    if(extension.applyAndroidCriticalStub && extension.useAndroidCriticalNative) {
+        sourceSet.dependencies {
+            compileOnly("com.huskerdev:native-kt-android-critical-stub:1.0.0")
+        }
+    }
 }
 
 private abstract class PrepareNativesAndroid: DefaultTask() {
-    @get:Input abstract var useCoroutines: Boolean
-    @get:Input abstract var expectActual: Boolean
-
     @get:Input abstract var idl: String
     @get:Input abstract var moduleName: String
     @get:Input abstract var moduleClasspath: String
+
+    @get:Input abstract var useCoroutines: Boolean
+    @get:Input abstract var expectActual: Boolean
+    @get:Input abstract var useAndroidCriticalNative: Boolean
 
     @get:Input abstract var srcDir: String
     @get:Input abstract var jniLibsDir: String
@@ -188,7 +197,8 @@ private abstract class PrepareNativesAndroid: DefaultTask() {
                 classPath = moduleClasspath,
                 moduleName = moduleName,
                 useCoroutines = useCoroutines,
-                expectActual = expectActual
+                expectActual = expectActual,
+                isAndroidCriticalEnabled = useAndroidCriticalNative
             )
 
             CJniUtilsPrinter(
@@ -203,7 +213,9 @@ private abstract class PrepareNativesAndroid: DefaultTask() {
                 idl = idl,
                 target = File(cmakeDir, "jni_bindings.c"),
                 classPath = moduleClasspath,
-                name = "${moduleName.capitalized()}JNI"
+                name = "${moduleName.capitalized()}JNI",
+                isAndroid = true,
+                isAndroidCriticalEnabled = useAndroidCriticalNative
             )
 
             CJniArenaPrinter(
@@ -257,7 +269,8 @@ private abstract class CompileNativesAndroid @Inject constructor(
 
                 // Copy library to jniLibs dir
                 File(targetBuildDir, "liblib$moduleName.so").copyTo(
-                    File(outputFolder.get().asFile, "$abi/lib$moduleName.so")
+                    File(outputFolder.get().asFile, "$abi/lib$moduleName.so"),
+                    overwrite = true
                 )
             }
         }

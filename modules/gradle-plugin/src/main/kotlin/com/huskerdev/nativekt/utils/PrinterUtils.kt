@@ -164,7 +164,9 @@ fun ResolvedIdlType.toCDefType(
 }
 
 
-fun ResolvedIdlType.toJNIType(): String = when(this) {
+fun ResolvedIdlType.toJNIType(
+    isCritical: Boolean = false
+): String = when(this) {
     is ResolvedIdlType.Void -> "void"
     is ResolvedIdlType.Default -> when(declaration) {
         is BuiltinIdlDeclaration -> when((declaration as BuiltinIdlDeclaration).kind) {
@@ -176,29 +178,43 @@ fun ResolvedIdlType.toJNIType(): String = when(this) {
             WebIDLBuiltinKind.LONG -> "jlong"
             WebIDLBuiltinKind.FLOAT -> "jfloat"
             WebIDLBuiltinKind.DOUBLE -> "jdouble"
-            WebIDLBuiltinKind.STRING -> "jstring"
+            WebIDLBuiltinKind.STRING -> if(isCritical) "jbyte*" else "jstring"
             WebIDLBuiltinKind.LIST -> firstParam { _, declaration ->
-                if(declaration is BuiltinIdlDeclaration) when(declaration.kind) {
-                    WebIDLBuiltinKind.CHAR -> "jcharArray"
-                    WebIDLBuiltinKind.BOOLEAN -> "jbooleanArray"
-                    WebIDLBuiltinKind.BYTE -> "jbyteArray"
-                    WebIDLBuiltinKind.SHORT -> "jshortArray"
-                    WebIDLBuiltinKind.INT -> "jintArray"
-                    WebIDLBuiltinKind.LONG -> "jlongArray"
-                    WebIDLBuiltinKind.FLOAT -> "jfloatArray"
-                    WebIDLBuiltinKind.DOUBLE -> "jdoubleArray"
+                when (declaration) {
+                    is BuiltinIdlDeclaration -> when (declaration.kind) {
+                        WebIDLBuiltinKind.CHAR -> if (isCritical) "char*" else "jcharArray"
+                        WebIDLBuiltinKind.BOOLEAN -> if (isCritical) "jboolean*" else "jbooleanArray"
+                        WebIDLBuiltinKind.BYTE -> if (isCritical) "jbyte*" else "jbyteArray"
+                        WebIDLBuiltinKind.SHORT -> if (isCritical) "jshort*" else "jshortArray"
+                        WebIDLBuiltinKind.INT -> if (isCritical) "jint*" else "jintArray"
+                        WebIDLBuiltinKind.LONG -> if (isCritical) "jlong*" else "jlongArray"
+                        WebIDLBuiltinKind.FLOAT -> if (isCritical) "jfloat*" else "jfloatArray"
+                        WebIDLBuiltinKind.DOUBLE -> if (isCritical) "jdouble*" else "jdoubleArray"
+                        else -> "jobjectArray"
+                    }
+                    is ResolvedIdlEnum if(isCritical) -> "jint*"
                     else -> "jobjectArray"
-                } else "jobjectArray"
+                }
             }
             else -> throw UnsupportedOperationException(toString())
         }
-        is ResolvedIdlEnum -> "jobject"
+        is ResolvedIdlEnum -> if(isCritical) "jint" else "jobject"
         else -> "jobject"
     }
     else -> throw UnsupportedOperationException(toString())
 }
 
-fun ResolvedIdlType.toJavaDesc(classpath: String): String = when(this) {
+fun ResolvedIdlOperation.toJavaDesc(
+    classpath: String,
+    isCritical: Boolean = false
+): String = "(${args.joinToString("") { 
+    it.type.toJavaDesc(classpath, isCritical) 
+}})${type.toJavaDesc(classpath, isCritical)}"
+
+fun ResolvedIdlType.toJavaDesc(
+    classpath: String,
+    isCritical: Boolean = false
+): String = when(this) {
     is ResolvedIdlType.Void -> "V"
     is ResolvedIdlType.Default -> when(val declaration = declaration) {
         is BuiltinIdlDeclaration -> when(declaration.kind) {
@@ -210,12 +226,13 @@ fun ResolvedIdlType.toJavaDesc(classpath: String): String = when(this) {
             WebIDLBuiltinKind.LONG -> "J"
             WebIDLBuiltinKind.FLOAT -> "F"
             WebIDLBuiltinKind.DOUBLE -> "D"
-            WebIDLBuiltinKind.STRING -> "Ljava/lang/String;"
+            WebIDLBuiltinKind.STRING -> if(isCritical) "[B" else "Ljava/lang/String;"
             WebIDLBuiltinKind.LIST -> firstParam { type, _ ->
-                "[${type.toJavaDesc(classpath)}"
+                "[${type.toJavaDesc(classpath, isCritical)}"
             }
             else -> throw UnsupportedOperationException(toString())
         }
+        is ResolvedIdlEnum if (isCritical) -> "I"
         is ResolvedIdlEnum,
         is ResolvedIdlDictionary,
         is ResolvedIdlCallbackFunction -> "L${classpath.replace(".", "/")}/${declaration.name};"
@@ -337,6 +354,11 @@ fun IdlAttributedHolder.isDeallocContent(): Boolean =
 fun ResolvedIdlOperation.isCriticalCapable(): Boolean =
     !type.isArray() && !type.isString() && !type.isDictionary() &&
             !args.any { it.type.isStringArray() || it.type.isDictionaryArray() }
+
+// Same as default critical, but without array and string args
+fun ResolvedIdlOperation.isAndroidCriticalCapable(): Boolean =
+    !type.isArray() && !type.isString() && !type.isDictionary() &&
+            args.all { !it.type.isArray() && !it.type.isString() }
 
 fun ResolvedIdlOperation.hasString(): Boolean =
     args.any { it.type.isString() }

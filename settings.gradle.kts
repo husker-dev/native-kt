@@ -3,6 +3,7 @@ rootProject.name = "native-kt"
 
 include("modules:runtime")
 include("modules:intellij-plugin")
+include("modules:android-critical-stub")
 
 include("modules:tests")
 include("modules:test-jvm-only")

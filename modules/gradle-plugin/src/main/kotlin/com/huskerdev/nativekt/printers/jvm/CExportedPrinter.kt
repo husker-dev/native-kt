@@ -78,24 +78,24 @@ class CExportedPrinter(
         if(function.type !is ResolvedIdlType.Void)
             append("return ")
 
-        val args = function.args.joinToString { castToKType(it.type, it.name) }
+        val args = function.args.joinToString { castToKTypeFromCritical(it.type, it.name) }
         val call = "${function.name}($args)"
         append(call)
         append(";\n}\n")
     }
+}
 
-    internal fun castToKType(type: ResolvedIdlType, name: String): String {
-        return when(type) {
-            is ResolvedIdlType.Void -> name
-            is ResolvedIdlType.Default -> when(val decl = type.declaration) {
-                is BuiltinIdlDeclaration -> when(decl.kind) {
-                    WebIDLBuiltinKind.LIST -> "${type.toCDefType()}_new(__arg_${name}, __length_${name})"
-                    WebIDLBuiltinKind.STRING -> "KString_new(__arg_${name}, __length_${name})"
-                    else -> "__arg_$name"
-                }
+internal fun castToKTypeFromCritical(type: ResolvedIdlType, name: String): String {
+    return when(type) {
+        is ResolvedIdlType.Void -> name
+        is ResolvedIdlType.Default -> when(val decl = type.declaration) {
+            is BuiltinIdlDeclaration -> when(decl.kind) {
+                WebIDLBuiltinKind.LIST -> "${type.toCDefType()}_new(__arg_${name}, __length_${name})"
+                WebIDLBuiltinKind.STRING -> "KString_new(__arg_${name}, __length_${name})"
                 else -> "__arg_$name"
             }
-            else -> throw UnsupportedOperationException(type.toString())
+            else -> "__arg_$name"
         }
+        else -> throw UnsupportedOperationException(type.toString())
     }
 }

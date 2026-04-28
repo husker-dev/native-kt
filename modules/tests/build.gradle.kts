@@ -38,7 +38,7 @@ kotlin {
 
     android {
         namespace = group.toString()
-        minSdk = 25
+        minSdk = 32
         compileSdk {
             version = release(32)
         }
@@ -67,6 +67,9 @@ kotlin {
         implementation(kotlin("test"))
         implementation(libs.kotlinx.coroutines.test)
     }
+    sourceSets.androidMain.dependencies {
+        compileOnly(project(":modules:android-critical-stub"))
+    }
     sourceSets.getByName("androidDeviceTest").dependencies {
         implementation(libs.androidx.test.runner)
         implementation(libs.androidx.test.ext.junit)
@@ -75,6 +78,8 @@ kotlin {
 
 natives {
     applyRuntime = false
+    applyAndroidCriticalStub = false
+
     useJsBigInt = true
     useJvmRecord = false
 

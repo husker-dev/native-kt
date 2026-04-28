@@ -34,7 +34,7 @@ kotlin {
         namespace = group.toString()
         minSdk = 5
         compileSdk {
-            version = release(26)
+            version = release(5)
         }
     }
 

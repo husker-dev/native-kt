@@ -137,7 +137,8 @@ class KotlinJvmPrinter(
                 idl, builder,
                 name = "${moduleName.capitalized()}JNI",
                 parentClass = nativeInvoker,
-                forAndroid = false,
+                isAndroid = false,
+                isAndroidCriticalEnabled = false
             )
         }
 

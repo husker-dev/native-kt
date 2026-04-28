@@ -238,7 +238,9 @@ private abstract class PrepareNativesJvm: DefaultTask() {
                     idl = idl,
                     target = File(cmakeDir, "jni_bindings.c"),
                     classPath = moduleClasspath,
-                    name = "${moduleName.capitalized()}JNI"
+                    name = "${moduleName.capitalized()}JNI",
+                    isAndroid = false,
+                    isAndroidCriticalEnabled = false
                 )
 
                 CJniArenaPrinter(

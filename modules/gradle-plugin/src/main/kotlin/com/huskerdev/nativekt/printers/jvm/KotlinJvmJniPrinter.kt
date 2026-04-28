@@ -1,6 +1,8 @@
 package com.huskerdev.nativekt.printers.jvm
 
 import com.huskerdev.nativekt.utils.globalOperators
+import com.huskerdev.nativekt.utils.isAndroidCriticalCapable
+import com.huskerdev.nativekt.utils.isCritical
 import com.huskerdev.nativekt.utils.printFunctionHeader
 import com.huskerdev.webidl.resolver.IdlResolver
 
@@ -9,12 +11,13 @@ class KotlinJvmJniPrinter(
     builder: StringBuilder,
     name: String = "JNI",
     parentClass: String? = null,
-    forAndroid: Boolean,
+    isAndroid: Boolean,
+    isAndroidCriticalEnabled: Boolean,
     indent: String = ""
 ) {
     init {
         builder.append(indent)
-        if(!forAndroid)
+        if(!isAndroid)
             builder.append("private ")
 
         builder.append("class ")
@@ -23,23 +26,40 @@ class KotlinJvmJniPrinter(
             builder.append(": $parentClass")
         builder.append(" {\n")
 
-        if(forAndroid) {
+        if(isAndroid) {
             // Static functions
             builder.append("${indent}\tcompanion object {\n")
             builder.append("""
-                @JvmStatic external fun JNILoad()
+                @JvmStatic external fun JNILoad(${if(isAndroidCriticalEnabled) "critical: Boolean" else ""})
                 init {
-                    JNILoad()
+                    JNILoad(${if(isAndroidCriticalEnabled) "supportsCritical" else ""})
                 }
             """.replaceIndent("$indent\t\t"))
             builder.append("\n")
 
             idl.globalOperators().forEach { function ->
                 builder.append("${indent}\t\t@JvmStatic ")
+
+                // If function is critical but contains arrays or string, then apply @FastNative
+                if(isAndroidCriticalEnabled && function.isCritical() && !function.isAndroidCriticalCapable())
+                    builder.append("@FastNative ")
+
                 printFunctionHeader(
                     builder, function,
                     isExternal = true
                 )
+
+                if(isAndroidCriticalEnabled && function.isCritical() && function.isAndroidCriticalCapable()) {
+                    builder.append("\n${indent}\t\t@JvmStatic @CriticalNative ")
+                    printFunctionHeader(
+                        builder, function,
+                        name = "${function.name}_",
+                        isExternal = true,
+                        enumAsInt = true,
+                        arraysLen = true,
+                        stringAsBytes = true,
+                    )
+                }
                 builder.append("\n")
             }
             builder.append("${indent}\t}\n")

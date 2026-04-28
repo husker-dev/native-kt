@@ -102,18 +102,18 @@ class KotlinJvmCIPrinter(
         append(" =\n\t\t")
 
         val args = function.args.joinToString {
-            if(it.type.isString())
-                "${it.name}.toByteArray(), ${it.name}.length"
-            else if(it.type.isEnum())
-                "${it.name}.ordinal"
-            else if(it.type.isEnumArray())
-                "IntArray(${it.name}.size) { ${it.name}[it].ordinal }, ${it.name}.size"
-            else if(it.type.isArray())
-                "${it.name}, ${it.name}.size"
-            else it.name
+            toNativeCriticalType(it.type, it.name)
         }
         append("_${function.name}(${args})")
         append("\n")
     }
 
+}
+
+internal fun toNativeCriticalType(type: ResolvedIdlType, name: String) = when {
+    type.isString() -> "${name}.toByteArray(), ${name}.length"
+    type.isEnum() -> "${name}.ordinal"
+    type.isEnumArray() -> "IntArray(${name}.size) { ${name}[it].ordinal }, ${name}.size"
+    type.isArray() -> "${name}, ${name}.size"
+    else -> name
 }

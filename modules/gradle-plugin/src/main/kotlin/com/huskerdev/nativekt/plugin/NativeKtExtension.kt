@@ -27,23 +27,29 @@ open class NativeKtMultiplatformExtension @Inject constructor(
         }
     }
 
-    override var useCoroutines = true
+    // JVM
     override var useJvmRecord = true
+    override var useUniversalMacOSLib = false
 
     override var useJNI = true
     override var useForeignApi = true
     override var useJVMCI = true
 
-    override var useUniversalMacOSLib = false
+    override var jvmNativesJarTask: Jar? = null
 
+    // Android
     override var ndkVersion: String = NDK_LATEST
     override var androidTargets = arrayListOf("arm64-v8a", "armeabi-v7a", "x86_64")
 
-    override var applyRuntime = true
+    override var applyAndroidCriticalStub = true
+    override var useAndroidCriticalNative = true
 
+    // JS
     override var useJsBigInt = false
 
-    override var jvmNativesJarTask: Jar? = null
+    // Common
+    override var useCoroutines = true
+    override var applyRuntime = true
 }
 
 @Suppress("JavaDefaultMethodsNotOverriddenByDelegation")
@@ -100,6 +106,9 @@ interface NativeKtNativeInterface: NativeKtCommonInterface {
 interface NativeKtAndroidInterface: NativeKtCommonInterface {
     var ndkVersion: String
     var androidTargets: ArrayList<String>
+
+    var applyAndroidCriticalStub: Boolean
+    var useAndroidCriticalNative: Boolean
 }
 
 interface NativeKtJsInterface: NativeKtCommonInterface {
@@ -108,12 +117,11 @@ interface NativeKtJsInterface: NativeKtCommonInterface {
 
 interface NativeKtJvmInterface: NativeKtCommonInterface {
     var useJvmRecord: Boolean
+    var useUniversalMacOSLib: Boolean
 
     var useJNI: Boolean
     var useForeignApi: Boolean
     var useJVMCI: Boolean
-
-    var useUniversalMacOSLib: Boolean
 
     var jvmNativesJarTask: Jar?
 }

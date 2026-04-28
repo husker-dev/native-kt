@@ -266,6 +266,11 @@ class CJniUtilsPrinter(
             .joinTo(builder, prefix = "jclass ", separator = ",\n\t", postfix = ";\n") { it.joinToString() }
 
         idl.dictionaries.values
+            .map { "struct${it.name}Companion" }
+            .chunked(3)
+            .joinTo(builder, prefix = "jobject ", separator = ",\n\t", postfix = ";\n") { it.joinToString() }
+
+        idl.dictionaries.values
             .map { "struct${it.name}Constructor" }
             .chunked(3)
             .joinTo(builder, prefix = "jmethodID ", separator = ",\n\t", postfix = ";\n") { it.joinToString() }
@@ -289,10 +294,10 @@ class CJniUtilsPrinter(
             append("(JNIEnv *env, ")
             append(struct.name)
             append("* src, bool dealloc) {\n\t")
-            append("jobject result = (*env)->CallStaticObjectMethod(env, ")
+            append("jobject result = (*env)->CallObjectMethod(env, ")
             append("struct")
             append(struct.name)
-            append("Class, struct")
+            append("Companion, struct")
             append(struct.name)
             append("Constructor, \n\t\t")
             struct.allFields().joinTo(builder, separator = ",\n\t\t") {
@@ -402,18 +407,30 @@ class CJniUtilsPrinter(
             idl.dictionaries.values.forEach { struct ->
                 val structClassPath = "${classPath.replace(".", "/")}/${struct.name}"
                 val classFieldName = "struct${struct.name}Class"
+                val companionFieldName = "struct${struct.name}Companion"
                 val constructorFieldName = "struct${struct.name}Constructor"
 
                 append("\n\t")
+
                 append(classFieldName)
                 append(" = (*env)->NewGlobalRef(env, (*env)->FindClass(env, \"")
                 append(structClassPath)
                 append("\"));\n\t")
 
-                append(constructorFieldName)
-                append(" = (*env)->GetStaticMethodID(env, ")
+
+                append(companionFieldName)
+                append(" = (*env)->NewGlobalRef(env, (*env)->GetStaticObjectField(env, ")
                 append(classFieldName)
-                append(", \"of\", \"(")
+                append(", (*env)->GetStaticFieldID(env, ")
+                append(classFieldName)
+                append(", \"Companion\", \"L")
+                append(structClassPath)
+                append($$"$Companion;\")));\n\t")
+
+                append(constructorFieldName)
+                append(" = (*env)->GetMethodID(env, (*env)->FindClass(env, \"")
+                append(structClassPath)
+                append($$"$Companion\"), \"of\", \"(")
                 struct.allFields().joinTo(builder, separator = "") { d -> d.type.toJavaDesc(classPath) }
                 append(")L")
                 append(structClassPath)

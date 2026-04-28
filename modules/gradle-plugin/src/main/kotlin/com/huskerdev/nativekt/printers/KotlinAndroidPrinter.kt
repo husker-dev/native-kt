@@ -1,8 +1,11 @@
 package com.huskerdev.nativekt.printers
 
 import com.huskerdev.nativekt.printers.jvm.KotlinJvmJniPrinter
+import com.huskerdev.nativekt.printers.jvm.toNativeCriticalType
 import com.huskerdev.nativekt.utils.asyncFunctionName
 import com.huskerdev.nativekt.utils.globalOperators
+import com.huskerdev.nativekt.utils.isAndroidCriticalCapable
+import com.huskerdev.nativekt.utils.isCritical
 import com.huskerdev.nativekt.utils.printFunctionHeader
 import com.huskerdev.nativekt.utils.syncFunctionName
 import com.huskerdev.webidl.resolver.IdlResolver
@@ -16,7 +19,8 @@ class KotlinAndroidPrinter(
     classPath: String,
     moduleName: String,
     useCoroutines: Boolean,
-    val expectActual: Boolean
+    val expectActual: Boolean,
+    val isAndroidCriticalEnabled: Boolean
 ) {
     val jniClassName = "${moduleName.capitalized()}JNI"
 
@@ -28,6 +32,21 @@ class KotlinAndroidPrinter(
             @file:Suppress("unchecked_cast")
             
             package $classPath
+            
+        """.trimIndent())
+
+        if(isAndroidCriticalEnabled)
+            builder.append("""
+                
+                import android.os.Build
+                import dalvik.annotation.optimization.*
+                
+                
+                private val supportsCritical = Build.VERSION.SDK_INT >= 26
+                
+            """.trimIndent())
+
+        builder.append("""
             
             private var _isLib${moduleName.capitalized()}Loaded = false
 
@@ -61,7 +80,12 @@ class KotlinAndroidPrinter(
         idl.globalOperators().forEach { printFunction(builder, it) }
 
         builder.append("\n\n")
-        KotlinJvmJniPrinter(idl, builder, name = jniClassName, parentClass = null, forAndroid = true)
+        KotlinJvmJniPrinter(idl, builder,
+            name = jniClassName,
+            parentClass = null,
+            isAndroid = true,
+            isAndroidCriticalEnabled = isAndroidCriticalEnabled
+        )
 
         target.parentFile.mkdirs()
         target.writeText(builder.toString())
@@ -72,10 +96,17 @@ class KotlinAndroidPrinter(
         printFunctionHeader(builder, function, isActual = expectActual)
         append(" = \n\t")
 
-        val args = function.args.joinToString { it.name }
-        val call = "$jniClassName.${function.name}($args)"
+        if(isAndroidCriticalEnabled && function.isCritical() && function.isAndroidCriticalCapable()) {
+            append("if(supportsCritical) $jniClassName.${function.name}_(")
+            function.args.joinTo(builder) {
+                toNativeCriticalType(it.type, it.name)
+            }
+            append(")\n\telse ")
+        }
 
-        append(call)
+        val args = function.args.joinToString { it.name }
+
+        append("$jniClassName.${function.name}($args)")
         append("\n")
     }
 }

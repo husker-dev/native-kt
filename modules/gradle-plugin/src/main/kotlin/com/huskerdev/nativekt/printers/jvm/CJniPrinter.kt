@@ -9,7 +9,9 @@ class CJniPrinter(
     val idl: IdlResolver,
     target: File,
     val classPath: String,
-    val name: String = "JNI"
+    val name: String = "JNI",
+    val isAndroid: Boolean,
+    val isAndroidCriticalEnabled: Boolean
 ) {
     init {
         val builder = StringBuilder()
@@ -18,7 +20,12 @@ class CJniPrinter(
             
         """.trimIndent())
 
-        idl.globalOperators().forEach { printFunction(builder, it) }
+        idl.globalOperators().forEach {
+            printFunction(builder, it)
+
+            if(isAndroid && isAndroidCriticalEnabled && it.isCritical() && it.isAndroidCriticalCapable())
+                printCriticalFunction(builder, it)
+        }
 
         printRegisterFunction(builder)
 
@@ -27,39 +34,43 @@ class CJniPrinter(
 
     private fun printRegisterFunction(builder: StringBuilder) = builder.apply {
         printLabel(builder, "Load")
+
+        val isCritical = if(isAndroid && isAndroidCriticalEnabled)
+            ", jboolean critical" else ""
+
         append("""
             
-            JNIEXPORT void JNICALL Java_${classPath.replace(".", "_")}_${name}_JNILoad(JNIEnv *env, jclass clazz) {
+            JNIEXPORT void JNICALL Java_${classPath.replace(".", "_")}_${name}_JNILoad(JNIEnv *env, jclass clazz$isCritical) {
                 JNINativeMethod methods[] = {
-            
+                    
         """.trimIndent())
 
-        // {"run", "()V", (void *)&Java_natives_glfwBindings_GlfwBindingsJNI_glfwInit},
         val operators = idl.globalOperators()
         operators.forEachIndexed { index, function ->
-            append("\t\t{\"")
-            append(function.name)
-            append("\", \"(")
-            function.args.joinTo(builder, "") { it.type.toJavaDesc(classPath) }
-            append(")")
-            append(function.type.toJavaDesc(classPath))
-            append("\", (void*)&Java_")
-            append(classPath.replace(".", "_"))
-            append("_")
-            append(name)
-            append("_")
-            append(function.name)
-            append("}")
+            val name = function.name
+            val funcName = function.jniName()
+            val funcDesc = function.toJavaDesc(classPath)
+            val nl = "\n\t\t\t"
+
+            append("{$nl")
+            if(isAndroid && isAndroidCriticalEnabled && function.isCritical() && function.isAndroidCriticalCapable()) {
+                val criticalFuncName = funcName + "_"
+                val criticalFuncDesc = function.toJavaDesc(classPath, isCritical = true)
+
+                append("critical ? \"${name}_\" : \"$name\",$nl")
+                append("critical ? \"$criticalFuncDesc\" : \"!${funcDesc}\",$nl")
+                append("critical ? (void*)&$criticalFuncName : (void*)&$funcName")
+            } else
+                append("\"$name\",$nl\"$funcDesc\",$nl(void*)&$funcName")
+
+            append("\n\t\t}")
             if(index != operators.lastIndex)
-                append(",")
-            append("\n")
+                append(", ")
         }
 
-        append("\t};\n\t")
-
-        // Get env
         append("""
             
+                };
                 return JNI_Init(env, methods, ${idl.globalOperators().size});
             }
         """.trimIndent())
@@ -68,22 +79,18 @@ class CJniPrinter(
     private fun printFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
         append("\nstatic ")
         append(function.type.toJNIType())
-        append(" Java_")
-        append(classPath.replace(".", "_"))
-        append("_")
-        append(name)
-        append("_")
-        append(function.name)
-        append("(JNIEnv *env, jclass __cls")
+        append(" ")
+        append(function.jniName())
 
-        if(function.args.isNotEmpty())
-            append(", ")
+        buildList {
+            add("JNIEnv *env")
+            add("jclass __cls")
+            addAll(function.args.map {
+                "${it.type.toJNIType()} __arg_${it.name}"
+            })
+        }.joinTo(builder, prefix = "(", postfix = ")")
 
-        function.args.joinTo(this) {
-            "${it.type.toJNIType()} __arg_${it.name}"
-        }
-
-        append(") {\n")
+        append(" {\n")
 
         val useArena = function.args.any { it.type.isString() || it.type.isArray() || it.isDealloc() }
 
@@ -101,7 +108,9 @@ class CJniPrinter(
         }
 
         // == Function call ==
-        val args = function.args.joinToString { castJavaToJNI(it.type, "__arg_${it.name}", it.isDealloc(), useArena) }
+        val args = function.args.joinToString {
+            castJavaToJNI(it.type, "__arg_${it.name}", it.isDealloc(), useArena)
+        }
         val call = "${function.name}($args)"
         append(castJniToJava(function.type, call, function.isDealloc(), function.isDeallocContent(), useArena))
         append(";\n")
@@ -114,6 +123,37 @@ class CJniPrinter(
 
         append("}\n")
     }
+
+    private fun printCriticalFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
+        append("\nstatic ")
+        append(function.type.toJNIType(isCritical = true))
+        append(" ")
+        append(function.jniName())
+        append("_")
+
+        function.args.flatMap {
+            val arg = "${it.type.toJNIType(isCritical = true)} __arg_${it.name}"
+
+            if(it.type.isArray() || it.type.isString())
+                listOf(arg, "jint __length_${it.name}")
+            else listOf(arg)
+
+        }.joinTo(builder, prefix = "(", postfix = ")")
+
+        append(" {\n\t")
+
+        if(function.type !is ResolvedIdlType.Void)
+            append("return ")
+
+        // == Function call ==
+        val args = function.args.joinToString {
+            castToKTypeFromCritical(it.type, it.name)
+        }
+        append("${function.name}($args);\n}\n")
+    }
+
+    private fun ResolvedIdlOperation.jniName() =
+        "Java_${classPath.replace(".", "_")}_${this@CJniPrinter.name}_$name"
 }
 
 internal fun castJniToJava(type: ResolvedIdlType, content: String, dealloc: Boolean, deallocContent: Boolean, useArena: Boolean): String {
