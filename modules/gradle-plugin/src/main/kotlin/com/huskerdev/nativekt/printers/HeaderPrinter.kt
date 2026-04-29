@@ -1,14 +1,7 @@
 package com.huskerdev.nativekt.printers
 
-import com.huskerdev.nativekt.utils.allFields
-import com.huskerdev.nativekt.utils.globalOperators
-import com.huskerdev.nativekt.utils.printLabel
-import com.huskerdev.nativekt.utils.toCDefType
-import com.huskerdev.webidl.resolver.IdlResolver
-import com.huskerdev.webidl.resolver.ResolvedIdlCallbackFunction
-import com.huskerdev.webidl.resolver.ResolvedIdlDictionary
-import com.huskerdev.webidl.resolver.ResolvedIdlEnum
-import com.huskerdev.webidl.resolver.ResolvedIdlOperation
+import com.huskerdev.nativekt.utils.*
+import com.huskerdev.webidl.resolver.*
 import java.io.File
 import kotlin.math.max
 
@@ -107,7 +100,11 @@ class HeaderPrinter(
         append(dictionary.name)
         append("_new(")
         dictionary.allFields().joinTo(builder) { field ->
-            "${field.type.toCDefType()} ${field.name}"
+            val const = if(
+                    !field.type.isDictionary() &&
+                    !field.type.isCallback()
+                ) "const " else ""
+            "$const${field.type.toCDefType()} ${field.name}"
         }
         append(") {\n\t")
         // malloc

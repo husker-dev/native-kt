@@ -1,41 +1,41 @@
 #include <api.h>
 
-KCharArray pingCharArray(KCharArray arg) {
+KCharArray pingCharArray(const KCharArray arg) {
     return arg;
 }
 
-KBooleanArray pingBooleanArray(KBooleanArray arg) {
+KBooleanArray pingBooleanArray(const KBooleanArray arg) {
     return arg;
 }
 
-KByteArray pingByteArray(KByteArray arg) {
+KByteArray pingByteArray(const KByteArray arg) {
     return arg;
 }
 
-KShortArray pingShortArray(KShortArray arg) {
+KShortArray pingShortArray(const KShortArray arg) {
     return arg;
 }
 
-KIntArray pingIntArray(KIntArray arg) {
+KIntArray pingIntArray(const KIntArray arg) {
     return arg;
 }
 
-KLongArray pingLongArray(KLongArray arg) {
+KLongArray pingLongArray(const KLongArray arg) {
     return arg;
 }
 
-KFloatArray pingFloatArray(KFloatArray arg) {
+KFloatArray pingFloatArray(const KFloatArray arg) {
     return arg;
 }
 
-KDoubleArray pingDoubleArray(KDoubleArray arg) {
+KDoubleArray pingDoubleArray(const KDoubleArray arg) {
     return arg;
 }
 
-KIntArray pingEnumArray(KIntArray arg) {
+KIntArray pingEnumArray(const KIntArray arg) {
     return arg;
 }
 
-KArray pingDictionaryArray(KArray arg) {
+KArray pingDictionaryArray(const KArray arg) {
     return arg;
 }

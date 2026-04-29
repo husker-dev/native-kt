@@ -206,19 +206,19 @@ struct TypeDictionary {
 	KArray a22;
 };
 
-static ParentDictionary* ParentDictionary_new(KInt a, KInt b) {
+static ParentDictionary* ParentDictionary_new(const KInt a, const KInt b) {
 	ParentDictionary* result = (ParentDictionary*)malloc(sizeof(ParentDictionary));
 	*result = (ParentDictionary){ a, b };
 	return result;
 }
 
-static MyDictionary* MyDictionary_new(KInt a, KInt b, KInt c, KInt d) {
+static MyDictionary* MyDictionary_new(const KInt a, const KInt b, const KInt c, const KInt d) {
 	MyDictionary* result = (MyDictionary*)malloc(sizeof(MyDictionary));
 	*result = (MyDictionary){ a, b, c, d };
 	return result;
 }
 
-static TypeDictionary* TypeDictionary_new(KChar a1, KBoolean a2, KByte a3, KShort a4, KInt a5, KLong a6, KFloat a7, KDouble a8, KString a9, MyEnum a10, MyDictionary* a11, VoidCallback* a12, KCharArray a13, KBooleanArray a14, KByteArray a15, KShortArray a16, KIntArray a17, KLongArray a18, KFloatArray a19, KDoubleArray a20, KIntArray a21, KArray a22) {
+static TypeDictionary* TypeDictionary_new(const KChar a1, const KBoolean a2, const KByte a3, const KShort a4, const KInt a5, const KLong a6, const KFloat a7, const KDouble a8, const KString a9, const MyEnum a10, MyDictionary* a11, VoidCallback* a12, const KCharArray a13, const KBooleanArray a14, const KByteArray a15, const KShortArray a16, const KIntArray a17, const KLongArray a18, const KFloatArray a19, const KDoubleArray a20, const KIntArray a21, const KArray a22) {
 	TypeDictionary* result = (TypeDictionary*)malloc(sizeof(TypeDictionary));
 	*result = (TypeDictionary){ a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22 };
 	return result;
@@ -239,7 +239,7 @@ KBoolean passFloat(KFloat arg);
 KBoolean passDouble(KDouble arg);
 KBoolean passString(KString arg);
 KBoolean passEnum(MyEnum arg);
-KBoolean passDictionary(MyDictionary* arg);
+KBoolean passDictionary(const MyDictionary* arg);
 void returnVoid();
 KChar returnChar();
 KBoolean returnBoolean();
@@ -339,7 +339,7 @@ KBoolean callbackReturnFloatArray(CallbackReturnFloatArray* arg);
 KBoolean callbackReturnDoubleArray(CallbackReturnDoubleArray* arg);
 KBoolean callbackReturnEnumArray(CallbackReturnEnumArray* arg);
 KBoolean callbackReturnDictionaryArray(CallbackReturnDictionaryArray* arg);
-KBoolean passBigDictionary(TypeDictionary* arg);
+KBoolean passBigDictionary(const TypeDictionary* arg);
 TypeDictionary* returnBigDictionary(VoidCallback* callback);
 TypeDictionary* pingBigDictionary(TypeDictionary* arg);
 KBoolean criticalPrimitives(KChar a1, KBoolean a2, KByte a3, KShort a4, KInt a5, KLong a6, KFloat a7, KDouble a8);

@@ -99,9 +99,7 @@ open class NativeKtJsExtension @Inject constructor(
     override var useJsBigInt = false
 }
 
-interface NativeKtNativeInterface: NativeKtCommonInterface {
-
-}
+interface NativeKtNativeInterface: NativeKtCommonInterface
 
 interface NativeKtAndroidInterface: NativeKtCommonInterface {
     var ndkVersion: String

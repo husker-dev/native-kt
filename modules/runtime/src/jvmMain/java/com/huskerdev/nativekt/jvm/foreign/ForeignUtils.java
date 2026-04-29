@@ -53,15 +53,15 @@ public class ForeignUtils {
 
     // Types
 
-    public static ValueLayout C_CHAR = ValueLayout.JAVA_CHAR;
-    public static ValueLayout C_BYTE = ValueLayout.JAVA_BYTE;
-    public static ValueLayout C_BOOLEAN = ValueLayout.JAVA_BOOLEAN;
-    public static ValueLayout C_SHORT = ValueLayout.JAVA_SHORT;
-    public static ValueLayout C_INT = ValueLayout.JAVA_INT;
-    public static ValueLayout C_LONG = ValueLayout.JAVA_LONG;
-    public static ValueLayout C_FLOAT = ValueLayout.JAVA_FLOAT;
-    public static ValueLayout C_DOUBLE = ValueLayout.JAVA_DOUBLE;
-    public static ValueLayout C_ADDRESS = ValueLayout.ADDRESS;
+    public static final ValueLayout C_CHAR = ValueLayout.JAVA_CHAR;
+    public static final ValueLayout C_BYTE = ValueLayout.JAVA_BYTE;
+    public static final ValueLayout C_BOOLEAN = ValueLayout.JAVA_BOOLEAN;
+    public static final ValueLayout C_SHORT = ValueLayout.JAVA_SHORT;
+    public static final ValueLayout C_INT = ValueLayout.JAVA_INT;
+    public static final ValueLayout C_LONG = ValueLayout.JAVA_LONG;
+    public static final ValueLayout C_FLOAT = ValueLayout.JAVA_FLOAT;
+    public static final ValueLayout C_DOUBLE = ValueLayout.JAVA_DOUBLE;
+    public static final ValueLayout C_ADDRESS = ValueLayout.ADDRESS;
 
     // Free function
 

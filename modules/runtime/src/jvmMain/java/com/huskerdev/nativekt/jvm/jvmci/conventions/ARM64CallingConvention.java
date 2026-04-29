@@ -46,9 +46,6 @@ public class ARM64CallingConvention extends CallingConvention {
     }
 
     @Override
-    protected void emitPrologue(Buffer buf, Method method) { }
-
-    @Override
     protected void emitConversion(Buffer buf, Method method) {
         // 8th integer Java argument clashes with the 1st native arg
         for(int i = 0, ints = 0; i < method.getParameterCount(); i++) {

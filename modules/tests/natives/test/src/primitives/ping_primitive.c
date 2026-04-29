@@ -1,42 +1,42 @@
 #include <api.h>
 
-KChar pingChar(KChar arg) {
+KChar pingChar(const KChar arg) {
     return arg;
 }
 
-KBoolean pingBoolean(KBoolean arg) {
+KBoolean pingBoolean(const KBoolean arg) {
     return arg;
 }
 
-KByte pingByte(KByte arg) {
+KByte pingByte(const KByte arg) {
     return arg;
 }
 
-KShort pingShort(KShort arg) {
+KShort pingShort(const KShort arg) {
     return arg;
 }
 
-KInt pingInt(KInt arg) {
+KInt pingInt(const KInt arg) {
     return arg;
 }
 
-KLong pingLong(KLong arg) {
+KLong pingLong(const KLong arg) {
     return arg;
 }
 
-KFloat pingFloat(KFloat arg) {
+KFloat pingFloat(const KFloat arg) {
     return arg;
 }
 
-KDouble pingDouble(KDouble arg) {
+KDouble pingDouble(const KDouble arg) {
     return arg;
 }
 
-KString pingString(KString arg) {
+KString pingString(const KString arg) {
     return arg;
 }
 
-MyEnum pingEnum(MyEnum arg) {
+MyEnum pingEnum(const MyEnum arg) {
     return arg;
 }
 

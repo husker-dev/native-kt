@@ -1,6 +1,5 @@
 #include <api.h>
 #include <stdlib.h>
-#include <stdio.h>
 
 KCharArray returnCharArray() {
     return KCharArray_of('a', 'b');

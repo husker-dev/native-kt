@@ -38,7 +38,6 @@ abstract public class CallingConvention {
     public byte[] createNativeCall(Method method, long address) {
         Buffer buf = new Buffer();
 
-        emitPrologue(buf, method);
         emitConversion(buf, method);
         emitCall(buf, method, address);
         emitEpilogue(buf, method);
@@ -51,8 +50,6 @@ abstract public class CallingConvention {
             byte[] code,
             HotSpotResolvedJavaMethod resolvedMethod
     );
-
-    abstract protected void emitPrologue(Buffer buf, Method method);
 
     abstract protected void emitConversion(Buffer buf, Method method);
 

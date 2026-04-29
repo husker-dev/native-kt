@@ -89,9 +89,6 @@ public abstract class AbstractAMD64CallingConvention extends CallingConvention {
     }
 
     @Override
-    protected void emitPrologue(Buffer buf, Method method) { }
-
-    @Override
     protected void emitConversion(Buffer buf, Method method) {
         if(method.getParameterCount() == 0)
             return;

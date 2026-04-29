@@ -46,7 +46,7 @@ KBoolean callbackReturnEnum(CallbackReturnEnum* arg) {
 }
 
 KBoolean callbackReturnDictionary(CallbackReturnDictionary* arg) {
-    MyDictionary* result = arg->invoke(arg);
+    const MyDictionary* result = arg->invoke(arg);
     return result->a == 1 &&
         result->b == 2 &&
         result->c == 3 &&

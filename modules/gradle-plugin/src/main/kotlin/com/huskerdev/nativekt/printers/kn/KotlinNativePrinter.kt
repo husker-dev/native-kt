@@ -154,7 +154,9 @@ class KotlinNativePrinter(
         // invoke =
         val args = listOf("_callback") + callback.args.map { it.name }
 
-        val castedArgs = callback.args.joinToString { castFromNative(it.type, it.name, it.isDealloc(), false, false) }
+        val castedArgs = callback.args.joinToString {
+            castFromNative(it.type, it.name, it.isDealloc(), deallocContent = false, useArena = false)
+        }
 
         val call = "_callback!!.pointed.m!!.asStableRef<${callback.name}>().get()($castedArgs)"
 

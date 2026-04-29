@@ -1,4 +1,5 @@
 @file:OptIn(ExperimentalWasmJsInterop::class)
+@file:Suppress("unused")
 
 package com.huskerdev.nativekt.web
 
@@ -50,19 +51,15 @@ abstract external class TypedArray: JsAny {
     fun set(array: JsArray<JsNumber>)
 }
 
-@Suppress("unused")
 private fun setTypedArray(array: TypedArray, index: Int, value: Double): Unit =
     js("array[index] = value")
 
-@Suppress("unused")
 private fun getTypedArray(array: TypedArray, index: Int): Double =
     js("array[index]")
 
-@Suppress("unused")
 private fun setBigIntArray(array: BigInt64Array, index: Int, value: Long): Unit =
     js("array[index] = value")
 
-@Suppress("unused")
 private fun getBigIntArray(array: BigInt64Array, index: Int): Long =
     js("array[index]")
 
