@@ -47,7 +47,7 @@ KBoolean passEnum(const MyEnum arg) {
     return arg == MyEnum_CASE2;
 }
 
-KBoolean passDictionary(const MyDictionary* arg) {
+KBoolean passDictionary(MyDictionary* arg) {
     return arg->a == 1 &&
         arg->b == 2 &&
         arg->c == 3 &&

@@ -1,7 +1,7 @@
 #include <api.h>
 #include <string.h>
 
-KBoolean passBigDictionary(const TypeDictionary* arg) {
+KBoolean passBigDictionary(TypeDictionary* arg) {
     return arg->a1 == 'a' &&
         arg->a2 == true &&
         arg->a3 == 123 &&
