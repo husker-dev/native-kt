@@ -8,7 +8,8 @@ repo_name = "husker-dev/native-kt"
 nav = [
     {"Home" = "index.md"},
     {"Documentation" = [
-        {"Basics" = "basics.md"},
+        {"Overview" = "overview.md"},
+        {"Requirements" = "requirements.md"},
         {"Gradle setup" = "gradle.md"},
         {"Internals" = "internals.md"},
     ]}
@@ -16,6 +17,8 @@ nav = [
 
 # Theme colors
 [project.theme]
+logo = "images/logo-rect.svg"
+favicon = "images/logo-rect.png"
 language = "en"
 features = [
     "navigation.instant",
