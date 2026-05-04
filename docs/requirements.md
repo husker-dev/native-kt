@@ -45,8 +45,7 @@ The project only supports compilation via `clang`, so please follow the instruct
 
     ---
 
-    1. Install [Xcode Command Line Tools](https://developer.apple.com/download/all/?q=command%20line%20tools) or [Xcode](https://developer.apple.com/xcode/) application.
-    2. Run it once
+    Install [Xcode Command Line Tools](https://developer.apple.com/download/all/?q=command%20line%20tools) or [Xcode](https://developer.apple.com/xcode/) and run it once.
 </div>
 
 <div class="grid cards" markdown>
@@ -57,6 +56,15 @@ The project only supports compilation via `clang`, so please follow the instruct
 
     It is required to have `clang` and `make` installed. 
     Please follow your own distribution instructions.
+
+    - Debian:
+      ```sh
+      sudo apt install build-essential clang
+      ```
+    - Arch:
+      ```sh
+      sudo pacman -S base-devel clang
+      ```
 </div>
 
 

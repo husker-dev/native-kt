@@ -10,8 +10,11 @@ nav = [
     {"Documentation" = [
         {"Overview" = "overview.md"},
         {"Requirements" = "requirements.md"},
-        {"Gradle setup" = "gradle.md"},
-        {"Internals" = "internals.md"},
+        {"Project configuration" = "project_configuration.md"},
+        {"Natives declaration" = "natives_declaration.md"},
+        {"NDL syntax" = "ndl_syntax.md"},
+        {"Memory model" = "memory_model.md"},
+        {"Critical" = "critical.md"},
     ]}
 ]
 

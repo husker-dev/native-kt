@@ -105,8 +105,8 @@ interface NativeKtAndroidInterface: NativeKtCommonInterface {
     var ndkVersion: String
     var androidTargets: ArrayList<String>
 
-    var applyAndroidCriticalStub: Boolean
     var useAndroidCriticalNative: Boolean
+    var applyAndroidCriticalStub: Boolean
 }
 
 interface NativeKtJsInterface: NativeKtCommonInterface {

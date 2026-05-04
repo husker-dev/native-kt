@@ -2,18 +2,20 @@
 
 **native-kt** is a Gradle plugin that creates an 
 interop between Kotlin Multiplatform and C/C++ 
-using **NDL** description file (WebIDL modification).
+based on **NDL** description file.
 
 This project also includes a syntax highlighting [plugin](https://plugins.jetbrains.com/plugin/31414-native-kt-utils).
 
+!!! note "NDL is a [WebIDL](https://webidl.spec.whatwg.org/) format modification"
+
 ## Runtime
 
-This project **doesn't provide** tools to manipulate native memory from Java. 
+This project **doesn't provide** tools to manipulate native memory from Kotlin. 
 
 However, it does require a runtime, which it adds itself.
 The runtime only includes the functions needed for interop inside generated code. 
 
-As a bonus, there is a class for retrieving the current OS and architecture, that you can use :)
+As a bonus, there is a class for retrieving the current OS and architecture, that you can use.
 
 ## Target details
 
