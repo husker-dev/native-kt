@@ -1,6 +1,18 @@
 
 # Requirements
 
+### IDEA plugins
+
+To work comfortably with native code, the following plugins are required:
+
+- [Native-Kt Utils](https://plugins.jetbrains.com/plugin/31414-native-kt-utils) (project's plugin)
+- [C and C++](https://plugins.jetbrains.com/plugin/28804-clion-c-and-c-)
+- [CMake](https://plugins.jetbrains.com/plugin/28794-cmake)
+- [Native Build Tools](https://plugins.jetbrains.com/plugin/28796-native-build-tools)
+
+
+### Platform configuration
+
 Regardless of platform, you need to have [`CMake`](https://cmake.org/) installed.
 
 The project only supports compilation via `clang`, so please follow the instructions below.
@@ -48,7 +60,7 @@ The project only supports compilation via `clang`, so please follow the instruct
 </div>
 
 
-### Additional requirements
+### Additional platform configuration
 
 Some targets require special compilation tools.
 

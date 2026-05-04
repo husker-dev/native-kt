@@ -6,14 +6,6 @@ using **NDL** description file (WebIDL modification).
 
 This project also includes a syntax highlighting [plugin](https://plugins.jetbrains.com/plugin/31414-native-kt-utils).
 
-!!! note "Recommended IDEA plugins"
-    
-
-    - [Native-Kt Utils](https://plugins.jetbrains.com/plugin/31414-native-kt-utils)
-    - [C and C++](https://plugins.jetbrains.com/plugin/28804-clion-c-and-c-)
-    - [CMake](https://plugins.jetbrains.com/plugin/28794-cmake)
-    - [Native Build Tools](https://plugins.jetbrains.com/plugin/28796-native-build-tools)
-
 ## Runtime
 
 This project **doesn't provide** tools to manipulate native memory from Java. 
