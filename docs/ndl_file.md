@@ -1,7 +1,40 @@
+---
+icon: material/code-braces
+---
 
-# NDL syntax
+# NDL file
 
 NDL - is a custom interface definition language, that based on [WebIDL](https://webidl.spec.whatwg.org/) format.
+
+Kotlin and C code generates based on this file when Gradle is synchronized in IDEA.
+
+??? "Example of all possible records"
+
+    ```webidl
+    namespace global {
+        void simpleFunc();
+        boolean myFunc(MyDictionary params, Array<int> flags, MyCallback response);
+        [Dealloc] string returnString();
+        [Critical] void fastFunc();
+    }
+    
+    enum MyEnum {
+        "CASE1",
+        "CASE2"
+    };
+    
+    callback MyCallback = boolean (int arg);
+    
+    dictionary ParentDictionary {
+        MyEnum a;
+        int b;
+    };
+    
+    dictionary MyDictionary: ParentDictionary {
+        int c;
+        int d;
+    };
+    ```
 
 ## Types mapping
 
@@ -72,6 +105,18 @@ callback OnResponse = void (int response);
 namespace global {
     void request(OnResponse result);
 }
+```
+
+## Enums
+
+Enums are some typed constants.
+
+Example:
+```webidl
+enum MyEnum {
+    "CASE1",
+    "CASE2"
+};
 ```
 
 ## Annotations

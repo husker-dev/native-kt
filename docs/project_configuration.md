@@ -1,4 +1,8 @@
-# Project configuration
+---
+icon: simple/gradle
+---
+
+# Gradle configuration
 
 Add the plugin to your `build.gradle` file:
 

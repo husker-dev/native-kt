@@ -1,3 +1,7 @@
+---
+icon: lucide/chevrons-up
+---
+
 # Critical
 
 Critical is a special way to call native functions 

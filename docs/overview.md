@@ -1,12 +1,14 @@
+---
+icon: lucide/file-sliders
+---
+
 # Overview
 
 **native-kt** is a Gradle plugin that creates an 
 interop between Kotlin Multiplatform and C/C++ 
-based on **NDL** description file.
+based on [NDL](/ndl_file) description file.
 
 This project also includes a syntax highlighting [plugin](https://plugins.jetbrains.com/plugin/31414-native-kt-utils).
-
-!!! note "NDL is a [WebIDL](https://webidl.spec.whatwg.org/) format modification"
 
 ## Runtime
 

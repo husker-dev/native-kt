@@ -10,12 +10,21 @@ nav = [
     {"Documentation" = [
         {"Overview" = "overview.md"},
         {"Requirements" = "requirements.md"},
-        {"Project configuration" = "project_configuration.md"},
-        {"Natives declaration" = "natives_declaration.md"},
-        {"NDL syntax" = "ndl_syntax.md"},
-        {"Memory model" = "memory_model.md"},
-        {"Critical" = "critical.md"},
-    ]}
+        {"Project" = [
+            {"Gradle configuration" = "project_configuration.md"},
+            {"Natives declaration" = "natives_declaration.md"},
+        ]},
+        {"Code" = [
+            {"NDL file" = "ndl_file.md"},
+            {"Kotlin code" = "kotlin_file.md"},
+            {"C header" = "c_header.md"}
+        ]},
+        {"Details" = [
+            {"Memory model" = "memory_model.md"},
+            {"Critical" = "critical.md"},
+        ]},
+    ]},
+    {"Example" = ""}
 ]
 
 # Theme colors
@@ -29,7 +38,9 @@ features = [
     "navigation.instant.progress",
     "navigation.tabs",
     "navigation.tabs.sticky",
+    "navigation.sections",
     "navigation.path",
+    "navigation.footer",
     "toc.follow",
     "content.code.copy"
 ]
