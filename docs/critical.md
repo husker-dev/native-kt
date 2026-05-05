@@ -1,5 +1,5 @@
 ---
-icon: lucide/chevrons-up
+icon: lucide/fast-forward
 ---
 
 # Critical

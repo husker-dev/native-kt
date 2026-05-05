@@ -24,7 +24,7 @@ nav = [
             {"Critical" = "critical.md"},
         ]},
     ]},
-    {"Example" = ""}
+    {"Example" = "example.md"}
 ]
 
 # Theme colors
