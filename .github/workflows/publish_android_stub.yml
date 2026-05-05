@@ -1,8 +1,8 @@
-name: Publish (runtime)
+name: Publish (android stub)
 on: workflow_dispatch
 jobs:
   publish:
-    name: Publish (runtime)
+    name: Publish (android stub)
     runs-on: macOS-latest
     steps:
       - name: Check out code
@@ -16,7 +16,7 @@ jobs:
           distribution: 'graalvm'
           java-version: 25
       - name: Publish to MavenCentral
-        run: ./gradlew :modules:runtime:publishToMavenCentral --no-configuration-cache
+        run: ./gradlew :modules:android-critical-stub:publishToMavenCentral --no-configuration-cache
         env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
