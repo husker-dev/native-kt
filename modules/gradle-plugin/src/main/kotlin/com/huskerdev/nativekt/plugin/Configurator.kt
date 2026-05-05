@@ -37,16 +37,20 @@ private fun NativeKtPlugin.validateModule(module: NativeModule): IdlResolver? {
         this.moduleName = module.name
     }
 
-    if(!module.getNDLFile(project).exists()) {
-        project.logger.error("""
-            Native module '${module.name}' is not loaded:
-              'api.ndl' file not found.
-            
-            Possible solution: 
-              run './gradlew :${initTask.name}'
-        """.trimIndent())
-        return null
+    project.gradle.taskGraph.whenReady {
+        if (!module.getNDLFile(project).exists() && !hasTask(initTask.get())) {
+            project.logger.error("""
+                Native module '${module.name}' is not loaded:
+                  'api.ndl' file not found.
+                
+                Possible solution: 
+                  run './gradlew :${initTask.name}'
+            """.trimIndent())
+        }
     }
+
+    if(!module.getNDLFile(project).exists())
+        return null
 
     return module.idl(project)
         .also { validateIDL(it) }
