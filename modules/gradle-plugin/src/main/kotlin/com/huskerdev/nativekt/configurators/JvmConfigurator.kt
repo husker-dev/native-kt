@@ -1,6 +1,5 @@
 package com.huskerdev.nativekt.configurators
 
-import com.android.build.gradle.internal.tasks.factory.dependsOn
 import com.huskerdev.nativekt.plugin.CMakeBuildType
 import com.huskerdev.nativekt.plugin.NATIVE_TASK_GROUP
 import com.huskerdev.nativekt.plugin.NativeKtJvmInterface
@@ -123,7 +122,7 @@ internal fun configureJvm(
         it.nativeProjectDir     = module.dir(project).absolutePath
     }
     if(commonTask != null)
-        prepareTask.dependsOn(commonTask)
+        prepareTask.get().dependsOn(commonTask)
     prepareTask.dependsOnReload()
 
     sourceSet.kotlin.srcDirs(prepareTask.map { srcDir })
