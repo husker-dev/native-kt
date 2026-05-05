@@ -142,9 +142,23 @@ sealed class NativeModule @Inject constructor(
     /**
      * Directory with CMake project.
      *
-     * Default value: `src/nativeInterop/[name]`
+     * Default value: `natives/[name]`
      */
     var projectDir: RegularFileProperty? = null
+
+    /**
+     * Generated header file.
+     *
+     * Default value: `natives/[name]/include/api.h`
+     */
+    var headerFile: RegularFileProperty? = null
+
+    /**
+     * NDL file
+     *
+     * Default value: `natives/[name]/api.ndl`
+     */
+    var ndlFile: RegularFileProperty? = null
 
     /**
      * CMake build type.

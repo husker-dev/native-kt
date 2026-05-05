@@ -18,11 +18,16 @@ fun NativeModule.dir(project: Project): File =
     projectDir?.get()?.asFile
         ?: project.file("natives/$name")
 
-fun NativeModule.idlFile(project: Project): File =
-    File(dir(project), "api.ndl")
+fun NativeModule.getNDLFile(project: Project): File =
+    ndlFile?.get()?.asFile
+        ?: File(dir(project), "api.ndl")
+
+fun NativeModule.getHeaderFile(project: Project): File =
+    headerFile?.get()?.asFile
+        ?: File(dir(project), "include/api.h")
 
 fun NativeModule.idl(project: Project) = WebIDL.resolve(
-    iterable = idlFile(project).reader().iterator(),
+    iterable = getNDLFile(project).reader().iterator(),
     env = NDLEnv()
 )
 

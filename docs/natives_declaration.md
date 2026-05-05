@@ -60,6 +60,15 @@ Each native project has a minimum set of files required to work. These are:
 : Directory with CMake project.
 : Default: `<projectDir>/natives/[name]`
 
+### `headerFile`
+: Generated header file.
+: Default: `<projectDir>/natives/[name]/include/api.h`
+
+### `ndlFile`
+: NDL file.
+: Default: `<projectDir>/natives/[name]/api.ndl`
+
+
 ### `buildType`
 : CMake build type. <br> Possible values:
 : - `DEBUG`

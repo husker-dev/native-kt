@@ -6,8 +6,9 @@ import com.huskerdev.nativekt.configurators.*
 import com.huskerdev.nativekt.printers.HeaderPrinter
 import com.huskerdev.nativekt.utils.validateIDL
 import com.huskerdev.nativekt.utils.dir
+import com.huskerdev.nativekt.utils.getHeaderFile
 import com.huskerdev.nativekt.utils.idl
-import com.huskerdev.nativekt.utils.idlFile
+import com.huskerdev.nativekt.utils.getNDLFile
 import com.huskerdev.webidl.resolver.IdlResolver
 import org.gradle.api.Project
 import org.gradle.api.tasks.TaskProvider
@@ -36,7 +37,7 @@ private fun NativeKtPlugin.validateModule(module: NativeModule): IdlResolver? {
         this.moduleName = module.name
     }
 
-    if(!module.idlFile(project).exists()) {
+    if(!module.getNDLFile(project).exists()) {
         project.logger.error("""
             Native module '${module.name}' is not loaded:
               'api.ndl' file not found.
@@ -71,7 +72,7 @@ fun NativeKtPlugin.configureKotlin(
 
         HeaderPrinter(
             idl = idl,
-            target = File(module.dir(project), "include/api.h"),
+            target = module.getHeaderFile(project),
             guardName = module.name.uppercase()
         )
     }
@@ -87,7 +88,7 @@ fun NativeKtPlugin.configureAndroid(
         extension.forEach { module ->
             module as NativeModule
 
-            if(!module.idlFile(project).exists())
+            if(!module.getNDLFile(project).exists())
                 return@forEach
 
             val idl = module.idl(project)
