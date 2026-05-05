@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.dsl.KotlinJvmCompilerOptions
 
 plugins {
     alias(libs.plugins.plugin.publish)
@@ -10,6 +12,17 @@ version = projectDir.parentFile.parentFile.resolve("VERSION").readText()
 repositories {
     mavenCentral()
     google()
+}
+
+kotlin {
+    target.apply {
+        compilations.configureEach {
+            compileTaskProvider.get().compilerOptions {
+                this as KotlinJvmCompilerOptions
+                jvmTarget = JvmTarget.JVM_11
+            }
+        }
+    }
 }
 
 dependencies {
