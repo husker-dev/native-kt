@@ -98,7 +98,7 @@ tasks.withType<Javadoc>().configureEach {
 mavenPublishing {
     publishToMavenCentral()
 
-    //signAllPublications()
+    signAllPublications()
 
     coordinates(group.toString(), "native-kt-runtime", version.toString())
 
