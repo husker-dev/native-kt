@@ -9,8 +9,8 @@ nav = [
     {"Home" = "index.md"},
     {"Documentation" = [
         {"Overview" = "overview.md"},
-        {"Requirements" = "requirements.md"},
         {"Project" = [
+            {"Requirements" = "requirements.md"},
             {"Gradle configuration" = "project_configuration.md"},
             {"Natives declaration" = "natives_declaration.md"},
         ]},

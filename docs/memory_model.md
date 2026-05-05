@@ -6,6 +6,8 @@ icon: lucide/memory-stick
 
 It is important to understand the lifetime of different objects to prevent memory leaks.
 
+Some objects require deallocating, and some do not.
+
 ## Function arguments
 
 `Array` and `string` arguments are deallocated when the function returns, 

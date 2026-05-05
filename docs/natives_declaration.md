@@ -38,16 +38,16 @@ This task is optional but recommended for getting started.
 
 ## Project structure
 
-Each project has a minimum set of files required to work. These are:
+Each native project has a minimum set of files required to work. These are:
 
-- ### `CMakeLists.txt`
+- ### CMakeLists.txt
   Configuration file for native compilation. 
   Must contain project with the same name, as specified in their Gradle configuration.
-- ### `include/api.h`
+- ### [include/api.h](c_header.md)
   Header file that contains generated API functions and structures.
   It is regenerated each time the Gradle project is synced.
   Native project must implement this header.
-- ### `api.ndl`
+- ### [api.ndl](ndl_file.md)
   File that declares how the API looks. Uses NDL syntax.
 
 ## Properties
