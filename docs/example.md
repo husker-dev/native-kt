@@ -1,8 +1,10 @@
 
 # Step-by-step example
 
+### 1. Prepare system
+Follow [these](requirements) instructions to prepare your system for native compilations.
 
-### 1. Project creation
+### 2. Project creation
 
 Create new Kotlin project in IDEA
 
@@ -12,7 +14,7 @@ Create new Kotlin project in IDEA
 
 ![img.png](images/example/create_project.png)
 
-### 2. Reconfigure to Multiplatform (optional)
+### 3. Reconfigure to Multiplatform (optional)
 
 !!! note
     By default, IDEA creates a Kotlin/JVM project. 
@@ -49,7 +51,7 @@ kotlin {
 Clean content in `src` and create `commonMain/kotlin/` directory
 
 
-## 3. Declare natives
+### 4. Declare natives
 
 Add `native-kt` plugin:
 ```kotlin
@@ -77,7 +79,7 @@ Synchronize Gradle and call task:
 :cmakeInitMyNatives
 ```
 
-## 4. Call function
+### 5. Call function
 
 Create Kotlin file and write main function:
 
@@ -94,7 +96,7 @@ suspend fun main() {
 }
 ```
 
-## 5. Further development.
+### Further development.
 
 You can now edit the `natives/myNatives/api.ndl` file, sync Gradle to generate code, 
 and use it.
