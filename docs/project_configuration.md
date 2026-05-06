@@ -8,7 +8,7 @@ Add the plugin to your `build.gradle` file:
 
 ```kotlin title="build.gradle.kts"
 plugins {
-   id("com.huskerdev.native-kt") version "2.0.0"
+   id("com.huskerdev.native-kt") version "2.0.2"
 }
 ```
 

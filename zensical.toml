@@ -22,6 +22,7 @@ nav = [
         {"Details" = [
             {"Memory model" = "memory_model.md"},
             {"Critical" = "critical.md"},
+            {"Publishing" = "publishing.md"},
         ]},
     ]},
     {"Example" = "example.md"}

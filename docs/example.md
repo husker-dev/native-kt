@@ -55,17 +55,19 @@ Add `native-kt` plugin:
 ```kotlin
 plugins {
     // ...
-    id("com.huskerdev.native-kt") version "2.0.0"
+    id("com.huskerdev.native-kt") version "2.0.2"
 }
 ```
 
-And declare new native project:
+Declare new native project `myNatives` and disable `useForeignApi` (for JDK < 23):
 ```kotlin
 kotlin {
     // ...
 }
 
 natives {
+    useForeignApi = false
+    
     create("myNatives")
 }
 ```
