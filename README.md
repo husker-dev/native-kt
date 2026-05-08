@@ -13,5 +13,5 @@
 <a href="https://github.com/husker-dev/native-kt/releases/latest"><img src="https://img.shields.io/github/v/release/husker-dev/native-kt?style=flat-square"></a>
 
 ## Docs
-https://husker-dev.github.io/native-kt/
+https://native-kt.com/
 
