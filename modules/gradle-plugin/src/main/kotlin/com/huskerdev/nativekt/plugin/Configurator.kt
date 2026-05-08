@@ -10,7 +10,6 @@ import com.huskerdev.nativekt.utils.getHeaderFile
 import com.huskerdev.nativekt.utils.idl
 import com.huskerdev.nativekt.utils.getNDLFile
 import com.huskerdev.webidl.resolver.IdlResolver
-import org.gradle.api.Project
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.internal.extensions.stdlib.capitalized
 import org.gradle.kotlin.dsl.the
@@ -28,9 +27,11 @@ import java.io.File
 import kotlin.collections.set
 import kotlin.concurrent.getOrSet
 
-private val tmpCommonTasks = ThreadLocal<MutableMap<Project, TaskProvider<*>>>()
+private const val RUNTIME_DEPENDENCY = "com.huskerdev:native-kt-runtime:${NativeKtInfo.VERSION}"
 
-private fun NativeKtPlugin.validateModule(module: NativeModule): IdlResolver? {
+private val tmpCommonTasks = ThreadLocal<MutableMap<NativeProject, TaskProvider<*>>>()
+
+private fun NativeKtPlugin.validateModule(module: NativeProject): IdlResolver? {
     val initTask = project.tasks.register("cmakeInit${module.name.capitalized()}", InitTask::class.java)
     initTask.get().apply {
         this.dir = module.dir(project).absolutePath
@@ -57,82 +58,101 @@ private fun NativeKtPlugin.validateModule(module: NativeModule): IdlResolver? {
 }
 
 fun NativeKtPlugin.configureKotlin(
-    cmakeDir: File,
+    nativesBuildDir: File,
     srcGenDir: File
 ){
     extension.whenObjectAdded {
-        val module = this as NativeModule
+        val module = this as NativeProject
 
         val idl = validateModule(module)
             ?: return@whenObjectAdded
 
-        val cmakeModuleDir = File(cmakeDir, module.name)
-        val srcGenModuleDir = File(srcGenDir, module.name)
+        val nativesBuildDir = File(nativesBuildDir, module.name)
+        val srcGenDir = File(srcGenDir, module.name)
 
         when(module) {
-            is Multiplatform -> configureMultiplatform(idl, cmakeModuleDir, srcGenModuleDir, module)
-            is SinglePlatform -> configureSinglePlatform(idl, cmakeModuleDir, srcGenModuleDir, module)
+            is Multiplatform -> configureMultiplatform(idl, nativesBuildDir, srcGenDir, module)
+            is SinglePlatform -> configureSinglePlatform(idl, nativesBuildDir, srcGenDir, module)
         }
 
-        HeaderPrinter(
-            idl = idl,
-            target = module.getHeaderFile(project),
-            guardName = module.name.uppercase()
-        )
+        when(module.buildSystem) {
+            is BuildSystem.CMake -> {
+                HeaderPrinter(
+                    idl = idl,
+                    target = module.getHeaderFile(project),
+                    guardName = module.name.uppercase()
+                )
+            }
+            is BuildSystem.Cargo -> {
+
+            }
+        }
     }
 }
 
 fun NativeKtPlugin.configureAndroid(
-    cmakeDir: File,
+    nativesBuildDir: File,
     srcGenDir: File
 ) {
     val androidComponents = project.the<KotlinMultiplatformAndroidComponentsExtension>()
 
     androidComponents.finalizeDsl { androidExtension ->
         extension.forEach { module ->
-            module as NativeModule
+            module as NativeProject
 
             if(!module.getNDLFile(project).exists())
                 return@forEach
 
             val idl = module.idl(project)
-            val cmakeModuleDir = File(cmakeDir, module.name)
-            val srcGenModuleDir = File(srcGenDir, module.name)
+
+            val nativesBuildDir = File(nativesBuildDir, module.name)
+            val srcGenDir = File(srcGenDir, module.name)
 
             when(module) {
                 is Multiplatform -> {
-                    val commonTask = tmpCommonTasks.get()?.remove(project)
+                    val commonTask = tmpCommonTasks.get()?.remove(module)
                     module.getActiveSourceSets(kotlin)
-                        .filter { getTargetType(kotlin, it) == TargetType.ANDROID }
+                        .filter {
+                            getTargetType(kotlin, it) == TargetType.ANDROID
+                        }
                         .forEach {
-                            configureAndroidSourceSet(project, extension as NativeKtAndroidInterface, androidExtension, commonTask, idl, module, it, srcGenModuleDir, cmakeModuleDir, true)
+                            configureAndroidSourceSet(project, extension as NativeKtAndroidInterface, androidExtension, commonTask, idl, module, it, srcGenDir, nativesBuildDir, true)
                         }
                 }
                 is SinglePlatform -> {
                     val sourceSet = kotlin.findSourceSet(module.targetSourceSet)
 
                     if(getTargetType(kotlin, sourceSet) == TargetType.ANDROID)
-                        configureAndroidSourceSet(project, extension as NativeKtAndroidInterface, androidExtension, null, idl, module, sourceSet, srcGenModuleDir, cmakeModuleDir, false)
+                        configureAndroidSourceSet(project, extension as NativeKtAndroidInterface, androidExtension, null, idl, module, sourceSet, srcGenDir, nativesBuildDir, false)
                 }
             }
         }
+        tmpCommonTasks.get()?.clear()
     }
-    tmpCommonTasks.get()?.clear()
 }
 
 private fun NativeKtPlugin.configureSinglePlatform(
     idl: IdlResolver,
-    cmakeRootDir: File,
+    nativesBuildDir: File,
     srcGenDir: File,
     module: SinglePlatform
 ){
+    val extension = extension as NativeKtCommonInterface
     val sourceSet = kotlin.findSourceSet(module.targetSourceSet)
-    configureKotlinSourceSet(kotlin, null, idl, cmakeRootDir, srcGenDir, module, sourceSet, false)
+
+    // Apply runtime
+    if(extension.applyRuntime) {
+        sourceSet.dependencies {
+            implementation(RUNTIME_DEPENDENCY)
+        }
+    }
+
+    configureKotlinSourceSet(kotlin, null, idl, nativesBuildDir, srcGenDir, module, sourceSet, false)
 }
 
 private fun NativeKtPlugin.configureMultiplatform(
     idl: IdlResolver,
-    cmakeRootDir: File,
+    nativesBuildDir: File,
     srcGenDir: File,
     module: Multiplatform
 ){
@@ -152,17 +172,17 @@ private fun NativeKtPlugin.configureMultiplatform(
         sourceSet = commonSourceSet,
         srcRootDir = srcGenDir
     )
-    tmpCommonTasks.getOrSet { hashMapOf() }[project] = commonTask
+    tmpCommonTasks.getOrSet { hashMapOf() }[module] = commonTask
 
     // Apply runtime
     if(extension.applyRuntime) {
         commonSourceSet.dependencies {
-            implementation("com.huskerdev:native-kt-runtime:${NativeKtInfo.VERSION}")
+            implementation(RUNTIME_DEPENDENCY)
         }
     }
 
     targetSourceSets.forEach {
-        configureKotlinSourceSet(kotlin, commonTask, idl, cmakeRootDir, srcGenDir, module, it, true)
+        configureKotlinSourceSet(kotlin, commonTask, idl, nativesBuildDir, srcGenDir, module, it, true)
     }
 
     stubSourceSets.forEach {
@@ -174,17 +194,17 @@ private fun NativeKtPlugin.configureKotlinSourceSet(
     kotlin: KotlinProjectExtension,
     commonTask: TaskProvider<*>?,
     idl: IdlResolver,
-    cmakeRootDir: File,
+    nativesBuildDir: File,
     srcGenDir: File,
-    module: NativeModule,
+    module: NativeProject,
     sourceSet: KotlinSourceSet,
     expectActual: Boolean
 ) = when(val targetType = getTargetType(kotlin, sourceSet)) {
-    TargetType.JVM -> configureJvm(project, extension as NativeKtJvmInterface, commonTask, idl, module, sourceSet, srcGenDir, cmakeRootDir, expectActual)
-    TargetType.JS -> configureJs(project, extension as NativeKtJsInterface, commonTask, idl, module, sourceSet, srcGenDir, cmakeRootDir, expectActual, false)
-    TargetType.WASM_JS -> configureJs(project, extension as NativeKtJsInterface, commonTask, idl, module, sourceSet, srcGenDir, cmakeRootDir, expectActual, true)
+    TargetType.JVM -> configureJvm(project, extension as NativeKtJvmInterface, commonTask, idl, module, sourceSet, srcGenDir, nativesBuildDir, expectActual)
+    TargetType.JS -> configureJs(project, extension as NativeKtJsInterface, commonTask, idl, module, sourceSet, srcGenDir, nativesBuildDir, expectActual, false)
+    TargetType.WASM_JS -> configureJs(project, extension as NativeKtJsInterface, commonTask, idl, module, sourceSet, srcGenDir, nativesBuildDir, expectActual, true)
     TargetType.ANDROID -> { }
-    else -> configureNative(project, extension as NativeKtNativeInterface, commonTask, idl, module, sourceSet, targetType, srcGenDir, cmakeRootDir, expectActual)
+    else -> configureNative(project, extension as NativeKtNativeInterface, commonTask, idl, module, sourceSet, targetType, srcGenDir, nativesBuildDir, expectActual)
 }
 
 private fun Multiplatform.getActiveSourceSets(kotlin: KotlinProjectExtension): List<KotlinSourceSet> {

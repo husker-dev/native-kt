@@ -27,31 +27,31 @@ class NativeKtPlugin: Plugin<Project> {
         this.project = project
 
         val buildDir = project.layout.buildDirectory.get().asFile
-        val cmakeDir = File(buildDir, "cmake")
+        val nativesBuildDir = File(buildDir, "nativekt")
         val srcGenDir = File(buildDir, "generated/natives")
 
         project.plugins.withId("com.android.kotlin.multiplatform.library") {
-            configureAndroid(cmakeDir, srcGenDir)
+            configureAndroid(nativesBuildDir, srcGenDir)
         }
 
         project.plugins.withId("org.jetbrains.kotlin.multiplatform") {
             extension = project.extensions.create("natives", NativeKtMultiplatformExtension::class.java)
-            configureKotlin(cmakeDir, srcGenDir)
+            configureKotlin(nativesBuildDir, srcGenDir)
         }
 
         project.plugins.withId("org.jetbrains.kotlin.jvm") {
             extension = project.extensions.create("natives", NativeKtJvmExtension::class.java)
-            configureKotlin(cmakeDir, srcGenDir)
+            configureKotlin(nativesBuildDir, srcGenDir)
         }
 
         project.plugins.withId("org.jetbrains.kotlin.js") {
             extension = project.extensions.create("natives", NativeKtJsExtension::class.java)
-            configureKotlin(cmakeDir, srcGenDir)
+            configureKotlin(nativesBuildDir, srcGenDir)
         }
 
         project.afterEvaluate {
             val content = extension.joinToString(separator = "\n") {
-                (it as NativeModule).dir(project).absolutePath
+                (it as NativeProject).dir(project).absolutePath
             }
             val file = File(project.layout.buildDirectory.get().asFile, "nativekt.txt")
 

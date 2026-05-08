@@ -31,10 +31,10 @@ internal fun configureAndroidSourceSet(
     androidExtension: KotlinMultiplatformAndroidLibraryExtension,
     commonTask: TaskProvider<*>?,
     idl: IdlResolver,
-    module: NativeModule,
+    module: NativeProject,
     sourceSet: KotlinSourceSet,
-    srcRootDir: File,
-    cmakeRootDir: File,
+    srcGenDir: File,
+    nativesBuildDir: File,
     expectActual: Boolean
 ) {
     val androidComponents = project.the<KotlinMultiplatformAndroidComponentsExtension>()
@@ -64,17 +64,15 @@ internal fun configureAndroidSourceSet(
         }
     }
 
-    val toolchain = File(ndkDir, "build/cmake/android.toolchain.cmake")
+    // Kotlin sources
+    val srcDir = File(srcGenDir, "android/src")
+    val jniLibsDir = File(srcGenDir, "android/jniLibs")
 
-    // src dirs
+    val kotlinFile = srcDir
+        .resolve(module.classPath.replace(".", "/"))
+        .resolve("${module.name}.android.kt")
 
-    val srcDir = File(srcRootDir, "android/src")
-    val jniLibsDir = File(srcRootDir, "android/jniLibs")
-
-    // CMake dirs
-
-    val cmakeDir = File(cmakeRootDir, "android")
-    val cmakeBuildDir = File(cmakeDir, "out")
+    val nativesBuildDir = File(nativesBuildDir, "android")
 
     // Prepare task
 
@@ -84,25 +82,23 @@ internal fun configureAndroidSourceSet(
     )
     prepareTask.get().also {
         it.inputs.dir(module.dir(project))
-        it.outputs.dirs(cmakeDir, srcDir)
+        it.outputs.dirs(nativesBuildDir, srcDir)
+
+        it.idl                      = Json.encodeToString(idl)
+
+        it.moduleName               = module.name
+        it.moduleClasspath          = module.classPath
 
         it.useCoroutines            = extension.useCoroutines
         it.expectActual             = expectActual
         it.useAndroidCriticalNative = extension.useAndroidCriticalNative
 
-        it.idl                      = Json.encodeToString(idl)
-        it.moduleName               = module.name
-        it.moduleClasspath          = module.classPath
+        it.nativesBuildDir          = nativesBuildDir.absolutePath
 
-        it.srcDir                   = srcDir.absolutePath
-        it.jniLibsDir               = jniLibsDir.absolutePath
+        it.kotlinFile               = kotlinFile.absolutePath
+        it.projectDir               = module.dir(project).absolutePath
 
-        it.cmakeDir                 = cmakeDir.absolutePath
-        it.cmakeBuildDir            = cmakeBuildDir.absolutePath
-        it.srcFile = srcDir
-            .resolve(module.classPath.replace(".", "/"))
-            .resolve("${module.name}.android.kt").absolutePath
-        it.nativeProjectDir         = module.dir(project).absolutePath
+        it.buildSystem              = module.buildSystem
     }
     if(commonTask != null)
         prepareTask.dependsOn(commonTask)
@@ -118,18 +114,18 @@ internal fun configureAndroidSourceSet(
     )
     compileTask.get().also {
         it.inputs.dir(module.dir(project))
-        it.outputs.dirs(cmakeDir)
+        it.outputs.dirs(nativesBuildDir)
 
         it.outputFolder.set(jniLibsDir)
 
-        it.cmakeArgs      = LinkedHashSet(module.cmakeArgs)
-        it.cmakeBuildType = module.buildType
-        it.androidTargets = extension.androidTargets.toTypedArray()
-        it.cmakeDir       = cmakeDir.absolutePath
-        it.cmakeBuildDir  = cmakeBuildDir.absolutePath
-        it.moduleName     = module.name
-        it.toolchain      = toolchain.absolutePath
-        it.compileSdk     = androidExtension.compileSdk!!
+        it.androidTargets   = extension.androidTargets.toTypedArray()
+        it.moduleName       = module.name
+        it.compileSdk       = androidExtension.compileSdk!!
+        it.ndkDir           = ndkDir.absolutePath
+
+        it.nativesBuildDir  = nativesBuildDir.absolutePath
+
+        it.buildSystem      = module.buildSystem
     }
     compileTask.dependsOn(prepareTask)
 
@@ -157,43 +153,23 @@ private abstract class PrepareNativesAndroid: DefaultTask() {
     @get:Input abstract var expectActual: Boolean
     @get:Input abstract var useAndroidCriticalNative: Boolean
 
-    @get:Input abstract var srcDir: String
-    @get:Input abstract var jniLibsDir: String
+    @get:Input abstract var nativesBuildDir: String
 
-    @get:Input abstract var cmakeDir: String
-    @get:Input abstract var cmakeBuildDir: String
-    @get:Input abstract var srcFile: String
-    @get:Input abstract var nativeProjectDir: String
+    @get:Input abstract var kotlinFile: String
+    @get:Input abstract var projectDir: String
+
+    @get:Input abstract var buildSystem: BuildSystem
 
     init {
         doLast {
-            File(srcDir).fresh()
-            File(jniLibsDir).fresh()
-
             val idl = Json.decodeFromString<IdlResolver>(idl)
 
-            val cmakeDir = File(cmakeDir)
-            cmakeDir.mkdirs()
-
-            // Create CMakeLists.txt
-            File(cmakeDir, "CMakeLists.txt").writeText($$"""
-                cmake_minimum_required(VERSION 3.15)
-        
-                project("$$moduleName")
-        
-                add_subdirectory("$${
-                    nativeProjectDir.replace("\\", "/")
-                }" "$${
-                    cmakeBuildDir.replace("\\", "/")
-                }/sub/${ANDROID_ABI}")
-        
-                add_library(lib$$moduleName SHARED $<TARGET_OBJECTS:$$moduleName> jni_bindings.c)
-            """.trimIndent())
+            val srcList = arrayListOf("jni_bindings.c")
 
             // Create Kotlin/Android bindings
             KotlinAndroidPrinter(
                 idl = idl,
-                target = File(srcFile),
+                target = File(kotlinFile),
                 classPath = moduleClasspath,
                 moduleName = moduleName,
                 useCoroutines = useCoroutines,
@@ -203,7 +179,7 @@ private abstract class PrepareNativesAndroid: DefaultTask() {
 
             CJniUtilsPrinter(
                 idl = idl,
-                target = File(cmakeDir, "jni_utils.h"),
+                target = File(nativesBuildDir, "jni_utils.h"),
                 classPath = moduleClasspath,
                 name = "${moduleName.capitalized()}JNI",
                 isAndroid = true
@@ -211,7 +187,7 @@ private abstract class PrepareNativesAndroid: DefaultTask() {
 
             CJniPrinter(
                 idl = idl,
-                target = File(cmakeDir, "jni_bindings.c"),
+                target = File(nativesBuildDir, "jni_bindings.c"),
                 classPath = moduleClasspath,
                 name = "${moduleName.capitalized()}JNI",
                 isAndroid = true,
@@ -219,14 +195,35 @@ private abstract class PrepareNativesAndroid: DefaultTask() {
             )
 
             CJniArenaPrinter(
-                target = File(cmakeDir, "jni_arena.h"),
+                target = File(nativesBuildDir, "jni_arena.h"),
                 callbacks = idl.callbacks.isNotEmpty()
             )
 
             HeaderPrinter(
                 idl = idl,
-                target = File(cmakeDir, "api.h")
+                target = File(nativesBuildDir, "api.h")
             )
+
+            when(buildSystem) {
+                is BuildSystem.CMake -> {
+                    File(nativesBuildDir, "CMakeLists.txt").writeText($$"""
+                        cmake_minimum_required(VERSION 3.15)
+                
+                        project("$$moduleName")
+                
+                        add_subdirectory("$${
+                            projectDir.replace("\\", "/")
+                        }" "$${
+                            nativesBuildDir.replace("\\", "/")
+                        }/sub/${ANDROID_ABI}")
+                
+                        add_library(lib$$moduleName SHARED $<TARGET_OBJECTS:$$moduleName> $${srcList.joinToString(" ")})
+                    """.trimIndent())
+                }
+                is BuildSystem.Cargo -> {
+
+                }
+            }
         }
     }
 }
@@ -237,41 +234,50 @@ private abstract class CompileNativesAndroid @Inject constructor(
     @get:OutputDirectory
     abstract val outputFolder: DirectoryProperty
 
-    @get:Input abstract var cmakeArgs: LinkedHashSet<String>
-    @get:Input abstract var cmakeBuildType: CMakeBuildType
     @get:Input abstract var androidTargets: Array<String>
-    @get:Input abstract var cmakeDir: String
-    @get:Input abstract var cmakeBuildDir: String
     @get:Input abstract var moduleName: String
-    @get:Input abstract var toolchain: String
     @get:Input abstract var compileSdk: Int
+    @get:Input abstract var ndkDir: String
+
+    @get:Input abstract var nativesBuildDir: String
+
+    @get:Input abstract var buildSystem: BuildSystem
 
     init {
         group = NATIVE_TASK_GROUP
         doLast {
-            androidTargets.forEach { abi ->
-                val targetBuildDir = File(cmakeBuildDir, abi)
+            when(val buildSystem = buildSystem) {
+                is BuildSystem.CMake -> {
+                    val toolchain = File(ndkDir, "build/cmake/android.toolchain.cmake")
 
-                // Generate CMake build
-                cmakeGen(execOps,
-                    dir = File(cmakeDir),
-                    buildDir = targetBuildDir,
-                    buildType = cmakeBuildType,
-                    args = LinkedHashSet(cmakeArgs).apply {
-                        this += "-DCMAKE_TOOLCHAIN_FILE=\"$toolchain\""
-                        this += "-DANDROID_ABI=$abi"
-                        this += "-DANDROID_PLATFORM=android-$compileSdk"
+                    androidTargets.forEach { abi ->
+                        val targetBuildDir = File(nativesBuildDir, abi)
+
+                        // Generate CMake build
+                        cmakeGen(execOps,
+                            dir = File(nativesBuildDir),
+                            buildDir = targetBuildDir,
+                            buildType = buildSystem.buildType,
+                            args = LinkedHashSet(buildSystem.args).apply {
+                                this += "-DCMAKE_TOOLCHAIN_FILE=\"$toolchain\""
+                                this += "-DANDROID_ABI=$abi"
+                                this += "-DANDROID_PLATFORM=android-$compileSdk"
+                            }
+                        )
+
+                        // Build
+                        cmakeBuild(execOps, targetBuildDir)
+
+                        // Copy library to jniLibs dir
+                        File(targetBuildDir, "liblib$moduleName.so").copyTo(
+                            File(outputFolder.get().asFile, "$abi/lib$moduleName.so"),
+                            overwrite = true
+                        )
                     }
-                )
+                }
+                is BuildSystem.Cargo -> {
 
-                // Build
-                cmakeBuild(execOps, targetBuildDir)
-
-                // Copy library to jniLibs dir
-                File(targetBuildDir, "liblib$moduleName.so").copyTo(
-                    File(outputFolder.get().asFile, "$abi/lib$moduleName.so"),
-                    overwrite = true
-                )
+                }
             }
         }
     }

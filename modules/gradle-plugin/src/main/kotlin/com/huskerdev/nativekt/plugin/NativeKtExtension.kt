@@ -5,6 +5,8 @@ import org.gradle.api.Named
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.jvm.tasks.Jar
+import java.io.File
+import java.io.Serializable
 import javax.inject.Inject
 
 const val NDK_LATEST = "~latest~"
@@ -12,7 +14,7 @@ const val NDK_LATEST = "~latest~"
 @Suppress("JavaDefaultMethodsNotOverriddenByDelegation")
 open class NativeKtMultiplatformExtension @Inject constructor(
     objects: ObjectFactory
-): ExtensiblePolymorphicDomainObjectContainer<NativeModule> by objects.polymorphicDomainObjectContainer(NativeModule::class.java),
+): ExtensiblePolymorphicDomainObjectContainer<NativeProject> by objects.polymorphicDomainObjectContainer(NativeProject::class.java),
     NativeKtJvmInterface, NativeKtJsInterface, NativeKtAndroidInterface, NativeKtNativeInterface, NativeKtCommonInterface
 {
     init {
@@ -22,7 +24,7 @@ open class NativeKtMultiplatformExtension @Inject constructor(
         registerFactory(SinglePlatform::class.java) { name ->
             objects.newInstance(SinglePlatform::class.java, name)
         }
-        registerFactory(NativeModule::class.java) { name ->
+        registerFactory(NativeProject::class.java) { name ->
             objects.newInstance(Multiplatform::class.java, name)
         }
     }
@@ -130,14 +132,49 @@ interface NativeKtCommonInterface {
 }
 
 // ==============
+//  Build system
+// ==============
+
+sealed interface BuildSystem: Serializable {
+
+    open class CMake: BuildSystem {
+        /**
+         * Generated header file.
+         *
+         * Default value: `natives/[name]/include/api.h`
+         */
+        var headerFile: File? = null
+
+        /**
+         * CMake build type.
+         *
+         * Default value: `RELEASE`
+         */
+        var buildType: CMakeBuildType = CMakeBuildType.RELEASE
+
+        /**
+         * Cmake command-line args
+         */
+        var args = arrayListOf<String>()
+    }
+
+    open class Cargo: BuildSystem {
+
+    }
+}
+
+// ==============
 //    Modules
 // ==============
 
-sealed class NativeModule @Inject constructor(
+sealed class NativeProject @Inject constructor(
     @get:JvmName("_name")
     val name: String
 ): Named {
     override fun getName(): String = name
+
+    var buildSystem: BuildSystem = BuildSystem.CMake()
+        private set
 
     /**
      * Directory with CMake project.
@@ -147,13 +184,6 @@ sealed class NativeModule @Inject constructor(
     var projectDir: RegularFileProperty? = null
 
     /**
-     * Generated header file.
-     *
-     * Default value: `natives/[name]/include/api.h`
-     */
-    var headerFile: RegularFileProperty? = null
-
-    /**
      * NDL file
      *
      * Default value: `natives/[name]/api.ndl`
@@ -161,28 +191,28 @@ sealed class NativeModule @Inject constructor(
     var ndlFile: RegularFileProperty? = null
 
     /**
-     * CMake build type.
-     *
-     * Default value: `RELEASE`
-     */
-    var buildType: CMakeBuildType = CMakeBuildType.RELEASE
-
-    /**
-     * Cmake command-line args
-     */
-    var cmakeArgs = arrayListOf<String>()
-
-    /**
      * Classpath where bindings will be generated.
      *
      * Default value: `natives.[name]`
      */
     var classPath: String = "natives.$name"
+
+    fun cmake(configure: BuildSystem.CMake.() -> Unit = {}) {
+        val buildSystem = BuildSystem.CMake()
+        buildSystem.configure()
+        this.buildSystem = buildSystem
+    }
+
+    fun cargo(configure: BuildSystem.Cargo.() -> Unit = {}) {
+        val buildSystem = BuildSystem.Cargo()
+        buildSystem.configure()
+        this.buildSystem = buildSystem
+    }
 }
 
 open class Multiplatform @Inject constructor(
     name: String
-): NativeModule(name) {
+): NativeProject(name) {
 
     /**
      * SourceSet that will have 'expect' api
@@ -234,7 +264,7 @@ open class Multiplatform @Inject constructor(
 
 open class SinglePlatform @Inject constructor(
     name: String
-): NativeModule(name) {
+): NativeProject(name) {
 
     /**
      * SourceSet with implementation

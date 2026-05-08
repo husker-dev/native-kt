@@ -2,7 +2,8 @@ package com.huskerdev.nativekt.utils
 
 import com.huskerdev.nativekt.NDLEnv
 import com.huskerdev.nativekt.TargetType
-import com.huskerdev.nativekt.plugin.NativeModule
+import com.huskerdev.nativekt.plugin.BuildSystem
+import com.huskerdev.nativekt.plugin.NativeProject
 import com.huskerdev.webidl.WebIDL
 import com.huskerdev.webidl.jvm.iterator
 import com.huskerdev.webidl.resolver.*
@@ -14,19 +15,19 @@ import org.gradle.process.ExecOperations
 import java.io.File
 import java.io.OutputStream
 
-fun NativeModule.dir(project: Project): File =
+fun NativeProject.dir(project: Project): File =
     projectDir?.get()?.asFile
         ?: project.file("natives/$name")
 
-fun NativeModule.getNDLFile(project: Project): File =
+fun NativeProject.getNDLFile(project: Project): File =
     ndlFile?.get()?.asFile
         ?: File(dir(project), "api.ndl")
 
-fun NativeModule.getHeaderFile(project: Project): File =
-    headerFile?.get()?.asFile
+fun NativeProject.getHeaderFile(project: Project): File =
+    (buildSystem as BuildSystem.CMake).headerFile
         ?: File(dir(project), "include/api.h")
 
-fun NativeModule.idl(project: Project) = WebIDL.resolve(
+fun NativeProject.idl(project: Project) = WebIDL.resolve(
     iterable = getNDLFile(project).reader().iterator(),
     env = NDLEnv()
 )

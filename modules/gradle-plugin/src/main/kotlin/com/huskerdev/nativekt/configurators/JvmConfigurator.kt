@@ -1,9 +1,9 @@
 package com.huskerdev.nativekt.configurators
 
-import com.huskerdev.nativekt.plugin.CMakeBuildType
+import com.huskerdev.nativekt.plugin.BuildSystem
 import com.huskerdev.nativekt.plugin.NATIVE_TASK_GROUP
 import com.huskerdev.nativekt.plugin.NativeKtJvmInterface
-import com.huskerdev.nativekt.plugin.NativeModule
+import com.huskerdev.nativekt.plugin.NativeProject
 import com.huskerdev.nativekt.printers.HeaderPrinter
 import com.huskerdev.nativekt.printers.jvm.*
 import com.huskerdev.nativekt.utils.*
@@ -50,10 +50,10 @@ internal fun configureJvm(
     extension: NativeKtJvmInterface,
     commonTask: TaskProvider<*>?,
     idl: IdlResolver,
-    module: NativeModule,
+    module: NativeProject,
     sourceSet: KotlinSourceSet,
-    srcRootDir: File,
-    cmakeRootDir: File,
+    srcGenDir: File,
+    nativesBuildDir: File,
     expectActual: Boolean
 ) {
     if(!extension.useJNI && !extension.useForeignApi && !extension.useJVMCI)
@@ -81,13 +81,15 @@ internal fun configureJvm(
     val libFullFileName = "lib${module.name}-$libArch.${libExtension}"
 
     // src dirs
-    val srcDir = File(srcRootDir, "jvm/src")
-    val libsDir = File(srcRootDir, "jvm/libs")
+    val srcDir = File(srcGenDir, "jvm/src")
+    val libsDir = File(srcGenDir, "jvm/libs")
     val targetLibFile = File(libsDir, libFullFileName)
 
-    // cmake dirs
-    val cmakeDir = File(cmakeRootDir, "jvm")
-    val cmakeBuildDir = File(cmakeDir, "${platformName()}${libArch.capitalized()}")
+    val nativesBuildDir = File(nativesBuildDir, "jvm")
+
+    val kotlinFile = srcDir
+        .resolve(module.classPath.replace(".", "/"))
+        .resolve("${module.name}.jvm.kt")
 
     // Prepare task
 
@@ -97,7 +99,7 @@ internal fun configureJvm(
     )
     prepareTask.get().also {
         it.inputs.dir(module.dir(project))
-        it.outputs.dirs(cmakeDir, srcDir)
+        it.outputs.dirs(nativesBuildDir, srcDir)
 
         it.idl                  = Json.encodeToString(idl)
 
@@ -111,15 +113,15 @@ internal fun configureJvm(
         it.useCoroutines        = extension.useCoroutines
         it.expectActual         = expectActual
 
-        it.srcDir               = srcDir.absolutePath
+        it.libArch              = libArch
+
+        it.projectDir           = module.dir(project).absolutePath
+        it.nativesBuildDir      = nativesBuildDir.absolutePath
+
+        it.kotlinFile           = kotlinFile.absolutePath
         it.libsDir              = libsDir.absolutePath
 
-        it.srcFile = srcDir
-            .resolve(module.classPath.replace(".", "/"))
-            .resolve("${module.name}.jvm.kt").absolutePath
-        it.cmakeDir             = cmakeDir.absolutePath
-        it.cmakeBuildDir        = cmakeBuildDir.absolutePath
-        it.nativeProjectDir     = module.dir(project).absolutePath
+        it.buildSystem          = module.buildSystem
     }
     if(commonTask != null)
         prepareTask.get().dependsOn(commonTask)
@@ -131,15 +133,17 @@ internal fun configureJvm(
 
     val compileTask = project.tasks.register("compileNatives${module.name.capitalized()}Jvm", CompileNativesJvm::class.java).get().also {
         it.inputs.dir(module.dir(project))
-        it.outputs.dir(cmakeDir)
+        it.outputs.dir(nativesBuildDir)
 
-        it.cmakeArgs            = LinkedHashSet(module.cmakeArgs)
-        it.cmakeBuildType       = module.buildType
         it.useUniversalMacOSLib = extension.useUniversalMacOSLib
-        it.cmakeDir             = cmakeDir.absolutePath
-        it.cmakeBuildDir        = cmakeBuildDir.absolutePath
+
+        it.nativesBuildDir      = nativesBuildDir.absolutePath
         it.libOutFileName       = libOutFileName
         it.targetLibFile        = targetLibFile.absolutePath
+
+        it.libArch              = libArch
+
+        it.buildSystem          = module.buildSystem
     }
     compileTask.dependsOn(prepareTask)
 
@@ -172,48 +176,33 @@ private abstract class PrepareNativesJvm: DefaultTask() {
     @get:Input abstract var useCoroutines: Boolean
     @get:Input abstract var expectActual: Boolean
 
-    @get:Input abstract var srcDir: String
+    @get:Input abstract var libArch: String
+
+    @get:Input abstract var projectDir: String
+    @get:Input abstract var nativesBuildDir: String
+
+    @get:Input abstract var kotlinFile: String
     @get:Input abstract var libsDir: String
 
-    @get:Input abstract var srcFile: String
-    @get:Input abstract var cmakeDir: String
-    @get:Input abstract var cmakeBuildDir: String
-    @get:Input abstract var nativeProjectDir: String
+    @get:Input abstract var buildSystem: BuildSystem
 
     init {
         doLast {
-            File(srcDir).fresh()
             File(libsDir).fresh()
 
             val idl = Json.decodeFromString<IdlResolver>(idl)
 
-            val cmakeDir = File(cmakeDir)
-            cmakeDir.fresh()
+            val nativesBuildDir = File(nativesBuildDir)
+            nativesBuildDir.fresh()
 
             val srcList = arrayListOf<String>()
-            if(useJNI)
-                srcList += "jni_bindings.c"
-            if(useForeignApi || useJVMCI)
-                srcList += "externals.c"
+            val includeList = arrayListOf<String>()
 
-            File(cmakeDir, "CMakeLists.txt").writeText($$"""
-                cmake_minimum_required(VERSION 3.15)
-        
-                project("$$moduleName")
-        
-                add_subdirectory("$${nativeProjectDir.replace("\\", "/")}" 
-                    "$${File(cmakeBuildDir, "sub").absolutePath.replace("\\", "/")}")
-        
-                add_library(lib_$$moduleName SHARED $${srcList.joinToString(" ")})
-                
-                target_link_libraries(lib_$$moduleName PRIVATE $$moduleName)
-                
-                target_include_directories(lib_$$moduleName PRIVATE "include" "include/$${jdkPlatformName()}")
-            """.trimIndent())
+            // Generate all files
 
             KotlinJvmPrinter(
                 idl = idl,
-                target = File(srcFile),
+                target = File(kotlinFile),
                 classPath = moduleClasspath,
                 moduleName = moduleName,
                 useCoroutines = useCoroutines,
@@ -225,9 +214,12 @@ private abstract class PrepareNativesJvm: DefaultTask() {
             )
 
             if(useJNI) {
+                srcList += "jni_bindings.c"
+                includeList += listOf("include", "include/${jdkPlatformName()}")
+
                 CJniUtilsPrinter(
                     idl = idl,
-                    target = File(cmakeDir, "jni_utils.h"),
+                    target = File(nativesBuildDir, "jni_utils.h"),
                     classPath = moduleClasspath,
                     name = "${moduleName.capitalized()}JNI",
                     isAndroid = false
@@ -235,7 +227,7 @@ private abstract class PrepareNativesJvm: DefaultTask() {
 
                 CJniPrinter(
                     idl = idl,
-                    target = File(cmakeDir, "jni_bindings.c"),
+                    target = File(nativesBuildDir, "jni_bindings.c"),
                     classPath = moduleClasspath,
                     name = "${moduleName.capitalized()}JNI",
                     isAndroid = false,
@@ -243,12 +235,12 @@ private abstract class PrepareNativesJvm: DefaultTask() {
                 )
 
                 CJniArenaPrinter(
-                    target = File(cmakeDir, "jni_arena.h"),
+                    target = File(nativesBuildDir, "jni_arena.h"),
                     callbacks = idl.callbacks.isNotEmpty()
                 )
 
                 // unpack jni headers
-                val includeDir = File(cmakeDir, "include")
+                val includeDir = File(nativesBuildDir, "include")
                 if(!includeDir.exists()) {
                     arrayOf(
                         "darwin/jawt_md.h",
@@ -279,17 +271,43 @@ private abstract class PrepareNativesJvm: DefaultTask() {
             }
 
             if(useForeignApi || useJVMCI) {
+                srcList += "externals.c"
+
                 CExportedPrinter(
                     idl = idl,
-                    target = File(cmakeDir, "externals.c"),
+                    target = File(nativesBuildDir, "externals.c"),
                     classPath = moduleClasspath
                 )
             }
 
             HeaderPrinter(
                 idl = idl,
-                target = File(cmakeDir, "api.h")
+                target = File(nativesBuildDir, "api.h")
             )
+
+            when(buildSystem) {
+                is BuildSystem.CMake -> {
+                    val platformBuildDir = File(nativesBuildDir, "${platformName()}${libArch.capitalized()}")
+
+                    File(nativesBuildDir, "CMakeLists.txt").writeText($$"""
+                        cmake_minimum_required(VERSION 3.15)
+                
+                        project("$$moduleName")
+                
+                        add_subdirectory("$${projectDir.replace("\\", "/")}" 
+                            "$${File(platformBuildDir, "sub").absolutePath.replace("\\", "/")}")
+                
+                        add_library(lib_$$moduleName SHARED $${srcList.joinToString(" ")})
+                        
+                        target_link_libraries(lib_$$moduleName PRIVATE $$moduleName)
+                        
+                        target_include_directories(lib_$$moduleName PRIVATE $${includeList.joinToString(" ") { "\"$it\"" }})
+                    """.trimIndent())
+                }
+                is BuildSystem.Cargo -> {
+
+                }
+            }
         }
     }
 }
@@ -297,42 +315,53 @@ private abstract class PrepareNativesJvm: DefaultTask() {
 private abstract class CompileNativesJvm @Inject constructor(
     private val execOps: ExecOperations,
 ): DefaultTask() {
-    @get:Input abstract var cmakeArgs: LinkedHashSet<String>
-    @get:Input abstract var cmakeBuildType: CMakeBuildType
     @get:Input abstract var useUniversalMacOSLib: Boolean
-    @get:Input abstract var cmakeDir: String
-    @get:Input abstract var cmakeBuildDir: String
+
+    @get:Input abstract var nativesBuildDir: String
     @get:Input abstract var libOutFileName: String
     @get:Input abstract var targetLibFile: String
+
+    @get:Input abstract var libArch: String
+
+    @get:Input abstract var buildSystem: BuildSystem
 
     init {
         group = NATIVE_TASK_GROUP
         doLast {
-            // Generate CMake build
-            val args = linkedSetOf(
-                "-DCMAKE_C_COMPILER=clang",
-                "-DCMAKE_CXX_COMPILER=clang++"
-            )
-            args += cmakeArgs
-            if (Os.isFamily(Os.FAMILY_MAC) && useUniversalMacOSLib) {
-                args += setOf(
-                    "-DCMAKE_C_FLAGS=\"-arch x86_64 -arch arm64\"",
-                    "-DCMAKE_CXX_FLAGS=\"-arch x86_64 -arch arm64\""
-                )
+            when(val buildSystem = buildSystem) {
+                is BuildSystem.CMake -> {
+                    val platformBuildDir = File(nativesBuildDir, "${platformName()}${libArch.capitalized()}")
+
+                    // Generate CMake build
+                    val args = LinkedHashSet(buildSystem.args)
+                    args += setOf(
+                        "-DCMAKE_C_COMPILER=clang",
+                        "-DCMAKE_CXX_COMPILER=clang++"
+                    )
+                    if (Os.isFamily(Os.FAMILY_MAC) && useUniversalMacOSLib) {
+                        args += setOf(
+                            "-DCMAKE_C_FLAGS=\"-arch x86_64 -arch arm64\"",
+                            "-DCMAKE_CXX_FLAGS=\"-arch x86_64 -arch arm64\""
+                        )
+                    }
+                    cmakeGen(execOps,
+                        dir = File(nativesBuildDir),
+                        buildDir = platformBuildDir,
+                        buildType = buildSystem.buildType,
+                        args = args
+                    )
+
+                    // Build
+                    cmakeBuild(execOps, platformBuildDir)
+
+                    platformBuildDir.listFiles()!!.first {
+                        it.name == libOutFileName
+                    }.copyTo(File(targetLibFile), overwrite = true)
+                }
+                is BuildSystem.Cargo -> {
+
+                }
             }
-            cmakeGen(execOps,
-                dir = File(cmakeDir),
-                buildDir = File(cmakeBuildDir),
-                buildType = cmakeBuildType,
-                args = args
-            )
-
-            // Build
-            cmakeBuild(execOps, File(cmakeBuildDir))
-
-            File(cmakeBuildDir).listFiles()!!.first {
-                it.name == libOutFileName
-            }.copyTo(File(targetLibFile), overwrite = true)
         }
     }
 }

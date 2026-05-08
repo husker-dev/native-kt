@@ -2,10 +2,11 @@ package com.huskerdev.nativekt.configurators
 
 import com.android.build.gradle.internal.tasks.factory.dependsOn
 import com.huskerdev.nativekt.TargetType
+import com.huskerdev.nativekt.plugin.BuildSystem
 import com.huskerdev.nativekt.plugin.CMakeBuildType
 import com.huskerdev.nativekt.plugin.NATIVE_TASK_GROUP
 import com.huskerdev.nativekt.plugin.NativeKtNativeInterface
-import com.huskerdev.nativekt.plugin.NativeModule
+import com.huskerdev.nativekt.plugin.NativeProject
 import com.huskerdev.nativekt.printers.HeaderPrinter
 import com.huskerdev.nativekt.printers.kn.DefPrinter
 import com.huskerdev.nativekt.printers.kn.KotlinNativePrinter
@@ -35,11 +36,11 @@ internal fun configureNative(
     extension: NativeKtNativeInterface,
     commonTask: TaskProvider<*>?,
     idl: IdlResolver,
-    module: NativeModule,
+    module: NativeProject,
     sourceSet: KotlinSourceSet,
     targetType: TargetType,
-    srcRootDir: File,
-    cmakeRootDir: File,
+    srcGenDir: File,
+    nativesBuildDir: File,
     expectActual: Boolean
 ) {
     val targetName = targetType.kotlinTarget
@@ -49,15 +50,15 @@ internal fun configureNative(
 
     val kotlin = project.the<KotlinMultiplatformExtension>()
 
-    // cmake paths
-    val cmakeDir = File(cmakeRootDir, "native/$targetName")
-    val cmakeBuildDir = File(cmakeDir, "build")
+    val nativesBuildDir = File(nativesBuildDir, "native/$targetName")
 
     // src paths
-    val srcTargetDir = File(srcRootDir, "native/$targetName")
+    val srcDir = File(srcGenDir, "native/$targetName/src")
+    val cinteropDir = File(srcGenDir, "native/$targetName/cinterop")
 
-    val srcDir = File(srcTargetDir, "src")
-    val cinteropDir = File(srcTargetDir, "cinterop")
+    val kotlinFile = srcDir
+        .resolve(module.classPath.replace(".", "/"))
+        .resolve("${module.name}.native.kt")
 
     val defFile = File(cinteropDir, "cinterop.def")
     val headerFile = File(cinteropDir, "header.h")
@@ -80,24 +81,24 @@ internal fun configureNative(
     prepareTask.get().also {
         it.defFile.set(defFile)
         it.inputs.dir(module.dir(project))
-        it.outputs.dirs(srcDir, cmakeDir)
+        it.outputs.dirs(srcDir, nativesBuildDir)
 
         it.idl              = Json.encodeToString(idl)
+
+        it.moduleName       = module.name
+        it.moduleClasspath  = module.classPath
+
         it.useCoroutines    = extension.useCoroutines
         it.expectActual     = expectActual
 
-        it.srcDir           = srcDir.absolutePath
-
-        it.cmakeArgs        = LinkedHashSet(module.cmakeArgs)
-        it.cmakeBuildType   = module.buildType
         it.targetType       = targetType
-        it.cmakeDir         = cmakeDir.absolutePath
-        it.cmakeBuildDir    = cmakeBuildDir.absolutePath
         it.headerFile       = headerFile.absolutePath
-        it.moduleName       = module.name
-        it.moduleClasspath  = module.classPath
-        it.srcFile          = srcDir.resolve(module.classPath.replace(".", "/")).resolve("${module.name}.native.kt").absolutePath
-        it.nativeProjectDir = module.dir(project).absolutePath.replace("\\", "/")
+        it.kotlinFile       = kotlinFile.absolutePath
+
+        it.projectDir       = module.dir(project).absolutePath.replace("\\", "/")
+        it.nativesBuildDir  = nativesBuildDir.absolutePath
+
+        it.buildSystem      = module.buildSystem
     }
     if(commonTask != null)
         prepareTask.dependsOn(commonTask)
@@ -121,9 +122,10 @@ internal fun configureNative(
     )
     compilationTask.get().also {
         it.inputs.dir(module.dir(project))
-        it.outputs.dirs(cmakeDir)
+        it.outputs.dirs(nativesBuildDir)
 
-        it.cmakeBuildDir = cmakeBuildDir.absolutePath
+        it.nativesBuildDir  = nativesBuildDir.absolutePath
+        it.buildSystem      = module.buildSystem
     }
     compilationTask.dependsOn(prepareTask)
 
@@ -247,11 +249,11 @@ private fun configureCMake(
         execOps.exec("xcrun --sdk $sdk --show-sdk-path", silent = true)
 
 
-    val args = linkedSetOf(
+    val args = LinkedHashSet(cmakeArgs)
+    args += linkedSetOf(
         "-DCMAKE_C_COMPILER=clang",
         "-DCMAKE_CXX_COMPILER=clang++",
     )
-    args += cmakeArgs
     args += when(targetType) {
         TargetType.IOS_SIMULATOR_ARM64 -> flags(
             "-arch arm64",
@@ -327,36 +329,31 @@ private abstract class PrepareNativesKn @Inject constructor(
     abstract val defFile: RegularFileProperty
 
     @get:Input abstract var shouldInit: Boolean
-
     @get:Input abstract var idl: String
+
+    @get:Input abstract var moduleName: String
+    @get:Input abstract var moduleClasspath: String
+
     @get:Input abstract var useCoroutines: Boolean
     @get:Input abstract var expectActual: Boolean
 
-    @get:Input abstract var srcDir: String
-
-    @get:Input abstract var cmakeArgs: LinkedHashSet<String>
-    @get:Input abstract var cmakeBuildType: CMakeBuildType
     @get:Input abstract var targetType: TargetType
-    @get:Input abstract var cmakeDir: String
-    @get:Input abstract var cmakeBuildDir: String
     @get:Input abstract var headerFile: String
-    @get:Input abstract var moduleName: String
-    @get:Input abstract var moduleClasspath: String
-    @get:Input abstract var srcFile: String
-    @get:Input abstract var nativeProjectDir: String
+    @get:Input abstract var kotlinFile: String
+
+    @get:Input abstract var projectDir: String
+    @get:Input abstract var nativesBuildDir: String
+
+    @get:Input abstract var buildSystem: BuildSystem
 
     init {
         doLast {
-            File(srcDir).fresh()
-
             val idl = Json.decodeFromString<IdlResolver>(idl)
 
-            val cmakeBuildDir = File(cmakeBuildDir)
-            val cmakeDir = File(cmakeDir)
             val headerFile = File(headerFile)
-
-            cmakeDir.mkdirs()
             headerFile.parentFile.mkdirs()
+
+            val linkerOpts = arrayListOf<String>()
 
             // Generate header
             HeaderPrinter(
@@ -365,33 +362,49 @@ private abstract class PrepareNativesKn @Inject constructor(
                 guardName = moduleName.uppercase(),
             )
 
-            // Create CMake file
-            File(cmakeDir, "CMakeLists.txt").writeText($$"""
-                cmake_minimum_required(VERSION 3.15)
-        
-                project("$$moduleName")
-        
-                add_subdirectory("$$nativeProjectDir" "$${
-                File(cmakeBuildDir, "common").absolutePath.replace("\\", "/")
-            }")
+            when(val buildSystem = buildSystem) {
+                is BuildSystem.CMake -> {
+                    val buildDir = File(nativesBuildDir, "build")
+
+                    // Create CMake file
+                    File(nativesBuildDir, "CMakeLists.txt").writeText($$"""
+                        cmake_minimum_required(VERSION 3.15)
                 
-                add_library(lib_$$moduleName SHARED stub.c)
-                target_link_libraries(lib_$$moduleName PUBLIC $$moduleName)
+                        project("$$moduleName")
                 
-                add_library(libstatic_$$moduleName STATIC stub.c)
-                target_link_libraries(libstatic_$$moduleName PUBLIC $$moduleName)
-            """.trimIndent())
+                        add_subdirectory("$$projectDir" "$${
+                            File(buildDir, "common").absolutePath.replace("\\", "/")
+                        }")
+                        
+                        add_library(lib_$$moduleName SHARED stub.c)
+                        target_link_libraries(lib_$$moduleName PUBLIC $$moduleName)
+                        
+                        add_library(libstatic_$$moduleName STATIC stub.c)
+                        target_link_libraries(libstatic_$$moduleName PUBLIC $$moduleName)
+                    """.trimIndent())
 
-            File(cmakeDir, "stub.c").writeText("")
+                    File(nativesBuildDir, "stub.c").writeText("")
 
-            // Configure CMake (if needed)
-            if(shouldInit)
-                configureCMake(execOps, targetType, cmakeArgs, cmakeDir, cmakeBuildDir, cmakeBuildType)
+                    // Configure CMake (if needed)
+                    if(shouldInit) {
+                        configureCMake(
+                            execOps, targetType,
+                            cmakeArgs = LinkedHashSet(buildSystem.args),
+                            cmakeDir = File(nativesBuildDir),
+                            cmakeBuildDir = buildDir,
+                            cmakeBuildType = buildSystem.buildType
+                        )
+                    }
 
-            // Get linker opts
-            val linkerOpts = if(shouldInit)
-                extractLinkerOpts(cmakeBuildDir, moduleName)
-            else emptyList()
+                    // Get linker opts
+                    linkerOpts += if(shouldInit)
+                        extractLinkerOpts(buildDir, moduleName)
+                    else emptyList()
+                }
+                is BuildSystem.Cargo -> {
+
+                }
+            }
 
             // Create .def file
             DefPrinter(
@@ -404,7 +417,7 @@ private abstract class PrepareNativesKn @Inject constructor(
             // Generate Kotlin files
             KotlinNativePrinter(
                 idl = idl,
-                target = File(srcFile),
+                target = File(kotlinFile),
                 classPath = moduleClasspath,
                 moduleName = moduleName,
                 is32Bit = targetType in setOf(TargetType.WATCHOS_ARM32, TargetType.WATCHOS_ARM64),
@@ -418,12 +431,20 @@ private abstract class PrepareNativesKn @Inject constructor(
 private abstract class CompileNativesKn @Inject constructor(
     private val execOps: ExecOperations,
 ): DefaultTask() {
-    @get:Input abstract var cmakeBuildDir: String
+    @get:Input abstract var nativesBuildDir: String
+    @get:Input abstract var buildSystem: BuildSystem
 
     init {
         group = NATIVE_TASK_GROUP
         doLast {
-            cmakeBuild(execOps, File(cmakeBuildDir))
+            when(buildSystem) {
+                is BuildSystem.CMake -> {
+                    cmakeBuild(execOps, File(nativesBuildDir, "build"))
+                }
+                is BuildSystem.Cargo -> {
+
+                }
+            }
         }
     }
 }
