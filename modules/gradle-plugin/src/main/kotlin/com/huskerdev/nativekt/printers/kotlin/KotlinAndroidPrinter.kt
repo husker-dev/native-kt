@@ -1,8 +1,8 @@
-package com.huskerdev.nativekt.printers
+package com.huskerdev.nativekt.printers.kotlin
 
-import com.huskerdev.nativekt.printers.jvm.KotlinJvmJniPrinter
-import com.huskerdev.nativekt.printers.jvm.toKotlinCriticalType
-import com.huskerdev.nativekt.printers.jvm.toNativeCriticalType
+import com.huskerdev.nativekt.printers.kotlin.jvm.KotlinJvmJniPrinter
+import com.huskerdev.nativekt.printers.kotlin.jvm.toKotlinCriticalType
+import com.huskerdev.nativekt.printers.kotlin.jvm.toNativeCriticalType
 import com.huskerdev.nativekt.utils.*
 import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlOperation

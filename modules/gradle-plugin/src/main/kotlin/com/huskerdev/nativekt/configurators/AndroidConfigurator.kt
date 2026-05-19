@@ -4,11 +4,11 @@ import com.android.build.api.dsl.KotlinMultiplatformAndroidLibraryExtension
 import com.android.build.api.variant.KotlinMultiplatformAndroidComponentsExtension
 import com.android.build.gradle.internal.tasks.factory.dependsOn
 import com.huskerdev.nativekt.plugin.*
-import com.huskerdev.nativekt.printers.HeaderPrinter
-import com.huskerdev.nativekt.printers.KotlinAndroidPrinter
-import com.huskerdev.nativekt.printers.jvm.CJniArenaPrinter
-import com.huskerdev.nativekt.printers.jvm.CJniPrinter
-import com.huskerdev.nativekt.printers.jvm.CJniUtilsPrinter
+import com.huskerdev.nativekt.printers.c.CHeaderPrinter
+import com.huskerdev.nativekt.printers.kotlin.KotlinAndroidPrinter
+import com.huskerdev.nativekt.printers.c.CJniArenaPrinter
+import com.huskerdev.nativekt.printers.c.CJniPrinter
+import com.huskerdev.nativekt.printers.c.CJniUtilsPrinter
 import com.huskerdev.nativekt.utils.*
 import com.huskerdev.webidl.resolver.IdlResolver
 import kotlinx.serialization.json.Json
@@ -199,7 +199,7 @@ private abstract class PrepareNativesAndroid: DefaultTask() {
                 callbacks = idl.callbacks.isNotEmpty()
             )
 
-            HeaderPrinter(
+            CHeaderPrinter(
                 idl = idl,
                 target = File(nativesBuildDir, "api.h")
             )

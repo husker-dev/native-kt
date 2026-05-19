@@ -1,4 +1,4 @@
-package com.huskerdev.nativekt.printers.kn
+package com.huskerdev.nativekt.printers
 
 import java.io.File
 

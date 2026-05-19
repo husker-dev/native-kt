@@ -3,7 +3,8 @@ package com.huskerdev.nativekt.plugin
 import com.android.build.api.variant.KotlinMultiplatformAndroidComponentsExtension
 import com.huskerdev.nativekt.TargetType
 import com.huskerdev.nativekt.configurators.*
-import com.huskerdev.nativekt.printers.HeaderPrinter
+import com.huskerdev.nativekt.printers.c.CHeaderPrinter
+import com.huskerdev.nativekt.printers.rust.RustPrinter
 import com.huskerdev.nativekt.utils.validateIDL
 import com.huskerdev.nativekt.utils.dir
 import com.huskerdev.nativekt.utils.getHeaderFile
@@ -77,14 +78,17 @@ fun NativeKtPlugin.configureKotlin(
 
         when(module.buildSystem) {
             is BuildSystem.CMake -> {
-                HeaderPrinter(
+                CHeaderPrinter(
                     idl = idl,
                     target = module.getHeaderFile(project),
                     guardName = module.name.uppercase()
                 )
             }
             is BuildSystem.Cargo -> {
-
+                RustPrinter(
+                    idl = idl,
+                    target = module.getHeaderFile(project)
+                )
             }
         }
     }

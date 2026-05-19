@@ -1,4 +1,4 @@
-package com.huskerdev.nativekt.printers.jvm
+package com.huskerdev.nativekt.printers.kotlin.jvm
 
 import com.huskerdev.nativekt.utils.*
 import com.huskerdev.webidl.resolver.*
@@ -295,7 +295,15 @@ class KotlinJvmForeignPrinter(
         else -> throw UnsupportedOperationException(type.toString())
     }
 
-    private fun castToNative(type: ResolvedIdlType, content: String, critical: Boolean, dealloc: Boolean, useArena: Boolean, slice: String? = null): String {
+    private fun castToNative(
+        type: ResolvedIdlType,
+        content: String,
+        critical: Boolean,
+        dealloc: Boolean,
+        useArena: Boolean,
+        releasable: Boolean,
+        slice: String? = null
+    ): String {
         val slice = if(slice != null) ", $slice" else ""
         return when (type) {
             is ResolvedIdlType.Void -> content
@@ -304,19 +312,19 @@ class KotlinJvmForeignPrinter(
                     WebIDLBuiltinKind.STRING ->
                         if (critical) "ForeignUtils.toNativeHeapString($content)"
                         else if (useArena) "arena.toNativeString($content)"
-                        else "ForeignUtils.toNativeString($content$slice)"
+                        else "ForeignUtils.toNativeString($content, $releasable$slice)"
                     WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
                         when (declaration) {
                             is BuiltinIdlDeclaration -> {
                                 val name = declaration.kind.simpleName()
                                 if (useArena) "arena.toNative${name}Array($content)"
-                                else "ForeignUtils.toNative${name}Array($content$slice)"
+                                else "ForeignUtils.toNative${name}Array($content, $releasable$slice)"
                             }
                             is ResolvedIdlEnum -> {
                                 if (useArena) "arena.toNativeEnumArray($content)"
-                                else "ForeignUtils.toNativeEnumArray($content$slice)"
+                                else "ForeignUtils.toNativeEnumArray($content, $releasable$slice)"
                             }
-                            is ResolvedIdlDictionary -> "ForeignUtils.toNativeArray($content, ::toNativeDictionary${declaration.name}$slice)"
+                            is ResolvedIdlDictionary -> "ForeignUtils.toNativeArray($content, $releasable, ::toNativeDictionary${declaration.name}$slice)"
                             else -> throw UnsupportedOperationException(type.toString())
                         }
                     }

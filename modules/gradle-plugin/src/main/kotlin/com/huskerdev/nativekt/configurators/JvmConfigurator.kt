@@ -4,8 +4,12 @@ import com.huskerdev.nativekt.plugin.BuildSystem
 import com.huskerdev.nativekt.plugin.NATIVE_TASK_GROUP
 import com.huskerdev.nativekt.plugin.NativeKtJvmInterface
 import com.huskerdev.nativekt.plugin.NativeProject
-import com.huskerdev.nativekt.printers.HeaderPrinter
-import com.huskerdev.nativekt.printers.jvm.*
+import com.huskerdev.nativekt.printers.c.CHeaderPrinter
+import com.huskerdev.nativekt.printers.c.CExportedPrinter
+import com.huskerdev.nativekt.printers.c.CJniArenaPrinter
+import com.huskerdev.nativekt.printers.c.CJniPrinter
+import com.huskerdev.nativekt.printers.c.CJniUtilsPrinter
+import com.huskerdev.nativekt.printers.kotlin.KotlinJvmPrinter
 import com.huskerdev.nativekt.utils.*
 import com.huskerdev.webidl.resolver.IdlResolver
 import kotlinx.serialization.json.Json
@@ -280,7 +284,7 @@ private abstract class PrepareNativesJvm: DefaultTask() {
                 )
             }
 
-            HeaderPrinter(
+            CHeaderPrinter(
                 idl = idl,
                 target = File(nativesBuildDir, "api.h")
             )

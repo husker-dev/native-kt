@@ -16,7 +16,7 @@ kotlin {
     jvm {
         compilations.configureEach {
             compileTaskProvider.get().compilerOptions {
-                jvmTarget = JvmTarget.JVM_11
+                jvmTarget = JvmTarget.JVM_23
             }
         }
     }

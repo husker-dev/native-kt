@@ -27,6 +27,10 @@ fun NativeProject.getHeaderFile(project: Project): File =
     (buildSystem as BuildSystem.CMake).headerFile
         ?: File(dir(project), "include/api.h")
 
+fun NativeProject.getApiRsFile(project: Project): File =
+    (buildSystem as BuildSystem.Cargo).apiRsFile
+        ?: File(dir(project), "src/api.rs")
+
 fun NativeProject.idl(project: Project) = WebIDL.resolve(
     iterable = getNDLFile(project).reader().iterator(),
     env = NDLEnv()

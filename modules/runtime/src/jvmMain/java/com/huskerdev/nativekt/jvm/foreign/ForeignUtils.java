@@ -17,25 +17,45 @@ public class ForeignUtils {
 
     private static final Linker linker = Linker.nativeLinker();
 
+    // Types
+
+    public static final ValueLayout C_CHAR = ValueLayout.JAVA_CHAR;
+    public static final ValueLayout C_BYTE = ValueLayout.JAVA_BYTE;
+    public static final ValueLayout C_BOOLEAN = ValueLayout.JAVA_BOOLEAN;
+    public static final ValueLayout C_SHORT = ValueLayout.JAVA_SHORT;
+    public static final ValueLayout C_INT = ValueLayout.JAVA_INT;
+    public static final ValueLayout C_LONG = ValueLayout.JAVA_LONG;
+    public static final ValueLayout C_FLOAT = ValueLayout.JAVA_FLOAT;
+    public static final ValueLayout C_DOUBLE = ValueLayout.JAVA_DOUBLE;
+    public static final ValueLayout C_ADDRESS = ValueLayout.ADDRESS;
+
     // KString struct
 
     public static final StructLayout STRING_STRUCT = MemoryLayout.structLayout(
-            ValueLayout.ADDRESS.withName("data"),
-            ValueLayout.JAVA_INT.withName("length"),
-            MemoryLayout.paddingLayout(4) // align to 16
+            C_ADDRESS.withName("data"),
+            C_INT.withName("length"),
+            C_BOOLEAN.withName("releasable"),
+            C_BOOLEAN.withName("released"),
+            MemoryLayout.paddingLayout(2) // align to 16
     );
     public static final VarHandle stringDataVarHandle = STRING_STRUCT.varHandle(MemoryLayout.PathElement.groupElement("data"));
     public static final VarHandle stringLengthVarHandle = STRING_STRUCT.varHandle(MemoryLayout.PathElement.groupElement("length"));
+    public static final VarHandle stringReleasableVarHandle = STRING_STRUCT.varHandle(MemoryLayout.PathElement.groupElement("releasable"));
+    public static final VarHandle stringReleasedVarHandle = STRING_STRUCT.varHandle(MemoryLayout.PathElement.groupElement("released"));
 
     // KArray struct
 
     public static final StructLayout ARRAY_STRUCT = MemoryLayout.structLayout(
-            ValueLayout.ADDRESS.withName("elements"),
-            ValueLayout.JAVA_INT.withName("size"),
-            MemoryLayout.paddingLayout(4) // align to 16
+            C_ADDRESS.withName("elements"),
+            C_INT.withName("size"),
+            C_BOOLEAN.withName("releasable"),
+            C_BOOLEAN.withName("released"),
+            MemoryLayout.paddingLayout(2) // align to 16
     );
     public static final VarHandle arrayElementsVarHandle = ARRAY_STRUCT.varHandle(MemoryLayout.PathElement.groupElement("elements"));
     public static final VarHandle arraySizeVarHandle = ARRAY_STRUCT.varHandle(MemoryLayout.PathElement.groupElement("size"));
+    public static final VarHandle arrayReleasableVarHandle = ARRAY_STRUCT.varHandle(MemoryLayout.PathElement.groupElement("releasable"));
+    public static final VarHandle arrayReleasedVarHandle = ARRAY_STRUCT.varHandle(MemoryLayout.PathElement.groupElement("released"));
 
     // Callbacks
 
@@ -50,18 +70,6 @@ public class ForeignUtils {
     private static final VarHandle callbackFreeVarHandle = callbackStructLayout.varHandle(MemoryLayout.PathElement.groupElement("free"));
 
     private static final MemorySegment callbackFree;
-
-    // Types
-
-    public static final ValueLayout C_CHAR = ValueLayout.JAVA_CHAR;
-    public static final ValueLayout C_BYTE = ValueLayout.JAVA_BYTE;
-    public static final ValueLayout C_BOOLEAN = ValueLayout.JAVA_BOOLEAN;
-    public static final ValueLayout C_SHORT = ValueLayout.JAVA_SHORT;
-    public static final ValueLayout C_INT = ValueLayout.JAVA_INT;
-    public static final ValueLayout C_LONG = ValueLayout.JAVA_LONG;
-    public static final ValueLayout C_FLOAT = ValueLayout.JAVA_FLOAT;
-    public static final ValueLayout C_DOUBLE = ValueLayout.JAVA_DOUBLE;
-    public static final ValueLayout C_ADDRESS = ValueLayout.ADDRESS;
 
     // Free function
 
@@ -86,16 +94,23 @@ public class ForeignUtils {
     // String
 
     public static MemorySegment toNativeHeapString(String str) {
-        return MemorySegment.ofArray(str.getBytes());
+        MemorySegment struct = Arena.ofAuto().allocate(STRING_STRUCT);
+        stringDataVarHandle.set(struct, 0L, MemorySegment.ofArray(str.getBytes()));
+        stringLengthVarHandle.set(struct, 0L, str.length());
+        stringReleasableVarHandle.set(struct, 0L, false);
+        stringReleasedVarHandle.set(struct, 0L, false);
+        return struct;
     }
 
-    public static MemorySegment toNativeString(String of) {
-        return toNativeString(of, Arena.ofAuto().allocate(STRING_STRUCT));
+    public static MemorySegment toNativeString(String of, boolean releasable) {
+        return toNativeString(of, releasable, Arena.ofAuto().allocate(STRING_STRUCT));
     }
 
-    public static MemorySegment toNativeString(String of, MemorySegment struct) {
+    public static MemorySegment toNativeString(String of, boolean releasable, MemorySegment struct) {
         stringDataVarHandle.set(struct, 0L, Arena.global().allocateFrom(of));
         stringLengthVarHandle.set(struct, 0L, of.length());
+        stringReleasableVarHandle.set(struct, 0L, releasable);
+        stringReleasedVarHandle.set(struct, 0L, false);
         return struct;
     }
 
@@ -128,24 +143,26 @@ public class ForeignUtils {
 
     // Array: char
 
-    public static MemorySegment toNativeCharArray(char[] arr) {
-        return toNativeCharArray(arr, Arena.global(), Arena.ofAuto());
+    public static MemorySegment toNativeCharArray(char[] arr, boolean releasable) {
+        return toNativeCharArray(arr, releasable, Arena.global(), Arena.ofAuto());
     }
 
-    public static MemorySegment toNativeCharArray(char[] arr, Arena elementsArena, Arena structArena) {
-        return toNativeCharArray(arr, elementsArena, structArena.allocate(ARRAY_STRUCT));
+    public static MemorySegment toNativeCharArray(char[] arr, boolean releasable, Arena elementsArena, Arena structArena) {
+        return toNativeCharArray(arr, releasable, elementsArena, structArena.allocate(ARRAY_STRUCT));
     }
 
-    public static MemorySegment toNativeCharArray(char[] arr, MemorySegment struct) {
-        return toNativeCharArray(arr, Arena.global(), struct);
+    public static MemorySegment toNativeCharArray(char[] arr, boolean releasable, MemorySegment struct) {
+        return toNativeCharArray(arr, releasable, Arena.global(), struct);
     }
 
-    public static MemorySegment toNativeCharArray(char[] arr, Arena elementsArena, MemorySegment struct) {
+    public static MemorySegment toNativeCharArray(char[] arr, boolean releasable, Arena elementsArena, MemorySegment struct) {
         arrayElementsVarHandle.set(struct, 0L,
                 elementsArena.allocate((long) arr.length * C_CHAR.byteSize(), C_CHAR.byteAlignment())
                         .copyFrom(MemorySegment.ofArray(arr))
         );
         arraySizeVarHandle.set(struct, 0L, arr.length);
+        arrayReleasableVarHandle.set(struct, 0L, releasable);
+        arrayReleasedVarHandle.set(struct, 0L, false);
         return struct;
     }
 
@@ -159,23 +176,23 @@ public class ForeignUtils {
 
     // Array: boolean
 
-    public static MemorySegment toNativeBooleanArray(boolean[] arr) {
-        return toNativeBooleanArray(arr, Arena.global(), Arena.ofAuto());
+    public static MemorySegment toNativeBooleanArray(boolean[] arr, boolean releasable) {
+        return toNativeBooleanArray(arr, releasable, Arena.global(), Arena.ofAuto());
     }
 
-    public static MemorySegment toNativeBooleanArray(boolean[] arr, Arena elementsArena, Arena structArena) {
-        return toNativeBooleanArray(arr, elementsArena, structArena.allocate(ARRAY_STRUCT));
+    public static MemorySegment toNativeBooleanArray(boolean[] arr, boolean releasable, Arena elementsArena, Arena structArena) {
+        return toNativeBooleanArray(arr, releasable, elementsArena, structArena.allocate(ARRAY_STRUCT));
     }
 
-    public static MemorySegment toNativeBooleanArray(boolean[] arr, MemorySegment struct) {
-        return toNativeBooleanArray(arr, Arena.global(), struct);
+    public static MemorySegment toNativeBooleanArray(boolean[] arr, boolean releasable, MemorySegment struct) {
+        return toNativeBooleanArray(arr, releasable, Arena.global(), struct);
     }
 
-    public static MemorySegment toNativeBooleanArray(boolean[] arr, Arena elementsArena, MemorySegment struct) {
+    public static MemorySegment toNativeBooleanArray(boolean[] arr, boolean releasable, Arena elementsArena, MemorySegment struct) {
         byte[] bytes = new byte[arr.length];
         for(int i = 0; i < arr.length; i++)
             bytes[i] = (byte)(arr[i] ? 1 : 0);
-        return toNativeByteArray(bytes, elementsArena, struct);
+        return toNativeByteArray(bytes, releasable, elementsArena, struct);
     }
 
     public static boolean[] toJvmBooleanArray(MemorySegment struct, boolean dealloc) throws Throwable {
@@ -188,24 +205,26 @@ public class ForeignUtils {
 
     // Array: byte
 
-    public static MemorySegment toNativeByteArray(byte[] arr) {
-        return toNativeByteArray(arr, Arena.global(), Arena.ofAuto());
+    public static MemorySegment toNativeByteArray(byte[] arr, boolean releasable) {
+        return toNativeByteArray(arr, releasable, Arena.global(), Arena.ofAuto());
     }
 
-    public static MemorySegment toNativeByteArray(byte[] arr, Arena elementsArena, Arena structArena) {
-        return toNativeByteArray(arr, elementsArena, structArena.allocate(ARRAY_STRUCT));
+    public static MemorySegment toNativeByteArray(byte[] arr, boolean releasable, Arena elementsArena, Arena structArena) {
+        return toNativeByteArray(arr, releasable, elementsArena, structArena.allocate(ARRAY_STRUCT));
     }
 
-    public static MemorySegment toNativeByteArray(byte[] arr, MemorySegment struct) {
-        return toNativeByteArray(arr, Arena.global(), struct);
+    public static MemorySegment toNativeByteArray(byte[] arr, boolean releasable, MemorySegment struct) {
+        return toNativeByteArray(arr, releasable, Arena.global(), struct);
     }
 
-    public static MemorySegment toNativeByteArray(byte[] arr, Arena elementsArena, MemorySegment struct) {
+    public static MemorySegment toNativeByteArray(byte[] arr, boolean releasable, Arena elementsArena, MemorySegment struct) {
         arrayElementsVarHandle.set(struct, 0L,
                 elementsArena.allocate((long) arr.length * C_BYTE.byteSize(), C_BYTE.byteAlignment())
                         .copyFrom(MemorySegment.ofArray(arr))
         );
         arraySizeVarHandle.set(struct, 0L, arr.length);
+        arrayReleasableVarHandle.set(struct, 0L, releasable);
+        arrayReleasedVarHandle.set(struct, 0L, false);
         return struct;
     }
 
@@ -219,24 +238,26 @@ public class ForeignUtils {
 
     // Array: short
 
-    public static MemorySegment toNativeShortArray(short[] arr) {
-        return toNativeShortArray(arr, Arena.global(), Arena.ofAuto());
+    public static MemorySegment toNativeShortArray(short[] arr, boolean releasable) {
+        return toNativeShortArray(arr, releasable, Arena.global(), Arena.ofAuto());
     }
 
-    public static MemorySegment toNativeShortArray(short[] arr, Arena elementsArena, Arena structArena) {
-        return toNativeShortArray(arr, elementsArena, structArena.allocate(ARRAY_STRUCT));
+    public static MemorySegment toNativeShortArray(short[] arr, boolean releasable, Arena elementsArena, Arena structArena) {
+        return toNativeShortArray(arr, releasable, elementsArena, structArena.allocate(ARRAY_STRUCT));
     }
 
-    public static MemorySegment toNativeShortArray(short[] arr, MemorySegment struct) {
-        return toNativeShortArray(arr, Arena.global(), struct);
+    public static MemorySegment toNativeShortArray(short[] arr, boolean releasable, MemorySegment struct) {
+        return toNativeShortArray(arr, releasable, Arena.global(), struct);
     }
 
-    public static MemorySegment toNativeShortArray(short[] arr, Arena elementsArena, MemorySegment struct) {
+    public static MemorySegment toNativeShortArray(short[] arr, boolean releasable, Arena elementsArena, MemorySegment struct) {
         arrayElementsVarHandle.set(struct, 0L,
                 elementsArena.allocate((long) arr.length * C_SHORT.byteSize(), C_SHORT.byteAlignment())
                         .copyFrom(MemorySegment.ofArray(arr))
         );
         arraySizeVarHandle.set(struct, 0L, arr.length);
+        arrayReleasableVarHandle.set(struct, 0L, releasable);
+        arrayReleasedVarHandle.set(struct, 0L, false);
         return struct;
     }
 
@@ -250,24 +271,26 @@ public class ForeignUtils {
 
     // Array: int
 
-    public static MemorySegment toNativeIntArray(int[] arr) {
-        return toNativeIntArray(arr, Arena.global(), Arena.ofAuto());
+    public static MemorySegment toNativeIntArray(int[] arr, boolean releasable) {
+        return toNativeIntArray(arr, releasable, Arena.global(), Arena.ofAuto());
     }
 
-    public static MemorySegment toNativeIntArray(int[] arr, Arena elementsArena, Arena structArena) {
-        return toNativeIntArray(arr, elementsArena, structArena.allocate(ARRAY_STRUCT));
+    public static MemorySegment toNativeIntArray(int[] arr, boolean releasable, Arena elementsArena, Arena structArena) {
+        return toNativeIntArray(arr, releasable, elementsArena, structArena.allocate(ARRAY_STRUCT));
     }
 
-    public static MemorySegment toNativeIntArray(int[] arr, MemorySegment struct) {
-        return toNativeIntArray(arr, Arena.global(), struct);
+    public static MemorySegment toNativeIntArray(int[] arr, boolean releasable, MemorySegment struct) {
+        return toNativeIntArray(arr, releasable, Arena.global(), struct);
     }
 
-    public static MemorySegment toNativeIntArray(int[] arr, Arena elementsArena, MemorySegment struct) {
+    public static MemorySegment toNativeIntArray(int[] arr, boolean releasable, Arena elementsArena, MemorySegment struct) {
         arrayElementsVarHandle.set(struct, 0L,
                 elementsArena.allocate((long) arr.length * C_INT.byteSize(), C_INT.byteAlignment())
                         .copyFrom(MemorySegment.ofArray(arr))
         );
         arraySizeVarHandle.set(struct, 0L, arr.length);
+        arrayReleasableVarHandle.set(struct, 0L, releasable);
+        arrayReleasedVarHandle.set(struct, 0L, false);
         return struct;
     }
 
@@ -281,24 +304,26 @@ public class ForeignUtils {
 
     // Array: long
 
-    public static MemorySegment toNativeLongArray(long[] arr) {
-        return toNativeLongArray(arr, Arena.global(), Arena.ofAuto());
+    public static MemorySegment toNativeLongArray(long[] arr, boolean releasable) {
+        return toNativeLongArray(arr, releasable, Arena.global(), Arena.ofAuto());
     }
 
-    public static MemorySegment toNativeLongArray(long[] arr, Arena elementsArena, Arena structArena) {
-        return toNativeLongArray(arr, Arena.global(), structArena.allocate(ARRAY_STRUCT));
+    public static MemorySegment toNativeLongArray(long[] arr, boolean releasable, Arena elementsArena, Arena structArena) {
+        return toNativeLongArray(arr, releasable, Arena.global(), structArena.allocate(ARRAY_STRUCT));
     }
 
-    public static MemorySegment toNativeLongArray(long[] arr, MemorySegment struct) {
-        return toNativeLongArray(arr, Arena.global(), struct);
+    public static MemorySegment toNativeLongArray(long[] arr, boolean releasable, MemorySegment struct) {
+        return toNativeLongArray(arr, releasable, Arena.global(), struct);
     }
 
-    public static MemorySegment toNativeLongArray(long[] arr, Arena elementsArena, MemorySegment struct) {
+    public static MemorySegment toNativeLongArray(long[] arr, boolean releasable, Arena elementsArena, MemorySegment struct) {
         arrayElementsVarHandle.set(struct, 0L,
                 elementsArena.allocate((long) arr.length * C_LONG.byteSize(), C_LONG.byteAlignment())
                         .copyFrom(MemorySegment.ofArray(arr))
         );
         arraySizeVarHandle.set(struct, 0L, arr.length);
+        arrayReleasableVarHandle.set(struct, 0L, releasable);
+        arrayReleasedVarHandle.set(struct, 0L, false);
         return struct;
     }
 
@@ -313,24 +338,26 @@ public class ForeignUtils {
 
     // Array: float
 
-    public static MemorySegment toNativeFloatArray(float[] arr) {
-        return toNativeFloatArray(arr, Arena.global(), Arena.ofAuto());
+    public static MemorySegment toNativeFloatArray(float[] arr, boolean releasable) {
+        return toNativeFloatArray(arr, releasable, Arena.global(), Arena.ofAuto());
     }
 
-    public static MemorySegment toNativeFloatArray(float[] arr, Arena elementsArena, Arena structArena) {
-        return toNativeFloatArray(arr, elementsArena, structArena.allocate(ARRAY_STRUCT));
+    public static MemorySegment toNativeFloatArray(float[] arr, boolean releasable, Arena elementsArena, Arena structArena) {
+        return toNativeFloatArray(arr, releasable, elementsArena, structArena.allocate(ARRAY_STRUCT));
     }
 
-    public static MemorySegment toNativeFloatArray(float[] arr, MemorySegment struct) {
-        return toNativeFloatArray(arr, Arena.global(), struct);
+    public static MemorySegment toNativeFloatArray(float[] arr, boolean releasable, MemorySegment struct) {
+        return toNativeFloatArray(arr, releasable, Arena.global(), struct);
     }
 
-    public static MemorySegment toNativeFloatArray(float[] arr, Arena elementsArena, MemorySegment struct) {
+    public static MemorySegment toNativeFloatArray(float[] arr, boolean releasable, Arena elementsArena, MemorySegment struct) {
         arrayElementsVarHandle.set(struct, 0L,
                 elementsArena.allocate((long) arr.length * C_FLOAT.byteSize(), C_FLOAT.byteAlignment())
                         .copyFrom(MemorySegment.ofArray(arr))
         );
         arraySizeVarHandle.set(struct, 0L, arr.length);
+        arrayReleasableVarHandle.set(struct, 0L, releasable);
+        arrayReleasedVarHandle.set(struct, 0L, false);
         return struct;
     }
 
@@ -344,24 +371,26 @@ public class ForeignUtils {
 
     // Array: double
 
-    public static MemorySegment toNativeDoubleArray(double[] arr) {
-        return toNativeDoubleArray(arr, Arena.global(), Arena.ofAuto());
+    public static MemorySegment toNativeDoubleArray(double[] arr, boolean releasable) {
+        return toNativeDoubleArray(arr, releasable, Arena.global(), Arena.ofAuto());
     }
 
-    public static MemorySegment toNativeDoubleArray(double[] arr, Arena elementsArena, Arena structArena) {
-        return toNativeDoubleArray(arr, elementsArena, structArena.allocate(ARRAY_STRUCT));
+    public static MemorySegment toNativeDoubleArray(double[] arr, boolean releasable, Arena elementsArena, Arena structArena) {
+        return toNativeDoubleArray(arr, releasable, elementsArena, structArena.allocate(ARRAY_STRUCT));
     }
 
-    public static MemorySegment toNativeDoubleArray(double[] arr, MemorySegment struct) {
-        return toNativeDoubleArray(arr, Arena.global(), struct);
+    public static MemorySegment toNativeDoubleArray(double[] arr, boolean releasable, MemorySegment struct) {
+        return toNativeDoubleArray(arr, releasable, Arena.global(), struct);
     }
 
-    public static MemorySegment toNativeDoubleArray(double[] arr, Arena elementsArena, MemorySegment struct) {
+    public static MemorySegment toNativeDoubleArray(double[] arr, boolean releasable, Arena elementsArena, MemorySegment struct) {
         arrayElementsVarHandle.set(struct, 0L,
                 elementsArena.allocate((long) arr.length * C_DOUBLE.byteSize(), C_DOUBLE.byteAlignment())
                         .copyFrom(MemorySegment.ofArray(arr))
         );
         arraySizeVarHandle.set(struct, 0L, arr.length);
+        arrayReleasableVarHandle.set(struct, 0L, releasable);
+        arrayReleasedVarHandle.set(struct, 0L, false);
         return struct;
     }
 
@@ -375,23 +404,23 @@ public class ForeignUtils {
 
     // Array: enum
 
-    public static <T extends Enum<T>> MemorySegment toNativeEnumArray(T[] arr) {
-        return toNativeEnumArray(arr, Arena.global(), Arena.ofAuto());
+    public static <T extends Enum<T>> MemorySegment toNativeEnumArray(T[] arr, boolean releasable) {
+        return toNativeEnumArray(arr, releasable, Arena.global(), Arena.ofAuto());
     }
 
-    public static <T extends Enum<T>> MemorySegment toNativeEnumArray(T[] arr, Arena elementsArena, Arena structArena) {
-        return toNativeEnumArray(arr, elementsArena, structArena.allocate(ARRAY_STRUCT));
+    public static <T extends Enum<T>> MemorySegment toNativeEnumArray(T[] arr, boolean releasable, Arena elementsArena, Arena structArena) {
+        return toNativeEnumArray(arr, releasable, elementsArena, structArena.allocate(ARRAY_STRUCT));
     }
 
-    public static <T extends Enum<T>> MemorySegment toNativeEnumArray(T[] arr, MemorySegment struct) {
-        return toNativeEnumArray(arr, Arena.global(), struct);
+    public static <T extends Enum<T>> MemorySegment toNativeEnumArray(T[] arr, boolean releasable, MemorySegment struct) {
+        return toNativeEnumArray(arr, releasable, Arena.global(), struct);
     }
 
-    public static <T extends Enum<T>> MemorySegment toNativeEnumArray(T[] arr, Arena elementsArena, MemorySegment struct) {
+    public static <T extends Enum<T>> MemorySegment toNativeEnumArray(T[] arr, boolean releasable, Arena elementsArena, MemorySegment struct) {
         int[] intEnums = new int[arr.length];
         for(int i = 0; i < arr.length; i++)
             intEnums[i] = arr[i].ordinal();
-        return toNativeIntArray(intEnums, elementsArena, struct);
+        return toNativeIntArray(intEnums, releasable, elementsArena, struct);
     }
 
     @SuppressWarnings("unchecked")
@@ -412,11 +441,11 @@ public class ForeignUtils {
 
     // Array: object
 
-    public static <T> MemorySegment toNativeArray(T[] elements, Function<T, MemorySegment> cast) {
-        return toNativeArray(elements, cast, Arena.ofAuto().allocate(ARRAY_STRUCT));
+    public static <T> MemorySegment toNativeArray(T[] elements, boolean releasable, Function<T, MemorySegment> cast) {
+        return toNativeArray(elements, releasable, cast, Arena.ofAuto().allocate(ARRAY_STRUCT));
     }
 
-    public static <T> MemorySegment toNativeArray(T[] elements, Function<T, MemorySegment> cast, MemorySegment struct) {
+    public static <T> MemorySegment toNativeArray(T[] elements, boolean releasable, Function<T, MemorySegment> cast, MemorySegment struct) {
         MemorySegment elementsPtr = Arena.global().allocate(MemoryLayout.sequenceLayout(elements.length, ValueLayout.ADDRESS));
         VarHandle ptrHandle = ValueLayout.ADDRESS.arrayElementVarHandle();
         for(int i = 0; i < elements.length; i++)
@@ -424,6 +453,8 @@ public class ForeignUtils {
 
         arrayElementsVarHandle.set(struct, 0L, elementsPtr);
         arraySizeVarHandle.set(struct, 0L, elements.length);
+        arrayReleasableVarHandle.set(struct, 0L, releasable);
+        arrayReleasedVarHandle.set(struct, 0L, false);
         return struct;
     }
 

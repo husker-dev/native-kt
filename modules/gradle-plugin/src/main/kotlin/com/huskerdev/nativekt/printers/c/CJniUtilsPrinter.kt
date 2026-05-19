@@ -1,4 +1,4 @@
-package com.huskerdev.nativekt.printers.jvm
+package com.huskerdev.nativekt.printers.c
 
 import com.huskerdev.nativekt.utils.allFields
 import com.huskerdev.nativekt.utils.isDealloc
@@ -58,7 +58,7 @@ class CJniUtilsPrinter(
                 const char* temp = (*env)->GetStringUTFChars(env, obj, NULL);
                 const char* copy = strdup(temp);
                 (*env)->ReleaseStringUTFChars(env, obj, temp);
-                return (KString) { copy, length };
+                return (KString) { copy, length, false, false };
             }
             
         """.trimIndent())
@@ -73,10 +73,10 @@ class CJniUtilsPrinter(
                 const JType* copy = (JType*)malloc(size * sizeof(JType));                           \
                 memcpy((void*)copy, (void*)tmp, size * sizeof(JType));                              \
                 (*env)->Release##Name##ArrayElements(env, arr, tmp, JNI_ABORT);                     \
-                return (K##Name##Array) { (K##Name*)copy, size };                                   \
+                return (K##Name##Array) { (K##Name*)copy, size, false, false };                     \
             }                                                                                       \
                                                                                                     \
-            JType##Array JNI_toKotlin##Name##Array(JNIEnv *env, K##Name##Array arr, bool dealloc) {    \
+            JType##Array JNI_toKotlin##Name##Array(JNIEnv *env, K##Name##Array arr, bool dealloc) { \
                 JType##Array result = (*env)->New##Name##Array(env, arr.size);                      \
                 (*env)->Set##Name##ArrayRegion(env, result, 0, arr.size, (JType*)arr.elements);     \
                 if(dealloc) free((void*)arr.elements);                                              \

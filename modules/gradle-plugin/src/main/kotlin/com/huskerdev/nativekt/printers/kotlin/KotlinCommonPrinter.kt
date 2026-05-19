@@ -1,4 +1,4 @@
-package com.huskerdev.nativekt.printers
+package com.huskerdev.nativekt.printers.kotlin
 
 import com.huskerdev.nativekt.utils.allFields
 import com.huskerdev.nativekt.utils.asyncFunctionName

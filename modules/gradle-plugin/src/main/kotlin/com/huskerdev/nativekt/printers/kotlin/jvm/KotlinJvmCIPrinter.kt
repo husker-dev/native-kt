@@ -1,4 +1,4 @@
-package com.huskerdev.nativekt.printers.jvm
+package com.huskerdev.nativekt.printers.kotlin.jvm
 
 import com.huskerdev.nativekt.utils.*
 import com.huskerdev.webidl.resolver.*

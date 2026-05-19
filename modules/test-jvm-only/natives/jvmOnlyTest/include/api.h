@@ -34,11 +34,20 @@ typedef uint16_t KChar;
 
 typedef struct KString {
     const char* data;
-    KInt length;
+    const KInt length;
+    const KBoolean releasable;
+    KBoolean released;
 } KString;
 
-inline KString KString_new(const char* data, const KInt length) {
-    return (KString) { data, length };
+static KString KString_new(const char* data, const KInt length) {
+    return (KString) { data, length, true, false };
+}
+
+static void KString_free(KString* str) {
+    if(str->releasable && !str->released) {
+        free((void*)str->data);
+        str->released = true;
+    }
 }
 
 #define ARG_LENGTH(...) ARG_LENGTH__(__VA_ARGS__)
@@ -56,11 +65,13 @@ inline KString KString_new(const char* data, const KInt length) {
 #define KArrayDef(Name, Type, VarargType)	                    \
 typedef struct Name {			                                \
     const Type* elements;				                        \
-    KInt size;				                                    \
+    const KInt size;				                            \
+    const KBoolean releasable;                                  \
+    KBoolean released;                                          \
 } Name;                                                         \
                                                                 \
 static Name Name##_new(const Type* elements, const KInt size) { \
-    return (Name){ elements, size };                            \
+    return (Name){ elements, size, true, false };               \
 }																\
                                                                 \
 static Name _##Name##_of(const int n, ...) {                    \
@@ -70,8 +81,15 @@ static Name _##Name##_of(const int n, ...) {                    \
     for (int i = 0; i < n; i++)                                 \
         elements[i] = (Type)va_arg(args, VarargType);           \
     va_end(args);                                               \
-    return (Name){ (const Type*) elements, n };                 \
+    return (Name){ (const Type*) elements, n, true, false };    \
 }                                                               \
+                                                                \
+static void Name##_free(Name* arr) {                            \
+    if(arr->releasable && !arr->released) {                     \
+        free((void*)arr->elements);                             \
+        arr->released = true;                                   \
+    }                                                           \
+}
 
 KArrayDef(KCharArray,	 KChar,    int32_t)
 KArrayDef(KBooleanArray, KBoolean, int32_t)
@@ -89,7 +107,6 @@ KArrayDef(KArray,        void*,    void*)
 #define KByteArray_of(...)    _KByteArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
 #define KShortArray_of(...)   _KShortArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
 #define KIntArray_of(...)     _KIntArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
-//#define KLongArray_of(...)    _KLongArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
 #define KFloatArray_of(...)   _KFloatArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
 #define KDoubleArray_of(...)  _KDoubleArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
 #define KArray_of(...)        _KArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)

@@ -1,4 +1,4 @@
-package com.huskerdev.nativekt.printers.jvm
+package com.huskerdev.nativekt.printers.c
 
 import com.huskerdev.nativekt.utils.printLabel
 import java.io.File
@@ -71,13 +71,13 @@ class CJniArenaPrinter(
                     (void*)(*env)->Get##Name##ArrayElements(env, arr, NULL),                        \
                     ArenaNode__free##Name##Array                                                    \
                 );                                                                                  \
-                return (K##Name##Array) { elements, size };                                         \
+                return (K##Name##Array) { elements, size, false, false };                           \
             }                                                                                       \
                                                                                                     \
             JType##Array Arena__toKotlin##Name##Array(Arena* arena, K##Name##Array arr, bool dealloc) {\
                 return JNI_toKotlin##Name##Array(                                                      \
                     arena->env, arr,                                                                \
-                    dealloc && !Arena__contains(arena, (void*)arr.elements)                         \
+                    dealloc && !arr.releasable                                                      \
                 );                                                                                  \
             }
 
@@ -110,11 +110,11 @@ class CJniArenaPrinter(
                     (void*)(*env)->GetStringUTFChars(env, str, NULL),
                     ArenaNode__freeString
                 );
-                return (KString) { data, length };
+                return (KString) { data, length, false, false };
             }
             
             jstring Arena__toKotlinString(Arena* arena, KString str, bool dealloc) {
-                return JNI_toKotlinString(arena->env, str, dealloc && !Arena__contains(arena, (void*)str.data));
+                return JNI_toKotlinString(arena->env, str, dealloc && !str.releasable);
             }
             
         """.trimIndent())

@@ -5,9 +5,9 @@ import com.huskerdev.nativekt.plugin.BuildSystem
 import com.huskerdev.nativekt.plugin.NATIVE_TASK_GROUP
 import com.huskerdev.nativekt.plugin.NativeKtJsInterface
 import com.huskerdev.nativekt.plugin.NativeProject
-import com.huskerdev.nativekt.printers.HeaderPrinter
-import com.huskerdev.nativekt.printers.js.CEmscriptenPrinter
-import com.huskerdev.nativekt.printers.js.KotlinJsPrinter
+import com.huskerdev.nativekt.printers.c.CHeaderPrinter
+import com.huskerdev.nativekt.printers.c.CEmscriptenPrinter
+import com.huskerdev.nativekt.printers.kotlin.KotlinJsPrinter
 import com.huskerdev.nativekt.utils.*
 import com.huskerdev.webidl.resolver.BuiltinIdlDeclaration
 import com.huskerdev.webidl.resolver.IdlResolver
@@ -155,7 +155,7 @@ private abstract class PrepareNativesJs: DefaultTask() {
                 target = File(nativesBuildDir, "emscripten_bindings.cpp")
             )
 
-            HeaderPrinter(
+            CHeaderPrinter(
                 idl = idl,
                 target = File(nativesBuildDir, "api.h")
             )

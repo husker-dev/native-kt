@@ -1,6 +1,12 @@
-package com.huskerdev.nativekt.printers.js
+package com.huskerdev.nativekt.printers.c
 
-import com.huskerdev.nativekt.utils.*
+import com.huskerdev.nativekt.utils.allFields
+import com.huskerdev.nativekt.utils.globalOperators
+import com.huskerdev.nativekt.utils.isCallback
+import com.huskerdev.nativekt.utils.isDictionary
+import com.huskerdev.nativekt.utils.printLabel
+import com.huskerdev.nativekt.utils.toCDefType
+import com.huskerdev.nativekt.utils.toCType
 import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlCallbackFunction
 import com.huskerdev.webidl.resolver.ResolvedIdlDictionary
@@ -34,7 +40,9 @@ class CEmscriptenPrinter(
             #define K_ARRAY_DECL(Name, Type)							 \
             value_object<Name>(#Name)									 \
                 .field("elements", POINTER_FIELD(elements, Name, Type))  \
-                .field("size", &Name::size);							 \
+                .field("size", &Name::size)							     \
+                .field("releasable", &Name::releasable)               \
+                .field("released", &Name::released);                  \
 
         """.trimIndent())
 
@@ -51,7 +59,9 @@ class CEmscriptenPrinter(
             
             	value_object<KString>("KString")
                     .field("data", POINTER_FIELD(data, KString, const char*))
-                    .field("length", &KString::length);
+                    .field("length", &KString::length)
+                    .field("releasable", &KString::releasable)
+                    .field("released", &KString::released);
                     
                 K_ARRAY_DECL(KCharArray,	KChar*)
                 K_ARRAY_DECL(KBooleanArray, KBoolean*)

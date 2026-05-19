@@ -1,4 +1,4 @@
-package com.huskerdev.nativekt.printers.jvm
+package com.huskerdev.nativekt.printers.c
 
 import com.huskerdev.nativekt.utils.*
 import com.huskerdev.nativekt.utils.firstParam

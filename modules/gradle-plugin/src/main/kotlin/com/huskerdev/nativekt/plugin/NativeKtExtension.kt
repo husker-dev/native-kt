@@ -159,7 +159,7 @@ sealed interface BuildSystem: Serializable {
     }
 
     open class Cargo: BuildSystem {
-
+        var apiRsFile: File? = null
     }
 }
 

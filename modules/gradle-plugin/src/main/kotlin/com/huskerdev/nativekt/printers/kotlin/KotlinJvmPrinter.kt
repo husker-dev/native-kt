@@ -1,5 +1,8 @@
-package com.huskerdev.nativekt.printers.jvm
+package com.huskerdev.nativekt.printers.kotlin
 
+import com.huskerdev.nativekt.printers.kotlin.jvm.KotlinJvmCIPrinter
+import com.huskerdev.nativekt.printers.kotlin.jvm.KotlinJvmForeignPrinter
+import com.huskerdev.nativekt.printers.kotlin.jvm.KotlinJvmJniPrinter
 import com.huskerdev.nativekt.utils.asyncFunctionName
 import com.huskerdev.nativekt.utils.functionHeader
 import com.huskerdev.nativekt.utils.globalOperators
@@ -9,7 +12,6 @@ import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlOperation
 import org.gradle.internal.extensions.stdlib.capitalized
 import java.io.File
-
 
 class KotlinJvmPrinter(
     idl: IdlResolver,

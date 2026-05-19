@@ -1,11 +1,20 @@
-package com.huskerdev.nativekt.printers
+package com.huskerdev.nativekt.printers.c
 
-import com.huskerdev.nativekt.utils.*
-import com.huskerdev.webidl.resolver.*
+import com.huskerdev.nativekt.utils.allFields
+import com.huskerdev.nativekt.utils.globalOperators
+import com.huskerdev.nativekt.utils.isCallback
+import com.huskerdev.nativekt.utils.isDictionary
+import com.huskerdev.nativekt.utils.printLabel
+import com.huskerdev.nativekt.utils.toCDefType
+import com.huskerdev.webidl.resolver.IdlResolver
+import com.huskerdev.webidl.resolver.ResolvedIdlCallbackFunction
+import com.huskerdev.webidl.resolver.ResolvedIdlDictionary
+import com.huskerdev.webidl.resolver.ResolvedIdlEnum
+import com.huskerdev.webidl.resolver.ResolvedIdlOperation
 import java.io.File
 import kotlin.math.max
 
-class HeaderPrinter(
+class CHeaderPrinter(
     idl: IdlResolver,
     target: File,
     val guardName: String? = null
@@ -261,11 +270,20 @@ class HeaderPrinter(
 
             typedef struct KString {
                 const char* data;
-                KInt length;
+                const KInt length;
+                const KBoolean releasable;
+                KBoolean released;
             } KString;
             
-            inline KString KString_new(const char* data, const KInt length) {
-                return (KString) { data, length };
+            static KString KString_new(const char* data, const KInt length) {
+                return (KString) { data, length, true, false };
+            }
+            
+            static void KString_free(KString* str) {
+                if(str->releasable && !str->released) {
+                    free((void*)str->data);
+                    str->released = true;
+                }
             }
 
             #define ARG_LENGTH(...) ARG_LENGTH__(__VA_ARGS__)
@@ -283,11 +301,13 @@ class HeaderPrinter(
             #define KArrayDef(Name, Type, VarargType)	                    \
             typedef struct Name {			                                \
                 const Type* elements;				                        \
-                KInt size;				                                    \
+                const KInt size;				                            \
+                const KBoolean releasable;                                  \
+                KBoolean released;                                          \
             } Name;                                                         \
                                                                             \
             static Name Name##_new(const Type* elements, const KInt size) { \
-                return (Name){ elements, size };                            \
+                return (Name){ elements, size, true, false };               \
             }																\
                                                                             \
             static Name _##Name##_of(const int n, ...) {                    \
@@ -297,8 +317,15 @@ class HeaderPrinter(
                 for (int i = 0; i < n; i++)                                 \
                     elements[i] = (Type)va_arg(args, VarargType);           \
                 va_end(args);                                               \
-                return (Name){ (const Type*) elements, n };                 \
+                return (Name){ (const Type*) elements, n, true, false };    \
             }                                                               \
+                                                                            \
+            static void Name##_free(Name* arr) {                            \
+                if(arr->releasable && !arr->released) {                     \
+                    free((void*)arr->elements);                             \
+                    arr->released = true;                                   \
+                }                                                           \
+            }
             
             KArrayDef(KCharArray,	 KChar,    int32_t)
             KArrayDef(KBooleanArray, KBoolean, int32_t)
@@ -316,7 +343,6 @@ class HeaderPrinter(
             #define KByteArray_of(...)    _KByteArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
             #define KShortArray_of(...)   _KShortArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
             #define KIntArray_of(...)     _KIntArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
-            //#define KLongArray_of(...)    _KLongArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
             #define KFloatArray_of(...)   _KFloatArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
             #define KDoubleArray_of(...)  _KDoubleArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
             #define KArray_of(...)        _KArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)

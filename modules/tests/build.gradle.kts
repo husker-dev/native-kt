@@ -89,6 +89,9 @@ natives {
     }
 
     create("test")
+    create("test-rs") {
+        cargo()
+    }
 }
 
 

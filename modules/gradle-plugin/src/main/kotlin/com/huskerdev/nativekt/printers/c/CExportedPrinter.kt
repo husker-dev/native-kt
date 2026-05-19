@@ -1,4 +1,4 @@
-package com.huskerdev.nativekt.printers.jvm
+package com.huskerdev.nativekt.printers.c
 
 import com.huskerdev.nativekt.utils.*
 import com.huskerdev.webidl.resolver.*
@@ -90,8 +90,8 @@ internal fun castToKTypeFromCritical(type: ResolvedIdlType, name: String): Strin
         is ResolvedIdlType.Void -> name
         is ResolvedIdlType.Default -> when(val decl = type.declaration) {
             is BuiltinIdlDeclaration -> when(decl.kind) {
-                WebIDLBuiltinKind.LIST -> "${type.toCDefType()}_new(__arg_${name}, __length_${name})"
-                WebIDLBuiltinKind.STRING -> "KString_new(__arg_${name}, __length_${name})"
+                WebIDLBuiltinKind.LIST -> "(${type.toCDefType()}){__arg_${name}, __length_${name}, false, false}"
+                WebIDLBuiltinKind.STRING -> "(KString){__arg_${name}, __length_${name}, false, false}"
                 else -> "__arg_$name"
             }
             else -> "__arg_$name"

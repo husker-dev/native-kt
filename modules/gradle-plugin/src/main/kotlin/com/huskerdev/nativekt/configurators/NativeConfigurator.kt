@@ -7,9 +7,9 @@ import com.huskerdev.nativekt.plugin.CMakeBuildType
 import com.huskerdev.nativekt.plugin.NATIVE_TASK_GROUP
 import com.huskerdev.nativekt.plugin.NativeKtNativeInterface
 import com.huskerdev.nativekt.plugin.NativeProject
-import com.huskerdev.nativekt.printers.HeaderPrinter
-import com.huskerdev.nativekt.printers.kn.DefPrinter
-import com.huskerdev.nativekt.printers.kn.KotlinNativePrinter
+import com.huskerdev.nativekt.printers.c.CHeaderPrinter
+import com.huskerdev.nativekt.printers.DefPrinter
+import com.huskerdev.nativekt.printers.kotlin.KotlinNativePrinter
 import com.huskerdev.nativekt.utils.*
 import com.huskerdev.webidl.resolver.IdlResolver
 import kotlinx.serialization.json.Json
@@ -356,7 +356,7 @@ private abstract class PrepareNativesKn @Inject constructor(
             val linkerOpts = arrayListOf<String>()
 
             // Generate header
-            HeaderPrinter(
+            CHeaderPrinter(
                 idl = idl,
                 target = headerFile,
                 guardName = moduleName.uppercase(),

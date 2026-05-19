@@ -3,7 +3,7 @@ package com.huskerdev.nativekt.configurators
 import com.huskerdev.nativekt.plugin.Multiplatform
 import com.huskerdev.nativekt.plugin.NativeKtCommonInterface
 import com.huskerdev.nativekt.plugin.NativeKtJvmInterface
-import com.huskerdev.nativekt.printers.KotlinCommonPrinter
+import com.huskerdev.nativekt.printers.kotlin.KotlinCommonPrinter
 import com.huskerdev.nativekt.utils.dependsOnReload
 import com.huskerdev.nativekt.utils.dir
 import com.huskerdev.nativekt.utils.fresh

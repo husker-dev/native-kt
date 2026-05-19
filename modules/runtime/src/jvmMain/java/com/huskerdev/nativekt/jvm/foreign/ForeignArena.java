@@ -25,6 +25,8 @@ public class ForeignArena implements Closeable {
         MemorySegment data = heap.allocateFrom(of);
         ForeignUtils.stringDataVarHandle.set(struct, 0L, data);
         ForeignUtils.stringLengthVarHandle.set(struct, 0L, of.length());
+        ForeignUtils.stringReleasableVarHandle.set(struct, 0L, false);
+        ForeignUtils.stringReleasedVarHandle.set(struct, 0L, false);
 
         allocated.add(data.address());
         return struct;
@@ -38,7 +40,7 @@ public class ForeignArena implements Closeable {
     // Array: char
 
     public MemorySegment toNativeCharArray(char[] arr) {
-        MemorySegment struct = ForeignUtils.toNativeCharArray(arr, heap, heap);
+        MemorySegment struct = ForeignUtils.toNativeCharArray(arr, false, heap, heap);
         allocated.add(ForeignUtils.arrayElementsAddress(struct));
         return struct;
     }
@@ -51,7 +53,7 @@ public class ForeignArena implements Closeable {
     // Array: boolean
 
     public MemorySegment toNativeBooleanArray(boolean[] arr) {
-        MemorySegment struct = ForeignUtils.toNativeBooleanArray(arr, heap, heap);
+        MemorySegment struct = ForeignUtils.toNativeBooleanArray(arr, false, heap, heap);
         allocated.add(ForeignUtils.arrayElementsAddress(struct));
         return struct;
     }
@@ -64,7 +66,7 @@ public class ForeignArena implements Closeable {
     // Array: byte
 
     public MemorySegment toNativeByteArray(byte[] arr) {
-        MemorySegment struct = ForeignUtils.toNativeByteArray(arr, heap, heap);
+        MemorySegment struct = ForeignUtils.toNativeByteArray(arr, false, heap, heap);
         allocated.add(ForeignUtils.arrayElementsAddress(struct));
         return struct;
     }
@@ -77,7 +79,7 @@ public class ForeignArena implements Closeable {
     // Array: short
 
     public MemorySegment toNativeShortArray(short[] arr) {
-        MemorySegment struct = ForeignUtils.toNativeShortArray(arr, heap, heap);
+        MemorySegment struct = ForeignUtils.toNativeShortArray(arr, false, heap, heap);
         allocated.add(ForeignUtils.arrayElementsAddress(struct));
         return struct;
     }
@@ -90,7 +92,7 @@ public class ForeignArena implements Closeable {
     // Array: int
 
     public MemorySegment toNativeIntArray(int[] arr) {
-        MemorySegment struct = ForeignUtils.toNativeIntArray(arr, heap, heap);
+        MemorySegment struct = ForeignUtils.toNativeIntArray(arr, false, heap, heap);
         allocated.add(ForeignUtils.arrayElementsAddress(struct));
         return struct;
     }
@@ -103,7 +105,7 @@ public class ForeignArena implements Closeable {
     // Array: long
 
     public MemorySegment toNativeLongArray(long[] arr) {
-        MemorySegment struct = ForeignUtils.toNativeLongArray(arr, heap, heap);
+        MemorySegment struct = ForeignUtils.toNativeLongArray(arr, false, heap, heap);
         allocated.add(ForeignUtils.arrayElementsAddress(struct));
         return struct;
     }
@@ -116,7 +118,7 @@ public class ForeignArena implements Closeable {
     // Array: float
 
     public MemorySegment toNativeFloatArray(float[] arr) {
-        MemorySegment struct = ForeignUtils.toNativeFloatArray(arr, heap, heap);
+        MemorySegment struct = ForeignUtils.toNativeFloatArray(arr, false, heap, heap);
         allocated.add(ForeignUtils.arrayElementsAddress(struct));
         return struct;
     }
@@ -129,7 +131,7 @@ public class ForeignArena implements Closeable {
     // Array: double
 
     public MemorySegment toNativeDoubleArray(double[] arr) {
-        MemorySegment struct = ForeignUtils.toNativeDoubleArray(arr, heap, heap);
+        MemorySegment struct = ForeignUtils.toNativeDoubleArray(arr, false, heap, heap);
         allocated.add(ForeignUtils.arrayElementsAddress(struct));
         return struct;
     }
@@ -142,7 +144,7 @@ public class ForeignArena implements Closeable {
     // Array: enum
 
     public <T extends Enum<T>> MemorySegment toNativeEnumArray(T[] arr) {
-        MemorySegment struct = ForeignUtils.toNativeEnumArray(arr, heap, heap);
+        MemorySegment struct = ForeignUtils.toNativeEnumArray(arr, false, heap, heap);
         allocated.add(ForeignUtils.arrayElementsAddress(struct));
         return struct;
     }
