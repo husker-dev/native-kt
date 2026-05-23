@@ -89,8 +89,13 @@ natives {
     useJvmRecord = false
 
     if(project.hasProperty("disableForeign")) {
-        println("Foreign disabled")
+        println("Disable: Foreign")
         useForeignApi = false
+    }
+
+    if(project.hasProperty("disableJVMCI")) {
+        println("Disable: JVMCI")
+        useJVMCI = false
     }
 
     create("test")

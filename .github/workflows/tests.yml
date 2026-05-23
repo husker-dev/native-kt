@@ -119,18 +119,24 @@ jobs:
         run: |
           ./gradlew :modules:tests:jvmTest --continue
           ./gradlew :modules:tests:jvmTest -DdisableForeign --continue
+          ./gradlew :modules:tests:jvmTest -DdisableJVMCI --continue
+          ./gradlew :modules:tests:jvmTest -DdisableJVMCI -DdisableForeign --continue
 
       - name: Kotlin/JVM tests (macOS arm64)
         if: runner.os == 'macOS'
         run: |
           ./gradlew :modules:tests:jvmTest --continue
           ./gradlew :modules:tests:jvmTest -DdisableForeign --continue
+          ./gradlew :modules:tests:jvmTest -DdisableJVMCI --continue
+          ./gradlew :modules:tests:jvmTest -DdisableJVMCI -DdisableForeign --continue
 
       - name: Kotlin/JVM tests (Windows x64)
         if: runner.os == 'Windows'
         run: |
           ./gradlew :modules:tests:jvmTest --continue
           ./gradlew :modules:tests:jvmTest -DdisableForeign --continue
+          ./gradlew :modules:tests:jvmTest -DdisableJVMCI --continue
+          ./gradlew :modules:tests:jvmTest -DdisableJVMCI -DdisableForeign --continue
 
       - name: Stop Gradle deamon
         run: ./gradlew --stop
