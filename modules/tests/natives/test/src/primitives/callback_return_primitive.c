@@ -34,7 +34,8 @@ KBoolean callbackReturnDouble(CallbackReturnDouble* arg) {
 }
 
 KBoolean callbackReturnString(CallbackReturnString* arg) {
-    return strcmp(arg->invoke(arg).data, "test string") == 0;
+    const KString str = arg->invoke(arg);
+    return str.releasable && strncmp(str.data, "test string", 11) == 0;
 }
 
 VoidCallback* callbackReturnCallback(CallbackReturnCallback* arg) {
