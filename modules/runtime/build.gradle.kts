@@ -13,10 +13,15 @@ group = "com.huskerdev"
 version = projectDir.parentFile.parentFile.resolve("VERSION").readText()
 
 kotlin {
+    jvmToolchain {
+        vendor = JvmVendorSpec.GRAAL_VM
+        languageVersion = JavaLanguageVersion.of(23)
+    }
+
     jvm {
         compilations.configureEach {
             compileTaskProvider.get().compilerOptions {
-                jvmTarget = JvmTarget.JVM_23
+                jvmTarget = JvmTarget.JVM_11
             }
         }
     }

@@ -33,6 +33,8 @@ class EmArena(
         return createJsObject {
             data = strMem
             length = str.length
+            releasable = false
+            released = false
         }
     }
 
@@ -51,7 +53,7 @@ class EmArena(
     // Array: char
 
     fun toNativeCharArray(arr: CharArray) =
-        toNativeCharArray(module, arr).also { ptr(it.elements) }
+        toNativeCharArray(module, arr, false).also { ptr(it.elements) }
 
     fun toKotlinCharArray(struct: EmArray, dealloc: Boolean) =
         toKotlinCharArray(module, struct, dealloc && struct.unsafeCast<EmArray>().elements !in allocated)
@@ -59,7 +61,7 @@ class EmArena(
     // Array: boolean
 
     fun toNativeBooleanArray(arr: BooleanArray) =
-        toNativeBooleanArray(module, arr).also { ptr(it.elements) }
+        toNativeBooleanArray(module, arr, false).also { ptr(it.elements) }
 
     fun toKotlinBooleanArray(struct: EmArray, dealloc: Boolean) =
         toKotlinBooleanArray(module, struct, dealloc && struct.unsafeCast<EmArray>().elements !in allocated)
@@ -67,7 +69,7 @@ class EmArena(
     // Array: byte
 
     fun toNativeByteArray(arr: ByteArray) =
-        toNativeByteArray(module, arr).also { ptr(it.elements) }
+        toNativeByteArray(module, arr, false).also { ptr(it.elements) }
 
     fun toKotlinByteArray(struct: EmArray, dealloc: Boolean) =
         toKotlinByteArray(module, struct, dealloc && struct.unsafeCast<EmArray>().elements !in allocated)
@@ -75,7 +77,7 @@ class EmArena(
     // Array: short
 
     fun toNativeShortArray(arr: ShortArray) =
-        toNativeShortArray(module, arr).also { ptr(it.elements) }
+        toNativeShortArray(module, arr, false).also { ptr(it.elements) }
 
     fun toKotlinShortArray(struct: EmArray, dealloc: Boolean): ShortArray =
         toKotlinShortArray(module, struct, dealloc && struct.unsafeCast<EmArray>().elements !in allocated)
@@ -83,7 +85,7 @@ class EmArena(
     // Array: int
 
     fun toNativeIntArray(arr: IntArray) =
-        toNativeIntArray(module, arr).also { ptr(it.elements) }
+        toNativeIntArray(module, arr, false).also { ptr(it.elements) }
 
     fun toKotlinIntArray(struct: EmArray, dealloc: Boolean) =
         toKotlinIntArray(module, struct, dealloc && struct.unsafeCast<EmArray>().elements !in allocated)
@@ -91,7 +93,7 @@ class EmArena(
     // Array: long
 
     fun toNativeLongArray(arr: LongArray) =
-        toNativeLongArray(module, arr).also { ptr(it.elements) }
+        toNativeLongArray(module, arr, false).also { ptr(it.elements) }
 
     fun toKotlinLongArray(struct: EmArray, dealloc: Boolean): LongArray =
         toKotlinLongArray(module, struct, dealloc && struct.unsafeCast<EmArray>().elements !in allocated)
@@ -99,7 +101,7 @@ class EmArena(
     // Array: float
 
     fun toNativeFloatArray(arr: FloatArray) =
-        toNativeFloatArray(module, arr).also { ptr(it.elements) }
+        toNativeFloatArray(module, arr, false).also { ptr(it.elements) }
 
     fun toKotlinFloatArray(struct: EmArray, dealloc: Boolean): FloatArray =
         toKotlinFloatArray(module, struct, dealloc && struct.unsafeCast<EmArray>().elements !in allocated)
@@ -107,7 +109,7 @@ class EmArena(
     // Array: double
 
     fun toNativeDoubleArray(arr: DoubleArray) =
-        toNativeDoubleArray(module, arr).also { ptr(it.elements) }
+        toNativeDoubleArray(module, arr, false).also { ptr(it.elements) }
 
     fun toKotlinDoubleArray(struct: EmArray, dealloc: Boolean): DoubleArray =
         toKotlinDoubleArray(module, struct, dealloc && struct.unsafeCast<EmArray>().elements !in allocated)

@@ -15,6 +15,10 @@ kotlin {
             version = release(5)
         }
     }
+
+    sourceSets {
+        remove(commonTest.get())
+    }
 }
 
 

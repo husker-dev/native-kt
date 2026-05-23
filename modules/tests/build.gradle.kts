@@ -15,6 +15,11 @@ group = "com.huskerdev"
 version = "1.0"
 
 kotlin {
+    jvmToolchain {
+        vendor = JvmVendorSpec.GRAAL_VM
+        languageVersion = JavaLanguageVersion.of(23)
+    }
+
     jvm {
         compilations.configureEach {
             compileTaskProvider.get().compilerOptions {

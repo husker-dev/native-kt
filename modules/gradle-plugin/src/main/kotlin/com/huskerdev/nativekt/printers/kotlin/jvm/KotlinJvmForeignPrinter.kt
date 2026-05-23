@@ -87,15 +87,15 @@ class KotlinJvmForeignPrinter(
         append(dictionary.name.capitalized())
         append("(of: ")
         append(dictionary.name)
-        append(") = Arena.global().allocate(")
+        append(", releasable: Boolean) = Arena.global().allocate(")
         append(structName)
         append(").apply {\n\t\t\t")
         dictionary.allFields().joinTo(builder, separator = "\n\t\t\t") {
             val fieldName = "${structName}Field${it.name.capitalized()}"
             if(it.type.isString() || it.type.isArray()) {
-                castToNative(it.type, "of.${it.name}", false, dealloc = false, useArena = false, slice = "asSlice($fieldName)")
+                castToNative(it.type, "of.${it.name}", false, dealloc = false, useArena = false, slice = "asSlice($fieldName)", releasable = "releasable")
             } else {
-                val set = castToNative(it.type, "of.${it.name}", critical = false, dealloc = false, useArena = false)
+                val set = castToNative(it.type, "of.${it.name}", critical = false, dealloc = false, useArena = false, releasable = "releasable")
                 "$fieldName.set(this, 0L, $set)"
             }
         }
@@ -135,7 +135,7 @@ class KotlinJvmForeignPrinter(
 
         val args = arrayListOf(function.type.toForeignType())
         args += function.args.flatMap {
-            if(isCriticalAlt && it.type.isString())
+            if(isCriticalAlt && (it.type.isString() || it.type.isArray()) && !it.type.isDictionaryArray() && !it.type.isStringArray())
                 listOf("ForeignUtils.C_ADDRESS", "ForeignUtils.C_INT")
             else listOf(it.type.toForeignType())
         }
@@ -166,10 +166,12 @@ class KotlinJvmForeignPrinter(
             args += "arena.heap as SegmentAllocator"
 
         args += function.args.flatMap {
-            val casted = castToNative(it.type, it.name, function.isCritical(), it.isDealloc(), useArena)
+            val casted = castToNative(it.type, it.name, function.isCritical(), it.isDealloc(), useArena, releasable = "false")
 
             if(it.type.isString() && function.isCritical())
                 listOf(casted, "${it.name}.length")
+            else if(it.type.isArray() && !it.type.isDictionaryArray() && !it.type.isStringArray() && function.isCritical())
+                listOf(casted, "${it.name}.size")
             else listOf(casted)
         }
 
@@ -206,7 +208,7 @@ class KotlinJvmForeignPrinter(
             append(")")
         }
 
-        append(castToNative(callback.type, call.toString(), critical = false, dealloc = false, useArena = false))
+        append(castToNative(callback.type, call.toString(), critical = false, dealloc = false, useArena = false, releasable = "true"))
         append("\n")
     }
 
@@ -286,8 +288,8 @@ class KotlinJvmForeignPrinter(
                 else -> content
             }
             is ResolvedIdlCallbackFunction ->
-                if(useArena) "arena.toJvmCallback<${type.declaration.name}>($content, $dealloc)"
-                else "ForeignUtils.toJvmCallback<${type.declaration.name}>($content, $dealloc)"
+                if(useArena) "arena.toJvmCallback($content, $dealloc)"
+                else "ForeignUtils.toJvmCallback($content, $dealloc)"
             is ResolvedIdlEnum -> "${type.declaration.name}.entries[$content]"
             is ResolvedIdlDictionary -> "toJvmDictionary${type.declaration.name}(${content}, $dealloc)"
             else -> throw UnsupportedOperationException(type.toString())
@@ -301,7 +303,7 @@ class KotlinJvmForeignPrinter(
         critical: Boolean,
         dealloc: Boolean,
         useArena: Boolean,
-        releasable: Boolean,
+        releasable: String,
         slice: String? = null
     ): String {
         val slice = if(slice != null) ", $slice" else ""
@@ -317,11 +319,13 @@ class KotlinJvmForeignPrinter(
                         when (declaration) {
                             is BuiltinIdlDeclaration -> {
                                 val name = declaration.kind.simpleName()
-                                if (useArena) "arena.toNative${name}Array($content)"
+                                if (critical) "ForeignUtils.toNativeHeap${name}Array($content)"
+                                else if (useArena) "arena.toNative${name}Array($content)"
                                 else "ForeignUtils.toNative${name}Array($content, $releasable$slice)"
                             }
                             is ResolvedIdlEnum -> {
-                                if (useArena) "arena.toNativeEnumArray($content)"
+                                if (critical) "ForeignUtils.toNativeHeapEnumArray($content)"
+                                else if (useArena) "arena.toNativeEnumArray($content)"
                                 else "ForeignUtils.toNativeEnumArray($content, $releasable$slice)"
                             }
                             is ResolvedIdlDictionary -> "ForeignUtils.toNativeArray($content, $releasable, ::toNativeDictionary${declaration.name}$slice)"
@@ -334,7 +338,7 @@ class KotlinJvmForeignPrinter(
                     if (dealloc) "arena.callback(toNativeCallback${type.declaration.name}($content))"
                     else "toNativeCallback${type.declaration.name}($content)"
                 is ResolvedIdlEnum -> "$content.ordinal"
-                is ResolvedIdlDictionary -> "toNativeDictionary${type.declaration.name}(${content})"
+                is ResolvedIdlDictionary -> "toNativeDictionary${type.declaration.name}($content, $releasable)"
                 else -> throw UnsupportedOperationException(type.toString())
             }
             else -> throw UnsupportedOperationException(type.toString())

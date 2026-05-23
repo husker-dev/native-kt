@@ -18,6 +18,7 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.internal.extensions.stdlib.capitalized
@@ -103,12 +104,6 @@ internal fun configureNative(
     if(commonTask != null)
         prepareTask.dependsOn(commonTask)
 
-    // Init cmake only when compiling project
-    project.gradle.taskGraph.whenReady {
-        if (hasTask("${project.path}:compileKotlin${targetName.capitalized()}"))
-            prepareTask.get().shouldInit = true
-    }
-
     // Add cinterop
     compilation.cinterops {
         create("nativekt${module.name.capitalized()}").definitionFile.set(prepareTask.flatMap { it.defFile })
@@ -134,6 +129,12 @@ internal fun configureNative(
     }
     project.tasks.matching { it.name == "${targetName}SourcesJar" }.forEach {
         it.dependsOn(compilationTask)
+    }
+
+    // Init cmake only when compiling project
+    project.gradle.taskGraph.whenReady {
+        if (hasTask(compilationTask.get()))
+            prepareTask.get().shouldInit = true
     }
 }
 
@@ -342,7 +343,7 @@ private abstract class PrepareNativesKn @Inject constructor(
     @get:Input abstract var kotlinFile: String
 
     @get:Input abstract var projectDir: String
-    @get:Input abstract var nativesBuildDir: String
+    @get:OutputDirectory abstract var nativesBuildDir: String
 
     @get:Input abstract var buildSystem: BuildSystem
 

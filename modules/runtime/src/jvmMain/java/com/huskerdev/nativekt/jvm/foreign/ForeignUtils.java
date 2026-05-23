@@ -1,5 +1,7 @@
 package com.huskerdev.nativekt.jvm.foreign;
 
+import kotlin.jvm.functions.Function2;
+
 import java.lang.foreign.*;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -94,12 +96,7 @@ public class ForeignUtils {
     // String
 
     public static MemorySegment toNativeHeapString(String str) {
-        MemorySegment struct = Arena.ofAuto().allocate(STRING_STRUCT);
-        stringDataVarHandle.set(struct, 0L, MemorySegment.ofArray(str.getBytes()));
-        stringLengthVarHandle.set(struct, 0L, str.length());
-        stringReleasableVarHandle.set(struct, 0L, false);
-        stringReleasedVarHandle.set(struct, 0L, false);
-        return struct;
+        return MemorySegment.ofArray(str.getBytes());
     }
 
     public static MemorySegment toNativeString(String of, boolean releasable) {
@@ -143,6 +140,10 @@ public class ForeignUtils {
 
     // Array: char
 
+    public static MemorySegment toNativeHeapCharArray(char[] arr) {
+        return MemorySegment.ofArray(arr);
+    }
+
     public static MemorySegment toNativeCharArray(char[] arr, boolean releasable) {
         return toNativeCharArray(arr, releasable, Arena.global(), Arena.ofAuto());
     }
@@ -176,6 +177,13 @@ public class ForeignUtils {
 
     // Array: boolean
 
+    public static MemorySegment toNativeHeapBooleanArray(boolean[] arr) {
+        byte[] bytes = new byte[arr.length];
+        for(int i = 0; i < arr.length; i++)
+            bytes[i] = (byte)(arr[i] ? 1 : 0);
+        return MemorySegment.ofArray(bytes);
+    }
+
     public static MemorySegment toNativeBooleanArray(boolean[] arr, boolean releasable) {
         return toNativeBooleanArray(arr, releasable, Arena.global(), Arena.ofAuto());
     }
@@ -204,6 +212,10 @@ public class ForeignUtils {
     }
 
     // Array: byte
+
+    public static MemorySegment toNativeHeapByteArray(byte[] arr) {
+        return MemorySegment.ofArray(arr);
+    }
 
     public static MemorySegment toNativeByteArray(byte[] arr, boolean releasable) {
         return toNativeByteArray(arr, releasable, Arena.global(), Arena.ofAuto());
@@ -238,6 +250,10 @@ public class ForeignUtils {
 
     // Array: short
 
+    public static MemorySegment toNativeHeapShortArray(short[] arr) {
+        return MemorySegment.ofArray(arr);
+    }
+
     public static MemorySegment toNativeShortArray(short[] arr, boolean releasable) {
         return toNativeShortArray(arr, releasable, Arena.global(), Arena.ofAuto());
     }
@@ -271,6 +287,10 @@ public class ForeignUtils {
 
     // Array: int
 
+    public static MemorySegment toNativeHeapIntArray(int[] arr) {
+        return MemorySegment.ofArray(arr);
+    }
+
     public static MemorySegment toNativeIntArray(int[] arr, boolean releasable) {
         return toNativeIntArray(arr, releasable, Arena.global(), Arena.ofAuto());
     }
@@ -303,6 +323,10 @@ public class ForeignUtils {
     }
 
     // Array: long
+
+    public static MemorySegment toNativeHeapLongArray(long[] arr) {
+        return MemorySegment.ofArray(arr);
+    }
 
     public static MemorySegment toNativeLongArray(long[] arr, boolean releasable) {
         return toNativeLongArray(arr, releasable, Arena.global(), Arena.ofAuto());
@@ -338,6 +362,10 @@ public class ForeignUtils {
 
     // Array: float
 
+    public static MemorySegment toNativeHeapFloatArray(float[] arr) {
+        return MemorySegment.ofArray(arr);
+    }
+
     public static MemorySegment toNativeFloatArray(float[] arr, boolean releasable) {
         return toNativeFloatArray(arr, releasable, Arena.global(), Arena.ofAuto());
     }
@@ -371,6 +399,10 @@ public class ForeignUtils {
 
     // Array: double
 
+    public static MemorySegment toNativeHeapDoubleArray(double[] arr) {
+        return MemorySegment.ofArray(arr);
+    }
+
     public static MemorySegment toNativeDoubleArray(double[] arr, boolean releasable) {
         return toNativeDoubleArray(arr, releasable, Arena.global(), Arena.ofAuto());
     }
@@ -403,6 +435,13 @@ public class ForeignUtils {
     }
 
     // Array: enum
+
+    public static <T extends Enum<T>> MemorySegment toNativeHeapEnumArray(T[] arr) {
+        int[] intEnums = new int[arr.length];
+        for(int i = 0; i < arr.length; i++)
+            intEnums[i] = arr[i].ordinal();
+        return MemorySegment.ofArray(intEnums);
+    }
 
     public static <T extends Enum<T>> MemorySegment toNativeEnumArray(T[] arr, boolean releasable) {
         return toNativeEnumArray(arr, releasable, Arena.global(), Arena.ofAuto());
@@ -441,15 +480,15 @@ public class ForeignUtils {
 
     // Array: object
 
-    public static <T> MemorySegment toNativeArray(T[] elements, boolean releasable, Function<T, MemorySegment> cast) {
+    public static <T> MemorySegment toNativeArray(T[] elements, boolean releasable, Function2<T, Boolean, MemorySegment> cast) {
         return toNativeArray(elements, releasable, cast, Arena.ofAuto().allocate(ARRAY_STRUCT));
     }
 
-    public static <T> MemorySegment toNativeArray(T[] elements, boolean releasable, Function<T, MemorySegment> cast, MemorySegment struct) {
+    public static <T> MemorySegment toNativeArray(T[] elements, boolean releasable, Function2<T, Boolean, MemorySegment> cast, MemorySegment struct) {
         MemorySegment elementsPtr = Arena.global().allocate(MemoryLayout.sequenceLayout(elements.length, ValueLayout.ADDRESS));
         VarHandle ptrHandle = ValueLayout.ADDRESS.arrayElementVarHandle();
         for(int i = 0; i < elements.length; i++)
-            ptrHandle.set(elementsPtr, 0L, (long)i, cast.apply(elements[i]));
+            ptrHandle.set(elementsPtr, 0L, (long)i, cast.invoke(elements[i], releasable));
 
         arrayElementsVarHandle.set(struct, 0L, elementsPtr);
         arraySizeVarHandle.set(struct, 0L, elements.length);

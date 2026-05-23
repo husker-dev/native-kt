@@ -56,29 +56,29 @@ class CJniArenaPrinter(
         printLabel(builder, "Primitive arrays")
         builder.append("""
              
-            #define KArrayCast(Name, JType)		                                                    \
-            static void ArenaNode__free##Name##Array(Arena* arena, ArenaNode* node){                \
-                JNIEnv *env = arena->env;                                                           \
-                (*env)->Release##Name##ArrayElements(env, node->obj, (JType*)node->ptr, 0);         \
-            }                                                                                       \
-                                                                                                    \
-            K##Name##Array Arena__toNative##Name##Array(Arena* arena, JType##Array arr) {           \
-                JNIEnv *env = arena->env;                                                           \
-                jsize size = (*env)->GetArrayLength(env, arr);                                      \
-                                                                                                    \
-                K##Name* elements = (K##Name*) Arena__push(arena,                                   \
-                    arr,                                                                            \
-                    (void*)(*env)->Get##Name##ArrayElements(env, arr, NULL),                        \
-                    ArenaNode__free##Name##Array                                                    \
-                );                                                                                  \
-                return (K##Name##Array) { elements, size, false, false };                           \
-            }                                                                                       \
-                                                                                                    \
+            #define KArrayCast(Name, JType)		                                                       \
+            static void ArenaNode__free##Name##Array(Arena* arena, ArenaNode* node){                   \
+                JNIEnv *env = arena->env;                                                              \
+                (*env)->Release##Name##ArrayElements(env, node->obj, (JType*)node->ptr, 0);            \
+            }                                                                                          \
+                                                                                                       \
+            K##Name##Array Arena__toNative##Name##Array(Arena* arena, JType##Array arr) {              \
+                JNIEnv *env = arena->env;                                                              \
+                jsize size = (*env)->GetArrayLength(env, arr);                                         \
+                                                                                                       \
+                K##Name* elements = (K##Name*) Arena__push(arena,                                      \
+                    arr,                                                                               \
+                    (void*)(*env)->Get##Name##ArrayElements(env, arr, NULL),                           \
+                    ArenaNode__free##Name##Array                                                       \
+                );                                                                                     \
+                return (K##Name##Array) { elements, size, false, false };                              \
+            }                                                                                          \
+                                                                                                       \
             JType##Array Arena__toKotlin##Name##Array(Arena* arena, K##Name##Array arr, bool dealloc) {\
                 return JNI_toKotlin##Name##Array(                                                      \
-                    arena->env, arr,                                                                \
-                    dealloc && !arr.releasable                                                      \
-                );                                                                                  \
+                    arena->env, arr,                                                                   \
+                    dealloc && arr.releasable                                                          \
+                );                                                                                     \
             }
 
             KArrayCast(Char,    jchar)
@@ -114,7 +114,7 @@ class CJniArenaPrinter(
             }
             
             jstring Arena__toKotlinString(Arena* arena, KString str, bool dealloc) {
-                return JNI_toKotlinString(arena->env, str, dealloc && !str.releasable);
+                return JNI_toKotlinString(arena->env, str, dealloc && str.releasable);
             }
             
         """.trimIndent())

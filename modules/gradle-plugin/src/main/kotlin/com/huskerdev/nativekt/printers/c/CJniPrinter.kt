@@ -109,7 +109,7 @@ class CJniPrinter(
 
         // == Function call ==
         val args = function.args.joinToString {
-            castJavaToJNI(it.type, "__arg_${it.name}", it.isDealloc(), useArena)
+            castJavaToJNI(it.type, "__arg_${it.name}", it.isDealloc(), useArena, releasable = "false")
         }
         val call = "${function.name}($args)"
         append(castJniToJava(function.type, call, function.isDealloc(), function.isDeallocContent(), useArena))
@@ -187,22 +187,22 @@ internal fun castJniToJava(type: ResolvedIdlType, content: String, dealloc: Bool
     }
 }
 
-internal fun castJavaToJNI(type: ResolvedIdlType, content: String, dealloc: Boolean, useArena: Boolean): String {
+internal fun castJavaToJNI(type: ResolvedIdlType, content: String, dealloc: Boolean, useArena: Boolean, releasable: String): String {
     return when(type) {
         is ResolvedIdlType.Default -> when(val decl = type.declaration) {
             is BuiltinIdlDeclaration -> when(decl.kind) {
                 WebIDLBuiltinKind.STRING ->
                     if(useArena) "Arena__toNativeString(&arena, $content)"
-                    else "JNI_toNativeString(env, $content)"
+                    else "JNI_toNativeString(env, $content, $releasable)"
                 WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
                     when (declaration) {
                         is BuiltinIdlDeclaration -> {
                             val name = declaration.kind.simpleName()
                             if (useArena) "Arena__toNative${name}Array(&arena, $content)"
-                            else "JNI_toNative${name}Array(env, $content)"
+                            else "JNI_toNative${name}Array(env, $content, $releasable)"
                         }
-                        is ResolvedIdlEnum -> "JNI_toNativeEnumArray(env, $content)"
-                        is ResolvedIdlDictionary -> "JNI_toNativeArray(env, $content, (void*(*)(JNIEnv*, jobject))JNI_toNativeDictionary${declaration.name})"
+                        is ResolvedIdlEnum -> "JNI_toNativeEnumArray(env, $content, $releasable)"
+                        is ResolvedIdlDictionary -> "JNI_toNativeArray(env, $content, (void*(*)(JNIEnv*, jobject, bool))JNI_toNativeDictionary${declaration.name}, $releasable)"
                         else -> throw UnsupportedOperationException(type.toString())
                     }
                 }
@@ -214,7 +214,7 @@ internal fun castJavaToJNI(type: ResolvedIdlType, content: String, dealloc: Bool
                 else "(${decl.name}*)$call"
             }
             is ResolvedIdlEnum -> "JNI_toNativeEnum(env, $content)"
-            is ResolvedIdlDictionary -> "JNI_toNativeDictionary${decl.name}(env, $content)"
+            is ResolvedIdlDictionary -> "JNI_toNativeDictionary${decl.name}(env, $content, $releasable)"
             else -> throw UnsupportedOperationException(type.toString())
         }
         else -> throw UnsupportedOperationException(type.toString())

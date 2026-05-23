@@ -46,15 +46,19 @@ class KotlinNativePrinter(
             private fun toNativeString(of: String, arena: NativeArena) = cValue<$cinteropPath.KString> {
                 data = of.cstr.getPointer(arena.scope)
                 length = of.length
+                releasable = false
+                released = false
                 arena.ptr(data!!)
             }
             
-            private fun toNativeString(of: String) = 
-            	cValue<$cinteropPath.KString> { toNativeString(of, this) }
+            private fun toNativeString(of: String, releasable: Boolean) = 
+            	cValue<$cinteropPath.KString> { toNativeString(of, this, releasable) }
 
-            private fun toNativeString(of: String, struct: $cinteropPath.KString) = struct.apply {
-            	data = strdup(of)
-            	length = of.length
+            private fun toNativeString(of: String, struct: $cinteropPath.KString, releasable: Boolean) = struct.apply {
+            	this.data = strdup(of)
+                this.length = of.length
+                this.releasable = releasable
+                this.released = false
             }
             
             private fun toKotlinString(of: $cinteropPath.KString, dealloc: Boolean): String =
@@ -115,7 +119,7 @@ class KotlinNativePrinter(
         append(dictionary.name)
         append("(of: ")
         append(dictionary.name)
-        append(") = allocStruct<")
+        append(", releasable: Boolean) = allocStruct<")
         append(cinteropPath)
         append(".")
         append(dictionary.name)
@@ -124,9 +128,9 @@ class KotlinNativePrinter(
 
         dictionary.allFields().joinTo(builder, separator = "\n\t") {
             if(it.type.isArray() || it.type.isString())
-                castToNative(it.type, "of.${it.name}", dealloc = false, useArena = false, struct = "struct.${it.name}")
+                castToNative(it.type, "of.${it.name}", dealloc = false, useArena = false, struct = "struct.${it.name}", releasable = "releasable")
             else
-                "struct.${it.name} = ${castToNative(it.type, "of.${it.name}", dealloc = false, useArena = false)}"
+                "struct.${it.name} = ${castToNative(it.type, "of.${it.name}", dealloc = false, useArena = false, releasable = "releasable")}"
         }
         append("\n}\n")
     }
@@ -163,7 +167,7 @@ class KotlinNativePrinter(
         append("struct.invoke = staticCFunction { ")
         args.joinTo(builder)
         append(" ->\n\t\t\t")
-        append(castToNative(callback.type, call, dealloc = false, useArena = false))
+        append(castToNative(callback.type, call, dealloc = false, useArena = false, releasable = "true"))
         append("\n\t\t}\n\t\t")
 
         // free =
@@ -182,7 +186,7 @@ class KotlinNativePrinter(
         append("\n\t")
 
         val args = function.args.joinToString { arg ->
-            castToNative(arg.type, arg.name, arg.isDealloc(), useArena)
+            castToNative(arg.type, arg.name, arg.isDealloc(), useArena, releasable = "false")
         }
 
         val call = "$cinteropPath.${function.name}($args)"
@@ -205,16 +209,20 @@ class KotlinNativePrinter(
                 private fun toNative${type}Array(array: ${type}Array, arena: NativeArena) = cValue<$cinteropPath.K${type}Array> {
                     elements = arena.pin(array).addressOf(0)
                     size = array.size
+                    releasable = false
+                    released = false
                     arena.ptr(elements!!)
                 }
     
-                private fun toNative${type}Array(array: ${type}Array) = 
-                    cValue<$cinteropPath.K${type}Array> { toNative${type}Array(array, this) }
+                private fun toNative${type}Array(array: ${type}Array, releasable: Boolean) = 
+                    cValue<$cinteropPath.K${type}Array> { toNative${type}Array(array, this, releasable) }
                 
-                private fun toNative${type}Array(array: ${type}Array, struct: $cinteropPath.K${type}Array) = struct.apply {
+                private fun toNative${type}Array(array: ${type}Array, struct: $cinteropPath.K${type}Array, releasable: Boolean) = struct.apply {
                     val bytes = array.size * ${type}.SIZE_BYTES
-                    elements = mallocExact(bytes.toUInt()).reinterpret()
-                    size = array.size
+                    this.elements = mallocExact(bytes.toUInt()).reinterpret()
+                    this.size = array.size
+                    this.releasable = releasable
+                    this.released = false
                     array.usePinned { memcpy(elements, it.addressOf(0), bytes.${if(is32Bit) "toUInt" else "toULong"}()) }
                 }
     
@@ -244,16 +252,20 @@ class KotlinNativePrinter(
             private fun toNativeCharArray(array: CharArray, arena: NativeArena) = cValue<$cinteropPath.KCharArray> {
                 elements = arena.pin(array).addressOf(0).reinterpret()
                 size = array.size
+                releasable = false
+                released = false
                 arena.ptr(elements!!)
             }
             
-            private fun toNativeCharArray(array: CharArray) = 
-                cValue<$cinteropPath.KCharArray> { toNativeCharArray(array, this) }
+            private fun toNativeCharArray(array: CharArray, releasable: Boolean) = 
+                cValue<$cinteropPath.KCharArray> { toNativeCharArray(array, this, releasable) }
 
-            private fun toNativeCharArray(array: CharArray, struct: $cinteropPath.KCharArray) = struct.apply {
+            private fun toNativeCharArray(array: CharArray, struct: $cinteropPath.KCharArray, releasable: Boolean) = struct.apply {
             	val bytes = array.size * Char.SIZE_BYTES
-            	elements = mallocExact(bytes.toUInt()).reinterpret()
-            	size = array.size
+            	this.elements = mallocExact(bytes.toUInt()).reinterpret()
+            	this.size = array.size
+                this.releasable = releasable
+                this.released = false
             	array.usePinned { memcpy(elements, it.addressOf(0), bytes.${if (is32Bit) "toUInt" else "toULong"}()) }
             }
 
@@ -281,16 +293,20 @@ class KotlinNativePrinter(
             	val byteArray = array.map { it.toByte() }.toByteArray()
             	elements = arena.pin(byteArray).addressOf(0).reinterpret()
             	size = array.size
+                releasable = false
+                released = false
             	arena.ptr(elements!!)
             }
 
-            private fun toNativeBooleanArray(array: BooleanArray) = 
-                cValue<$cinteropPath.KBooleanArray> { toNativeBooleanArray(array, this) }
+            private fun toNativeBooleanArray(array: BooleanArray, releasable: Boolean) = 
+                cValue<$cinteropPath.KBooleanArray> { toNativeBooleanArray(array, this, releasable) }
             
-            private fun toNativeBooleanArray(array: BooleanArray, struct: $cinteropPath.KBooleanArray) = struct.apply {
+            private fun toNativeBooleanArray(array: BooleanArray, struct: $cinteropPath.KBooleanArray, releasable: Boolean) = struct.apply {
             	val bytes = array.size * Byte.SIZE_BYTES
-            	elements = mallocExact(bytes.toUInt()).reinterpret()
-            	size = array.size
+            	this.elements = mallocExact(bytes.toUInt()).reinterpret()
+            	this.size = array.size
+                this.releasable = releasable
+                this.released = false
             	val byteArray = array.map { it.toByte() }.toByteArray()
             	byteArray.usePinned { memcpy(elements, it.addressOf(0), bytes.${if (is32Bit) "toUInt" else "toULong"}()) }
             }
@@ -323,26 +339,32 @@ class KotlinNativePrinter(
                 val bytes = array.size * typeSize
                 elements = arena.ptr(mallocExact(bytes.toUInt()).reinterpret())
                 size = array.size
+                releasable = false
+                released = false
                 setter(array, elements!!.reinterpret())
             }
             
             private fun <T: Enum<T>, N: CPrimitiveVar> toNativeEnumArray(
                 array: Array<T>,
                 typeSize: Long,
-                setter: (from: Array<T>, to: CPointer<N>) -> Unit
+                setter: (from: Array<T>, to: CPointer<N>) -> Unit,
+                releasable: Boolean
             ) = cValue<$cinteropPath.KIntArray> {
-                toNativeEnumArray(array, typeSize, setter, this)
+                toNativeEnumArray(array, typeSize, setter, this, releasable)
             }
             
             private fun <T: Enum<T>, N: CPrimitiveVar> toNativeEnumArray(
                 array: Array<T>,
                 typeSize: Long,
                 setter: (from: Array<T>, to: CPointer<N>) -> Unit,
-                struct: $cinteropPath.KIntArray
+                struct: $cinteropPath.KIntArray, 
+                releasable: Boolean
             ) = struct.apply {
                 val bytes = array.size * typeSize
-                elements = mallocExact(bytes.toUInt()).reinterpret()
-                size = array.size
+                this.elements = mallocExact(bytes.toUInt()).reinterpret()
+                this.size = array.size
+                this.releasable = releasable
+                this.released = false
                 setter(array, elements!!.reinterpret())
             }
             
@@ -374,22 +396,26 @@ class KotlinNativePrinter(
             
             private fun <T: Any, N: CPointed> toNativeArray(
                 array: Array<T>,
-                converter: (from: T) -> CPointer<N>,
-                arena: NativeArena? = null
+                converter: (from: T, releasable: Boolean) -> CPointer<N>,
+                arena: NativeArena? = null,
+                releasable: Boolean
             ) = cValue<$cinteropPath.KArray> {
-                toNativeArray(array, converter, arena, this)
+                toNativeArray(array, converter, arena, this, releasable)
             }
             
              private fun <T: Any, N: CPointed> toNativeArray(
                 array: Array<T>,
-                converter: (from: T) -> CPointer<N>,
+                converter: (from: T, releasable: Boolean) -> CPointer<N>,
                 arena: NativeArena? = null,
-                struct: $cinteropPath.KArray
+                struct: $cinteropPath.KArray,
+                releasable: Boolean
             ) = struct.apply {
-                elements = mallocExact((array.size * size_t.SIZE_BYTES).toUInt()).reinterpret()
-                size = array.size
+                this.elements = mallocExact((array.size * size_t.SIZE_BYTES).toUInt()).reinterpret()
+                this.size = array.size
+                this.releasable = releasable
+                this.released = false
                 for(i in array.indices)
-                    elements!![i] = converter(array[i])
+                    elements!![i] = converter(array[i], releasable)
                 arena?.ptr(elements!!.reinterpret())
             }
             
@@ -471,28 +497,29 @@ class KotlinNativePrinter(
         else -> throw UnsupportedOperationException(type.toString())
     }
 
-    private fun castToNative(type: ResolvedIdlType, content: String, dealloc: Boolean, useArena: Boolean, struct: String? = null): String {
+    private fun castToNative(type: ResolvedIdlType, content: String, dealloc: Boolean, useArena: Boolean, struct: String? = null, releasable: String): String {
         val struct = if(struct != null) ", struct = $struct" else ""
+        val releasable = "releasable = $releasable"
         return when(type) {
             is ResolvedIdlType.Void -> content
             is ResolvedIdlType.Default -> when(val decl = type.declaration) {
                 is BuiltinIdlDeclaration -> when(decl.kind) {
                     WebIDLBuiltinKind.STRING ->
                         if(useArena) "toNativeString($content, arena)"
-                        else "toNativeString($content$struct)"
+                        else "toNativeString($content$struct, $releasable)"
                     WebIDLBuiltinKind.CHAR -> "$content.code.toUShort()"
                     WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
                         when (declaration) {
                             is BuiltinIdlDeclaration -> {
                                 val name = declaration.kind.simpleName()
                                 if (useArena) "toNative${name}Array($content, arena)"
-                                else "toNative${name}Array($content$struct)"
+                                else "toNative${name}Array($content$struct, $releasable)"
                             }
                             is ResolvedIdlEnum -> {
                                 if (useArena) "toNativeEnumArray($content, arena, sizeOf<${cinteropPath}.${declaration.name}.Var>(), _${declaration.name}ToNative)"
-                                else "toNativeEnumArray($content, sizeOf<${cinteropPath}.${declaration.name}.Var>(), _${declaration.name}ToNative$struct)"
+                                else "toNativeEnumArray($content, sizeOf<${cinteropPath}.${declaration.name}.Var>(), _${declaration.name}ToNative$struct, $releasable)"
                             }
-                            is ResolvedIdlDictionary -> "toNativeArray($content, ::toNativeDictionary${declaration.name}${if(useArena) ", arena" else ""}$struct)"
+                            is ResolvedIdlDictionary -> "toNativeArray($content, ::toNativeDictionary${declaration.name}${if(useArena) ", arena" else ""}$struct, $releasable)"
                             else -> throw UnsupportedOperationException(type.toString())
                         }
                     }
@@ -502,7 +529,7 @@ class KotlinNativePrinter(
                 is ResolvedIdlCallbackFunction ->
                     if(dealloc) "arena.callback(toNativeCallback${decl.name}($content))"
                     else "toNativeCallback${decl.name}($content)"
-                is ResolvedIdlDictionary -> "toNativeDictionary${decl.name}(${content})"
+                is ResolvedIdlDictionary -> "toNativeDictionary${decl.name}(${content}, $releasable)"
                 else -> throw UnsupportedOperationException(type.toString())
             }
             else -> throw UnsupportedOperationException(type.toString())

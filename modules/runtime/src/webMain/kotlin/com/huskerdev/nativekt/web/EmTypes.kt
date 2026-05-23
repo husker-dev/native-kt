@@ -29,11 +29,15 @@ external interface EmModule: JsAny {
 external interface EmString: JsAny {
     var data: Int
     var length: Int
+    var releasable: Boolean
+    var released: Boolean
 }
 
 external interface EmArray: JsAny {
     var elements: Int
     var size: Int
+    var releasable: Boolean
+    var released: Boolean
 }
 
 // Types arrays

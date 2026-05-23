@@ -26,14 +26,16 @@ fun <T: JsAny> loadLib(lib: JsAny): Promise<T> =
 
 fun Boolean.toInt() = if(this) 1 else 0
 
-fun toNativeString(module: EmModule, str: String): EmString {
+fun toNativeString(module: EmModule, str: String, releasable: Boolean): EmString {
     val len = module.lengthBytesUTF8(str) + 1
     val strMem = module._malloc(len)
     module.stringToUTF8(str, strMem, len)
 
     return createJsObject {
-        data = strMem
-        length = str.length
+        this.data = strMem
+        this.length = str.length
+        this.releasable = releasable
+        this.released = false
     }
 }
 
@@ -47,6 +49,8 @@ fun toKotlinString(module: EmModule, struct: EmString, dealloc: Boolean): String
 fun fillEmString(module: EmModule, ptr: Int, str: EmString) {
     module.HEAP32[ptr shr 2] = str.data
     module.HEAP32[(ptr shr 2) + 1] = str.length
+    module.HEAP32[(ptr shr 2) + 2] = str.releasable.toInt()
+    module.HEAP32[(ptr shr 2) + 3] = str.released.toInt()
 }
 
 fun extractEmString(module: EmModule, ptr: Int): EmString = createJsObject {
@@ -59,6 +63,8 @@ fun extractEmString(module: EmModule, ptr: Int): EmString = createJsObject {
 fun fillEmArray(module: EmModule, ptr: Int, arr: EmArray) {
     module.HEAP32[ptr shr 2] = arr.elements
     module.HEAP32[(ptr shr 2) + 1] = arr.size
+    module.HEAP32[(ptr shr 2) + 2] = arr.releasable.toInt()
+    module.HEAP32[(ptr shr 2) + 3] = arr.released.toInt()
 }
 
 fun extractEmArray(module: EmModule, ptr: Int): EmArray = createJsObject {
@@ -68,7 +74,7 @@ fun extractEmArray(module: EmModule, ptr: Int): EmArray = createJsObject {
 
 // Array: char
 
-fun toNativeCharArray(module: EmModule, arr: CharArray): EmArray {
+fun toNativeCharArray(module: EmModule, arr: CharArray, releasable: Boolean): EmArray {
     val elements = module._malloc(arr.size * Char.SIZE_BYTES)
     Int16Array(module.HEAP8.buffer, elements, arr.size)
         .set(createJsArray(arr.size) {
@@ -77,6 +83,8 @@ fun toNativeCharArray(module: EmModule, arr: CharArray): EmArray {
     return createJsObject {
         this.elements = elements
         this.size = arr.size
+        this.releasable = releasable
+        this.released = false
     }
 }
 
@@ -91,7 +99,7 @@ fun toKotlinCharArray(module: EmModule, struct: EmArray, dealloc: Boolean): Char
 
 // Array: boolean
 
-fun toNativeBooleanArray(module: EmModule, arr: BooleanArray): EmArray {
+fun toNativeBooleanArray(module: EmModule, arr: BooleanArray, releasable: Boolean): EmArray {
     val elements = module._malloc(arr.size * Byte.SIZE_BYTES)
     Int8Array(module.HEAP8.buffer, elements, arr.size)
         .set(createJsArray(arr.size) {
@@ -100,6 +108,8 @@ fun toNativeBooleanArray(module: EmModule, arr: BooleanArray): EmArray {
     return createJsObject {
         this.elements = elements
         this.size = arr.size
+        this.releasable = releasable
+        this.released = false
     }
 }
 
@@ -114,7 +124,7 @@ fun toKotlinBooleanArray(module: EmModule, struct: EmArray, dealloc: Boolean): B
 
 // Array: byte
 
-fun toNativeByteArray(module: EmModule, arr: ByteArray): EmArray {
+fun toNativeByteArray(module: EmModule, arr: ByteArray, releasable: Boolean): EmArray {
     val elements = module._malloc(arr.size * Byte.SIZE_BYTES)
     Int8Array(module.HEAP8.buffer, elements, arr.size)
         .set(createJsArray(arr.size) {
@@ -123,6 +133,8 @@ fun toNativeByteArray(module: EmModule, arr: ByteArray): EmArray {
     return createJsObject {
         this.elements = elements
         this.size = arr.size
+        this.releasable = releasable
+        this.released = false
     }
 }
 
@@ -137,7 +149,7 @@ fun toKotlinByteArray(module: EmModule, struct: EmArray, dealloc: Boolean): Byte
 
 // Array: short
 
-fun toNativeShortArray(module: EmModule, arr: ShortArray): EmArray {
+fun toNativeShortArray(module: EmModule, arr: ShortArray, releasable: Boolean): EmArray {
     val elements = module._malloc(arr.size * Short.SIZE_BYTES)
     Int16Array(module.HEAP8.buffer, elements, arr.size)
         .set(createJsArray(arr.size) {
@@ -146,6 +158,8 @@ fun toNativeShortArray(module: EmModule, arr: ShortArray): EmArray {
     return createJsObject {
         this.elements = elements
         this.size = arr.size
+        this.releasable = releasable
+        this.released = false
     }
 }
 
@@ -160,7 +174,7 @@ fun toKotlinShortArray(module: EmModule, struct: EmArray, dealloc: Boolean): Sho
 
 // Array: int
 
-fun toNativeIntArray(module: EmModule, arr: IntArray): EmArray {
+fun toNativeIntArray(module: EmModule, arr: IntArray, releasable: Boolean): EmArray {
     val elements = module._malloc(arr.size * Int.SIZE_BYTES)
     Int32Array(module.HEAP8.buffer, elements, arr.size)
         .set(createJsArray(arr.size) {
@@ -169,6 +183,8 @@ fun toNativeIntArray(module: EmModule, arr: IntArray): EmArray {
     return createJsObject {
         this.elements = elements
         this.size = arr.size
+        this.releasable = releasable
+        this.released = false
     }
 }
 
@@ -183,7 +199,7 @@ fun toKotlinIntArray(module: EmModule, struct: EmArray, dealloc: Boolean): IntAr
 
 // Array: long
 
-fun toNativeLongArray(module: EmModule, arr: LongArray): EmArray {
+fun toNativeLongArray(module: EmModule, arr: LongArray, releasable: Boolean): EmArray {
     val elements = module._malloc(arr.size * Long.SIZE_BYTES)
     BigInt64Array(module.HEAP8.buffer, elements, arr.size)
         .set(createJsArray(arr.size) {
@@ -192,6 +208,8 @@ fun toNativeLongArray(module: EmModule, arr: LongArray): EmArray {
     return createJsObject {
         this.elements = elements
         this.size = arr.size
+        this.releasable = releasable
+        this.released = false
     }
 }
 
@@ -206,7 +224,7 @@ fun toKotlinLongArray(module: EmModule, struct: EmArray, dealloc: Boolean): Long
 
 // Array: float
 
-fun toNativeFloatArray(module: EmModule, arr: FloatArray): EmArray {
+fun toNativeFloatArray(module: EmModule, arr: FloatArray, releasable: Boolean): EmArray {
     val elements = module._malloc(arr.size * Float.SIZE_BYTES)
     Float32Array(module.HEAPF32.buffer, elements, arr.size)
         .set(createJsArray(arr.size) {
@@ -215,6 +233,8 @@ fun toNativeFloatArray(module: EmModule, arr: FloatArray): EmArray {
     return createJsObject {
         this.elements = elements
         this.size = arr.size
+        this.releasable = releasable
+        this.released = false
     }
 }
 
@@ -229,7 +249,7 @@ fun toKotlinFloatArray(module: EmModule, struct: EmArray, dealloc: Boolean): Flo
 
 // Array: double
 
-fun toNativeDoubleArray(module: EmModule, arr: DoubleArray): EmArray {
+fun toNativeDoubleArray(module: EmModule, arr: DoubleArray, releasable: Boolean): EmArray {
     val elements = module._malloc(arr.size * Double.SIZE_BYTES)
     Float64Array(module.HEAPF32.buffer, elements, arr.size)
         .set(createJsArray(arr.size) {
@@ -238,6 +258,8 @@ fun toNativeDoubleArray(module: EmModule, arr: DoubleArray): EmArray {
     return createJsObject {
         this.elements = elements
         this.size = arr.size
+        this.releasable = releasable
+        this.released = false
     }
 }
 
@@ -252,8 +274,8 @@ fun toKotlinDoubleArray(module: EmModule, struct: EmArray, dealloc: Boolean): Do
 
 // Array: enum
 
-fun <T: Enum<T>> toNativeEnumArray(module: EmModule, arr: Array<T>): EmArray =
-    toNativeIntArray(module, IntArray(arr.size) { arr[it].ordinal })
+fun <T: Enum<T>> toNativeEnumArray(module: EmModule, arr: Array<T>, releasable: Boolean): EmArray =
+    toNativeIntArray(module, IntArray(arr.size) { arr[it].ordinal }, releasable)
 
 inline fun <reified T: Enum<T>> toKotlinEnumArray(
     module: EmModule,
@@ -267,8 +289,9 @@ inline fun <reified T: Enum<T>> toKotlinEnumArray(
 fun <T> toNativeArray(
     module: EmModule,
     arr: Array<T>,
-    converter: (T) -> Int
-) = toNativeIntArray(module, IntArray(arr.size) { converter(arr[it]) })
+    converter: (T, Boolean) -> Int,
+    releasable: Boolean
+) = toNativeIntArray(module, IntArray(arr.size) { converter(arr[it], releasable) }, releasable)
 
 @Suppress("unchecked_cast")
 fun <T: Any> toKotlinArray(

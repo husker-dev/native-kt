@@ -156,14 +156,14 @@ class KotlinJsPrinter(
         append(dictionary.name)
         append("(of: ")
         append(dictionary.name)
-        append(") = _module._malloc(")
+        append(", releasable: Boolean) = _module._malloc(")
         append(structLayout.size)
         append(").apply {\n\t")
         append(heaps)
 
         dictionary.allFields().forEachIndexed { i, field ->
             append("\n\t")
-            val fieldRef = castToNative(field.type, "of.${field.name}", dealloc = false, useArena = false)
+            val fieldRef = castToNative(field.type, "of.${field.name}", dealloc = false, useArena = false, releasable = "releasable")
             val address = "this + ${structLayout.addressOf(i)}"
 
             append(when(val declaration = (field.type as ResolvedIdlType.Default).declaration) {
@@ -255,7 +255,7 @@ class KotlinJsPrinter(
 
         // body
         val call = "toKotlinCallback<${callback.name}>(_module, _c, false)(${castedArgs.joinToString()})"
-        append(castToNative(callback.type, call, dealloc = false, useArena = false))
+        append(castToNative(callback.type, call, dealloc = false, useArena = false, releasable = "true"))
         append("\n\t")
 
         // footer
@@ -274,7 +274,7 @@ class KotlinJsPrinter(
         append("\n\t")
 
         val args = function.args.joinToString {
-            castToNative(it.type, it.name, it.isDealloc(), useArena)
+            castToNative(it.type, it.name, it.isDealloc(), useArena, releasable = "false")
         }
         val func = "_module.${function.name}"
         append(castToJS(function.type, "$func($args)", function.isDealloc(), function.isDeallocContent(), useArena))
@@ -312,25 +312,25 @@ class KotlinJsPrinter(
         append("}\n")
     }
 
-    private fun castToNative(type: ResolvedIdlType, content: String, dealloc: Boolean, useArena: Boolean): String = when(type) {
+    private fun castToNative(type: ResolvedIdlType, content: String, dealloc: Boolean, useArena: Boolean, releasable: String): String = when(type) {
         is ResolvedIdlType.Void -> content
         is ResolvedIdlType.Default -> when(val decl = type.declaration) {
             is BuiltinIdlDeclaration -> when(decl.kind) {
                 WebIDLBuiltinKind.CHAR -> "${content}.code"
                 WebIDLBuiltinKind.STRING ->
                     if(useArena) "arena.toNativeString($content)"
-                    else "toNativeString(_module, $content)"
+                    else "toNativeString(_module, $content, $releasable)"
                 WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
                     when (declaration) {
                         is BuiltinIdlDeclaration -> {
                             val name = declaration.kind.simpleName()
                             if (useArena) "arena.toNative${name}Array($content)"
-                            else "toNative${name}Array(_module, $content)"
+                            else "toNative${name}Array(_module, $content, $releasable)"
                         }
                         is ResolvedIdlEnum ->
-                            "toNativeEnumArray(_module, $content)"
+                            "toNativeEnumArray(_module, $content, $releasable)"
                         is ResolvedIdlDictionary ->
-                            "toNativeArray(_module, $content, ::toNativeDictionary${declaration.name})"
+                            "toNativeArray(_module, $content, ::toNativeDictionary${declaration.name}, $releasable)"
                         else -> throw UnsupportedOperationException(type.toString())
                     }
                 }
@@ -340,7 +340,7 @@ class KotlinJsPrinter(
             is ResolvedIdlCallbackFunction ->
                 if(dealloc) "arena.callback(toNativeCallback${decl.name}($content))"
                 else "toNativeCallback${decl.name}($content)"
-            is ResolvedIdlDictionary -> "toNativeDictionary${decl.name}($content)"
+            is ResolvedIdlDictionary -> "toNativeDictionary${decl.name}($content, $releasable)"
             else -> throw UnsupportedOperationException(type.toString())
         }
         is ResolvedIdlType.Union -> throw UnsupportedOperationException(type.toString())

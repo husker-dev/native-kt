@@ -270,8 +270,8 @@ class CHeaderPrinter(
 
             typedef struct KString {
                 const char* data;
-                const KInt length;
-                const KBoolean releasable;
+                KInt length;
+                KBoolean releasable;
                 KBoolean released;
             } KString;
             
@@ -298,17 +298,17 @@ class CHeaderPrinter(
                 _22, _21, _20, _19, _18, _17, _16, _15, _14, _13, _12, _11, _10, _9, _8,   \
                 _7, _6, _5, _4, _3, _2, _1, Count, ...) Count
             
-            #define KArrayDef(Name, Type, VarargType)	                    \
-            typedef struct Name {			                                \
-                const Type* elements;				                        \
-                const KInt size;				                            \
-                const KBoolean releasable;                                  \
+            #define KArrayDef(Name, Type, VarargType)                       \
+            typedef struct Name {                                           \
+                const Type* elements;                                       \
+                KInt size;				                                    \
+                KBoolean releasable;                                        \
                 KBoolean released;                                          \
             } Name;                                                         \
                                                                             \
             static Name Name##_new(const Type* elements, const KInt size) { \
                 return (Name){ elements, size, true, false };               \
-            }																\
+            }                                                               \
                                                                             \
             static Name _##Name##_of(const int n, ...) {                    \
                 va_list args;                                               \
@@ -347,11 +347,11 @@ class CHeaderPrinter(
             #define KDoubleArray_of(...)  _KDoubleArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
             #define KArray_of(...)        _KArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
 
-            #define KCallbackDef(Name, Type, ...)		\
-            struct Name {								\
-                void *m;								\
-                Type (*invoke)(Name* _, ##__VA_ARGS__);	\
-                void (*free)(Name* _);					\
+            #define KCallbackDef(Name, Type, ...)       \
+            struct Name {                               \
+                void *m;                                \
+                Type (*invoke)(Name* _, ##__VA_ARGS__); \
+                void (*free)(Name* _);                  \
             };
             
         """.trimIndent())

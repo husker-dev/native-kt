@@ -53,12 +53,12 @@ class CJniUtilsPrinter(
                 return result;
             }
             
-            KString JNI_toNativeString(JNIEnv *env, jstring obj) {
+            KString JNI_toNativeString(JNIEnv *env, jstring obj, bool releasable) {
                 jsize length = (*env)->GetStringLength(env, obj);
                 const char* temp = (*env)->GetStringUTFChars(env, obj, NULL);
                 const char* copy = strdup(temp);
                 (*env)->ReleaseStringUTFChars(env, obj, temp);
-                return (KString) { copy, length, false, false };
+                return (KString) { copy, length, releasable, false };
             }
             
         """.trimIndent())
@@ -66,21 +66,21 @@ class CJniUtilsPrinter(
         printLabel(builder, "Primitive Arrays")
         builder.append("""
 
-            #define KArrayCast(Name, JType)                                                         \
-            K##Name##Array JNI_toNative##Name##Array(JNIEnv *env, JType##Array arr) {               \
-                jsize size = (*env)->GetArrayLength(env, arr);                                      \
-                JType* tmp = (*env)->Get##Name##ArrayElements(env, arr, NULL);                      \
-                const JType* copy = (JType*)malloc(size * sizeof(JType));                           \
-                memcpy((void*)copy, (void*)tmp, size * sizeof(JType));                              \
-                (*env)->Release##Name##ArrayElements(env, arr, tmp, JNI_ABORT);                     \
-                return (K##Name##Array) { (K##Name*)copy, size, false, false };                     \
-            }                                                                                       \
-                                                                                                    \
-            JType##Array JNI_toKotlin##Name##Array(JNIEnv *env, K##Name##Array arr, bool dealloc) { \
-                JType##Array result = (*env)->New##Name##Array(env, arr.size);                      \
-                (*env)->Set##Name##ArrayRegion(env, result, 0, arr.size, (JType*)arr.elements);     \
-                if(dealloc) free((void*)arr.elements);                                              \
-                return result;                                                                      \
+            #define KArrayCast(Name, JType)                                                           \
+            K##Name##Array JNI_toNative##Name##Array(JNIEnv *env, JType##Array arr, bool releasable) {\
+                jsize size = (*env)->GetArrayLength(env, arr);                                        \
+                JType* tmp = (*env)->Get##Name##ArrayElements(env, arr, NULL);                        \
+                const JType* copy = (JType*)malloc(size * sizeof(JType));                             \
+                memcpy((void*)copy, (void*)tmp, size * sizeof(JType));                                \
+                (*env)->Release##Name##ArrayElements(env, arr, tmp, JNI_ABORT);                       \
+                return (K##Name##Array) { (K##Name*)copy, size, releasable, false };                  \
+            }                                                                                         \
+                                                                                                      \
+            JType##Array JNI_toKotlin##Name##Array(JNIEnv *env, K##Name##Array arr, bool dealloc) {   \
+                JType##Array result = (*env)->New##Name##Array(env, arr.size);                        \
+                (*env)->Set##Name##ArrayRegion(env, result, 0, arr.size, (JType*)arr.elements);       \
+                if(dealloc) free((void*)arr.elements);                                                \
+                return result;                                                                        \
             }
 
             KArrayCast(Char,    jchar)
@@ -118,13 +118,14 @@ class CJniUtilsPrinter(
             KArray JNI_toNativeArray(
                 JNIEnv *env, 
                 jobjectArray src,
-                void* (*converter)(JNIEnv*, jobject)
+                void* (*converter)(JNIEnv*, jobject, bool),
+                bool releasable
             ) {
                 int length = (*env)->GetArrayLength(env, src);
                 void** elements = malloc(length * sizeof(void*));
                 for(int i = 0; i < length; i++)
-                    elements[i] = converter(env, (*env)->GetObjectArrayElement(env, src, i));
-                return (KArray){ (const void**) elements, length };
+                    elements[i] = converter(env, (*env)->GetObjectArrayElement(env, src, i), releasable);
+                return (KArray){ (const void**) elements, length, releasable, false };
             }
             
         """.trimIndent())
@@ -155,13 +156,14 @@ class CJniUtilsPrinter(
 
                 KIntArray JNI_toNativeEnumArray(
                 	JNIEnv *env,
-                	jobjectArray src
+                	jobjectArray src,
+                    bool releasable
                 ) {
                 	int length = (*env)->GetArrayLength(env, src);
                 	KInt* elements = malloc(length * sizeof(KInt));
                 	for(int i = 0; i < length; i++)
                 		elements[i] = JNI_toNativeEnum(env, (*env)->GetObjectArrayElement(env, src, i));
-                	return (KIntArray){ elements, length };
+                	return (KIntArray){ elements, length, releasable, false };
                 }
                 
                 jobjectArray JNI_toKotlinEnumArray(
@@ -313,14 +315,14 @@ class CJniUtilsPrinter(
             append(struct.name)
             append("* JNI_toNativeDictionary")
             append(struct.name)
-            append("(JNIEnv *env, jobject src) {\n\t")
+            append("(JNIEnv *env, jobject src, bool releasable) {\n\t")
             append(struct.name)
             append("* result = malloc(sizeof(").append(struct.name).append("));\n\t")
             append("*result = (").append(struct.name).append(") {\n\t\t")
             struct.allFields().joinTo(builder, separator = ",\n\t\t") { field ->
                 val fieldVariable = "struct${struct.name}Field${field.name.capitalized()}"
                 val getter = field.type.toMethodCall()
-                castJavaToJNI(field.type, "(*env)->$getter(env, src, $fieldVariable)", dealloc = false, useArena = false)
+                castJavaToJNI(field.type, "(*env)->$getter(env, src, $fieldVariable)", dealloc = false, useArena = false, releasable = "releasable")
             }
             append("\n\t};")
             append("\n\treturn result;\n}\n")
@@ -358,7 +360,7 @@ class CJniUtilsPrinter(
         if(callback.type !is ResolvedIdlType.Void) {
             append(callback.type.toCDefType())
             append(" __result = ")
-            append(castJavaToJNI(callback.type, call, dealloc = false, useArena = false))
+            append(castJavaToJNI(callback.type, call, dealloc = false, useArena = false, releasable = "true"))
         } else
             append(call)
 

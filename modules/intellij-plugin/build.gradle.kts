@@ -53,9 +53,9 @@ tasks {
     publishPlugin {
         token.set(System.getenv("PUBLISH_TOKEN"))
     }
-}
 
-tasks.generateLexer {
-    sourceFile = File("src/main/kotlin/com/huskerdev/nativekt/intellij/lexer/ndl.flex")
-    targetOutputDir = File("src/main/gen/com/huskerdev/nativekt/intellij/lexer")
+    generateLexer {
+        sourceFile = File("src/main/kotlin/com/huskerdev/nativekt/intellij/lexer/ndl.flex")
+        targetOutputDir = File("src/main/gen/com/huskerdev/nativekt/intellij/lexer")
+    }
 }

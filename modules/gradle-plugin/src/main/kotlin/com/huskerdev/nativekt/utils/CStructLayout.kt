@@ -27,7 +27,7 @@ class CStructLayout(
         types.forEach { type ->
             val alignment = type.getAlignment(x86)
             val typeSize = if(type.isString() || type.isArray()) {
-                if (x86) 8 else 16
+                if (x86) 12 else 16
             } else alignment
 
             val rem = size % alignment
