@@ -76,8 +76,6 @@ jobs:
 
       - name: Setup cmake
         uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: '4.3.2'
 
       - name: Enable KVM
         if: runner.os == 'Linux'
