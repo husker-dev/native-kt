@@ -86,6 +86,7 @@ natives {
     applyAndroidCriticalStub = false
 
     useJsBigInt = true
+    useJvmRecord = false
 
     if(project.hasProperty("disableForeign")) {
         println("Disable: Foreign")
