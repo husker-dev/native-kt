@@ -6,7 +6,6 @@ import com.huskerdev.nativekt.plugin.NativeKtJvmInterface
 import com.huskerdev.nativekt.plugin.NativeProject
 import com.huskerdev.nativekt.printers.c.CHeaderPrinter
 import com.huskerdev.nativekt.printers.c.CExportedPrinter
-import com.huskerdev.nativekt.printers.c.CJniArenaPrinter
 import com.huskerdev.nativekt.printers.c.CJniPrinter
 import com.huskerdev.nativekt.printers.c.CJniUtilsPrinter
 import com.huskerdev.nativekt.printers.kotlin.KotlinJvmPrinter
@@ -236,11 +235,6 @@ private abstract class PrepareNativesJvm: DefaultTask() {
                     name = "${moduleName.capitalized()}JNI",
                     isAndroid = false,
                     isAndroidCriticalEnabled = false
-                )
-
-                CJniArenaPrinter(
-                    target = File(nativesBuildDir, "jni_arena.h"),
-                    callbacks = idl.callbacks.isNotEmpty()
                 )
 
                 // unpack jni headers

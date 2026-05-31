@@ -14,6 +14,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,6 +23,12 @@ extern "C" {
 // ╔════════════════╗
 // ║     stdlib     ║
 // ╚════════════════╝
+
+#define K_FLAG_RELEASABLE 1
+#define K_FLAG_ON_STACK 2
+
+#define K_OBJECT_IS_RELEASABLE(flags) ((flags) & K_FLAG_RELEASABLE)
+#define K_OBJECT_IS_ON_STACK(flags) ((flags) & K_FLAG_ON_STACK)
 
 typedef int32_t  KInt;
 typedef int64_t  KLong;
@@ -33,21 +40,33 @@ typedef bool     KBoolean;
 typedef uint16_t KChar;
 
 typedef struct KString {
+    char __flags;
     const char* data;
     KInt length;
-    KBoolean releasable;
-    KBoolean released;
+    size_t size;
 } KString;
 
-static KString KString_new(const char* data, const KInt length) {
-    return (KString) { data, length, true, false };
+static KString* KString_new(const char* data, const KInt length, const KInt size) {
+    KString* result = (KString*) malloc(sizeof(KString));
+    *result = (KString) { K_FLAG_RELEASABLE, data, length, size };
+    return result;
+}
+
+static KString* KString_clone(const KString* of) {
+    const KInt size = of->size;
+    void* data = malloc(size);
+    memcpy(data, of->data, size);
+    KString* result = (KString*) malloc(sizeof(KString));
+    *result = (KString) { K_FLAG_RELEASABLE, (const char*) data, of->length, size };
+    return result;
 }
 
 static void KString_free(KString* str) {
-    if(str->releasable && !str->released) {
-        free((void*)str->data);
-        str->released = true;
-    }
+    if(!K_OBJECT_IS_RELEASABLE(str->__flags))
+        return;
+    free((void*) str->data);
+    if(!K_OBJECT_IS_ON_STACK(str->__flags))
+        free((void*) str);
 }
 
 #define ARG_LENGTH(...) ARG_LENGTH__(__VA_ARGS__)
@@ -62,33 +81,63 @@ static void KString_free(KString* str) {
     _22, _21, _20, _19, _18, _17, _16, _15, _14, _13, _12, _11, _10, _9, _8,   \
     _7, _6, _5, _4, _3, _2, _1, Count, ...) Count
 
-#define KArrayDef(Name, Type, VarargType)                       \
-typedef struct Name {                                           \
-    const Type* elements;                                       \
-    KInt size;				                                    \
-    KBoolean releasable;                                        \
-    KBoolean released;                                          \
-} Name;                                                         \
-                                                                \
-static Name Name##_new(const Type* elements, const KInt size) { \
-    return (Name){ elements, size, true, false };               \
-}                                                               \
-                                                                \
-static Name _##Name##_of(const int n, ...) {                    \
-    va_list args;                                               \
-    va_start(args, n);                                          \
-    Type* elements = (Type*)malloc(n * sizeof(Type));           \
-    for (int i = 0; i < n; i++)                                 \
-        elements[i] = (Type)va_arg(args, VarargType);           \
-    va_end(args);                                               \
-    return (Name){ (const Type*) elements, n, true, false };    \
-}                                                               \
-                                                                \
-static void Name##_free(Name* arr) {                            \
-    if(arr->releasable && !arr->released) {                     \
-        free((void*)arr->elements);                             \
-        arr->released = true;                                   \
-    }                                                           \
+#define KArrayDef(Name, Type, VarargType)                          \
+typedef struct Name {                                              \
+    char __flags;                                                  \
+    const Type* elements;                                          \
+    KInt length;				                                   \
+    size_t size;				                                   \
+} Name;                                                            \
+                                                                   \
+static Name* Name##_new(const Type* elements, const KInt length) { \
+    Name* result = (Name*) malloc(sizeof(Name));                   \
+    *result = (Name){                                              \
+        K_FLAG_RELEASABLE,                                         \
+        elements,                                                  \
+        length,                                                    \
+        length * sizeof(Name)                                      \
+    };                                                             \
+    return result;                                                 \
+}                                                                  \
+                                                                   \
+static Name* _##Name##_of(const int n, ...) {                      \
+    va_list args;                                                  \
+    va_start(args, n);                                             \
+    Type* elements = (Type*)malloc(n * sizeof(Type));              \
+    for (int i = 0; i < n; i++)                                    \
+        elements[i] = (Type)va_arg(args, VarargType);              \
+    va_end(args);                                                  \
+    Name* result = (Name*) malloc(sizeof(Name));                   \
+    *result = (Name){                                              \
+        K_FLAG_RELEASABLE,                                         \
+        (const Type*) elements,                                    \
+        n,                                                         \
+        n * sizeof(Name)                                           \
+    };                                                             \
+    return result;                                                 \
+}
+
+#define KArrayCloneDef(Name, Type)                                     \
+static Name* Name##_clone(const Name* of) {                            \
+    const KInt size = of->size;                                        \
+    void** elements = malloc(size);                                    \
+    memcpy(elements, (void*) of->elements, size);                      \
+    Name* result = (Name*) malloc(sizeof(Name));                       \
+    *result = (Name) {                                                 \
+        K_FLAG_RELEASABLE,                                             \
+        (Type*) elements,                                              \
+        of->length,                                                    \
+        of->size                                                       \
+    };                                                                 \
+    return result;                                                     \
+}                                                                      \
+                                                                       \
+static void Name##_free(Name* arr) {                                   \
+    if(!K_OBJECT_IS_RELEASABLE(arr->__flags))                          \
+        return;                                                        \
+    free((void*) arr->elements);                                       \
+    if(!K_OBJECT_IS_ON_STACK(arr->__flags))                            \
+        free((void*) arr);                                             \
 }
 
 KArrayDef(KCharArray,	 KChar,    int32_t)
@@ -111,10 +160,48 @@ KArrayDef(KArray,        void*,    void*)
 #define KDoubleArray_of(...)  _KDoubleArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
 #define KArray_of(...)        _KArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
 
+KArrayCloneDef(KCharArray,    KChar)
+KArrayCloneDef(KBooleanArray, KBoolean)
+KArrayCloneDef(KByteArray,    KByte)
+KArrayCloneDef(KShortArray,   KShort)
+KArrayCloneDef(KIntArray,     KInt)
+KArrayCloneDef(KLongArray,    KLong)
+KArrayCloneDef(KFloatArray,   KFloat)
+KArrayCloneDef(KDoubleArray,  KDouble)
+
+static KArray* KArray_clone(const KArray* of, void* (*cloneOp)(void*)) {
+	const KInt size = of->size;
+	void** elements = malloc(size);
+	for (int i = 0; i < of->length; i++)
+		elements[i] = cloneOp((void*)of->elements[i]);
+	KArray* result = (KArray*) malloc(sizeof(KArray));
+	*result = (KArray) { 
+        K_FLAG_RELEASABLE, 
+        (const void**) elements, 
+        of->length, 
+        of->size
+    }; 
+	return result;
+}
+
+static void KArray_free(const KArray* arr, void* (*freeOp)(void*)) {
+    if(!K_OBJECT_IS_RELEASABLE(arr->__flags))
+        return;
+    const void** elements = arr->elements;
+    for (int i = 0; i < arr->length; i++)
+        freeOp((void*) elements[i]);
+    free((void*) elements);
+    if(!K_OBJECT_IS_ON_STACK(arr->__flags))
+        free((void*) arr);
+}
+
 #define KCallbackDef(Name, Type, ...)       \
 struct Name {                               \
-    void *m;                                \
+    char __flags;                           \
     Type (*invoke)(Name* _, ##__VA_ARGS__); \
+    Name* (*clone)(Name* _);                \
+    KBoolean (*equals)(Name* _, Name* obj); \
+    KInt (*hashCode)(Name* _);              \
     void (*free)(Name* _);                  \
 };
 

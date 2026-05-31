@@ -1,8 +1,6 @@
 package com.huskerdev.nativekt.printers.c
 
 import com.huskerdev.nativekt.utils.allFields
-import com.huskerdev.nativekt.utils.isDealloc
-import com.huskerdev.nativekt.utils.isDeallocContent
 import com.huskerdev.nativekt.utils.printLabel
 import com.huskerdev.nativekt.utils.toCDefType
 import com.huskerdev.nativekt.utils.toJavaDesc
@@ -31,34 +29,78 @@ class CJniUtilsPrinter(
             JavaVM *jvm;
             jclass jniClass;
             
+            jmethodID objectEquals, objectHashCode;
+            
         """.trimIndent())
 
         printLabel(builder, "String")
         builder.append("""
             
             jclass stringClass;
-            jmethodID stringConstructor;
+            jmethodID stringConstructor, stringGetBytes;
+            jstring stringUTF8Const;
             typedef struct KString KString;
             
-            jstring JNI_toKotlinString(JNIEnv *env, KString str, bool dealloc) {
-                int32_t length = str.length;
-            
-                jbyteArray bytes = (*env)->NewByteArray(env, length);
-                (*env)->SetByteArrayRegion(env, bytes, 0, length, (jbyte*)str.data);
-            
-                jstring result = (jstring)(*env)->NewObject(env, stringClass, stringConstructor, bytes);
-                (*env)->DeleteLocalRef(env, bytes);
+            const size_t JNI_StringStackSize = sizeof(KString) + 2;
+
+            jstring JNI_toKotlinString(JNIEnv *env, KString* str) {
+                if(K_OBJECT_IS_ON_STACK(str->__flags))
+                    return (jstring)((size_t*)((char*)str + sizeof(KString)))[0];
                 
-                if(dealloc) free((void*)str.data);
+                int32_t size = str->size;
+                
+                jbyteArray bytes = (*env)->NewByteArray(env, size);
+                (*env)->SetByteArrayRegion(env, bytes, 0, size, (jbyte*)str->data);
+            
+                jstring result = (jstring)(*env)->NewObject(env, stringClass, stringConstructor, bytes, stringUTF8Const);
+                (*env)->DeleteLocalRef(env, bytes);
                 return result;
             }
             
-            KString JNI_toNativeString(JNIEnv *env, jstring obj, bool releasable) {
+            KString* JNI_toNativeStringOnStack(JNIEnv *env, jstring obj, void* mem) {
+                jbyteArray bytes = (jbyteArray) (*env)->CallObjectMethod(env, obj, stringGetBytes, stringUTF8Const);
+                ((size_t*)((char*)mem + sizeof(KString)))[0] = (size_t) obj;
+                ((size_t*)((char*)mem + sizeof(KString)))[1] = (size_t) bytes;
+                KString* result = (KString*)mem;
+                *result = (KString) {
+                    K_FLAG_ON_STACK,
+                    (const char*)(*env)->GetByteArrayElements(env, bytes, JNI_FALSE),
+                    (*env)->GetStringLength(env, obj),
+                    (*env)->GetArrayLength(env, bytes)
+                };
+                return result;
+            }
+            
+            void JNI_releaseStringOnStack(JNIEnv *env, KString* str) {
+                jbyteArray bytes = (jbyteArray)((size_t*)((char*)str + sizeof(KString)))[1];
+                (*env)->ReleaseByteArrayElements(env, bytes, (jbyte*) str->data, JNI_ABORT);
+            }
+            
+            KString* JNI_toNativeString(JNIEnv *env, jstring obj, char flags) {
+                jbyteArray bytes = (jbyteArray) (*env)->CallObjectMethod(env, obj, stringGetBytes, stringUTF8Const);
                 jsize length = (*env)->GetStringLength(env, obj);
-                const char* temp = (*env)->GetStringUTFChars(env, obj, NULL);
-                const char* copy = strdup(temp);
-                (*env)->ReleaseStringUTFChars(env, obj, temp);
-                return (KString) { copy, length, releasable, false };
+                jsize size = (*env)->GetArrayLength(env, bytes);
+            
+                jbyte* str = (*env)->GetByteArrayElements(env, bytes, JNI_FALSE);
+                void* strCopy = malloc(size);
+                memcpy(strCopy, (void*)str, size);
+            
+                (*env)->ReleaseByteArrayElements(env, bytes, str, JNI_ABORT);
+                (*env)->DeleteLocalRef(env, bytes);
+                
+                KString* result = (KString*) malloc(sizeof(KString));
+                *result = (KString) {
+                    flags, 
+                    (const char*) strCopy,
+                    length,
+                    size
+                };
+                return result;
+            }
+            
+            void JNI_forceFreeKString(KString* str) {
+                str->__flags |= K_FLAG_RELEASABLE;
+                KString_free(str);
             }
             
         """.trimIndent())
@@ -66,21 +108,57 @@ class CJniUtilsPrinter(
         printLabel(builder, "Primitive Arrays")
         builder.append("""
 
-            #define KArrayCast(Name, JType)                                                           \
-            K##Name##Array JNI_toNative##Name##Array(JNIEnv *env, JType##Array arr, bool releasable) {\
-                jsize size = (*env)->GetArrayLength(env, arr);                                        \
-                JType* tmp = (*env)->Get##Name##ArrayElements(env, arr, NULL);                        \
-                const JType* copy = (JType*)malloc(size * sizeof(JType));                             \
-                memcpy((void*)copy, (void*)tmp, size * sizeof(JType));                                \
-                (*env)->Release##Name##ArrayElements(env, arr, tmp, JNI_ABORT);                       \
-                return (K##Name##Array) { (K##Name*)copy, size, releasable, false };                  \
-            }                                                                                         \
-                                                                                                      \
-            JType##Array JNI_toKotlin##Name##Array(JNIEnv *env, K##Name##Array arr, bool dealloc) {   \
-                JType##Array result = (*env)->New##Name##Array(env, arr.size);                        \
-                (*env)->Set##Name##ArrayRegion(env, result, 0, arr.size, (JType*)arr.elements);       \
-                if(dealloc) free((void*)arr.elements);                                                \
-                return result;                                                                        \
+            const size_t JNI_ArrayStackSize = sizeof(KArray) + sizeof(size_t);
+
+            #define KArrayCast(Name, JType)                                                              \
+            K##Name##Array* JNI_toNative##Name##Array(JNIEnv *env, JType##Array arr, char flags) {       \
+                KInt length = (*env)->GetArrayLength(env, arr);                                          \
+                size_t size = length * sizeof(JType);                                                    \
+                                                                                                         \
+                JType* elements = (*env)->Get##Name##ArrayElements(env, arr, JNI_FALSE);                 \
+                void* elementsCopy = malloc(size);                                                       \
+                memcpy(elementsCopy, (void*)elements, size);                                             \
+                (*env)->Release##Name##ArrayElements(env, arr, elements, JNI_ABORT);                     \
+                                                                                                         \
+                K##Name##Array* result = (K##Name##Array*) malloc(sizeof(K##Name##Array));               \
+                *result = (K##Name##Array) {                                                             \
+                    flags,                                                                               \
+                    (K##Name*)elementsCopy,                                                              \
+                    length,                                                                              \
+                    size                                                                                 \
+                };                                                                                       \
+                return result;                                                                           \
+            }                                                                                            \
+                                                                                                         \
+            K##Name##Array* JNI_toNative##Name##ArrayOnStack(JNIEnv *env, JType##Array arr, void* mem) { \
+                ((size_t*)((char*)mem + sizeof(K##Name##Array)))[0] = (size_t) arr;                      \
+                KInt length = (*env)->GetArrayLength(env, arr);                                          \
+                K##Name##Array* result = (K##Name##Array*)mem;                                           \
+                *result = (K##Name##Array) {                                                             \
+                    K_FLAG_ON_STACK,                                                                     \
+                    (K##Name*)(*env)->Get##Name##ArrayElements(env, arr, JNI_FALSE),                     \
+                    length,                                                                              \
+                    length * sizeof(JType)                                                               \
+                };                                                                                       \
+                return result;                                                                           \
+            }                                                                                            \
+                                                                                                         \
+            void JNI_release##Name##ArrayOnStack(JNIEnv *env, K##Name##Array* arr) {                     \
+                JType##Array elements = (JType##Array)*((size_t*)((char*)arr + sizeof(K##Name##Array))); \
+                (*env)->Release##Name##ArrayElements(env, elements, (JType*)arr->elements, JNI_ABORT);   \
+            }                                                                                            \
+                                                                                                         \
+            JType##Array JNI_toKotlin##Name##Array(JNIEnv *env, K##Name##Array* arr) {                   \
+                if(K_OBJECT_IS_ON_STACK(arr->__flags))                                                   \
+                    return (JType##Array)*((size_t*)((char*)arr + sizeof(K##Name##Array)));              \
+                JType##Array result = (*env)->New##Name##Array(env, arr->length);                        \
+                (*env)->Set##Name##ArrayRegion(env, result, 0, arr->length, (JType*)arr->elements);      \
+                return result;                                                                           \
+            }                                                                                            \
+                                                                                                         \
+            void JNI_forceFreeK##Name##Array(K##Name##Array* arr) {                                      \
+                arr->__flags |= K_FLAG_RELEASABLE;                                                       \
+                K##Name##Array_free(arr);                                                                \
             }
 
             KArrayCast(Char,    jchar)
@@ -99,33 +177,75 @@ class CJniUtilsPrinter(
         printLabel(builder, "Object array")
         builder.append("""
                 
-            jobjectArray JNI_toKotlinArray(
-                JNIEnv *env, 
-                KArray src, 
-                jobject (*converter)(JNIEnv*, void*, bool),
-                jclass clazz,
-                bool dealloc,
-                bool deallocContent
-            ) {
-                jobjectArray result = (*env)->NewObjectArray(env, src.size, clazz, NULL);
-                void** elements = (void**)src.elements;
-                for(int i = 0; i < src.size; i++)
-                    (*env)->SetObjectArrayElement(env, result, i, converter(env, elements[i], deallocContent));
-                if(dealloc) free((void*) src.elements);
-                return result;
-            }
-
-            KArray JNI_toNativeArray(
+            KArray* JNI_toNativeArray(
                 JNIEnv *env, 
                 jobjectArray src,
-                void* (*converter)(JNIEnv*, jobject, bool),
-                bool releasable
+                void* (*converter)(JNIEnv*, jobject, char),
+                char flags
             ) {
                 int length = (*env)->GetArrayLength(env, src);
                 void** elements = malloc(length * sizeof(void*));
-                for(int i = 0; i < length; i++)
-                    elements[i] = converter(env, (*env)->GetObjectArrayElement(env, src, i), releasable);
-                return (KArray){ (const void**) elements, length, releasable, false };
+                for(int i = 0; i < length; i++) {
+                    jobject obj = (*env)->GetObjectArrayElement(env, src, i);
+                    elements[i] = converter(env, obj, flags);
+                    (*env)->DeleteLocalRef(env, obj);
+                }
+                
+                KArray* result = (KArray*) malloc(sizeof(KArray));
+                *result = (KArray) {
+                    flags,
+                    (const void**) elements,
+                    length,
+                    length * sizeof(void*)
+                };
+                return result;
+            }
+            
+            KArray* JNI_toNativeArrayOnStack(
+                JNIEnv *env,
+                jobjectArray src,
+                void* (*converter)(JNIEnv*, jobject, char),
+                void* mem
+            ) {
+                ((size_t*)((char*)mem + sizeof(KArray)))[0] = (size_t) src;
+                KInt length = (*env)->GetArrayLength(env, src);
+                
+                void** elements = malloc(length * sizeof(void*));
+                for(int i = 0; i < length; i++) {
+                    jobject obj = (*env)->GetObjectArrayElement(env, src, i);
+                    elements[i] = converter(env, obj, 0);
+                    (*env)->DeleteLocalRef(env, obj);
+                }
+                
+                KArray* result = (KArray*)mem;
+                *result = (KArray) {
+                    K_FLAG_ON_STACK,
+                    (const void**) elements,
+                    length,
+                    length * sizeof(void*)
+                };
+                return result;
+            }
+            
+            jobjectArray JNI_toKotlinArray(
+                JNIEnv *env, 
+                KArray* src, 
+                jobject (*converter)(JNIEnv*, void*),
+                jclass clazz
+            ) {
+                if(K_OBJECT_IS_ON_STACK(src->__flags))
+                    return (jobjectArray)*((size_t*)((char*)src + sizeof(KArray)));
+                
+                jobjectArray result = (*env)->NewObjectArray(env, src->length, clazz, NULL);
+                void** elements = (void**)src->elements;
+                for(int i = 0; i < src->length; i++)
+                    (*env)->SetObjectArrayElement(env, result, i, converter(env, elements[i]));
+                return result;
+            }
+            
+            void JNI_forceFreeKArray(KArray* arr, void* (*freeOp)(void*)) {
+                arr->__flags |= K_FLAG_RELEASABLE;
+                KArray_free(arr, freeOp);
             }
             
         """.trimIndent())
@@ -141,43 +261,84 @@ class CJniUtilsPrinter(
                 "enum${it.name}Values"
             }
             builder.append("""
-                
-                
-                KInt JNI_toNativeEnum(JNIEnv* env, jobject of) {
-                	return (*env)->CallIntMethod(env, of, enumOrdinal);
-                }
-                
-                jobject JNI_toKotlinEnum(JNIEnv* env, KInt of, jclass clazz, jmethodID valuesMethod) {
-                	jobjectArray values = (jobjectArray) (*env)->CallStaticObjectMethod(env, clazz, valuesMethod);
-                	jobject result = (*env)->GetObjectArrayElement(env, values, of);
-                	(*env)->DeleteLocalRef(env, values);
-                	return result;
-                }
 
-                KIntArray JNI_toNativeEnumArray(
-                	JNIEnv *env,
-                	jobjectArray src,
-                    bool releasable
+                KInt JNI_toNativeEnum(JNIEnv* env, jobject of) {
+                    return (*env)->CallIntMethod(env, of, enumOrdinal);
+                }
+                
+                jobject JNI_toKotlinEnum(
+                    JNIEnv* env, 
+                    KInt of, 
+                    jclass clazz, 
+                    jmethodID valuesMethod
                 ) {
-                	int length = (*env)->GetArrayLength(env, src);
-                	KInt* elements = malloc(length * sizeof(KInt));
-                	for(int i = 0; i < length; i++)
-                		elements[i] = JNI_toNativeEnum(env, (*env)->GetObjectArrayElement(env, src, i));
-                	return (KIntArray){ elements, length, releasable, false };
+                    jobjectArray values = (jobjectArray) (*env)->CallStaticObjectMethod(env, clazz, valuesMethod);
+                    jobject result = (*env)->GetObjectArrayElement(env, values, of);
+                    (*env)->DeleteLocalRef(env, values);
+                    return result;
+                }
+                
+                KIntArray* JNI_toNativeEnumArray(
+                    JNIEnv *env,
+                    jobjectArray src, 
+                    char flags
+                ) {
+                    int length = (*env)->GetArrayLength(env, src);
+                    KInt* elements = malloc(length * sizeof(KInt));
+                    for(int i = 0; i < length; i++) {
+                        jobject obj = (*env)->GetObjectArrayElement(env, src, i);
+                        elements[i] = JNI_toNativeEnum(env, (*env)->GetObjectArrayElement(env, src, i));
+                        (*env)->DeleteLocalRef(env, obj);
+                    }
+                    
+                    KIntArray* result = (KIntArray*) malloc(sizeof(KIntArray));
+                    *result = (KIntArray) {
+                        flags,
+                        (const KInt*) elements,
+                        length,
+                        length * sizeof(KInt)
+                    };
+                    return result;
+                }
+                
+                KIntArray* JNI_toNativeEnumArrayOnStack(
+                    JNIEnv *env,
+                    jobjectArray src,
+                    void* mem
+                ) {
+                    ((size_t*)((char*)mem + sizeof(KArray)))[0] = (size_t) src;
+                    
+                    int length = (*env)->GetArrayLength(env, src);
+                    KInt* elements = malloc(length * sizeof(KInt));
+                    for(int i = 0; i < length; i++) {
+                        jobject obj = (*env)->GetObjectArrayElement(env, src, i);
+                        elements[i] = JNI_toNativeEnum(env, (*env)->GetObjectArrayElement(env, src, i));
+                        (*env)->DeleteLocalRef(env, obj);
+                    }
+                    
+                    KIntArray* result = (KIntArray*)mem;
+                    *result = (KIntArray) {
+                        K_FLAG_ON_STACK,
+                        (const KInt*) elements,
+                        length,
+                        length * sizeof(KInt)
+                    };
+                    return result;
                 }
                 
                 jobjectArray JNI_toKotlinEnumArray(
                     JNIEnv *env,
-                    KIntArray src,
+                    KIntArray* src,
                     jclass clazz,
-                    jmethodID valuesMethod,
-                    bool dealloc
+                    jmethodID valuesMethod
                 ) {
-                    jobjectArray result = (*env)->NewObjectArray(env, src.size, clazz, NULL);
-                    const KInt* elements = src.elements;
-                    for(int i = 0; i < src.size; i++)
+                    if(K_OBJECT_IS_ON_STACK(src->__flags))
+                        return (jobjectArray)*((size_t*)((char*)src + sizeof(KArray)));
+                    
+                    jobjectArray result = (*env)->NewObjectArray(env, src->length, clazz, NULL);
+                    const KInt* elements = src->elements;
+                    for(int i = 0; i < src->length; i++)
                         (*env)->SetObjectArrayElement(env, result, i, JNI_toKotlinEnum(env, elements[i], clazz, valuesMethod));
-                    if(dealloc) free((void*) src.elements);
                     return result;
                 }
                 
@@ -189,50 +350,122 @@ class CJniUtilsPrinter(
             builder.append("""
                 
                 typedef struct JNI_Callback {
-                    void *m;
+                    char __flags;
                     void (*invoke)();
+                    struct JNI_Callback* (*clone)(struct JNI_Callback*);
+                    KBoolean (*equals)(struct JNI_Callback*, struct JNI_Callback* obj);
+                    KInt (*hashCode)(struct JNI_Callback*);
                     void (*free)(struct JNI_Callback*);
                 } JNI_Callback;
+                
+                const size_t JNI_CallbackSize = sizeof(JNI_Callback) + sizeof(size_t)*2;
                 
                 static jint JVM_attach(JNIEnv **env) {
                     jint status = (*jvm)->GetEnv(jvm, (void**)env, JNI_VERSION_1_6);
                     if (status == JNI_EDETACHED)
-                        (*jvm)->AttachCurrentThread(jvm, (${if(isAndroid) "JNIEnv**" else "void**"})env, NULL);
+                        (*jvm)->AttachCurrentThread(jvm, (void**)env, NULL);
                     return status;
                 }
-
+                
                 static inline void JVM_detach(jint status) {
                     if (status == JNI_EDETACHED)
                         (*jvm)->DetachCurrentThread(jvm);
                 }
                 
-                void JNI_freeCallback(JNI_Callback* callback) {
+                static inline KBoolean JNI_CALLBACK_equals(JNI_Callback* ref, JNI_Callback* with) {
+                	jobject obj = (jobject)((size_t*)((char*)ref + sizeof(JNI_Callback)))[0];
+                	jobject obj2 = (jobject)((size_t*)((char*)with + sizeof(JNI_Callback)))[0];
+                    JNIEnv *env = (JNIEnv*)((size_t*)((char*)ref + sizeof(JNI_Callback)))[1];
+                	
+                	jint status = env == NULL ? JVM_attach(&env) : JNI_OK;
+                	KBoolean result = (*env)->CallBooleanMethod(env, obj, objectEquals, obj2);
+                	if(status == JNI_EDETACHED) JVM_detach(status);
+                	return result;
+                }
+
+                static inline KInt JNI_CALLBACK_hashCode(JNI_Callback* ref) {
+                	jobject obj = (jobject)((size_t*)((char*)ref + sizeof(JNI_Callback)))[0];
+                	JNIEnv *env = (JNIEnv*)((size_t*)((char*)ref + sizeof(JNI_Callback)))[1];
+                	
+                	jint status = env == NULL ? JVM_attach(&env) : JNI_OK;
+                	KInt result = (*env)->CallIntMethod(env, obj, objectHashCode);
+                	if(status == JNI_EDETACHED) JVM_detach(status);
+                	return result;
+                }
+                
+                static void JNI_CALLBACK_free(JNI_Callback* callback) {
+                    if (!K_OBJECT_IS_RELEASABLE(callback->__flags) || K_OBJECT_IS_ON_STACK(callback->__flags))
+                        return;
+                
                     JNIEnv *env;
                     jint status = JVM_attach(&env);
-                
-                    (*env)->DeleteGlobalRef(env, (jobject)callback->m);
+                    
+                    jobject obj = (jobject)((size_t*)((char*)callback + sizeof(JNI_Callback)))[0];
+                    (*env)->DeleteGlobalRef(env, obj);
                     free((void*)callback);
-                
+                    
                     JVM_detach(status);
                 }
                 
-                jobject JNI_toKotlinCallback(JNIEnv *env, JNI_Callback* callback, bool dealloc) {
-                    jobject result = (jobject)callback->m;
-                    if(dealloc) JNI_freeCallback(callback);
-                    return result;
+                static JNI_Callback* JNI_CALLBACK_clone(JNI_Callback* ref) {
+                    jobject obj = (jobject)((size_t*)((char*)ref + sizeof(JNI_Callback)))[0];
+                	JNIEnv *env = (JNIEnv*)((size_t*)((char*)ref + sizeof(JNI_Callback)))[1];
+                    jint status = env == NULL ? JVM_attach(&env) : JNI_OK;
+                    
+                    JNI_Callback* callback = (JNI_Callback*) malloc(JNI_CallbackSize);
+                    memcpy(callback, ref, sizeof(JNI_Callback));
+                    callback->__flags = K_FLAG_RELEASABLE;
+                    
+                    ((size_t*)((char*)callback + sizeof(JNI_Callback)))[0] = (size_t)(*env)->NewGlobalRef(env, obj);
+                    ((size_t*)((char*)callback + sizeof(JNI_Callback)))[1] = (size_t) NULL;
+                    
+                    if(status == JNI_EDETACHED) JVM_detach(status);
+                    return callback;
                 }
                 
-                JNI_Callback* JNI_toNativeCallback(JNIEnv *env, jobject obj, void (*invoke)()) {
-                	JNI_Callback* callback = (JNI_Callback*)malloc(sizeof(JNI_Callback));
-                	callback->invoke = invoke;
-                	callback->free = JNI_freeCallback;
-                	callback->m = (void*)(*env)->NewGlobalRef(env, obj);
-                	return callback;
+                jobject JNI_toKotlinCallback(JNIEnv *env, JNI_Callback* callback) {
+                    return (jobject)((size_t*)((char*)callback + sizeof(JNI_Callback)))[0];
+                }
+                
+                JNI_Callback* JNI_toNativeCallbackOnStack(JNIEnv *env, jobject obj, void (*invoke)(), void* mem) {
+                    ((size_t*)((char*)mem + sizeof(JNI_Callback)))[0] = (size_t) obj;
+                    ((size_t*)((char*)mem + sizeof(JNI_Callback)))[1] = (size_t) env;
+                    JNI_Callback* callback = (JNI_Callback*) mem;
+                    *callback = (JNI_Callback) {
+                        K_FLAG_ON_STACK,
+                        invoke,
+                        JNI_CALLBACK_clone,
+                        JNI_CALLBACK_equals,
+                        JNI_CALLBACK_hashCode,
+                        JNI_CALLBACK_free
+                    };
+                    return callback;
+                }
+                
+                JNI_Callback* JNI_toNativeCallback(JNIEnv *env, jobject obj, void (*invoke)(), char flags) {
+                    void* mem = malloc(JNI_CallbackSize);
+                    ((size_t*)((char*)mem + sizeof(JNI_Callback)))[0] = (size_t) (*env)->NewGlobalRef(env, obj);
+                    ((size_t*)((char*)mem + sizeof(JNI_Callback)))[1] = (size_t) NULL;
+                    JNI_Callback* callback = (JNI_Callback*) mem;
+                    *callback = (JNI_Callback) {
+                        flags,
+                        invoke,
+                        JNI_CALLBACK_clone,
+                        JNI_CALLBACK_equals,
+                        JNI_CALLBACK_hashCode,
+                        JNI_CALLBACK_free
+                    };
+                    return callback;
                 }
                 
                 
             """.trimIndent())
-            idl.callbacks.values.forEach { printCallbackInvokeDef(builder, it) }
+            idl.callbacks.values.forEach {
+                printCallbackInvokeDef(builder, it)
+            }
+            idl.callbacks.values.forEach {
+                printCallbackFreeDef(builder, it)
+            }
         }
 
         if(idl.dictionaries.isNotEmpty()) {
@@ -250,6 +483,7 @@ class CJniUtilsPrinter(
 
             idl.callbacks.values.forEach { callback ->
                 printCallbackInvoke(builder, callback)
+                printCallbackForceFree(builder, callback)
             }
         }
 
@@ -290,42 +524,38 @@ class CJniUtilsPrinter(
             append("\n// ${struct.name}\n")
 
             // to JVM
-            append("\n")
-            append("jobject JNI_toKotlinDictionary")
-            append(struct.name)
-            append("(JNIEnv *env, ")
-            append(struct.name)
-            append("* src, bool dealloc) {\n\t")
-            append("jobject result = (*env)->CallObjectMethod(env, ")
-            append("struct")
-            append(struct.name)
-            append("Companion, struct")
-            append(struct.name)
-            append("Constructor, \n\t\t")
+            append("\njobject JNI_toKotlinDictionary${struct.name}(JNIEnv *env, ${struct.name}* src) {\n\t")
+            append("return (*env)->CallObjectMethod(env, struct${struct.name}Companion, struct${struct.name}Constructor, \n\t\t")
+
             struct.allFields().joinTo(builder, separator = ",\n\t\t") {
-                castJniToJava(it.type, "src->${it.name}", dealloc = false, deallocContent = false, useArena = false)
+                castJniToJava(it.type, "src->${it.name}")
             }
-            append("\n\t);\n\t")
-            append("if (dealloc) free((void*) src);\n\t")
-            append("return result;\n")
-            append("}\n")
+            append("\n\t);\n}\n")
 
             // to Native
-            append("\n")
-            append(struct.name)
-            append("* JNI_toNativeDictionary")
-            append(struct.name)
-            append("(JNIEnv *env, jobject src, bool releasable) {\n\t")
-            append(struct.name)
-            append("* result = malloc(sizeof(").append(struct.name).append("));\n\t")
-            append("*result = (").append(struct.name).append(") {\n\t\t")
-            struct.allFields().joinTo(builder, separator = ",\n\t\t") { field ->
-                val fieldVariable = "struct${struct.name}Field${field.name.capitalized()}"
-                val getter = field.type.toMethodCall()
-                castJavaToJNI(field.type, "(*env)->$getter(env, src, $fieldVariable)", dealloc = false, useArena = false, releasable = "releasable")
-            }
+            append("\n${struct.name}* JNI_toNativeDictionary${struct.name}(JNIEnv *env, jobject src, char flags) {\n\t")
+            append("${struct.name}* result = malloc(sizeof(${struct.name}));\n\t")
+            append("*result = (${struct.name}) {\n\t\t")
+
+            buildList {
+                add("flags")
+                struct.allFields().mapTo(this) { field ->
+                    val fieldVariable = "struct${struct.name}Field${field.name.capitalized()}"
+                    val getter = field.type.toMethodCall()
+                    castJavaToJNI(field.type, "(*env)->$getter(env, src, $fieldVariable)", onStack = false, flags = "flags")
+                }
+            }.joinTo(builder, separator = ",\n\t\t")
             append("\n\t};")
             append("\n\treturn result;\n}\n")
+
+            // Force free
+            append("\nvoid JNI_forceFree${struct.name}(${struct.name}* of) {")
+            struct.allFields().forEach { field ->
+                forceFreeFuncFor(
+                    field.type, "of->${field.name}"
+                )?.apply { append("\n\t$this;") }
+            }
+            append("\n\tfree((void*) of);\n}\n")
         }
     }
 
@@ -336,41 +566,59 @@ class CJniUtilsPrinter(
         append("${callback.type.toCDefType()} JNI_CALLBACK_INVOKE_${callback.name}(${args.joinToString()});\n")
     }
 
-    private fun printCallbackInvoke(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
-        val args = listOf("${callback.name}* _callback") +
-                callback.args.map { "${it.type.toCDefType()} ${it.name}" }
+    private fun printCallbackFreeDef(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
+        append("void JNI_forceFree${callback.name}(${callback.name}* of);\n")
+    }
 
-        var jvmArgs = callback.args.joinToString {
-            castJniToJava(it.type, it.name, it.isDealloc(), it.isDeallocContent(), false)
-        }
-        if(jvmArgs.isNotEmpty())
-            jvmArgs = ", $jvmArgs"
+    private fun printCallbackInvoke(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
+        val args = buildList {
+            add("${callback.name}* callback")
+            callback.args.mapTo(this) {
+                "${it.type.toCDefType()} __${it.name}"
+            }
+        }.joinToString()
+
+        val jvmArgs = buildList {
+            add("callback${callback.name}Invoke")
+            callback.args.mapTo(this) {
+                castJniToJava(it.type, "__${it.name}")
+            }
+        }.joinToString()
 
         append("""
             
-            ${callback.type.toCDefType()} JNI_CALLBACK_INVOKE_${callback.name}(${args.joinToString()}) {
-                JNIEnv *env;
-                jint __status = JVM_attach(&env);
+            ${callback.type.toCDefType()} JNI_CALLBACK_INVOKE_${callback.name}(${args}) {
+                jobject obj = (jobject)((size_t*)((char*)callback + sizeof(JNI_Callback)))[0];
+                JNIEnv *env = (JNIEnv*)((size_t*)((char*)callback + sizeof(JNI_Callback)))[1];
+                jint status = env == NULL ? JVM_attach(&env) : JNI_OK;
                 
         """.trimIndent())
 
-        val funcName = callback.type.toMethodCall()
-        val call = "(*env)->$funcName(env, (jobject)_callback->m, callback${callback.name}Invoke$jvmArgs)"
+        val call = "(*env)->${callback.type.toMethodCall()}(env, obj, $jvmArgs)"
 
         if(callback.type !is ResolvedIdlType.Void) {
             append(callback.type.toCDefType())
-            append(" __result = ")
-            append(castJavaToJNI(callback.type, call, dealloc = false, useArena = false, releasable = "true"))
+            append(" result = ")
+            append(castJavaToJNI(callback.type, call, onStack = false, flags = "K_FLAG_RELEASABLE"))
         } else
             append(call)
 
-        append(";\n")
-
-        append("\tJVM_detach(__status);\n")
+        append(";\n\tif(status == JNI_EDETACHED) JVM_detach(status);\n")
 
         if(callback.type !is ResolvedIdlType.Void)
-            append("\treturn __result;\n")
+            append("\treturn result;\n")
         append("}\n")
+    }
+
+    private fun printCallbackForceFree(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
+        append("""
+            
+            void JNI_forceFree${callback.name}(${callback.name}* of) {
+                of->__flags |= K_FLAG_RELEASABLE;
+                of->free(of);
+            }
+        """.trimIndent())
+        append("\n")
     }
 
     private fun printRegisterFunction(builder: StringBuilder) = builder.apply {
@@ -383,9 +631,16 @@ class CJniUtilsPrinter(
                 jniClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "${(classPath.split(".") + name).joinToString(separator = "/")}"));
                 (*env)->RegisterNatives(env, jniClass, methods, count);
                 
+                // Object
+                jclass objectClass = (*env)->FindClass(env, "java/lang/Object");
+                objectEquals = (*env)->GetMethodID(env, objectClass, "equals", "(Ljava/lang/Object;)Z");
+                objectHashCode = (*env)->GetMethodID(env, objectClass, "hashCode", "()I");
+                
                 // String
                 stringClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "java/lang/String"));
-                stringConstructor = (*env)->GetMethodID(env, stringClass, "<init>", "([B)V");
+                stringConstructor = (*env)->GetMethodID(env, stringClass, "<init>", "([BLjava/lang/String;)V");
+                stringGetBytes = (*env)->GetMethodID(env, stringClass, "getBytes", "(Ljava/lang/String;)[B");
+                stringUTF8Const = (*env)->NewGlobalRef(env, (*env)->NewStringUTF(env, "UTF-8"));
                 
         """.replaceIndent())
 

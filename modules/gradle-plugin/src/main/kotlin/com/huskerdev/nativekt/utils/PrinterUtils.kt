@@ -133,23 +133,23 @@ fun ResolvedIdlType.toCDefType(
             WebIDLBuiltinKind.LONG -> "KLong${if (longPtr) "*" else ""}"
             WebIDLBuiltinKind.FLOAT -> "KFloat"
             WebIDLBuiltinKind.DOUBLE -> "KDouble"
-            WebIDLBuiltinKind.STRING -> "KString${if (longPtr) "*" else ""}"
+            WebIDLBuiltinKind.STRING -> "KString*${if (longPtr) "*" else ""}"
             WebIDLBuiltinKind.LIST -> firstParam { _, declaration ->
                 when (declaration) {
                     is BuiltinIdlDeclaration -> when (declaration.kind) {
-                        WebIDLBuiltinKind.CHAR -> "KCharArray"
-                        WebIDLBuiltinKind.BOOLEAN -> "KBooleanArray"
-                        WebIDLBuiltinKind.BYTE -> "KByteArray"
-                        WebIDLBuiltinKind.SHORT -> "KShortArray"
-                        WebIDLBuiltinKind.INT -> "KIntArray"
-                        WebIDLBuiltinKind.LONG -> "KLongArray"
-                        WebIDLBuiltinKind.FLOAT -> "KFloatArray"
-                        WebIDLBuiltinKind.DOUBLE -> "KDoubleArray"
-                        WebIDLBuiltinKind.STRING -> "KStringArray"
+                        WebIDLBuiltinKind.CHAR -> "KCharArray*"
+                        WebIDLBuiltinKind.BOOLEAN -> "KBooleanArray*"
+                        WebIDLBuiltinKind.BYTE -> "KByteArray*"
+                        WebIDLBuiltinKind.SHORT -> "KShortArray*"
+                        WebIDLBuiltinKind.INT -> "KIntArray*"
+                        WebIDLBuiltinKind.LONG -> "KLongArray*"
+                        WebIDLBuiltinKind.FLOAT -> "KFloatArray*"
+                        WebIDLBuiltinKind.DOUBLE -> "KDoubleArray*"
+                        WebIDLBuiltinKind.STRING -> "KStringArray*"
                         else -> throw UnsupportedOperationException()
                     }
-                    is ResolvedIdlEnum -> "KIntArray"
-                    is ResolvedIdlDictionary -> "KArray"
+                    is ResolvedIdlEnum -> "KIntArray*"
+                    is ResolvedIdlDictionary -> "KArray*"
                     else -> throw UnsupportedOperationException(declaration.name)
                 }
             }
@@ -266,6 +266,20 @@ fun ResolvedIdlType.getAlignment(
 }
 
 
+fun ResolvedIdlType.isPrimitive(): Boolean {
+    if (this !is ResolvedIdlType.Default ||
+        declaration !is BuiltinIdlDeclaration) return false
+    return (declaration as BuiltinIdlDeclaration).kind in setOf(
+        WebIDLBuiltinKind.CHAR,
+        WebIDLBuiltinKind.BOOLEAN,
+        WebIDLBuiltinKind.BYTE,
+        WebIDLBuiltinKind.SHORT,
+        WebIDLBuiltinKind.INT,
+        WebIDLBuiltinKind.LONG,
+        WebIDLBuiltinKind.FLOAT,
+        WebIDLBuiltinKind.DOUBLE,
+    )
+}
 
 fun ResolvedIdlType.isString(): Boolean {
     if (this !is ResolvedIdlType.Default ||

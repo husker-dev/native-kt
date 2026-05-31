@@ -14,6 +14,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,6 +23,12 @@ extern "C" {
 // ╔════════════════╗
 // ║     stdlib     ║
 // ╚════════════════╝
+
+#define K_FLAG_RELEASABLE 1
+#define K_FLAG_ON_STACK 2
+
+#define K_OBJECT_IS_RELEASABLE(flags) ((flags) & K_FLAG_RELEASABLE)
+#define K_OBJECT_IS_ON_STACK(flags) ((flags) & K_FLAG_ON_STACK)
 
 typedef int32_t  KInt;
 typedef int64_t  KLong;
@@ -33,21 +40,33 @@ typedef bool     KBoolean;
 typedef uint16_t KChar;
 
 typedef struct KString {
+    char __flags;
     const char* data;
     KInt length;
-    KBoolean releasable;
-    KBoolean released;
+    size_t size;
 } KString;
 
-static KString KString_new(const char* data, const KInt length) {
-    return (KString) { data, length, true, false };
+static KString* KString_new(const char* data, const KInt length, const KInt size) {
+    KString* result = (KString*) malloc(sizeof(KString));
+    *result = (KString) { K_FLAG_RELEASABLE, data, length, size };
+    return result;
+}
+
+static KString* KString_clone(const KString* of) {
+    const KInt size = of->size;
+    void* data = malloc(size);
+    memcpy(data, of->data, size);
+    KString* result = (KString*) malloc(sizeof(KString));
+    *result = (KString) { K_FLAG_RELEASABLE, (const char*) data, of->length, size };
+    return result;
 }
 
 static void KString_free(KString* str) {
-    if(str->releasable && !str->released) {
-        free((void*)str->data);
-        str->released = true;
-    }
+    if(!K_OBJECT_IS_RELEASABLE(str->__flags))
+        return;
+    free((void*) str->data);
+    if(!K_OBJECT_IS_ON_STACK(str->__flags))
+        free((void*) str);
 }
 
 #define ARG_LENGTH(...) ARG_LENGTH__(__VA_ARGS__)
@@ -62,33 +81,63 @@ static void KString_free(KString* str) {
     _22, _21, _20, _19, _18, _17, _16, _15, _14, _13, _12, _11, _10, _9, _8,   \
     _7, _6, _5, _4, _3, _2, _1, Count, ...) Count
 
-#define KArrayDef(Name, Type, VarargType)                       \
-typedef struct Name {                                           \
-    const Type* elements;                                       \
-    KInt size;				                                    \
-    KBoolean releasable;                                        \
-    KBoolean released;                                          \
-} Name;                                                         \
-                                                                \
-static Name Name##_new(const Type* elements, const KInt size) { \
-    return (Name){ elements, size, true, false };               \
-}                                                               \
-                                                                \
-static Name _##Name##_of(const int n, ...) {                    \
-    va_list args;                                               \
-    va_start(args, n);                                          \
-    Type* elements = (Type*)malloc(n * sizeof(Type));           \
-    for (int i = 0; i < n; i++)                                 \
-        elements[i] = (Type)va_arg(args, VarargType);           \
-    va_end(args);                                               \
-    return (Name){ (const Type*) elements, n, true, false };    \
-}                                                               \
-                                                                \
-static void Name##_free(Name* arr) {                            \
-    if(arr->releasable && !arr->released) {                     \
-        free((void*)arr->elements);                             \
-        arr->released = true;                                   \
-    }                                                           \
+#define KArrayDef(Name, Type, VarargType)                          \
+typedef struct Name {                                              \
+    char __flags;                                                  \
+    const Type* elements;                                          \
+    KInt length;				                                   \
+    size_t size;				                                   \
+} Name;                                                            \
+                                                                   \
+static Name* Name##_new(const Type* elements, const KInt length) { \
+    Name* result = (Name*) malloc(sizeof(Name));                   \
+    *result = (Name){                                              \
+        K_FLAG_RELEASABLE,                                         \
+        elements,                                                  \
+        length,                                                    \
+        length * sizeof(Name)                                      \
+    };                                                             \
+    return result;                                                 \
+}                                                                  \
+                                                                   \
+static Name* _##Name##_of(const int n, ...) {                      \
+    va_list args;                                                  \
+    va_start(args, n);                                             \
+    Type* elements = (Type*)malloc(n * sizeof(Type));              \
+    for (int i = 0; i < n; i++)                                    \
+        elements[i] = (Type)va_arg(args, VarargType);              \
+    va_end(args);                                                  \
+    Name* result = (Name*) malloc(sizeof(Name));                   \
+    *result = (Name){                                              \
+        K_FLAG_RELEASABLE,                                         \
+        (const Type*) elements,                                    \
+        n,                                                         \
+        n * sizeof(Name)                                           \
+    };                                                             \
+    return result;                                                 \
+}
+
+#define KArrayCloneDef(Name, Type)                                     \
+static Name* Name##_clone(const Name* of) {                            \
+    const KInt size = of->size;                                        \
+    void** elements = malloc(size);                                    \
+    memcpy(elements, (void*) of->elements, size);                      \
+    Name* result = (Name*) malloc(sizeof(Name));                       \
+    *result = (Name) {                                                 \
+        K_FLAG_RELEASABLE,                                             \
+        (Type*) elements,                                              \
+        of->length,                                                    \
+        of->size                                                       \
+    };                                                                 \
+    return result;                                                     \
+}                                                                      \
+                                                                       \
+static void Name##_free(Name* arr) {                                   \
+    if(!K_OBJECT_IS_RELEASABLE(arr->__flags))                          \
+        return;                                                        \
+    free((void*) arr->elements);                                       \
+    if(!K_OBJECT_IS_ON_STACK(arr->__flags))                            \
+        free((void*) arr);                                             \
 }
 
 KArrayDef(KCharArray,	 KChar,    int32_t)
@@ -111,10 +160,48 @@ KArrayDef(KArray,        void*,    void*)
 #define KDoubleArray_of(...)  _KDoubleArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
 #define KArray_of(...)        _KArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
 
+KArrayCloneDef(KCharArray,    KChar)
+KArrayCloneDef(KBooleanArray, KBoolean)
+KArrayCloneDef(KByteArray,    KByte)
+KArrayCloneDef(KShortArray,   KShort)
+KArrayCloneDef(KIntArray,     KInt)
+KArrayCloneDef(KLongArray,    KLong)
+KArrayCloneDef(KFloatArray,   KFloat)
+KArrayCloneDef(KDoubleArray,  KDouble)
+
+static KArray* KArray_clone(const KArray* of, void* (*cloneOp)(void*)) {
+	const KInt size = of->size;
+	void** elements = malloc(size);
+	for (int i = 0; i < of->length; i++)
+		elements[i] = cloneOp((void*)of->elements[i]);
+	KArray* result = (KArray*) malloc(sizeof(KArray));
+	*result = (KArray) { 
+        K_FLAG_RELEASABLE, 
+        (const void**) elements, 
+        of->length, 
+        of->size
+    }; 
+	return result;
+}
+
+static void KArray_free(const KArray* arr, void* (*freeOp)(void*)) {
+    if(!K_OBJECT_IS_RELEASABLE(arr->__flags))
+        return;
+    const void** elements = arr->elements;
+    for (int i = 0; i < arr->length; i++)
+        freeOp((void*) elements[i]);
+    free((void*) elements);
+    if(!K_OBJECT_IS_ON_STACK(arr->__flags))
+        free((void*) arr);
+}
+
 #define KCallbackDef(Name, Type, ...)       \
 struct Name {                               \
-    void *m;                                \
+    char __flags;                           \
     Type (*invoke)(Name* _, ##__VA_ARGS__); \
+    Name* (*clone)(Name* _);                \
+    KBoolean (*equals)(Name* _, Name* obj); \
+    KInt (*hashCode)(Name* _);              \
     void (*free)(Name* _);                  \
 };
 
@@ -187,11 +274,13 @@ typedef enum {
 // ╚═════════════════╝
 
 struct ParentDictionary {
+	char __flags;
 	KInt a;
 	KInt b;
 };
 
 struct MyDictionary { // : ParentDictionary
+	char __flags;
 	KInt a;
 	KInt b;
 	KInt c;
@@ -199,6 +288,7 @@ struct MyDictionary { // : ParentDictionary
 };
 
 struct TypeDictionary {
+	char __flags;
 	KChar a1;
 	KBoolean a2;
 	KByte a3;
@@ -207,37 +297,37 @@ struct TypeDictionary {
 	KLong a6;
 	KFloat a7;
 	KDouble a8;
-	KString a9;
+	KString* a9;
 	MyEnum a10;
 	MyDictionary* a11;
 	VoidCallback* a12;
-	KCharArray a13;
-	KBooleanArray a14;
-	KByteArray a15;
-	KShortArray a16;
-	KIntArray a17;
-	KLongArray a18;
-	KFloatArray a19;
-	KDoubleArray a20;
-	KIntArray a21;
-	KArray a22;
+	KCharArray* a13;
+	KBooleanArray* a14;
+	KByteArray* a15;
+	KShortArray* a16;
+	KIntArray* a17;
+	KLongArray* a18;
+	KFloatArray* a19;
+	KDoubleArray* a20;
+	KIntArray* a21;
+	KArray* a22;
 };
 
 static ParentDictionary* ParentDictionary_new(const KInt a, const KInt b) {
-	ParentDictionary* result = (ParentDictionary*)malloc(sizeof(ParentDictionary));
-	*result = (ParentDictionary){ a, b };
+	ParentDictionary* result = (ParentDictionary*) malloc(sizeof(ParentDictionary));
+	*result = (ParentDictionary) { K_FLAG_RELEASABLE, a, b };
 	return result;
 }
 
 static MyDictionary* MyDictionary_new(const KInt a, const KInt b, const KInt c, const KInt d) {
-	MyDictionary* result = (MyDictionary*)malloc(sizeof(MyDictionary));
-	*result = (MyDictionary){ a, b, c, d };
+	MyDictionary* result = (MyDictionary*) malloc(sizeof(MyDictionary));
+	*result = (MyDictionary) { K_FLAG_RELEASABLE, a, b, c, d };
 	return result;
 }
 
-static TypeDictionary* TypeDictionary_new(const KChar a1, const KBoolean a2, const KByte a3, const KShort a4, const KInt a5, const KLong a6, const KFloat a7, const KDouble a8, const KString a9, const MyEnum a10, MyDictionary* a11, VoidCallback* a12, const KCharArray a13, const KBooleanArray a14, const KByteArray a15, const KShortArray a16, const KIntArray a17, const KLongArray a18, const KFloatArray a19, const KDoubleArray a20, const KIntArray a21, const KArray a22) {
-	TypeDictionary* result = (TypeDictionary*)malloc(sizeof(TypeDictionary));
-	*result = (TypeDictionary){ a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22 };
+static TypeDictionary* TypeDictionary_new(const KChar a1, const KBoolean a2, const KByte a3, const KShort a4, const KInt a5, const KLong a6, const KFloat a7, const KDouble a8, KString* a9, MyEnum a10, MyDictionary* a11, VoidCallback* a12, KCharArray* a13, KBooleanArray* a14, KByteArray* a15, KShortArray* a16, KIntArray* a17, KLongArray* a18, KFloatArray* a19, KDoubleArray* a20, KIntArray* a21, KArray* a22) {
+	TypeDictionary* result = (TypeDictionary*) malloc(sizeof(TypeDictionary));
+	*result = (TypeDictionary) { K_FLAG_RELEASABLE, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22 };
 	return result;
 }
 
@@ -254,7 +344,7 @@ KBoolean passInt(KInt arg);
 KBoolean passLong(KLong arg);
 KBoolean passFloat(KFloat arg);
 KBoolean passDouble(KDouble arg);
-KBoolean passString(KString arg);
+KBoolean passString(KString* arg);
 KBoolean passEnum(MyEnum arg);
 KBoolean passDictionary(MyDictionary* arg);
 void returnVoid();
@@ -266,8 +356,7 @@ KInt returnInt();
 KLong returnLong();
 KFloat returnFloat();
 KDouble returnDouble();
-KString returnStringLiteral();
-KString returnString();
+KString* returnString();
 MyEnum returnEnum();
 MyDictionary* returnDictionary();
 KChar pingChar(KChar arg);
@@ -278,7 +367,7 @@ KInt pingInt(KInt arg);
 KLong pingLong(KLong arg);
 KFloat pingFloat(KFloat arg);
 KDouble pingDouble(KDouble arg);
-KString pingString(KString arg);
+KString* pingString(KString* arg);
 MyEnum pingEnum(MyEnum arg);
 MyDictionary* pingDictionary(MyDictionary* arg);
 void callbackVoid(VoidCallback* arg);
@@ -306,36 +395,36 @@ KBoolean callbackReturnString(CallbackReturnString* arg);
 VoidCallback* callbackReturnCallback(CallbackReturnCallback* arg);
 KBoolean callbackReturnEnum(CallbackReturnEnum* arg);
 KBoolean callbackReturnDictionary(CallbackReturnDictionary* arg);
-KBoolean passCharArray(KCharArray arg);
-KBoolean passBooleanArray(KBooleanArray arg);
-KBoolean passByteArray(KByteArray arg);
-KBoolean passShortArray(KShortArray arg);
-KBoolean passIntArray(KIntArray arg);
-KBoolean passLongArray(KLongArray arg);
-KBoolean passFloatArray(KFloatArray arg);
-KBoolean passDoubleArray(KDoubleArray arg);
-KBoolean passEnumArray(KIntArray arg);
-KBoolean passDictionaryArray(KArray arg);
-KCharArray returnCharArray();
-KBooleanArray returnBooleanArray();
-KByteArray returnByteArray();
-KShortArray returnShortArray();
-KIntArray returnIntArray();
-KLongArray returnLongArray();
-KFloatArray returnFloatArray();
-KDoubleArray returnDoubleArray();
-KIntArray returnEnumArray();
-KArray returnDictionaryArray();
-KCharArray pingCharArray(KCharArray arg);
-KBooleanArray pingBooleanArray(KBooleanArray arg);
-KByteArray pingByteArray(KByteArray arg);
-KShortArray pingShortArray(KShortArray arg);
-KIntArray pingIntArray(KIntArray arg);
-KLongArray pingLongArray(KLongArray arg);
-KFloatArray pingFloatArray(KFloatArray arg);
-KDoubleArray pingDoubleArray(KDoubleArray arg);
-KIntArray pingEnumArray(KIntArray arg);
-KArray pingDictionaryArray(KArray arg);
+KBoolean passCharArray(KCharArray* arg);
+KBoolean passBooleanArray(KBooleanArray* arg);
+KBoolean passByteArray(KByteArray* arg);
+KBoolean passShortArray(KShortArray* arg);
+KBoolean passIntArray(KIntArray* arg);
+KBoolean passLongArray(KLongArray* arg);
+KBoolean passFloatArray(KFloatArray* arg);
+KBoolean passDoubleArray(KDoubleArray* arg);
+KBoolean passEnumArray(KIntArray* arg);
+KBoolean passDictionaryArray(KArray* arg);
+KCharArray* returnCharArray();
+KBooleanArray* returnBooleanArray();
+KByteArray* returnByteArray();
+KShortArray* returnShortArray();
+KIntArray* returnIntArray();
+KLongArray* returnLongArray();
+KFloatArray* returnFloatArray();
+KDoubleArray* returnDoubleArray();
+KIntArray* returnEnumArray();
+KArray* returnDictionaryArray();
+KCharArray* pingCharArray(KCharArray* arg);
+KBooleanArray* pingBooleanArray(KBooleanArray* arg);
+KByteArray* pingByteArray(KByteArray* arg);
+KShortArray* pingShortArray(KShortArray* arg);
+KIntArray* pingIntArray(KIntArray* arg);
+KLongArray* pingLongArray(KLongArray* arg);
+KFloatArray* pingFloatArray(KFloatArray* arg);
+KDoubleArray* pingDoubleArray(KDoubleArray* arg);
+KIntArray* pingEnumArray(KIntArray* arg);
+KArray* pingDictionaryArray(KArray* arg);
 KBoolean callbackArgCharArray(CallbackPassCharArray* arg);
 KBoolean callbackArgBooleanArray(CallbackPassBooleanArray* arg);
 KBoolean callbackArgByteArray(CallbackPassByteArray* arg);
@@ -361,9 +450,9 @@ TypeDictionary* returnBigDictionary(VoidCallback* callback);
 TypeDictionary* pingBigDictionary(TypeDictionary* arg);
 KBoolean criticalPrimitives(KChar a1, KBoolean a2, KByte a3, KShort a4, KInt a5, KLong a6, KFloat a7, KDouble a8);
 KBoolean criticalEnum(MyEnum a1);
-KBoolean criticalString(KString a1);
-KBoolean criticalPrimitivesArray(KCharArray a1, KBooleanArray a2, KByteArray a3, KShortArray a4, KIntArray a5, KLongArray a6, KFloatArray a7, KDoubleArray a8);
-KBoolean criticalEnumArray(KIntArray a1);
+KBoolean criticalString(KString* a1);
+KBoolean criticalPrimitivesArray(KCharArray* a1, KBooleanArray* a2, KByteArray* a3, KShortArray* a4, KIntArray* a5, KLongArray* a6, KFloatArray* a7, KDoubleArray* a8);
+KBoolean criticalEnumArray(KIntArray* a1);
 KChar criticalReturnChar();
 KBoolean criticalReturnBoolean();
 KByte criticalReturnByte();
@@ -382,68 +471,165 @@ KBoolean jvmci6(KFloat a1, KFloat a2, KFloat a3, KFloat a4, KFloat a5, KFloat a6
 KBoolean jvmci7(KFloat a1, KDouble a2, KFloat a3, KDouble a4, KFloat a5, KDouble a6, KFloat a7, KFloat a8, KDouble a9);
 KBoolean jvmci8(KInt a1, KDouble a2, KFloat a3, KLong a4);
 KBoolean jvmci9(KInt a1, KDouble a2, KFloat a3, KLong a4, KLong a5, KDouble a6, KFloat a7, KFloat a8, KInt a9);
-KBoolean jvmci10(KString a1, KDouble a2, KFloat a3, KLong a4, KLong a5, KDouble a6, KString a7, KFloat a8, KInt a9);
+KBoolean jvmci10(KString* a1, KDouble a2, KFloat a3, KLong a4, KLong a5, KDouble a6, KString* a7, KFloat a8, KInt a9);
 KBoolean jvmci11(KFloat a1, KInt a2, KFloat a3, KInt a4, KFloat a5, KInt a6, KFloat a7, KInt a8, KFloat a9, KInt a10, KFloat a11, KInt a12, KFloat a13, KInt a14, KFloat a15, KInt a16, KFloat a17);
 KInt jvmci12();
 KLong jvmci13();
 KFloat jvmci14();
 KDouble jvmci15();
-KBoolean jvmciArray(KIntArray array);
-KBoolean jvmciSomeArrays(KIntArray array1, KFloatArray array2, KDoubleArray array3);
-KBoolean jvmciEnum(MyEnum enum1, MyEnum enum2, KIntArray enumArray);
+KBoolean jvmciArray(KIntArray* array);
+KBoolean jvmciSomeArrays(KIntArray* array1, KFloatArray* array2, KDoubleArray* array3);
+KBoolean jvmciEnum(MyEnum enum1, MyEnum enum2, KIntArray* enumArray);
 
 // ╔═══════════════════╗
 // ║     Callbacks     ║
 // ╚═══════════════════╝
-// ┌───────┬──────────────────────────────┬─────────────┬──────────────────┐
-// │  ...  │ Name                         │ Type        │ Args             │
-// └───────┴──────────────────────────────┴─────────────┴──────────────────┘
-KCallbackDef(VoidCallback,                  void                           )
-KCallbackDef(CallbackPassChar,              KBoolean,     KChar arg        )
-KCallbackDef(CallbackPassBoolean,           KBoolean,     KBoolean arg     )
-KCallbackDef(CallbackPassByte,              KBoolean,     KByte arg        )
-KCallbackDef(CallbackPassShort,             KBoolean,     KShort arg       )
-KCallbackDef(CallbackPassInt,               KBoolean,     KInt arg         )
-KCallbackDef(CallbackPassLong,              KBoolean,     KLong arg        )
-KCallbackDef(CallbackPassFloat,             KBoolean,     KFloat arg       )
-KCallbackDef(CallbackPassDouble,            KBoolean,     KDouble arg      )
-KCallbackDef(CallbackPassString,            KBoolean,     KString arg      )
-KCallbackDef(CallbackPassCallback,          KBoolean,     VoidCallback* arg)
-KCallbackDef(CallbackPassEnum,              KBoolean,     MyEnum arg       )
-KCallbackDef(CallbackPassDictionary,        KBoolean,     MyDictionary* arg)
-KCallbackDef(CallbackReturnChar,            KChar                          )
-KCallbackDef(CallbackReturnBoolean,         KBoolean                       )
-KCallbackDef(CallbackReturnByte,            KByte                          )
-KCallbackDef(CallbackReturnShort,           KShort                         )
-KCallbackDef(CallbackReturnInt,             KInt                           )
-KCallbackDef(CallbackReturnLong,            KLong                          )
-KCallbackDef(CallbackReturnFloat,           KFloat                         )
-KCallbackDef(CallbackReturnDouble,          KDouble                        )
-KCallbackDef(CallbackReturnString,          KString                        )
-KCallbackDef(CallbackReturnCallback,        VoidCallback*                  )
-KCallbackDef(CallbackReturnEnum,            MyEnum                         )
-KCallbackDef(CallbackReturnDictionary,      MyDictionary*                  )
-KCallbackDef(CallbackPassCharArray,         KBoolean,     KCharArray arg   )
-KCallbackDef(CallbackPassBooleanArray,      KBoolean,     KBooleanArray arg)
-KCallbackDef(CallbackPassByteArray,         KBoolean,     KByteArray arg   )
-KCallbackDef(CallbackPassShortArray,        KBoolean,     KShortArray arg  )
-KCallbackDef(CallbackPassIntArray,          KBoolean,     KIntArray arg    )
-KCallbackDef(CallbackPassLongArray,         KBoolean,     KLongArray arg   )
-KCallbackDef(CallbackPassFloatArray,        KBoolean,     KFloatArray arg  )
-KCallbackDef(CallbackPassDoubleArray,       KBoolean,     KDoubleArray arg )
-KCallbackDef(CallbackPassEnumArray,         KBoolean,     KIntArray arg    )
-KCallbackDef(CallbackPassDictionaryArray,   KBoolean,     KArray arg       )
-KCallbackDef(CallbackReturnCharArray,       KCharArray                     )
-KCallbackDef(CallbackReturnBooleanArray,    KBooleanArray                  )
-KCallbackDef(CallbackReturnByteArray,       KByteArray                     )
-KCallbackDef(CallbackReturnShortArray,      KShortArray                    )
-KCallbackDef(CallbackReturnIntArray,        KIntArray                      )
-KCallbackDef(CallbackReturnLongArray,       KLongArray                     )
-KCallbackDef(CallbackReturnFloatArray,      KFloatArray                    )
-KCallbackDef(CallbackReturnDoubleArray,     KDoubleArray                   )
-KCallbackDef(CallbackReturnEnumArray,       KIntArray                      )
-KCallbackDef(CallbackReturnDictionaryArray, KArray                         )
+// ┌───────┬──────────────────────────────┬──────────────┬───────────────────┐
+// │  ...  │ Name                         │ Type         │ Args              │
+// └───────┴──────────────────────────────┴──────────────┴───────────────────┘
+KCallbackDef(VoidCallback,                  void                             )
+KCallbackDef(CallbackPassChar,              KBoolean,      KChar arg         )
+KCallbackDef(CallbackPassBoolean,           KBoolean,      KBoolean arg      )
+KCallbackDef(CallbackPassByte,              KBoolean,      KByte arg         )
+KCallbackDef(CallbackPassShort,             KBoolean,      KShort arg        )
+KCallbackDef(CallbackPassInt,               KBoolean,      KInt arg          )
+KCallbackDef(CallbackPassLong,              KBoolean,      KLong arg         )
+KCallbackDef(CallbackPassFloat,             KBoolean,      KFloat arg        )
+KCallbackDef(CallbackPassDouble,            KBoolean,      KDouble arg       )
+KCallbackDef(CallbackPassString,            KBoolean,      KString* arg      )
+KCallbackDef(CallbackPassCallback,          KBoolean,      VoidCallback* arg )
+KCallbackDef(CallbackPassEnum,              KBoolean,      MyEnum arg        )
+KCallbackDef(CallbackPassDictionary,        KBoolean,      MyDictionary* arg )
+KCallbackDef(CallbackReturnChar,            KChar                            )
+KCallbackDef(CallbackReturnBoolean,         KBoolean                         )
+KCallbackDef(CallbackReturnByte,            KByte                            )
+KCallbackDef(CallbackReturnShort,           KShort                           )
+KCallbackDef(CallbackReturnInt,             KInt                             )
+KCallbackDef(CallbackReturnLong,            KLong                            )
+KCallbackDef(CallbackReturnFloat,           KFloat                           )
+KCallbackDef(CallbackReturnDouble,          KDouble                          )
+KCallbackDef(CallbackReturnString,          KString*                         )
+KCallbackDef(CallbackReturnCallback,        VoidCallback*                    )
+KCallbackDef(CallbackReturnEnum,            MyEnum                           )
+KCallbackDef(CallbackReturnDictionary,      MyDictionary*                    )
+KCallbackDef(CallbackPassCharArray,         KBoolean,      KCharArray* arg   )
+KCallbackDef(CallbackPassBooleanArray,      KBoolean,      KBooleanArray* arg)
+KCallbackDef(CallbackPassByteArray,         KBoolean,      KByteArray* arg   )
+KCallbackDef(CallbackPassShortArray,        KBoolean,      KShortArray* arg  )
+KCallbackDef(CallbackPassIntArray,          KBoolean,      KIntArray* arg    )
+KCallbackDef(CallbackPassLongArray,         KBoolean,      KLongArray* arg   )
+KCallbackDef(CallbackPassFloatArray,        KBoolean,      KFloatArray* arg  )
+KCallbackDef(CallbackPassDoubleArray,       KBoolean,      KDoubleArray* arg )
+KCallbackDef(CallbackPassEnumArray,         KBoolean,      KIntArray* arg    )
+KCallbackDef(CallbackPassDictionaryArray,   KBoolean,      KArray* arg       )
+KCallbackDef(CallbackReturnCharArray,       KCharArray*                      )
+KCallbackDef(CallbackReturnBooleanArray,    KBooleanArray*                   )
+KCallbackDef(CallbackReturnByteArray,       KByteArray*                      )
+KCallbackDef(CallbackReturnShortArray,      KShortArray*                     )
+KCallbackDef(CallbackReturnIntArray,        KIntArray*                       )
+KCallbackDef(CallbackReturnLongArray,       KLongArray*                      )
+KCallbackDef(CallbackReturnFloatArray,      KFloatArray*                     )
+KCallbackDef(CallbackReturnDoubleArray,     KDoubleArray*                    )
+KCallbackDef(CallbackReturnEnumArray,       KIntArray*                       )
+KCallbackDef(CallbackReturnDictionaryArray, KArray*                          )
 #undef KCallbackDef
+
+// ╔══════════════════════════╗
+// ║     Struct functions     ║
+// ╚══════════════════════════╝
+
+static ParentDictionary* ParentDictionary_clone(const ParentDictionary* of);
+static MyDictionary* MyDictionary_clone(const MyDictionary* of);
+static TypeDictionary* TypeDictionary_clone(const TypeDictionary* of);
+static void ParentDictionary_free(ParentDictionary* of);
+static void MyDictionary_free(MyDictionary* of);
+static void TypeDictionary_free(TypeDictionary* of);
+
+static ParentDictionary* ParentDictionary_clone(const ParentDictionary* of) {
+	ParentDictionary* result = (ParentDictionary*) malloc(sizeof(ParentDictionary));
+	*result = (ParentDictionary) {
+		K_FLAG_RELEASABLE,
+		of->a,
+		of->b
+	};
+	return result;
+}
+
+static void ParentDictionary_free(ParentDictionary* of) {
+	if(!K_OBJECT_IS_RELEASABLE(of->__flags))
+	    return;	
+	if(!K_OBJECT_IS_ON_STACK(of->__flags))
+	    free((void*) of);
+}
+
+static MyDictionary* MyDictionary_clone(const MyDictionary* of) {
+	MyDictionary* result = (MyDictionary*) malloc(sizeof(MyDictionary));
+	*result = (MyDictionary) {
+		K_FLAG_RELEASABLE,
+		of->a,
+		of->b,
+		of->c,
+		of->d
+	};
+	return result;
+}
+
+static void MyDictionary_free(MyDictionary* of) {
+	if(!K_OBJECT_IS_RELEASABLE(of->__flags))
+	    return;	
+	if(!K_OBJECT_IS_ON_STACK(of->__flags))
+	    free((void*) of);
+}
+
+static TypeDictionary* TypeDictionary_clone(const TypeDictionary* of) {
+	TypeDictionary* result = (TypeDictionary*) malloc(sizeof(TypeDictionary));
+	*result = (TypeDictionary) {
+		K_FLAG_RELEASABLE,
+		of->a1,
+		of->a2,
+		of->a3,
+		of->a4,
+		of->a5,
+		of->a6,
+		of->a7,
+		of->a8,
+		KString_clone(of->a9),
+		of->a10,
+		MyDictionary_clone(of->a11),
+		of->a12->clone(of->a12),
+		KCharArray_clone(of->a13),
+		KBooleanArray_clone(of->a14),
+		KByteArray_clone(of->a15),
+		KShortArray_clone(of->a16),
+		KIntArray_clone(of->a17),
+		KLongArray_clone(of->a18),
+		KFloatArray_clone(of->a19),
+		KDoubleArray_clone(of->a20),
+		KIntArray_clone(of->a21),
+		KArray_clone(of->a22, (void*) MyDictionary_clone)
+	};
+	return result;
+}
+
+static void TypeDictionary_free(TypeDictionary* of) {
+	if(!K_OBJECT_IS_RELEASABLE(of->__flags))
+	    return;
+	KString_free(of->a9);
+	MyDictionary_free(of->a11);
+	of->a12->free(of->a12);
+	KCharArray_free(of->a13);
+	KBooleanArray_free(of->a14);
+	KByteArray_free(of->a15);
+	KShortArray_free(of->a16);
+	KIntArray_free(of->a17);
+	KLongArray_free(of->a18);
+	KFloatArray_free(of->a19);
+	KDoubleArray_free(of->a20);
+	KIntArray_free(of->a21);
+	KArray_free(of->a22, (void*) MyDictionary_free);	
+	if(!K_OBJECT_IS_ON_STACK(of->__flags))
+	    free((void*) of);
+}
 
 
 #ifdef __cplusplus

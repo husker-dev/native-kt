@@ -37,14 +37,8 @@ KDouble returnDouble() {
     return 99.0;
 }
 
-KString returnStringLiteral() {
-    return KString_new("test string", 11);
-}
-
-KString returnString() {
-    char* str = malloc(100);
-    strcpy(str, "test string");
-    return KString_new(str, 11);
+KString* returnString() {
+    return KString_new(strdup("test string"), 11, 11);
 }
 
 MyEnum returnEnum() {

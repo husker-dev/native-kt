@@ -37,7 +37,7 @@ KBoolean callbackArgDouble(CallbackPassDouble* arg) {
 }
 
 KBoolean callbackArgString(CallbackPassString* arg) {
-    return arg->invoke(arg, KString_new("test string", 11));
+    return arg->invoke(arg, KString_new(strdup("test string"), 11, 11));
 }
 
 KBoolean callbackArgCallback(VoidCallback* pass, CallbackPassCallback* arg) {

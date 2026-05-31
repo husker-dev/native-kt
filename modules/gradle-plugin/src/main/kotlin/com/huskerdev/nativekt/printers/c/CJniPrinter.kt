@@ -16,7 +16,7 @@ class CJniPrinter(
     init {
         val builder = StringBuilder()
         builder.append("""
-            #include "jni_arena.h"
+            #include "jni_utils.h"
             
         """.trimIndent())
 
@@ -86,42 +86,97 @@ class CJniPrinter(
             add("JNIEnv *env")
             add("jclass __cls")
             addAll(function.args.map {
-                "${it.type.toJNIType()} __arg_${it.name}"
+                "${it.type.toJNIType()} __arg_jvm_${it.name}"
             })
-        }.joinTo(builder, prefix = "(", postfix = ")")
+        }.joinTo(builder, prefix = "(", postfix = ") {")
 
-        append(" {\n")
+        val returns = function.type !is ResolvedIdlType.Void
+        val needReleases = function.args.any { !it.type.isPrimitive() } || function.isDealloc()
 
-        val useArena = function.args.any { it.type.isString() || it.type.isArray() || it.isDealloc() }
+        // ===========
+        //    Cast
+        // ===========
 
-        if(useArena) {
-            append("\tArena arena;\n")
-            append("\tArena__init(&arena, env);\n")
+        val argsToCast = function.args.filter { !it.type.isPrimitive() }
+        val typeMaxLength = argsToCast.maxOfOrNull { it.type.toCDefType().length } ?: 0
+
+        // write args
+        argsToCast.joinTo(this, separator = "") {
+            "\n\t${it.type.toCDefType().padEnd(typeMaxLength)} __arg_native_${it.name} = ${castJavaToJNI(
+                it.type, 
+                "__arg_jvm_${it.name}",
+                onStack = true,
+                flags = "0"
+            )};"
         }
 
-        append("\t")
-        if(function.type !is ResolvedIdlType.Void) {
-            if(useArena) {
-                append(function.type.toJNIType())
-                append(" __result = ")
-            } else append("return ")
-        }
+        // ===========
+        //    Call
+        // ===========
 
-        // == Function call ==
         val args = function.args.joinToString {
-            castJavaToJNI(it.type, "__arg_${it.name}", it.isDealloc(), useArena, releasable = "false")
+            if(it.type.isPrimitive())
+                "__arg_jvm_${it.name}"
+            else "__arg_native_${it.name}"
         }
         val call = "${function.name}($args)"
-        append(castJniToJava(function.type, call, function.isDealloc(), function.isDeallocContent(), useArena))
-        append(";\n")
 
-        if(useArena) {
-            append("\tArena__free(&arena);\n")
-            if(function.type !is ResolvedIdlType.Void)
-                append("\treturn __result;\n")
+        if(returns) {
+            if(needReleases) {
+                if(!function.type.isPrimitive()) {
+                    append("\n\t${function.type.toCDefType()} __result_native = $call;")
+                    append("\n\t${function.type.toJNIType()} __result_jvm = ${castJniToJava(function.type, "__result_native")};")
+                } else
+                    append("\n\t${function.type.toJNIType()} __result_jvm = ${castJniToJava(function.type, call)};")
+            } else
+                append("\n\treturn ${castJniToJava(function.type, call)};")
+        } else append("\n\t$call;")
+
+        // ==================
+        //   Dealloc result
+        // ==================
+
+        if(function.isDealloc()) {
+            freeFuncFor(
+                function.type,
+                "__result_native"
+            )?.apply { append("\n\t$this;") }
         }
 
-        append("}\n")
+        // ==================
+        //    Release args
+        // ==================
+
+        function.args.forEach { arg ->
+            when {
+                arg.type.isString() -> "JNI_releaseStringOnStack(env, __arg_native_${arg.name})"
+                arg.type.isArray() -> {
+                    (arg.type as ResolvedIdlType.Default).firstParam { _, declaration ->
+                        when (declaration) {
+                            is BuiltinIdlDeclaration -> {
+                                val name = declaration.kind.simpleName()
+                                "JNI_release${name}ArrayOnStack(env, __arg_native_${arg.name})"
+                            }
+                            is ResolvedIdlEnum -> "free((void*)__arg_native_${arg.name}->elements)"
+                            is ResolvedIdlDictionary -> {
+                                "JNI_forceFreeKArray(__arg_native_${arg.name}, (void*) JNI_forceFree${declaration.name})"
+                            }
+                            else -> throw UnsupportedOperationException(arg.type.toString())
+                        }
+                    }
+                }
+                arg.type.isDictionary() -> "JNI_forceFree${(arg.type as ResolvedIdlType.Default).declaration.name}(__arg_native_${arg.name})"
+                else -> return@forEach
+            }.apply { append("\n\t$this;") }
+        }
+
+        // ==================
+        //      Return
+        // ==================
+
+        if(returns && needReleases)
+            append("\n\treturn __result_jvm;")
+        append("\n}\n")
     }
 
     private fun printCriticalFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
@@ -156,67 +211,108 @@ class CJniPrinter(
         "Java_${classPath.replace(".", "_")}_${this@CJniPrinter.name}_$name"
 }
 
-internal fun castJniToJava(type: ResolvedIdlType, content: String, dealloc: Boolean, deallocContent: Boolean, useArena: Boolean): String {
+internal fun freeFuncFor(
+    type: ResolvedIdlType,
+    content: String
+) = when {
+    type.isString() -> "KString_free($content)"
+    type.isArray() -> (type as ResolvedIdlType.Default).firstParam { _, declaration ->
+        when (declaration) {
+            is BuiltinIdlDeclaration -> "K${declaration.kind.simpleName()}Array_free($content)"
+            is ResolvedIdlEnum -> "KIntArray_free($content)"
+            is ResolvedIdlDictionary -> "KArray_free($content, (void*) ${declaration.name}_free)"
+            else -> throw UnsupportedOperationException(type.toString())
+        }
+    }
+    type.isCallback() -> "$content->free($content)"
+    type.isDictionary() -> "${(type as ResolvedIdlType.Default).declaration.name}_free(${content})"
+    else -> null
+}
+
+internal fun forceFreeFuncFor(
+    type: ResolvedIdlType,
+    content: String
+) = when {
+    type.isString() -> "JNI_forceFreeKString($content)"
+    type.isArray() -> (type as ResolvedIdlType.Default).firstParam { _, declaration ->
+        when (declaration) {
+            is BuiltinIdlDeclaration -> "JNI_forceFreeK${declaration.kind.simpleName()}Array($content)"
+            is ResolvedIdlEnum -> "JNI_forceFreeKIntArray($content)"
+            is ResolvedIdlDictionary -> "JNI_forceFreeKArray($content, (void*) JNI_forceFree${declaration.name})"
+            else -> throw UnsupportedOperationException(type.toString())
+        }
+    }
+    type.isCallback() || type.isDictionary() ->
+        "JNI_forceFree${(type as ResolvedIdlType.Default).declaration.name}($content)"
+    else -> null
+}
+
+
+internal fun castJniToJava(type: ResolvedIdlType, content: String): String {
     return when(type) {
         is ResolvedIdlType.Void -> content
         is ResolvedIdlType.Default -> when(val decl = type.declaration) {
             is BuiltinIdlDeclaration -> when(decl.kind) {
                 WebIDLBuiltinKind.STRING ->
-                    if(useArena) "Arena__toKotlinString(&arena, $content, $dealloc)"
-                    else "JNI_toKotlinString(env, $content, $dealloc)"
+                    "JNI_toKotlinString(env, $content)"
                 WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
                     when (declaration) {
-                        is BuiltinIdlDeclaration -> {
-                            val name = declaration.kind.simpleName()
-                            if (useArena) "Arena__toKotlin${name}Array(&arena, $content, $dealloc)"
-                            else "JNI_toKotlin${name}Array(env, $content, $dealloc)"
-                        }
-                        is ResolvedIdlEnum -> "JNI_toKotlinEnumArray(env, $content, enum${declaration.name}Class, enum${declaration.name}Values, $dealloc)"
-                        is ResolvedIdlDictionary -> "JNI_toKotlinArray(env, $content, (jobject(*)(JNIEnv*, void*, bool))JNI_toKotlinDictionary${declaration.name}, struct${declaration.name}Class, $dealloc, $deallocContent)"
+                        is BuiltinIdlDeclaration ->
+                            "JNI_toKotlin${declaration.kind.simpleName()}Array(env, $content)"
+                        is ResolvedIdlEnum -> "JNI_toKotlinEnumArray(env, $content, enum${declaration.name}Class, enum${declaration.name}Values)"
+                        is ResolvedIdlDictionary -> "JNI_toKotlinArray(env, $content, (jobject(*)(JNIEnv*, void*)) JNI_toKotlinDictionary${declaration.name}, struct${declaration.name}Class)"
                         else -> throw UnsupportedOperationException(type.toString())
                     }
                 }
                 else -> content
             }
-            is ResolvedIdlCallbackFunction -> "JNI_toKotlinCallback(env, (JNI_Callback*)$content, $dealloc)"
+            is ResolvedIdlCallbackFunction -> "JNI_toKotlinCallback(env, (JNI_Callback*)$content)"
             is ResolvedIdlEnum -> "JNI_toKotlinEnum(env, $content, enum${decl.name}Class, enum${decl.name}Values)"
-            is ResolvedIdlDictionary -> "JNI_toKotlinDictionary${decl.name}(env, $content, $dealloc)"
+            is ResolvedIdlDictionary -> "JNI_toKotlinDictionary${decl.name}(env, $content)"
             else -> throw UnsupportedOperationException(type.toString())
         }
         else -> throw UnsupportedOperationException(type.toString())
     }
 }
 
-internal fun castJavaToJNI(type: ResolvedIdlType, content: String, dealloc: Boolean, useArena: Boolean, releasable: String): String {
-    return when(type) {
-        is ResolvedIdlType.Default -> when(val decl = type.declaration) {
-            is BuiltinIdlDeclaration -> when(decl.kind) {
-                WebIDLBuiltinKind.STRING ->
-                    if(useArena) "Arena__toNativeString(&arena, $content)"
-                    else "JNI_toNativeString(env, $content, $releasable)"
-                WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
-                    when (declaration) {
-                        is BuiltinIdlDeclaration -> {
-                            val name = declaration.kind.simpleName()
-                            if (useArena) "Arena__toNative${name}Array(&arena, $content)"
-                            else "JNI_toNative${name}Array(env, $content, $releasable)"
-                        }
-                        is ResolvedIdlEnum -> "JNI_toNativeEnumArray(env, $content, $releasable)"
-                        is ResolvedIdlDictionary -> "JNI_toNativeArray(env, $content, (void*(*)(JNIEnv*, jobject, bool))JNI_toNativeDictionary${declaration.name}, $releasable)"
-                        else -> throw UnsupportedOperationException(type.toString())
+internal fun castJavaToJNI(
+    type: ResolvedIdlType,
+    content: String,
+    onStack: Boolean,
+    flags: String
+) = when(type) {
+    is ResolvedIdlType.Default -> when(val decl = type.declaration) {
+        is BuiltinIdlDeclaration -> when(decl.kind) {
+            WebIDLBuiltinKind.STRING ->
+                if(onStack) "JNI_toNativeStringOnStack(env, $content, alloca(JNI_StringStackSize))"
+                else "JNI_toNativeString(env, $content, /* flags */ $flags)"
+            WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
+                when (declaration) {
+                    is BuiltinIdlDeclaration -> {
+                        val name = declaration.kind.simpleName()
+                        if(onStack) "JNI_toNative${name}ArrayOnStack(env, $content, alloca(JNI_ArrayStackSize))"
+                        else "JNI_toNative${name}Array(env, $content, /* flags */ $flags)"
                     }
+                    is ResolvedIdlEnum -> {
+                        if(onStack) "JNI_toNativeEnumArrayOnStack(env, $content, alloca(JNI_ArrayStackSize))"
+                        else "JNI_toNativeEnumArray(env, $content, /* flags */ $flags)"
+                    }
+                    is ResolvedIdlDictionary -> {
+                        if(onStack) "JNI_toNativeArrayOnStack(env, $content, (void*(*)(JNIEnv*, jobject, char)) JNI_toNativeDictionary${declaration.name}, alloca(JNI_ArrayStackSize))"
+                        else "JNI_toNativeArray(env, $content, (void*(*)(JNIEnv*, jobject, char)) JNI_toNativeDictionary${declaration.name}, /* flags */ $flags)"
+                    }
+                    else -> throw UnsupportedOperationException(type.toString())
                 }
-                else -> content
             }
-            is ResolvedIdlCallbackFunction -> {
-                val call = "JNI_toNativeCallback(env, $content, (void(*)())JNI_CALLBACK_INVOKE_${decl.name})"
-                if (dealloc) "(${decl.name}*)Arena__callback(&arena, $call)"
-                else "(${decl.name}*)$call"
-            }
-            is ResolvedIdlEnum -> "JNI_toNativeEnum(env, $content)"
-            is ResolvedIdlDictionary -> "JNI_toNativeDictionary${decl.name}(env, $content, $releasable)"
-            else -> throw UnsupportedOperationException(type.toString())
+            else -> content
         }
+        is ResolvedIdlCallbackFunction -> {
+            if (onStack) "(${decl.name}*) JNI_toNativeCallbackOnStack(env, $content, (void(*)())JNI_CALLBACK_INVOKE_${decl.name}, alloca(JNI_CallbackSize))"
+            else "(${decl.name}*) JNI_toNativeCallback(env, $content, (void(*)())JNI_CALLBACK_INVOKE_${decl.name}, /* flags */ $flags)"
+        }
+        is ResolvedIdlEnum -> "JNI_toNativeEnum(env, $content)"
+        is ResolvedIdlDictionary -> "JNI_toNativeDictionary${decl.name}(env, $content, /* flags */ $flags)"
         else -> throw UnsupportedOperationException(type.toString())
     }
+    else -> throw UnsupportedOperationException(type.toString())
 }

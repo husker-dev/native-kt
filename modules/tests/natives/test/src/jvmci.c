@@ -75,12 +75,12 @@ KBoolean jvmci9(
 }
 
 KBoolean jvmci10(
-    const KString a1, const KDouble a2, const KFloat a3, const KLong a4,
-    const KLong a5, const KDouble a6, const KString a7, const KFloat a8, const KInt a9
+    KString* a1, const KDouble a2, const KFloat a3, const KLong a4,
+    const KLong a5, const KDouble a6, KString* a7, const KFloat a8, const KInt a9
 ) {
-    printf("jvmci10 | a1: %s, a2: %f, a3: %f, a4: %lld, a5: %lld, a6: %f, a7: %s, a8: %f, a9: %d\n", a1.data, a2, a3, a4, a5, a6, a7.data, a8, a9);
+    printf("jvmci10 | a1: %s, a2: %f, a3: %f, a4: %lld, a5: %lld, a6: %f, a7: %s, a8: %f, a9: %d\n", a1->data, a2, a3, a4, a5, a6, a7->data, a8, a9);
     fflush(stdout);
-    return strncmp(a1.data, "string1", 7) == 0 && a2 == 2.0 && a3 == 3.0 && a4 == 4 && a5 == 5 && a6 == 6.0 && strncmp(a7.data, "string7", 7) == 0 && a8 == 8.0 && a9 == 9;
+    return strncmp(a1->data, "string1", 7) == 0 && a2 == 2.0 && a3 == 3.0 && a4 == 4 && a5 == 5 && a6 == 6.0 && strncmp(a7->data, "string7", 7) == 0 && a8 == 8.0 && a9 == 9;
 }
 
 KBoolean jvmci11(
@@ -110,33 +110,33 @@ KDouble jvmci15() {
     return 1.5;
 }
 
-KBoolean jvmciArray(const KIntArray array) {
-    return array.size == 3 &&
-        array.elements[0] == 1 &&
-        array.elements[1] == 2 &&
-        array.elements[2] == 3;
+KBoolean jvmciArray(KIntArray* array) {
+    return array->length == 3 &&
+        array->elements[0] == 1 &&
+        array->elements[1] == 2 &&
+        array->elements[2] == 3;
 }
 
-KBoolean jvmciSomeArrays(const KIntArray array1, const KFloatArray array2, const KDoubleArray array3) {
-    return array1.size == 3 &&
-        array1.elements[0] == 1 &&
-        array1.elements[1] == 2 &&
-        array1.elements[2] == 3 &&
-        array2.size == 3 &&
-        array2.elements[0] == 4.0 &&
-        array2.elements[1] == 5.0 &&
-        array2.elements[2] == 6.0 &&
-        array3.size == 3 &&
-        array3.elements[0] == 7.0 &&
-        array3.elements[1] == 8.0 &&
-        array3.elements[2] == 9.0;
+KBoolean jvmciSomeArrays(KIntArray* array1, KFloatArray* array2, KDoubleArray* array3) {
+    return array1->length == 3 &&
+        array1->elements[0] == 1 &&
+        array1->elements[1] == 2 &&
+        array1->elements[2] == 3 &&
+        array2->length == 3 &&
+        array2->elements[0] == 4.0 &&
+        array2->elements[1] == 5.0 &&
+        array2->elements[2] == 6.0 &&
+        array3->length == 3 &&
+        array3->elements[0] == 7.0 &&
+        array3->elements[1] == 8.0 &&
+        array3->elements[2] == 9.0;
 }
 
-KBoolean jvmciEnum(const MyEnum enum1, const MyEnum enum2, const KIntArray enumArray){
-    const MyEnum *elements = (MyEnum*)enumArray.elements;
+KBoolean jvmciEnum(const MyEnum enum1, const MyEnum enum2, KIntArray* enumArray){
+    const MyEnum *elements = (MyEnum*)enumArray->elements;
 
     return enum1 == MyEnum_CASE1 && enum2 == MyEnum_CASE2 &&
-        enumArray.size == 3 &&
+        enumArray->length == 3 &&
             elements[0] == MyEnum_CASE1 &&
             elements[1] == MyEnum_CASE2 &&
             elements[2] == MyEnum_CASE1;

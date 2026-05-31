@@ -1,46 +1,46 @@
 #include <api.h>
 #include <stdlib.h>
 
-KCharArray returnCharArray() {
+KCharArray* returnCharArray() {
     return KCharArray_of('a', 'b');
 }
 
-KBooleanArray returnBooleanArray() {
+KBooleanArray* returnBooleanArray() {
     return KBooleanArray_of(true, false);
 }
 
-KByteArray returnByteArray() {
+KByteArray* returnByteArray() {
     return KByteArray_of(1, 2);
 }
 
-KShortArray returnShortArray() {
+KShortArray* returnShortArray() {
     return KShortArray_of(1, 2);
 }
 
-KIntArray returnIntArray() {
+KIntArray* returnIntArray() {
     return KIntArray_of(1, 2);
 }
 
-KLongArray returnLongArray() {
+KLongArray* returnLongArray() {
     KLong* elements = malloc(2 * sizeof(int64_t));
     elements[0] = 1;
     elements[1] = 2;
     return KLongArray_new(elements, 2);
 }
 
-KFloatArray returnFloatArray() {
+KFloatArray* returnFloatArray() {
     return KFloatArray_of(1.1f, 2.2f);
 }
 
-KDoubleArray returnDoubleArray() {
+KDoubleArray* returnDoubleArray() {
     return KDoubleArray_of(1.1, 2.2);
 }
 
-KIntArray returnEnumArray() {
+KIntArray* returnEnumArray() {
     return KIntArray_of(MyEnum_CASE1, MyEnum_CASE2);
 }
 
-KArray returnDictionaryArray() {
+KArray* returnDictionaryArray() {
     return KArray_of(
         MyDictionary_new(1, 2, 3, 4),
         MyDictionary_new(5, 6, 7, 8)

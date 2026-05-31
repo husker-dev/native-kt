@@ -6,7 +6,6 @@ import com.android.build.gradle.internal.tasks.factory.dependsOn
 import com.huskerdev.nativekt.plugin.*
 import com.huskerdev.nativekt.printers.c.CHeaderPrinter
 import com.huskerdev.nativekt.printers.kotlin.KotlinAndroidPrinter
-import com.huskerdev.nativekt.printers.c.CJniArenaPrinter
 import com.huskerdev.nativekt.printers.c.CJniPrinter
 import com.huskerdev.nativekt.printers.c.CJniUtilsPrinter
 import com.huskerdev.nativekt.utils.*
@@ -192,11 +191,6 @@ private abstract class PrepareNativesAndroid: DefaultTask() {
                 name = "${moduleName.capitalized()}JNI",
                 isAndroid = true,
                 isAndroidCriticalEnabled = useAndroidCriticalNative
-            )
-
-            CJniArenaPrinter(
-                target = File(nativesBuildDir, "jni_arena.h"),
-                callbacks = idl.callbacks.isNotEmpty()
             )
 
             CHeaderPrinter(

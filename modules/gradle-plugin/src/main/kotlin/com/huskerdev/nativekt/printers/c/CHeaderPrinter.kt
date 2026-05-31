@@ -1,16 +1,23 @@
 package com.huskerdev.nativekt.printers.c
 
 import com.huskerdev.nativekt.utils.allFields
+import com.huskerdev.nativekt.utils.firstParam
 import com.huskerdev.nativekt.utils.globalOperators
+import com.huskerdev.nativekt.utils.isArray
 import com.huskerdev.nativekt.utils.isCallback
 import com.huskerdev.nativekt.utils.isDictionary
+import com.huskerdev.nativekt.utils.isPrimitive
+import com.huskerdev.nativekt.utils.isString
 import com.huskerdev.nativekt.utils.printLabel
+import com.huskerdev.nativekt.utils.simpleName
 import com.huskerdev.nativekt.utils.toCDefType
+import com.huskerdev.webidl.resolver.BuiltinIdlDeclaration
 import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlCallbackFunction
 import com.huskerdev.webidl.resolver.ResolvedIdlDictionary
 import com.huskerdev.webidl.resolver.ResolvedIdlEnum
 import com.huskerdev.webidl.resolver.ResolvedIdlOperation
+import com.huskerdev.webidl.resolver.ResolvedIdlType
 import java.io.File
 import kotlin.math.max
 
@@ -59,6 +66,22 @@ class CHeaderPrinter(
             printCallbacks(builder, idl.callbacks.values)
         }
 
+        if(idl.dictionaries.isNotEmpty()) {
+            printLabel(builder, "Struct functions")
+
+            idl.dictionaries.values.forEach {
+                builder.append("\nstatic ${it.name}* ${it.name}_clone(const ${it.name}* of);")
+            }
+            idl.dictionaries.values.forEach {
+                builder.append("\nstatic void ${it.name}_free(${it.name}* of);")
+            }
+            builder.append("\n")
+            idl.dictionaries.values.forEach {
+                printStructClone(builder, it)
+                printStructFree(builder, it)
+            }
+        }
+
         printFooter(builder)
 
         target.writeText(builder.toString().replace("\n", System.lineSeparator()))
@@ -96,43 +119,99 @@ class CHeaderPrinter(
             append(" // : ").append(dictionary.implements!!.name)
         append("\n\t")
 
-        dictionary.allFields().joinTo(builder, separator = "\n\t") { field ->
-            "${field.type.toCDefType()} ${field.name};"
-        }
+        buildList {
+            add("char __flags;")
+            dictionary.allFields().mapTo(this) { field ->
+                "${field.type.toCDefType()} ${field.name};"
+            }
+        }.joinTo(builder, separator = "\n\t")
+
         append("\n};\n")
     }
 
     private fun printStructNew(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
-        append("\nstatic ")
-        append(dictionary.name)
-        append("* ")
-        append(dictionary.name)
-        append("_new(")
+        append("\nstatic ${dictionary.name}* ${dictionary.name}_new(")
+
         dictionary.allFields().joinTo(builder) { field ->
-            val const = if(
-                    !field.type.isDictionary() &&
-                    !field.type.isCallback()
-                ) "const " else ""
+            val const = if(field.type.isPrimitive())
+                "const " else ""
             "$const${field.type.toCDefType()} ${field.name}"
         }
         append(") {\n\t")
+
         // malloc
-        append(dictionary.name)
-        append("* result = (")
-        append(dictionary.name)
-        append("*)malloc(sizeof(")
-        append(dictionary.name)
-        append("));\n\t")
-        // set
-        append("*result = (")
-        append(dictionary.name)
-        append("){ ")
-        dictionary.allFields().joinTo(builder) { field ->
-            field.name
-        }
+        append("${dictionary.name}* result = (${dictionary.name}*) malloc(sizeof(${dictionary.name}));\n\t")
+
+        // fill
+        append("*result = (${dictionary.name}) { ")
+        buildList {
+            add("K_FLAG_RELEASABLE")
+            dictionary.allFields().mapTo(this) { it.name }
+        }.joinTo(builder)
         append(" };\n\t")
+
         // return
         append("return result;\n}\n")
+    }
+
+    private fun printStructClone(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
+        append("\nstatic ${dictionary.name}* ${dictionary.name}_clone(const ${dictionary.name}* of) {\n\t")
+
+        // malloc
+        append("${dictionary.name}* result = (${dictionary.name}*) malloc(sizeof(${dictionary.name}));\n\t")
+
+        // fill
+        append("*result = (${dictionary.name}) {\n\t\t")
+        buildList {
+            add("K_FLAG_RELEASABLE")
+            dictionary.allFields().mapTo(this) { field ->
+                when {
+                    field.type.isString() -> "KString_clone(of->${field.name})"
+                    field.type.isArray() -> {
+                        (field.type as ResolvedIdlType.Default).firstParam { _, declaration ->
+                            when (declaration) {
+                                is BuiltinIdlDeclaration -> {
+                                    val name = declaration.kind.simpleName()
+                                    "K${name}Array_clone(of->${field.name})"
+                                }
+                                is ResolvedIdlEnum -> "KIntArray_clone(of->${field.name})"
+                                is ResolvedIdlDictionary -> "KArray_clone(of->${field.name}, (void*) ${declaration.name}_clone)"
+                                else -> throw UnsupportedOperationException(field.type.toString())
+                            }
+                        }
+                    }
+                    field.type.isCallback() -> "of->${field.name}->clone(of->${field.name})"
+                    field.type.isDictionary() -> "${(field.type as ResolvedIdlType.Default).declaration.name}_clone(of->${field.name})"
+                    else -> "of->${field.name}"
+                }
+            }
+        }.joinTo(builder, separator = ",\n\t\t")
+        append("\n\t};\n\t")
+
+        // return
+        append("return result;\n}\n")
+    }
+
+    private fun printStructFree(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
+        append("\nstatic void ${dictionary.name}_free(${dictionary.name}* of) {\n")
+        append("""
+            if(!K_OBJECT_IS_RELEASABLE(of->__flags))
+                return;
+        """.replaceIndent("\t"))
+
+        dictionary.allFields().forEach { field ->
+            freeFuncFor(
+                field.type,
+                "of->${field.name}"
+            )?.apply { append("\n\t$this;") }
+        }
+        append("""
+            
+            if(!K_OBJECT_IS_ON_STACK(of->__flags))
+                free((void*) of);
+        """.replaceIndent("\t"))
+
+        append("\n}\n")
     }
 
     private fun printStructTypedef(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
@@ -235,6 +314,7 @@ class CHeaderPrinter(
             
             #include <stdint.h>
             #include <stdbool.h>
+            #include <string.h>
             
             #ifdef __cplusplus
             extern "C" {
@@ -258,6 +338,12 @@ class CHeaderPrinter(
 
     private fun printStdLib(builder: StringBuilder){
         builder.append("""
+            
+            #define K_FLAG_RELEASABLE 1
+            #define K_FLAG_ON_STACK 2
+            
+            #define K_OBJECT_IS_RELEASABLE(flags) ((flags) & K_FLAG_RELEASABLE)
+            #define K_OBJECT_IS_ON_STACK(flags) ((flags) & K_FLAG_ON_STACK)
 
             typedef int32_t  KInt;
             typedef int64_t  KLong;
@@ -269,21 +355,33 @@ class CHeaderPrinter(
             typedef uint16_t KChar;
 
             typedef struct KString {
+                char __flags;
                 const char* data;
                 KInt length;
-                KBoolean releasable;
-                KBoolean released;
+                size_t size;
             } KString;
             
-            static KString KString_new(const char* data, const KInt length) {
-                return (KString) { data, length, true, false };
+            static KString* KString_new(const char* data, const KInt length, const KInt size) {
+                KString* result = (KString*) malloc(sizeof(KString));
+                *result = (KString) { K_FLAG_RELEASABLE, data, length, size };
+                return result;
+            }
+            
+            static KString* KString_clone(const KString* of) {
+                const KInt size = of->size;
+                void* data = malloc(size);
+                memcpy(data, of->data, size);
+                KString* result = (KString*) malloc(sizeof(KString));
+                *result = (KString) { K_FLAG_RELEASABLE, (const char*) data, of->length, size };
+                return result;
             }
             
             static void KString_free(KString* str) {
-                if(str->releasable && !str->released) {
-                    free((void*)str->data);
-                    str->released = true;
-                }
+                if(!K_OBJECT_IS_RELEASABLE(str->__flags))
+                    return;
+                free((void*) str->data);
+                if(!K_OBJECT_IS_ON_STACK(str->__flags))
+                    free((void*) str);
             }
 
             #define ARG_LENGTH(...) ARG_LENGTH__(__VA_ARGS__)
@@ -298,33 +396,63 @@ class CHeaderPrinter(
                 _22, _21, _20, _19, _18, _17, _16, _15, _14, _13, _12, _11, _10, _9, _8,   \
                 _7, _6, _5, _4, _3, _2, _1, Count, ...) Count
             
-            #define KArrayDef(Name, Type, VarargType)                       \
-            typedef struct Name {                                           \
-                const Type* elements;                                       \
-                KInt size;				                                    \
-                KBoolean releasable;                                        \
-                KBoolean released;                                          \
-            } Name;                                                         \
-                                                                            \
-            static Name Name##_new(const Type* elements, const KInt size) { \
-                return (Name){ elements, size, true, false };               \
-            }                                                               \
-                                                                            \
-            static Name _##Name##_of(const int n, ...) {                    \
-                va_list args;                                               \
-                va_start(args, n);                                          \
-                Type* elements = (Type*)malloc(n * sizeof(Type));           \
-                for (int i = 0; i < n; i++)                                 \
-                    elements[i] = (Type)va_arg(args, VarargType);           \
-                va_end(args);                                               \
-                return (Name){ (const Type*) elements, n, true, false };    \
-            }                                                               \
-                                                                            \
-            static void Name##_free(Name* arr) {                            \
-                if(arr->releasable && !arr->released) {                     \
-                    free((void*)arr->elements);                             \
-                    arr->released = true;                                   \
-                }                                                           \
+            #define KArrayDef(Name, Type, VarargType)                          \
+            typedef struct Name {                                              \
+                char __flags;                                                  \
+                const Type* elements;                                          \
+                KInt length;				                                   \
+                size_t size;				                                   \
+            } Name;                                                            \
+                                                                               \
+            static Name* Name##_new(const Type* elements, const KInt length) { \
+                Name* result = (Name*) malloc(sizeof(Name));                   \
+                *result = (Name){                                              \
+                    K_FLAG_RELEASABLE,                                         \
+                    elements,                                                  \
+                    length,                                                    \
+                    length * sizeof(Name)                                      \
+                };                                                             \
+                return result;                                                 \
+            }                                                                  \
+                                                                               \
+            static Name* _##Name##_of(const int n, ...) {                      \
+                va_list args;                                                  \
+                va_start(args, n);                                             \
+                Type* elements = (Type*)malloc(n * sizeof(Type));              \
+                for (int i = 0; i < n; i++)                                    \
+                    elements[i] = (Type)va_arg(args, VarargType);              \
+                va_end(args);                                                  \
+                Name* result = (Name*) malloc(sizeof(Name));                   \
+                *result = (Name){                                              \
+                    K_FLAG_RELEASABLE,                                         \
+                    (const Type*) elements,                                    \
+                    n,                                                         \
+                    n * sizeof(Name)                                           \
+                };                                                             \
+                return result;                                                 \
+            }
+            
+            #define KArrayCloneDef(Name, Type)                                     \
+            static Name* Name##_clone(const Name* of) {                            \
+                const KInt size = of->size;                                        \
+                void** elements = malloc(size);                                    \
+                memcpy(elements, (void*) of->elements, size);                      \
+                Name* result = (Name*) malloc(sizeof(Name));                       \
+                *result = (Name) {                                                 \
+                    K_FLAG_RELEASABLE,                                             \
+                    (Type*) elements,                                              \
+                    of->length,                                                    \
+                    of->size                                                       \
+                };                                                                 \
+                return result;                                                     \
+            }                                                                      \
+                                                                                   \
+            static void Name##_free(Name* arr) {                                   \
+                if(!K_OBJECT_IS_RELEASABLE(arr->__flags))                          \
+                    return;                                                        \
+                free((void*) arr->elements);                                       \
+                if(!K_OBJECT_IS_ON_STACK(arr->__flags))                            \
+                    free((void*) arr);                                             \
             }
             
             KArrayDef(KCharArray,	 KChar,    int32_t)
@@ -346,11 +474,49 @@ class CHeaderPrinter(
             #define KFloatArray_of(...)   _KFloatArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
             #define KDoubleArray_of(...)  _KDoubleArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
             #define KArray_of(...)        _KArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
+            
+            KArrayCloneDef(KCharArray,    KChar)
+            KArrayCloneDef(KBooleanArray, KBoolean)
+            KArrayCloneDef(KByteArray,    KByte)
+            KArrayCloneDef(KShortArray,   KShort)
+            KArrayCloneDef(KIntArray,     KInt)
+            KArrayCloneDef(KLongArray,    KLong)
+            KArrayCloneDef(KFloatArray,   KFloat)
+            KArrayCloneDef(KDoubleArray,  KDouble)
+            
+            static KArray* KArray_clone(const KArray* of, void* (*cloneOp)(void*)) {
+            	const KInt size = of->size;
+            	void** elements = malloc(size);
+            	for (int i = 0; i < of->length; i++)
+            		elements[i] = cloneOp((void*)of->elements[i]);
+            	KArray* result = (KArray*) malloc(sizeof(KArray));
+            	*result = (KArray) { 
+                    K_FLAG_RELEASABLE, 
+                    (const void**) elements, 
+                    of->length, 
+                    of->size
+                }; 
+            	return result;
+            }
+            
+            static void KArray_free(const KArray* arr, void* (*freeOp)(void*)) {
+                if(!K_OBJECT_IS_RELEASABLE(arr->__flags))
+                    return;
+                const void** elements = arr->elements;
+                for (int i = 0; i < arr->length; i++)
+                    freeOp((void*) elements[i]);
+                free((void*) elements);
+                if(!K_OBJECT_IS_ON_STACK(arr->__flags))
+                    free((void*) arr);
+            }
 
             #define KCallbackDef(Name, Type, ...)       \
             struct Name {                               \
-                void *m;                                \
+                char __flags;                           \
                 Type (*invoke)(Name* _, ##__VA_ARGS__); \
+                Name* (*clone)(Name* _);                \
+                KBoolean (*equals)(Name* _, Name* obj); \
+                KInt (*hashCode)(Name* _);              \
                 void (*free)(Name* _);                  \
             };
             

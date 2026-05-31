@@ -1,85 +1,85 @@
 #include <api.h>
 
 KBoolean callbackReturnCharArray(CallbackReturnCharArray* arg) {
-    const KCharArray array = arg->invoke(arg);
-    return array.releasable &&
-        array.size == 2 &&
-        array.elements[0] == 'a' &&
-        array.elements[1] == 'b';
+    const KCharArray* array = arg->invoke(arg);
+    return K_OBJECT_IS_RELEASABLE(array->__flags) &&
+        array->length == 2 &&
+        array->elements[0] == 'a' &&
+        array->elements[1] == 'b';
 }
 
 KBoolean callbackReturnBooleanArray(CallbackReturnBooleanArray* arg) {
-    const KBooleanArray array = arg->invoke(arg);
-    return array.releasable &&
-        array.size == 2 &&
-        array.elements[0] == true &&
-        array.elements[1] == false;
+    const KBooleanArray* array = arg->invoke(arg);
+    return K_OBJECT_IS_RELEASABLE(array->__flags) &&
+        array->length == 2 &&
+        array->elements[0] == true &&
+        array->elements[1] == false;
 }
 
 KBoolean callbackReturnByteArray(CallbackReturnByteArray* arg) {
-    const KByteArray array = arg->invoke(arg);
-    return array.releasable &&
-        array.size == 2 &&
-        array.elements[0] == 1 &&
-        array.elements[1] == 2;
+    const KByteArray* array = arg->invoke(arg);
+    return K_OBJECT_IS_RELEASABLE(array->__flags) &&
+        array->length == 2 &&
+        array->elements[0] == 1 &&
+        array->elements[1] == 2;
 }
 
 KBoolean callbackReturnShortArray(CallbackReturnShortArray* arg) {
-    const KShortArray array = arg->invoke(arg);
-    return array.releasable &&
-        array.size == 2 &&
-        array.elements[0] == 1 &&
-        array.elements[1] == 2;
+    const KShortArray* array = arg->invoke(arg);
+    return K_OBJECT_IS_RELEASABLE(array->__flags) &&
+        array->length == 2 &&
+        array->elements[0] == 1 &&
+        array->elements[1] == 2;
 }
 
 KBoolean callbackReturnIntArray(CallbackReturnIntArray* arg) {
-    const KIntArray array = arg->invoke(arg);
-    return array.releasable &&
-        array.size == 2 &&
-        array.elements[0] == 1 &&
-        array.elements[1] == 2;
+    const KIntArray* array = arg->invoke(arg);
+    return K_OBJECT_IS_RELEASABLE(array->__flags) &&
+        array->length == 2 &&
+        array->elements[0] == 1 &&
+        array->elements[1] == 2;
 }
 
 KBoolean callbackReturnLongArray(CallbackReturnLongArray* arg) {
-    const KLongArray array = arg->invoke(arg);
-    return array.releasable &&
-        array.size == 2 &&
-        array.elements[0] == 1 &&
-        array.elements[1] == 2;
+    const KLongArray* array = arg->invoke(arg);
+    return K_OBJECT_IS_RELEASABLE(array->__flags) &&
+        array->length == 2 &&
+        array->elements[0] == 1 &&
+        array->elements[1] == 2;
 }
 
 KBoolean callbackReturnFloatArray(CallbackReturnFloatArray* arg) {
-    const KFloatArray array = arg->invoke(arg);
-    return array.releasable &&
-        array.size == 2 &&
-        array.elements[0] == 1.1f &&
-        array.elements[1] == 2.2f;
+    const KFloatArray* array = arg->invoke(arg);
+    return K_OBJECT_IS_RELEASABLE(array->__flags) &&
+        array->length == 2 &&
+        array->elements[0] == 1.1f &&
+        array->elements[1] == 2.2f;
 }
 
 KBoolean callbackReturnDoubleArray(CallbackReturnDoubleArray* arg) {
-    const KDoubleArray array = arg->invoke(arg);
-    return array.releasable &&
-        array.size == 2 &&
-        array.elements[0] == 1.1 &&
-        array.elements[1] == 2.2;
+    const KDoubleArray* array = arg->invoke(arg);
+    return K_OBJECT_IS_RELEASABLE(array->__flags) &&
+        array->length == 2 &&
+        array->elements[0] == 1.1 &&
+        array->elements[1] == 2.2;
 }
 
 KBoolean callbackReturnEnumArray(CallbackReturnEnumArray* arg) {
-    const KIntArray array = arg->invoke(arg);
-    const MyEnum* elements = (MyEnum*)array.elements;
+    const KIntArray* array = arg->invoke(arg);
+    const MyEnum* elements = (MyEnum*)array->elements;
 
-    return array.releasable &&
-        array.size == 2 &&
+    return K_OBJECT_IS_RELEASABLE(array->__flags) &&
+        array->length == 2 &&
         elements[0] == MyEnum_CASE1 &&
         elements[1] == MyEnum_CASE2;
 }
 
 KBoolean callbackReturnDictionaryArray(CallbackReturnDictionaryArray* arg) {
-    const KArray array = arg->invoke(arg);
-    MyDictionary** elements = (MyDictionary**)array.elements;
+    const KArray* array = arg->invoke(arg);
+    MyDictionary** elements = (MyDictionary**)array->elements;
 
-    return array.releasable &&
-        array.size == 2 &&
+    return K_OBJECT_IS_RELEASABLE(array->__flags) &&
+        array->length == 2 &&
         elements[0]->a == 1 &&
         elements[0]->b == 2 &&
         elements[0]->c == 3 &&
