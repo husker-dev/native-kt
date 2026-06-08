@@ -1,20 +1,11 @@
 package com.huskerdev.nativekt.printers.c
 
 import com.huskerdev.nativekt.utils.allFields
-import com.huskerdev.nativekt.utils.firstParam
-import com.huskerdev.nativekt.utils.isArray
-import com.huskerdev.nativekt.utils.isCallback
-import com.huskerdev.nativekt.utils.isDictionary
 import com.huskerdev.nativekt.utils.isPrimitive
-import com.huskerdev.nativekt.utils.isString
 import com.huskerdev.nativekt.utils.printLabel
-import com.huskerdev.nativekt.utils.simpleName
 import com.huskerdev.nativekt.utils.toCDefType
-import com.huskerdev.webidl.resolver.BuiltinIdlDeclaration
 import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlDictionary
-import com.huskerdev.webidl.resolver.ResolvedIdlEnum
-import com.huskerdev.webidl.resolver.ResolvedIdlType
 import java.io.File
 
 class CApiImplPrinter(
@@ -153,8 +144,6 @@ class CApiImplPrinter(
 
     private fun printStdLib(builder: StringBuilder) = builder.apply {
         printLabel(builder, "stdlib")
-
-        val classPathPrefix = classPath.replace(".", "_")
 
         builder.append("""
             

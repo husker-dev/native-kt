@@ -1,23 +1,7 @@
 package com.huskerdev.nativekt.printers.c
 
-import com.huskerdev.nativekt.utils.allFields
-import com.huskerdev.nativekt.utils.firstParam
-import com.huskerdev.nativekt.utils.globalOperators
-import com.huskerdev.nativekt.utils.isArray
-import com.huskerdev.nativekt.utils.isCallback
-import com.huskerdev.nativekt.utils.isDictionary
-import com.huskerdev.nativekt.utils.isPrimitive
-import com.huskerdev.nativekt.utils.isString
-import com.huskerdev.nativekt.utils.printLabel
-import com.huskerdev.nativekt.utils.simpleName
-import com.huskerdev.nativekt.utils.toCDefType
-import com.huskerdev.webidl.resolver.BuiltinIdlDeclaration
-import com.huskerdev.webidl.resolver.IdlResolver
-import com.huskerdev.webidl.resolver.ResolvedIdlCallbackFunction
-import com.huskerdev.webidl.resolver.ResolvedIdlDictionary
-import com.huskerdev.webidl.resolver.ResolvedIdlEnum
-import com.huskerdev.webidl.resolver.ResolvedIdlOperation
-import com.huskerdev.webidl.resolver.ResolvedIdlType
+import com.huskerdev.nativekt.utils.*
+import com.huskerdev.webidl.resolver.*
 import java.io.File
 import kotlin.math.max
 

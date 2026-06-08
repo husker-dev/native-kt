@@ -393,11 +393,6 @@ fun IdlAttributedHolder.isDealloc(): Boolean =
         it is IdlExtendedAttribute.NoArgs && it.name == "Dealloc"
     }
 
-fun IdlAttributedHolder.isDeallocContent(): Boolean =
-    this.attributes.any {
-        it is IdlExtendedAttribute.NoArgs && it.name == "DeallocContent"
-    }
-
 fun ResolvedIdlOperation.isCriticalCapable(): Boolean =
     !type.isArray() && !type.isString() && !type.isDictionary() &&
             !args.any { it.type.isStringArray() || it.type.isDictionaryArray() }
