@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalForeignApi::class)
+@file:OptIn(ExperimentalForeignApi::class, UnsafeNumber::class)
 @file:Suppress("unused")
 
 package com.huskerdev.nativekt.kn
@@ -32,7 +32,7 @@ fun MemScope.toNativeStringOnArena(str: String, pin: Boolean): CPointer<KString>
 
 fun toNativeString(str: String): CPointer<KString> {
     val bytes = str.cstr
-    val mem = malloc(bytes.size.convert())!!.reinterpret<KString>().pointed
+    val mem = malloc(sizeOf<KString>().convert())!!.reinterpret<KString>().pointed
     mem.size = bytes.size.convert()
     mem.data = malloc(mem.size.convert())!!.reinterpret()
     mem.length = str.length
