@@ -25,7 +25,6 @@ namespace global {
     long returnLong();
     float returnFloat();
     double returnDouble();
-    string returnStringLiteral();
     [Dealloc] string returnString();
     MyEnum returnEnum();
     MyDictionary returnDictionary();
