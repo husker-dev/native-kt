@@ -1,7 +1,7 @@
 package com.huskerdev.nativekt.plugin
 
 import com.huskerdev.nativekt.NDLEnv
-import com.huskerdev.nativekt.printers.c.CHeaderPrinter
+import com.huskerdev.nativekt.printers.c.CApiHeaderPrinter
 import com.huskerdev.webidl.WebIDL
 import com.huskerdev.webidl.jvm.iterator
 import org.gradle.api.DefaultTask
@@ -56,7 +56,7 @@ abstract class InitTask: DefaultTask() {
                 env = NDLEnv()
             )
 
-            CHeaderPrinter(
+            CApiHeaderPrinter(
                 idl = idl,
                 target = File(dir, "include/api.h"),
                 guardName = moduleName.uppercase()

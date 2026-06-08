@@ -4,7 +4,8 @@ import com.huskerdev.nativekt.plugin.BuildSystem
 import com.huskerdev.nativekt.plugin.NATIVE_TASK_GROUP
 import com.huskerdev.nativekt.plugin.NativeKtJvmInterface
 import com.huskerdev.nativekt.plugin.NativeProject
-import com.huskerdev.nativekt.printers.c.CHeaderPrinter
+import com.huskerdev.nativekt.printers.c.CApiHeaderPrinter
+import com.huskerdev.nativekt.printers.c.CApiImplPrinter
 import com.huskerdev.nativekt.printers.c.CExportedPrinter
 import com.huskerdev.nativekt.printers.c.CJniPrinter
 import com.huskerdev.nativekt.printers.c.CJniUtilsPrinter
@@ -198,7 +199,7 @@ private abstract class PrepareNativesJvm: DefaultTask() {
             val nativesBuildDir = File(nativesBuildDir)
             nativesBuildDir.fresh()
 
-            val srcList = arrayListOf<String>()
+            val srcList = arrayListOf("api.c")
             val includeList = arrayListOf<String>()
 
             // Generate all files
@@ -278,9 +279,16 @@ private abstract class PrepareNativesJvm: DefaultTask() {
                 )
             }
 
-            CHeaderPrinter(
+            CApiHeaderPrinter(
                 idl = idl,
-                target = File(nativesBuildDir, "api.h")
+                target = File(nativesBuildDir, "api.h"),
+                isInternal = true
+            )
+
+            CApiImplPrinter(
+                idl = idl,
+                target = File(nativesBuildDir, "api.c"),
+                classPath = moduleClasspath
             )
 
             when(buildSystem) {

@@ -8,7 +8,7 @@ KInt callJniAdd(KInt a, KInt b) {
     return a + b;
 }
 
-KInt callJniString(KString arg) {
+KInt callJniString(KString* arg) {
     return 10;
 }
 
@@ -16,6 +16,6 @@ KInt callCriticalJni() {
     return 10;
 }
 
-KInt callCriticalJniString(KString arg) {
+KInt callCriticalJniString(KString* arg) {
     return 10;
 }

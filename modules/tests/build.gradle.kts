@@ -88,9 +88,6 @@ natives {
     useJsBigInt = true
     useJvmRecord = false
 
-    useJVMCI = false
-    useForeignApi = false
-
     if(project.hasProperty("disableForeign")) {
         println("Disable: Foreign")
         useForeignApi = false

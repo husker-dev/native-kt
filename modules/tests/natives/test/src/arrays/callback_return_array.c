@@ -2,7 +2,7 @@
 
 KBoolean callbackReturnCharArray(CallbackReturnCharArray* arg) {
     const KCharArray* array = arg->invoke(arg);
-    return K_OBJECT_IS_RELEASABLE(array->__flags) &&
+    return (array->__flags & 1) &&
         array->length == 2 &&
         array->elements[0] == 'a' &&
         array->elements[1] == 'b';
@@ -10,7 +10,7 @@ KBoolean callbackReturnCharArray(CallbackReturnCharArray* arg) {
 
 KBoolean callbackReturnBooleanArray(CallbackReturnBooleanArray* arg) {
     const KBooleanArray* array = arg->invoke(arg);
-    return K_OBJECT_IS_RELEASABLE(array->__flags) &&
+    return (array->__flags & 1) &&
         array->length == 2 &&
         array->elements[0] == true &&
         array->elements[1] == false;
@@ -18,7 +18,7 @@ KBoolean callbackReturnBooleanArray(CallbackReturnBooleanArray* arg) {
 
 KBoolean callbackReturnByteArray(CallbackReturnByteArray* arg) {
     const KByteArray* array = arg->invoke(arg);
-    return K_OBJECT_IS_RELEASABLE(array->__flags) &&
+    return (array->__flags & 1) &&
         array->length == 2 &&
         array->elements[0] == 1 &&
         array->elements[1] == 2;
@@ -26,7 +26,7 @@ KBoolean callbackReturnByteArray(CallbackReturnByteArray* arg) {
 
 KBoolean callbackReturnShortArray(CallbackReturnShortArray* arg) {
     const KShortArray* array = arg->invoke(arg);
-    return K_OBJECT_IS_RELEASABLE(array->__flags) &&
+    return (array->__flags & 1) &&
         array->length == 2 &&
         array->elements[0] == 1 &&
         array->elements[1] == 2;
@@ -34,7 +34,7 @@ KBoolean callbackReturnShortArray(CallbackReturnShortArray* arg) {
 
 KBoolean callbackReturnIntArray(CallbackReturnIntArray* arg) {
     const KIntArray* array = arg->invoke(arg);
-    return K_OBJECT_IS_RELEASABLE(array->__flags) &&
+    return (array->__flags & 1) &&
         array->length == 2 &&
         array->elements[0] == 1 &&
         array->elements[1] == 2;
@@ -42,7 +42,7 @@ KBoolean callbackReturnIntArray(CallbackReturnIntArray* arg) {
 
 KBoolean callbackReturnLongArray(CallbackReturnLongArray* arg) {
     const KLongArray* array = arg->invoke(arg);
-    return K_OBJECT_IS_RELEASABLE(array->__flags) &&
+    return (array->__flags & 1) &&
         array->length == 2 &&
         array->elements[0] == 1 &&
         array->elements[1] == 2;
@@ -50,7 +50,7 @@ KBoolean callbackReturnLongArray(CallbackReturnLongArray* arg) {
 
 KBoolean callbackReturnFloatArray(CallbackReturnFloatArray* arg) {
     const KFloatArray* array = arg->invoke(arg);
-    return K_OBJECT_IS_RELEASABLE(array->__flags) &&
+    return (array->__flags & 1) &&
         array->length == 2 &&
         array->elements[0] == 1.1f &&
         array->elements[1] == 2.2f;
@@ -58,7 +58,7 @@ KBoolean callbackReturnFloatArray(CallbackReturnFloatArray* arg) {
 
 KBoolean callbackReturnDoubleArray(CallbackReturnDoubleArray* arg) {
     const KDoubleArray* array = arg->invoke(arg);
-    return K_OBJECT_IS_RELEASABLE(array->__flags) &&
+    return (array->__flags & 1) &&
         array->length == 2 &&
         array->elements[0] == 1.1 &&
         array->elements[1] == 2.2;
@@ -68,7 +68,7 @@ KBoolean callbackReturnEnumArray(CallbackReturnEnumArray* arg) {
     const KIntArray* array = arg->invoke(arg);
     const MyEnum* elements = (MyEnum*)array->elements;
 
-    return K_OBJECT_IS_RELEASABLE(array->__flags) &&
+    return (array->__flags & 1) &&
         array->length == 2 &&
         elements[0] == MyEnum_CASE1 &&
         elements[1] == MyEnum_CASE2;
@@ -78,7 +78,7 @@ KBoolean callbackReturnDictionaryArray(CallbackReturnDictionaryArray* arg) {
     const KArray* array = arg->invoke(arg);
     MyDictionary** elements = (MyDictionary**)array->elements;
 
-    return K_OBJECT_IS_RELEASABLE(array->__flags) &&
+    return (array->__flags & 1) &&
         array->length == 2 &&
         elements[0]->a == 1 &&
         elements[0]->b == 2 &&

@@ -93,10 +93,10 @@ public class NativeKtUtils {
      *
      * @param baseName base library name, without prefix, extension and arch (e.g. 'some')
      * @param macosUniversal indicates if macOS lib is universal (fat)
-     * @return Full library file name (e.g. libsome-x64.dll)
+     * @return Full library file path (e.g. C:/libsome-x64.dll)
      * @throws IOException If file not found in resources
      */
-    public static String loadLibrary(String baseName, boolean macosUniversal) throws IOException {
+    public static String resolveLibraryFile(String baseName, boolean macosUniversal) throws IOException {
 
         // Get OS
         OS os = OS.current();
@@ -125,10 +125,7 @@ public class NativeKtUtils {
             Files.copy(input, libPath.toPath(), StandardCopyOption.REPLACE_EXISTING);
         }
 
-        // Load library
-        System.load(libPath.getAbsolutePath());
-
-        return fileName;
+        return libPath.getAbsolutePath();
     }
 
     /**

@@ -1,7 +1,9 @@
 @file:OptIn(ExperimentalWasmDsl::class)
 
+import org.apache.tools.ant.taskdefs.condition.Os
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -48,27 +50,37 @@ kotlin {
     linuxX64()
     linuxArm64()
 
-    macosX64()
-    macosArm64()
+    if(Os.isFamily(Os.FAMILY_MAC)) {
+        //macosX64()
+        macosArm64()
 
-    iosX64()
-    iosArm64()
-    iosSimulatorArm64()
+        iosX64()
+        iosArm64()
+        iosSimulatorArm64()
 
-    watchosX64()
-    watchosArm32()
-    watchosArm64()
-    watchosDeviceArm64()
-    watchosSimulatorArm64()
+        //watchosX64()
+        watchosArm32()
+        watchosArm64()
+        watchosDeviceArm64()
+        watchosSimulatorArm64()
 
-    tvosX64()
-    tvosArm64()
-    tvosSimulatorArm64()
+        //tvosX64()
+        tvosArm64()
+        tvosSimulatorArm64()
+    }
 
+    /*
     androidNativeX64()
     androidNativeX86()
     androidNativeArm32()
     androidNativeArm64()
+    */
+
+    targets.withType<KotlinNativeTarget>().configureEach {
+        compilations.getByName("main") {
+            cinterops.register("api")
+        }
+    }
 }
 
 java {
@@ -84,6 +96,7 @@ tasks.withType<JavaCompile>().configureEach {
         "--add-exports", "jdk.internal.vm.ci/jdk.vm.ci.hotspot=ALL-UNNAMED",
         "--add-exports", "jdk.internal.vm.ci/jdk.vm.ci.meta=ALL-UNNAMED",
         "--add-exports", "jdk.internal.vm.ci/jdk.vm.ci.runtime=ALL-UNNAMED",
+        "--add-exports", "java.base/jdk.internal.foreign=ALL-UNNAMED",
     ))
 }
 
@@ -95,7 +108,8 @@ tasks.withType<Javadoc>().configureEach {
             "jdk.internal.vm.ci/jdk.vm.ci.code.site=ALL-UNNAMED",
             "jdk.internal.vm.ci/jdk.vm.ci.hotspot=ALL-UNNAMED",
             "jdk.internal.vm.ci/jdk.vm.ci.meta=ALL-UNNAMED",
-            "jdk.internal.vm.ci/jdk.vm.ci.runtime=ALL-UNNAMED"
+            "jdk.internal.vm.ci/jdk.vm.ci.runtime=ALL-UNNAMED",
+            "java.base/jdk.internal.foreign=ALL-UNNAMED",
         )
     }
 }

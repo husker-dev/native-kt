@@ -34,6 +34,7 @@ open class NativeKtBenchmark {
 
     @Setup
     open fun prepare() {
+        println("JVM: ${System.getProperty("java.vendor.version")}")
         a = ThreadLocalRandom.current().nextInt()
         b = ThreadLocalRandom.current().nextInt()
 

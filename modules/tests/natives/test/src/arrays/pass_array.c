@@ -1,62 +1,62 @@
 #include <api.h>
 
 KBoolean passArray(KIntArray* arg) {
-    return !K_OBJECT_IS_RELEASABLE(arg->__flags) &&
+    return !(arg->__flags & 1) &&
         arg->length == 2 &&
         arg->elements[0] == 1 &&
         arg->elements[1] == 2;
 }
 
 KBoolean passCharArray(KCharArray* arg) {
-    return !K_OBJECT_IS_RELEASABLE(arg->__flags) &&
+    return !(arg->__flags & 1) &&
         arg->length == 2 &&
         arg->elements[0] == 'a' &&
         arg->elements[1] == 'b';
 }
 
 KBoolean passBooleanArray(KBooleanArray* arg) {
-    return !K_OBJECT_IS_RELEASABLE(arg->__flags) &&
+    return !(arg->__flags & 1) &&
         arg->length == 2 &&
         arg->elements[0] == true &&
         arg->elements[1] == false;
 }
 
 KBoolean passByteArray(KByteArray* arg) {
-    return !K_OBJECT_IS_RELEASABLE(arg->__flags) &&
+    return !(arg->__flags & 1) &&
         arg->length == 2 &&
         arg->elements[0] == 1 &&
         arg->elements[1] == 2;
 }
 
 KBoolean passShortArray(KShortArray* arg) {
-    return !K_OBJECT_IS_RELEASABLE(arg->__flags) &&
+    return !(arg->__flags & 1) &&
         arg->length == 2 &&
         arg->elements[0] == 1 &&
         arg->elements[1] == 2;
 }
 
 KBoolean passIntArray(KIntArray* arg) {
-    return !K_OBJECT_IS_RELEASABLE(arg->__flags) &&
+    return !(arg->__flags & 1) &&
         arg->length == 2 &&
         arg->elements[0] == 1 &&
         arg->elements[1] == 2;
 }
 KBoolean passLongArray(KLongArray* arg) {
-    return !K_OBJECT_IS_RELEASABLE(arg->__flags) &&
+    return !(arg->__flags & 1) &&
         arg->length == 2 &&
         arg->elements[0] == 1 &&
         arg->elements[1] == 2;
 }
 
 KBoolean passFloatArray(KFloatArray* arg) {
-    return !K_OBJECT_IS_RELEASABLE(arg->__flags) &&
+    return !(arg->__flags & 1) &&
         arg->length == 2 &&
         arg->elements[0] == 1.1f &&
         arg->elements[1] == 2.2f;
 }
 
 KBoolean passDoubleArray(KDoubleArray* arg) {
-    return !K_OBJECT_IS_RELEASABLE(arg->__flags) &&
+    return !(arg->__flags & 1) &&
         arg->length == 2 &&
         arg->elements[0] == 1.1 &&
         arg->elements[1] == 2.2;
@@ -65,7 +65,7 @@ KBoolean passDoubleArray(KDoubleArray* arg) {
 KBoolean passEnumArray(KIntArray* arg) {
     const MyEnum* elements = (MyEnum*)arg->elements;
 
-    return !K_OBJECT_IS_RELEASABLE(arg->__flags) &&
+    return !(arg->__flags & 1) &&
         arg->length == 2 &&
         elements[0] == MyEnum_CASE1 &&
         elements[1] == MyEnum_CASE2;
@@ -74,7 +74,7 @@ KBoolean passEnumArray(KIntArray* arg) {
 KBoolean passDictionaryArray(KArray* arg) {
     MyDictionary** elements = (MyDictionary**)arg->elements;
 
-    return !K_OBJECT_IS_RELEASABLE(arg->__flags) &&
+    return !(arg->__flags & 1) &&
         arg->length == 2 &&
         elements[0]->a == 1 &&
         elements[0]->b == 2 &&

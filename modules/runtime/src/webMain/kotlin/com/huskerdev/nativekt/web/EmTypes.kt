@@ -55,7 +55,7 @@ abstract external class TypedArray: JsAny {
     fun set(array: JsArray<JsNumber>)
 }
 
-private fun setTypedArray(array: TypedArray, index: Int, value: Double): Unit =
+private fun setTypedArrayAt(array: TypedArray, index: Int, value: Double): Unit =
     js("array[index] = value")
 
 private fun getTypedArray(array: TypedArray, index: Int): Double =
@@ -74,10 +74,10 @@ external class Int8Array(
 ): TypedArray
 
 operator fun Int8Array.set(index: Int, value: Byte) =
-    setTypedArray(this, index, value.toDouble())
+    setTypedArrayAt(this, index, value.toDouble())
 
 operator fun Int8Array.set(index: Int, value: Boolean) =
-    setTypedArray(this, index, value.toInt().toDouble())
+    setTypedArrayAt(this, index, value.toInt().toDouble())
 
 operator fun Int8Array.get(index: Int): Byte =
     getTypedArray(this, index).toInt().toByte()
@@ -88,17 +88,29 @@ external class Int16Array(
     length: Int
 ): TypedArray
 
-operator fun Int16Array.set(index: Int, value: Char) =
-    setTypedArray(this, index, value.code.toDouble())
-
 operator fun Int16Array.set(index: Int, value: Short) =
-    setTypedArray(this, index, value.toDouble())
+    setTypedArrayAt(this, index, value.toDouble())
+
+operator fun Int16Array.set(index: Int, value: Char) =
+    setTypedArrayAt(this, index, value.code.toDouble())
 
 operator fun Int16Array.set(index: Int, value: Int) =
-    setTypedArray(this, index, value.toDouble())
+    setTypedArrayAt(this, index, value.toDouble())
 
-operator fun Int16Array.get(index: Int): Int =
-    getTypedArray(this, index).toInt()
+operator fun Int16Array.get(index: Int): Short =
+    getTypedArray(this, index).toInt().toShort()
+
+external class Uint16Array(
+    val buffer: ArrayBuffer,
+    byteOffset: Int,
+    length: Int
+): TypedArray
+
+operator fun Uint16Array.set(index: Int, value: Char) =
+    setTypedArrayAt(this, index, value.code.toDouble())
+
+operator fun Uint16Array.get(index: Int): Char =
+    getTypedArray(this, index).toInt().toChar()
 
 external class Int32Array(
     val buffer: ArrayBuffer,
@@ -107,7 +119,7 @@ external class Int32Array(
 ): TypedArray
 
 operator fun Int32Array.set(index: Int, value: Int) =
-    setTypedArray(this, index, value.toDouble())
+    setTypedArrayAt(this, index, value.toDouble())
 
 operator fun Int32Array.get(index: Int): Int =
     getTypedArray(this, index).toInt()
@@ -119,7 +131,7 @@ external class Float32Array(
 ): TypedArray
 
 operator fun Float32Array.set(index: Int, value: Float) =
-    setTypedArray(this, index, value.toDouble())
+    setTypedArrayAt(this, index, value.toDouble())
 
 operator fun Float32Array.get(index: Int): Float =
     getTypedArray(this, index).toFloat()
@@ -131,7 +143,7 @@ external class Float64Array(
 ): TypedArray
 
 operator fun Float64Array.set(index: Int, value: Double) =
-    setTypedArray(this, index, value)
+    setTypedArrayAt(this, index, value)
 
 operator fun Float64Array.get(index: Int): Double =
     getTypedArray(this, index)

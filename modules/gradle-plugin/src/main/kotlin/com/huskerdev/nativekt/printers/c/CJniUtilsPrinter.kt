@@ -41,11 +41,11 @@ class CJniUtilsPrinter(
             jstring stringUTF8Const;
             typedef struct KString KString;
             
-            const size_t JNI_StringStackSize = sizeof(KString) + 2;
+            const size_t JNI_StringStackSize = sizeof(KString) + sizeof(intptr_t) * 2;
 
             jstring JNI_toKotlinString(JNIEnv *env, KString* str) {
                 if(K_OBJECT_IS_ON_STACK(str->__flags))
-                    return (jstring)((size_t*)((char*)str + sizeof(KString)))[0];
+                    return (jstring)((intptr_t*)((char*)str + sizeof(KString)))[0];
                 
                 int32_t size = str->size;
                 
@@ -63,10 +63,10 @@ class CJniUtilsPrinter(
                 ((size_t*)((char*)mem + sizeof(KString)))[1] = (size_t) bytes;
                 KString* result = (KString*)mem;
                 *result = (KString) {
-                    K_FLAG_ON_STACK,
                     (const char*)(*env)->GetByteArrayElements(env, bytes, JNI_FALSE),
+                    (*env)->GetArrayLength(env, bytes),
                     (*env)->GetStringLength(env, obj),
-                    (*env)->GetArrayLength(env, bytes)
+                    K_FLAG_ON_STACK
                 };
                 return result;
             }
@@ -90,17 +90,12 @@ class CJniUtilsPrinter(
                 
                 KString* result = (KString*) malloc(sizeof(KString));
                 *result = (KString) {
-                    flags, 
                     (const char*) strCopy,
+                    size,
                     length,
-                    size
+                    flags
                 };
                 return result;
-            }
-            
-            void JNI_forceFreeKString(KString* str) {
-                str->__flags |= K_FLAG_RELEASABLE;
-                KString_free(str);
             }
             
         """.trimIndent())
@@ -122,10 +117,10 @@ class CJniUtilsPrinter(
                                                                                                          \
                 K##Name##Array* result = (K##Name##Array*) malloc(sizeof(K##Name##Array));               \
                 *result = (K##Name##Array) {                                                             \
-                    flags,                                                                               \
                     (K##Name*)elementsCopy,                                                              \
+                    size,                                                                                \
                     length,                                                                              \
-                    size                                                                                 \
+                    flags                                                                                \
                 };                                                                                       \
                 return result;                                                                           \
             }                                                                                            \
@@ -135,10 +130,10 @@ class CJniUtilsPrinter(
                 KInt length = (*env)->GetArrayLength(env, arr);                                          \
                 K##Name##Array* result = (K##Name##Array*)mem;                                           \
                 *result = (K##Name##Array) {                                                             \
-                    K_FLAG_ON_STACK,                                                                     \
                     (K##Name*)(*env)->Get##Name##ArrayElements(env, arr, JNI_FALSE),                     \
+                    length * sizeof(JType),                                                              \
                     length,                                                                              \
-                    length * sizeof(JType)                                                               \
+                    K_FLAG_ON_STACK                                                                      \
                 };                                                                                       \
                 return result;                                                                           \
             }                                                                                            \
@@ -154,11 +149,6 @@ class CJniUtilsPrinter(
                 JType##Array result = (*env)->New##Name##Array(env, arr->length);                        \
                 (*env)->Set##Name##ArrayRegion(env, result, 0, arr->length, (JType*)arr->elements);      \
                 return result;                                                                           \
-            }                                                                                            \
-                                                                                                         \
-            void JNI_forceFreeK##Name##Array(K##Name##Array* arr) {                                      \
-                arr->__flags |= K_FLAG_RELEASABLE;                                                       \
-                K##Name##Array_free(arr);                                                                \
             }
 
             KArrayCast(Char,    jchar)
@@ -193,10 +183,10 @@ class CJniUtilsPrinter(
                 
                 KArray* result = (KArray*) malloc(sizeof(KArray));
                 *result = (KArray) {
-                    flags,
                     (const void**) elements,
+                    length * sizeof(void*),
                     length,
-                    length * sizeof(void*)
+                    flags,
                 };
                 return result;
             }
@@ -219,10 +209,10 @@ class CJniUtilsPrinter(
                 
                 KArray* result = (KArray*)mem;
                 *result = (KArray) {
-                    K_FLAG_ON_STACK,
                     (const void**) elements,
+                    length * sizeof(void*),
                     length,
-                    length * sizeof(void*)
+                    K_FLAG_ON_STACK
                 };
                 return result;
             }
@@ -243,11 +233,6 @@ class CJniUtilsPrinter(
                 return result;
             }
             
-            void JNI_forceFreeKArray(KArray* arr, void* (*freeOp)(void*)) {
-                arr->__flags |= K_FLAG_RELEASABLE;
-                KArray_free(arr, freeOp);
-            }
-            
         """.trimIndent())
 
         if(idl.enums.isNotEmpty()) {
@@ -261,6 +246,7 @@ class CJniUtilsPrinter(
                 "enum${it.name}Values"
             }
             builder.append("""
+                
 
                 KInt JNI_toNativeEnum(JNIEnv* env, jobject of) {
                     return (*env)->CallIntMethod(env, of, enumOrdinal);
@@ -293,10 +279,10 @@ class CJniUtilsPrinter(
                     
                     KIntArray* result = (KIntArray*) malloc(sizeof(KIntArray));
                     *result = (KIntArray) {
-                        flags,
                         (const KInt*) elements,
+                        length * sizeof(KInt),
                         length,
-                        length * sizeof(KInt)
+                        flags
                     };
                     return result;
                 }
@@ -318,10 +304,10 @@ class CJniUtilsPrinter(
                     
                     KIntArray* result = (KIntArray*)mem;
                     *result = (KIntArray) {
-                        K_FLAG_ON_STACK,
                         (const KInt*) elements,
+                        length * sizeof(KInt),
                         length,
-                        length * sizeof(KInt)
+                        K_FLAG_ON_STACK
                     };
                     return result;
                 }
@@ -349,21 +335,12 @@ class CJniUtilsPrinter(
             printLabel(builder, "Callback casts")
             builder.append("""
                 
-                typedef struct JNI_Callback {
-                    char __flags;
-                    void (*invoke)();
-                    struct JNI_Callback* (*clone)(struct JNI_Callback*);
-                    KBoolean (*equals)(struct JNI_Callback*, struct JNI_Callback* obj);
-                    KInt (*hashCode)(struct JNI_Callback*);
-                    void (*free)(struct JNI_Callback*);
-                } JNI_Callback;
-                
-                const size_t JNI_CallbackSize = sizeof(JNI_Callback) + sizeof(size_t)*2;
+                const size_t _AbstractCallbackSize = sizeof(_AbstractCallback) + sizeof(size_t)*2;
                 
                 static jint JVM_attach(JNIEnv **env) {
                     jint status = (*jvm)->GetEnv(jvm, (void**)env, JNI_VERSION_1_6);
                     if (status == JNI_EDETACHED)
-                        (*jvm)->AttachCurrentThread(jvm, (void**)env, NULL);
+                        (*jvm)->AttachCurrentThread(jvm, ${if(!isAndroid) "(void**) " else "" }env, NULL);
                     return status;
                 }
                 
@@ -372,10 +349,10 @@ class CJniUtilsPrinter(
                         (*jvm)->DetachCurrentThread(jvm);
                 }
                 
-                static inline KBoolean JNI_CALLBACK_equals(JNI_Callback* ref, JNI_Callback* with) {
-                	jobject obj = (jobject)((size_t*)((char*)ref + sizeof(JNI_Callback)))[0];
-                	jobject obj2 = (jobject)((size_t*)((char*)with + sizeof(JNI_Callback)))[0];
-                    JNIEnv *env = (JNIEnv*)((size_t*)((char*)ref + sizeof(JNI_Callback)))[1];
+                static inline KBoolean JNI_CALLBACK_equals(_AbstractCallback* ref, _AbstractCallback* with) {
+                	jobject obj = (jobject)((size_t*)((char*)ref + sizeof(_AbstractCallback)))[0];
+                	jobject obj2 = (jobject)((size_t*)((char*)with + sizeof(_AbstractCallback)))[0];
+                    JNIEnv *env = (JNIEnv*)((size_t*)((char*)ref + sizeof(_AbstractCallback)))[1];
                 	
                 	jint status = env == NULL ? JVM_attach(&env) : JNI_OK;
                 	KBoolean result = (*env)->CallBooleanMethod(env, obj, objectEquals, obj2);
@@ -383,9 +360,9 @@ class CJniUtilsPrinter(
                 	return result;
                 }
 
-                static inline KInt JNI_CALLBACK_hashCode(JNI_Callback* ref) {
-                	jobject obj = (jobject)((size_t*)((char*)ref + sizeof(JNI_Callback)))[0];
-                	JNIEnv *env = (JNIEnv*)((size_t*)((char*)ref + sizeof(JNI_Callback)))[1];
+                static inline KInt JNI_CALLBACK_hashCode(_AbstractCallback* ref) {
+                	jobject obj = (jobject)((size_t*)((char*)ref + sizeof(_AbstractCallback)))[0];
+                	JNIEnv *env = (JNIEnv*)((size_t*)((char*)ref + sizeof(_AbstractCallback)))[1];
                 	
                 	jint status = env == NULL ? JVM_attach(&env) : JNI_OK;
                 	KInt result = (*env)->CallIntMethod(env, obj, objectHashCode);
@@ -393,45 +370,45 @@ class CJniUtilsPrinter(
                 	return result;
                 }
                 
-                static void JNI_CALLBACK_free(JNI_Callback* callback) {
+                static void JNI_CALLBACK_free(_AbstractCallback* callback) {
                     if (!K_OBJECT_IS_RELEASABLE(callback->__flags) || K_OBJECT_IS_ON_STACK(callback->__flags))
                         return;
                 
                     JNIEnv *env;
                     jint status = JVM_attach(&env);
                     
-                    jobject obj = (jobject)((size_t*)((char*)callback + sizeof(JNI_Callback)))[0];
+                    jobject obj = (jobject)((size_t*)((char*)callback + sizeof(_AbstractCallback)))[0];
                     (*env)->DeleteGlobalRef(env, obj);
                     free((void*)callback);
                     
                     JVM_detach(status);
                 }
                 
-                static JNI_Callback* JNI_CALLBACK_clone(JNI_Callback* ref) {
-                    jobject obj = (jobject)((size_t*)((char*)ref + sizeof(JNI_Callback)))[0];
-                	JNIEnv *env = (JNIEnv*)((size_t*)((char*)ref + sizeof(JNI_Callback)))[1];
+                static _AbstractCallback* JNI_CALLBACK_clone(_AbstractCallback* ref) {
+                    jobject obj = (jobject)((size_t*)((char*)ref + sizeof(_AbstractCallback)))[0];
+                	JNIEnv *env = (JNIEnv*)((size_t*)((char*)ref + sizeof(_AbstractCallback)))[1];
                     jint status = env == NULL ? JVM_attach(&env) : JNI_OK;
                     
-                    JNI_Callback* callback = (JNI_Callback*) malloc(JNI_CallbackSize);
-                    memcpy(callback, ref, sizeof(JNI_Callback));
+                    _AbstractCallback* callback = (_AbstractCallback*) malloc(_AbstractCallbackSize);
+                    memcpy(callback, ref, sizeof(_AbstractCallback));
                     callback->__flags = K_FLAG_RELEASABLE;
                     
-                    ((size_t*)((char*)callback + sizeof(JNI_Callback)))[0] = (size_t)(*env)->NewGlobalRef(env, obj);
-                    ((size_t*)((char*)callback + sizeof(JNI_Callback)))[1] = (size_t) NULL;
+                    ((size_t*)((char*)callback + sizeof(_AbstractCallback)))[0] = (size_t)(*env)->NewGlobalRef(env, obj);
+                    ((size_t*)((char*)callback + sizeof(_AbstractCallback)))[1] = (size_t) NULL;
                     
                     if(status == JNI_EDETACHED) JVM_detach(status);
                     return callback;
                 }
                 
-                jobject JNI_toKotlinCallback(JNIEnv *env, JNI_Callback* callback) {
-                    return (jobject)((size_t*)((char*)callback + sizeof(JNI_Callback)))[0];
+                jobject JNI_toKotlinCallback(JNIEnv *env, _AbstractCallback* callback) {
+                    return (jobject)((size_t*)((char*)callback + sizeof(_AbstractCallback)))[0];
                 }
                 
-                JNI_Callback* JNI_toNativeCallbackOnStack(JNIEnv *env, jobject obj, void (*invoke)(), void* mem) {
-                    ((size_t*)((char*)mem + sizeof(JNI_Callback)))[0] = (size_t) obj;
-                    ((size_t*)((char*)mem + sizeof(JNI_Callback)))[1] = (size_t) env;
-                    JNI_Callback* callback = (JNI_Callback*) mem;
-                    *callback = (JNI_Callback) {
+                _AbstractCallback* JNI_toNativeCallbackOnStack(JNIEnv *env, jobject obj, void (*invoke)(), void* mem) {
+                    ((size_t*)((char*)mem + sizeof(_AbstractCallback)))[0] = (size_t) obj;
+                    ((size_t*)((char*)mem + sizeof(_AbstractCallback)))[1] = (size_t) env;
+                    _AbstractCallback* callback = (_AbstractCallback*) mem;
+                    *callback = (_AbstractCallback) {
                         K_FLAG_ON_STACK,
                         invoke,
                         JNI_CALLBACK_clone,
@@ -442,12 +419,12 @@ class CJniUtilsPrinter(
                     return callback;
                 }
                 
-                JNI_Callback* JNI_toNativeCallback(JNIEnv *env, jobject obj, void (*invoke)(), char flags) {
-                    void* mem = malloc(JNI_CallbackSize);
-                    ((size_t*)((char*)mem + sizeof(JNI_Callback)))[0] = (size_t) (*env)->NewGlobalRef(env, obj);
-                    ((size_t*)((char*)mem + sizeof(JNI_Callback)))[1] = (size_t) NULL;
-                    JNI_Callback* callback = (JNI_Callback*) mem;
-                    *callback = (JNI_Callback) {
+                _AbstractCallback* JNI_toNativeCallback(JNIEnv *env, jobject obj, void (*invoke)(), char flags) {
+                    void* mem = malloc(_AbstractCallbackSize);
+                    ((size_t*)((char*)mem + sizeof(_AbstractCallback)))[0] = (size_t) (*env)->NewGlobalRef(env, obj);
+                    ((size_t*)((char*)mem + sizeof(_AbstractCallback)))[1] = (size_t) NULL;
+                    _AbstractCallback* callback = (_AbstractCallback*) mem;
+                    *callback = (_AbstractCallback) {
                         flags,
                         invoke,
                         JNI_CALLBACK_clone,
@@ -462,9 +439,6 @@ class CJniUtilsPrinter(
             """.trimIndent())
             idl.callbacks.values.forEach {
                 printCallbackInvokeDef(builder, it)
-            }
-            idl.callbacks.values.forEach {
-                printCallbackFreeDef(builder, it)
             }
         }
 
@@ -483,7 +457,6 @@ class CJniUtilsPrinter(
 
             idl.callbacks.values.forEach { callback ->
                 printCallbackInvoke(builder, callback)
-                printCallbackForceFree(builder, callback)
             }
         }
 
@@ -538,24 +511,15 @@ class CJniUtilsPrinter(
             append("*result = (${struct.name}) {\n\t\t")
 
             buildList {
-                add("flags")
                 struct.allFields().mapTo(this) { field ->
                     val fieldVariable = "struct${struct.name}Field${field.name.capitalized()}"
                     val getter = field.type.toMethodCall()
                     castJavaToJNI(field.type, "(*env)->$getter(env, src, $fieldVariable)", onStack = false, flags = "flags")
                 }
+                add("flags")
             }.joinTo(builder, separator = ",\n\t\t")
             append("\n\t};")
             append("\n\treturn result;\n}\n")
-
-            // Force free
-            append("\nvoid JNI_forceFree${struct.name}(${struct.name}* of) {")
-            struct.allFields().forEach { field ->
-                forceFreeFuncFor(
-                    field.type, "of->${field.name}"
-                )?.apply { append("\n\t$this;") }
-            }
-            append("\n\tfree((void*) of);\n}\n")
         }
     }
 
@@ -564,10 +528,6 @@ class CJniUtilsPrinter(
                 callback.args.map { "${it.type.toCDefType()} ${it.name}" }
 
         append("${callback.type.toCDefType()} JNI_CALLBACK_INVOKE_${callback.name}(${args.joinToString()});\n")
-    }
-
-    private fun printCallbackFreeDef(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
-        append("void JNI_forceFree${callback.name}(${callback.name}* of);\n")
     }
 
     private fun printCallbackInvoke(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
@@ -588,8 +548,8 @@ class CJniUtilsPrinter(
         append("""
             
             ${callback.type.toCDefType()} JNI_CALLBACK_INVOKE_${callback.name}(${args}) {
-                jobject obj = (jobject)((size_t*)((char*)callback + sizeof(JNI_Callback)))[0];
-                JNIEnv *env = (JNIEnv*)((size_t*)((char*)callback + sizeof(JNI_Callback)))[1];
+                jobject obj = (jobject)((size_t*)((char*)callback + sizeof(_AbstractCallback)))[0];
+                JNIEnv *env = (JNIEnv*)((size_t*)((char*)callback + sizeof(_AbstractCallback)))[1];
                 jint status = env == NULL ? JVM_attach(&env) : JNI_OK;
                 
         """.trimIndent())
@@ -608,17 +568,6 @@ class CJniUtilsPrinter(
         if(callback.type !is ResolvedIdlType.Void)
             append("\treturn result;\n")
         append("}\n")
-    }
-
-    private fun printCallbackForceFree(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
-        append("""
-            
-            void JNI_forceFree${callback.name}(${callback.name}* of) {
-                of->__flags |= K_FLAG_RELEASABLE;
-                of->free(of);
-            }
-        """.trimIndent())
-        append("\n")
     }
 
     private fun printRegisterFunction(builder: StringBuilder) = builder.apply {

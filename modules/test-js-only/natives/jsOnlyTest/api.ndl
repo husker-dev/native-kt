@@ -1,4 +1,0 @@
-
-namespace global {
-    void helloWorld();
-};

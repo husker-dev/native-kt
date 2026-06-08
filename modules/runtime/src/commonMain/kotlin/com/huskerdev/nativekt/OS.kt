@@ -32,14 +32,16 @@ enum class OS(
     }
 }
 
-enum class Arch {
-    X86,
-    X64,
-    ARM32,
-    ARM64,
-    RISCV32,
-    RISCV64,
-    UNKNOWN
+enum class Arch(
+    val ptr64: Boolean
+) {
+    X86(false),
+    X64(true),
+    ARM32(false),
+    ARM64(true),
+    RISCV32(false),
+    RISCV64(true),
+    UNKNOWN(false)
     ;
     companion object {
         @JvmStatic fun current() = currentArch()

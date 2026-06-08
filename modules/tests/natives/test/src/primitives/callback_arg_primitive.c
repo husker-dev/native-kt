@@ -1,4 +1,5 @@
 #include <api.h>
+#include <string.h>
 
 void callbackVoid(VoidCallback* arg) {
     arg->invoke(arg);

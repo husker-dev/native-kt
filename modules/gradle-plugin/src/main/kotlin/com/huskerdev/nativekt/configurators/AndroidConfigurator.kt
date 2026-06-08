@@ -4,7 +4,8 @@ import com.android.build.api.dsl.KotlinMultiplatformAndroidLibraryExtension
 import com.android.build.api.variant.KotlinMultiplatformAndroidComponentsExtension
 import com.android.build.gradle.internal.tasks.factory.dependsOn
 import com.huskerdev.nativekt.plugin.*
-import com.huskerdev.nativekt.printers.c.CHeaderPrinter
+import com.huskerdev.nativekt.printers.c.CApiHeaderPrinter
+import com.huskerdev.nativekt.printers.c.CApiImplPrinter
 import com.huskerdev.nativekt.printers.kotlin.KotlinAndroidPrinter
 import com.huskerdev.nativekt.printers.c.CJniPrinter
 import com.huskerdev.nativekt.printers.c.CJniUtilsPrinter
@@ -163,7 +164,7 @@ private abstract class PrepareNativesAndroid: DefaultTask() {
         doLast {
             val idl = Json.decodeFromString<IdlResolver>(idl)
 
-            val srcList = arrayListOf("jni_bindings.c")
+            val srcList = arrayListOf("api.c", "jni_bindings.c")
 
             // Create Kotlin/Android bindings
             KotlinAndroidPrinter(
@@ -193,9 +194,16 @@ private abstract class PrepareNativesAndroid: DefaultTask() {
                 isAndroidCriticalEnabled = useAndroidCriticalNative
             )
 
-            CHeaderPrinter(
+            CApiHeaderPrinter(
                 idl = idl,
-                target = File(nativesBuildDir, "api.h")
+                target = File(nativesBuildDir, "api.h"),
+                isInternal = true
+            )
+
+            CApiImplPrinter(
+                idl = idl,
+                target = File(nativesBuildDir, "api.c"),
+                classPath = moduleClasspath
             )
 
             when(buildSystem) {

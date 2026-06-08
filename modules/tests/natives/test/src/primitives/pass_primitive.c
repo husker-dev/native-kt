@@ -40,7 +40,7 @@ KBoolean passDouble(const KDouble arg) {
 }
 
 KBoolean passString(KString* arg) {
-    return !K_OBJECT_IS_RELEASABLE(arg->__flags) && arg->length == 11 && strncmp(arg->data, "test string", arg->length) == 0;
+    return !(arg->__flags & 1) && arg->length == 11 && strncmp(arg->data, "test string", arg->length) == 0;
 }
 
 KBoolean passEnum(const MyEnum arg) {

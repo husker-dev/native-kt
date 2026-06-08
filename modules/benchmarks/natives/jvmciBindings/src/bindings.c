@@ -9,6 +9,6 @@ KInt callCriticalJVMCIAdd(KInt a, KInt b) {
     return a + b;
 }
 
-KInt callCriticalJVMCIString(KString arg) {
+KInt callCriticalJVMCIString(KString* arg) {
     return 10;
 }

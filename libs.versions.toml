@@ -1,14 +1,13 @@
 [versions]
 
-kotlin = "2.3.21"
+kotlin = "2.4.0"
 kotlin_serialization = "1.11.0"
 coroutines = "1.11.0"
 benchmark = "0.4.17"
 
 android_plugin = "9.2.0"
-# old versions to allow testing on SDK < 21
-android_test_runner = "1.2.0"
-android_test_juint = "1.1.5"
+android_test_runner = "1.2.0" #| old versions to allow testing on SDK < 21
+android_test_juint = "1.1.5"  #|
 
 webidl = "1.0.3"
 

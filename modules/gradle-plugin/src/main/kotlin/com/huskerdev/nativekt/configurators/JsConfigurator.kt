@@ -5,7 +5,8 @@ import com.huskerdev.nativekt.plugin.BuildSystem
 import com.huskerdev.nativekt.plugin.NATIVE_TASK_GROUP
 import com.huskerdev.nativekt.plugin.NativeKtJsInterface
 import com.huskerdev.nativekt.plugin.NativeProject
-import com.huskerdev.nativekt.printers.c.CHeaderPrinter
+import com.huskerdev.nativekt.printers.c.CApiHeaderPrinter
+import com.huskerdev.nativekt.printers.c.CApiImplPrinter
 import com.huskerdev.nativekt.printers.c.CEmscriptenPrinter
 import com.huskerdev.nativekt.printers.kotlin.KotlinJsPrinter
 import com.huskerdev.nativekt.utils.*
@@ -150,19 +151,66 @@ private abstract class PrepareNativesJs: DefaultTask() {
                 expectActual = expectActual
             )
 
-            CEmscriptenPrinter(
-                idl = idl,
-                target = File(nativesBuildDir, "emscripten_bindings.cpp")
-            )
-
-            CHeaderPrinter(
-                idl = idl,
-                target = File(nativesBuildDir, "api.h")
-            )
-
             when(buildSystem) {
                 is BuildSystem.CMake -> {
-                    // Create CMakeLists.txt with emscripten linker flags
+                    CApiHeaderPrinter(
+                        idl = idl,
+                        target = File(nativesBuildDir, "api.h"),
+                        isInternal = true
+                    )
+                    CApiImplPrinter(
+                        idl = idl,
+                        target = File(nativesBuildDir, "api.c"),
+                        classPath = moduleClasspath
+                    )
+                    CEmscriptenPrinter(
+                        idl = idl,
+                        target = File(nativesBuildDir, "emscripten_bindings.c")
+                    )
+
+                    val exportedFunctions = buildList {
+                        addAll(listOf(
+                            "free",
+                            "malloc",
+                            "KString_free",
+                            "KCharArray_free",
+                            "KBooleanArray_free",
+                            "KByteArray_free",
+                            "KShortArray_free",
+                            "KIntArray_free",
+                            "KLongArray_free",
+                            "KFloatArray_free",
+                            "KDoubleArray_free",
+                            "KArray_free"
+                        ))
+                        idl.dictionaries.values.mapTo(this) { "${it.name}_free" }
+                        idl.globalOperators().mapTo(this) { it.name }
+                    }.joinToString(separator = ",") { "_$it" }
+
+                    val runtimeFunctions = listOf(
+                        "UTF8ToString", "stringToUTF8", "lengthBytesUTF8",
+                        "HEAP8", "HEAP16", "HEAP32", "HEAPF32", "HEAPF64",
+                        "addFunction", "wasmTable"
+                    ).joinToString(separator = ",")
+
+                    // ASSERTIONS=2 -s SAFE_HEAP=1 -s STACK_OVERFLOW_CHECK=1
+                    val args = listOf(
+                        "--no-entry",
+
+                        "SAFE_HEAP=1",
+                        "ASSERTIONS=2",
+                        "STACK_OVERFLOW_CHECK=1",
+
+                        "ALLOW_MEMORY_GROWTH=1",
+                        "ALLOW_TABLE_GROWTH=1",
+                        "MODULARIZE=1",
+                        "EXPORT_ES6=1",
+                        "WASM_BIGINT=${if (useJsBigInt) "1" else "0"}",
+                        "EXPORTED_RUNTIME_METHODS=$runtimeFunctions",
+                        "EXPORTED_FUNCTIONS=$exportedFunctions",
+                    ).joinToString(separator = " ") { "-s $it" }
+
+                    // Create CMakeLists.txt with Emscripten linker flags
                     File(nativesBuildDir, "CMakeLists.txt").writeText($$"""
                         cmake_minimum_required(VERSION 3.15)
                 
@@ -176,10 +224,9 @@ private abstract class PrepareNativesJs: DefaultTask() {
                                 File(nativesBuildDir, "sub").absolutePath.replace("\\", "/")
                             }")
                 
-                        add_executable(lib$$moduleName $<TARGET_OBJECTS:$$moduleName> emscripten_bindings.cpp)
-                        set_target_properties(lib$$moduleName PROPERTIES CXX_STANDARD 17)
+                        add_executable(lib$$moduleName $<TARGET_OBJECTS:$$moduleName> emscripten_bindings.c api.c)
                         
-                        set_target_properties(lib$$moduleName PROPERTIES LINK_FLAGS "${EXTRA_LINK_FLAGS} -s -lembind -s --no-entry -s ALLOW_MEMORY_GROWTH=1 -s ALLOW_TABLE_GROWTH=1 -s MODULARIZE=1 -s EXPORT_ES6=1 -s WASM_BIGINT=$${if(useJsBigInt) "1" else "0"} -s EXPORTED_RUNTIME_METHODS=UTF8ToString,stringToUTF8,lengthBytesUTF8,HEAP8,HEAP16,HEAP32,HEAPF32,HEAPF64,addFunction -s EXPORTED_FUNCTIONS=_free,_malloc")
+                        set_target_properties(lib$$moduleName PROPERTIES LINK_FLAGS "${EXTRA_LINK_FLAGS} $$args")
                     """.trimIndent())
                 }
                 is BuildSystem.Cargo -> {
