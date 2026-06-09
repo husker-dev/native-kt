@@ -1,6 +1,7 @@
 #include <api.h>
 #include <stdio.h>
 #include <string.h>
+#include <inttypes.h>
 
 // JVMCI
 
@@ -35,7 +36,7 @@ KBoolean jvmci5(
     const KInt a1, const KLong a2, const KInt a3, const KLong a4,
     const KInt a5, const KLong a6, const KInt a7, const KInt a8, const KLong a9
 ) {
-    printf("jvmci5  | a1: %d, a2: %lld, a3: %d, a4: %lld, a5: %d, a6: %lld, a7: %d, a8: %d, a9: %lld\n", a1, a2, a3, a4, a5, a6, a7, a8, a9);
+    printf("jvmci5  | a1: %d, a2: %" PRId64 ", a3: %d, a4: %" PRId64 ", a5: %d, a6: %" PRId64 ", a7: %d, a8: %d, a9: %" PRId64 "\n", a1, a2, a3, a4, a5, a6, a7, a8, a9);
     fflush(stdout);
     return a1 == 1 && a2 == 2 && a3 == 3 && a4 == 4 && a5 == 5 && a6 == 6 && a7 == 7 && a8 == 8 && a9 == 9;
 }
@@ -60,7 +61,7 @@ KBoolean jvmci7(
 }
 
 KBoolean jvmci8(const KInt a1, const KDouble a2, const KFloat a3, const KLong a4) {
-    printf("jvmci8  | a1: %d, a2: %f, a3: %f, a4: %lld\n", a1, a2, a3, a4);
+    printf("jvmci8  | a1: %d, a2: %f, a3: %f, a4: %" PRId64 "\n", a1, a2, a3, a4);
     fflush(stdout);
     return a1 == 1 && a2 == 2.0 && a3 == 3.0 && a4 == 4.0;
 }
@@ -69,7 +70,7 @@ KBoolean jvmci9(
     const KInt a1, const KDouble a2, const KFloat a3, const KLong a4,
     const KLong a5, const KDouble a6, const KFloat a7, const KFloat a8, const KInt a9
 ) {
-    printf("jvmci9  | a1: %d, a2: %f, a3: %f, a4: %lld, a5: %lld, a6: %f, a7: %f, a8: %f, a9: %d\n", a1, a2, a3, a4, a5, a6, a7, a8, a9);
+    printf("jvmci9  | a1: %d, a2: %f, a3: %f, a4: %" PRId64 ", a5: %" PRId64 ", a6: %f, a7: %f, a8: %f, a9: %d\n", a1, a2, a3, a4, a5, a6, a7, a8, a9);
     fflush(stdout);
     return a1 == 1 && a2 == 2.0 && a3 == 3.0 && a4 == 4 && a5 == 5 && a6 == 6.0 && a7 == 7.0 && a8 == 8.0 && a9 == 9;
 }
@@ -78,7 +79,7 @@ KBoolean jvmci10(
     KString* a1, const KDouble a2, const KFloat a3, const KLong a4,
     const KLong a5, const KDouble a6, KString* a7, const KFloat a8, const KInt a9
 ) {
-    printf("jvmci10 | a1: %s, a2: %f, a3: %f, a4: %lld, a5: %lld, a6: %f, a7: %s, a8: %f, a9: %d\n", a1->data, a2, a3, a4, a5, a6, a7->data, a8, a9);
+    printf("jvmci10 | a1: %s, a2: %f, a3: %f, a4: %" PRId64 ", a5: %" PRId64 ", a6: %f, a7: %s (%d, %" PRId64 ", %d), a8: %f, a9: %d\n", a1->data, a2, a3, a4, a5, a6, a7->data, a7->length, a7->size, a7->__flags, a8, a9);
     fflush(stdout);
     return strncmp(a1->data, "string1", 7) == 0 && a2 == 2.0 && a3 == 3.0 && a4 == 4 && a5 == 5 && a6 == 6.0 && strncmp(a7->data, "string7", 7) == 0 && a8 == 8.0 && a9 == 9;
 }

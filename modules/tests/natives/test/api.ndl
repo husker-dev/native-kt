@@ -134,7 +134,7 @@ namespace global {
     // Dictionary
     boolean passBigDictionary(TypeDictionary arg);
     [Dealloc] TypeDictionary returnBigDictionary(VoidCallback callback);
-    [Dealloc] TypeDictionary pingBigDictionary(TypeDictionary arg);
+    TypeDictionary pingBigDictionary(TypeDictionary arg);
 
     // Critical
     [Critical] boolean criticalPrimitives(char a1, boolean a2, byte a3, short a4, int a5, long a6, float a7, double a8);
