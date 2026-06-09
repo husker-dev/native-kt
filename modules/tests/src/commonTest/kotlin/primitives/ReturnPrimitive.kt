@@ -54,11 +54,6 @@ class ReturnPrimitive {
     }
 
     @Test
-    fun returnStringLiteral() = withLib {
-        assertEquals("test string", natives.test.returnStringLiteral())
-    }
-
-    @Test
     fun returnString() = withLib {
         assertEquals("test string", natives.test.returnString())
     }

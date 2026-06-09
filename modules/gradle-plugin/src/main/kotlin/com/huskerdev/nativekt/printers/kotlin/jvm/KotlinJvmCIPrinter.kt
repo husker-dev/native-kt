@@ -18,12 +18,13 @@ class KotlinJvmCIPrinter(
 
             if(implementFields) {
                 append("""
-                    private class $name: $parentClass {
+                    private class $name(libraryPath: String): $parentClass {
                     
                 """.trimIndent())
             } else {
                 append("""
                     private class $name(
+                        libraryPath: String,
                         parent: $parentClass
                     ): $parentClass by parent {
                     
@@ -31,16 +32,7 @@ class KotlinJvmCIPrinter(
             }
 
             if(operators.isNotEmpty()) {
-                append($$"""
-                    companion object {
-                        private fun linkFunction(name: String, alt: Boolean, vararg types: Class<*>) {
-                            JVMCIUtils.linkNativeCall(
-                                $$name::class.java.getDeclaredMethod("_$name", *types),
-                                NativeKtUtils.findAddress("EXPORTED_$${classPath.replace(".", "_")}_$name${if (alt) "_" else ""}")
-                            )
-                        }
-                        
-                """.replaceIndent("\t"))
+                append("\tcompanion object {")
 
                 operators.forEach {
                     append("\n\t\t@JvmStatic ")
@@ -56,17 +48,34 @@ class KotlinJvmCIPrinter(
                 append("\n\t}\n\n")
                 append("\tinit {")
 
+                if(implementFields)
+                    append("\n\t\tSystem.load(libraryPath)")
+
                 operators.forEach {
                     printFunctionBinding(builder, it)
                 }
 
                 append("\n\t}\n")
 
-                operators.forEach {
-                    printFunctionCall(builder, it)
-                }
+                append($$"""
+                    
+                    private fun linkFunction(name: String, alt: Boolean, vararg types: Class<*>) {
+                        JVMCIUtils.linkNativeCall(
+                            $$name::class.java.getDeclaredMethod("_$name", *types),
+                            _address("EXPORTED_$${classPath.replace(".", "_")}_$name${if (alt) "_" else ""}")
+                        )
+                    }
+                    
+                """.replaceIndent("\t"))
 
                 if (implementFields) {
+                    append("""
+                        
+                        override fun _address(name: String): Long =
+                            NativeKtUtils.findAddress(name)
+                        
+                    """.replaceIndent("\t"))
+
                     val nonCritical = idl.globalOperators()
                         .filter { !it.isCritical() }
 
@@ -74,6 +83,10 @@ class KotlinJvmCIPrinter(
                         val list = nonCritical.joinToString(separator = "") { "\n\t- ${it.name}" }
                         throw UnsupportedOperationException("JVMCI can not operate with non-critical operations: $list")
                     }
+                }
+
+                operators.forEach {
+                    printFunctionCall(builder, it)
                 }
             }
             append("\n}\n")
@@ -84,10 +97,11 @@ class KotlinJvmCIPrinter(
         val args = listOf("\"${function.name}\"", function.hasString() || function.hasArray()) +
                 function.args.flatMap {
                     val clazz = "${it.type.toKotlinType(stringAsBytes = true, enumAsInt = true)}::class.java"
-
-                    if(it.type.isString() || it.type.isArray())
-                        listOf(clazz, "Int::class.java")
-                    else listOf(clazz)
+                    when {
+                        it.type.isString() -> listOf(clazz, "Int::class.java", "Int::class.java")
+                        it.type.isArray() -> listOf(clazz, "Int::class.java")
+                        else -> listOf(clazz)
+                    }
                 }
 
         append("\n\t\tlinkFunction(${args.joinToString()})")
@@ -96,25 +110,35 @@ class KotlinJvmCIPrinter(
     private fun printFunctionCall(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
         append("\n\t")
         printFunctionHeader(builder, function,
-            isOverride = true,
-            forcePrintVoid = true
+            isOverride = true
         )
-        append(" =\n\t\t")
+        append(" {")
+
+        function.args.forEach {
+            if(it.type.isString())
+                append("\n\t\tval _bytes_${it.name} = ${it.name}.toByteArray()")
+            if(it.type.isEnumArray())
+                append("\n\t\tval _ints_${it.name} = IntArray(${it.name}.size) { ${it.name}[it].ordinal }")
+        }
+
+        append("\n\t\t")
+        if(function.type !is ResolvedIdlType.Void)
+            append("return ")
 
         val args = function.args.joinToString {
             toNativeCriticalType(it.type, it.name)
         }
         val call = "_${function.name}(${args})"
         append(toKotlinCriticalType(function.type, call))
-        append("\n")
+        append("\n\t}\n")
     }
 }
 
 internal fun toNativeCriticalType(type: ResolvedIdlType, name: String) = when {
-    type.isString() -> "${name}.toByteArray(), ${name}.length"
-    type.isEnum() -> "${name}.ordinal"
-    type.isEnumArray() -> "IntArray(${name}.size) { ${name}[it].ordinal }, ${name}.size"
-    type.isArray() -> "${name}, ${name}.size"
+    type.isString() -> "_bytes_$name, $name.length, _bytes_$name.size"
+    type.isEnum() -> "$name.ordinal"
+    type.isEnumArray() -> "_ints_$name, $name.size"
+    type.isArray() -> "$name, $name.size"
     else -> name
 }
 

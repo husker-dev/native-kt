@@ -1,81 +1,81 @@
 #include <api.h>
 
-KBoolean passArray(const KIntArray arg) {
-    return !arg.releasable &&
-        arg.size == 2 &&
-        arg.elements[0] == 1 &&
-        arg.elements[1] == 2;
+KBoolean passArray(KIntArray* arg) {
+    return !(arg->__flags & 1) &&
+        arg->length == 2 &&
+        arg->elements[0] == 1 &&
+        arg->elements[1] == 2;
 }
 
-KBoolean passCharArray(const KCharArray arg) {
-    return !arg.releasable &&
-        arg.size == 2 &&
-        arg.elements[0] == 'a' &&
-        arg.elements[1] == 'b';
+KBoolean passCharArray(KCharArray* arg) {
+    return !(arg->__flags & 1) &&
+        arg->length == 2 &&
+        arg->elements[0] == 'a' &&
+        arg->elements[1] == 'b';
 }
 
-KBoolean passBooleanArray(const KBooleanArray arg) {
-    return !arg.releasable &&
-        arg.size == 2 &&
-        arg.elements[0] == true &&
-        arg.elements[1] == false;
+KBoolean passBooleanArray(KBooleanArray* arg) {
+    return !(arg->__flags & 1) &&
+        arg->length == 2 &&
+        arg->elements[0] == true &&
+        arg->elements[1] == false;
 }
 
-KBoolean passByteArray(const KByteArray arg) {
-    return !arg.releasable &&
-        arg.size == 2 &&
-        arg.elements[0] == 1 &&
-        arg.elements[1] == 2;
+KBoolean passByteArray(KByteArray* arg) {
+    return !(arg->__flags & 1) &&
+        arg->length == 2 &&
+        arg->elements[0] == 1 &&
+        arg->elements[1] == 2;
 }
 
-KBoolean passShortArray(const KShortArray arg) {
-    return !arg.releasable &&
-        arg.size == 2 &&
-        arg.elements[0] == 1 &&
-        arg.elements[1] == 2;
+KBoolean passShortArray(KShortArray* arg) {
+    return !(arg->__flags & 1) &&
+        arg->length == 2 &&
+        arg->elements[0] == 1 &&
+        arg->elements[1] == 2;
 }
 
-KBoolean passIntArray(const KIntArray arg) {
-    return !arg.releasable &&
-        arg.size == 2 &&
-        arg.elements[0] == 1 &&
-        arg.elements[1] == 2;
+KBoolean passIntArray(KIntArray* arg) {
+    return !(arg->__flags & 1) &&
+        arg->length == 2 &&
+        arg->elements[0] == 1 &&
+        arg->elements[1] == 2;
 }
-KBoolean passLongArray(const KLongArray arg) {
-    return !arg.releasable &&
-        arg.size == 2 &&
-        arg.elements[0] == 1 &&
-        arg.elements[1] == 2;
-}
-
-KBoolean passFloatArray(const KFloatArray arg) {
-    return !arg.releasable &&
-        arg.size == 2 &&
-        arg.elements[0] == 1.1f &&
-        arg.elements[1] == 2.2f;
+KBoolean passLongArray(KLongArray* arg) {
+    return !(arg->__flags & 1) &&
+        arg->length == 2 &&
+        arg->elements[0] == 1 &&
+        arg->elements[1] == 2;
 }
 
-KBoolean passDoubleArray(const KDoubleArray arg) {
-    return !arg.releasable &&
-        arg.size == 2 &&
-        arg.elements[0] == 1.1 &&
-        arg.elements[1] == 2.2;
+KBoolean passFloatArray(KFloatArray* arg) {
+    return !(arg->__flags & 1) &&
+        arg->length == 2 &&
+        arg->elements[0] == 1.1f &&
+        arg->elements[1] == 2.2f;
 }
 
-KBoolean passEnumArray(const KIntArray arg) {
-    const MyEnum* elements = (MyEnum*)arg.elements;
+KBoolean passDoubleArray(KDoubleArray* arg) {
+    return !(arg->__flags & 1) &&
+        arg->length == 2 &&
+        arg->elements[0] == 1.1 &&
+        arg->elements[1] == 2.2;
+}
 
-    return !arg.releasable &&
-        arg.size == 2 &&
+KBoolean passEnumArray(KIntArray* arg) {
+    const MyEnum* elements = (MyEnum*)arg->elements;
+
+    return !(arg->__flags & 1) &&
+        arg->length == 2 &&
         elements[0] == MyEnum_CASE1 &&
         elements[1] == MyEnum_CASE2;
 }
 
-KBoolean passDictionaryArray(const KArray arg) {
-    MyDictionary** elements = (MyDictionary**)arg.elements;
+KBoolean passDictionaryArray(KArray* arg) {
+    MyDictionary** elements = (MyDictionary**)arg->elements;
 
-    return !arg.releasable &&
-        arg.size == 2 &&
+    return !(arg->__flags & 1) &&
+        arg->length == 2 &&
         elements[0]->a == 1 &&
         elements[0]->b == 2 &&
         elements[0]->c == 3 &&

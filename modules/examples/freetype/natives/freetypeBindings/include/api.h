@@ -10,14 +10,24 @@
 #define KOTLIN_NATIVE_FREETYPEBINDINGS_H
 
 #include <stdlib.h>
-#include <stdarg.h>
-
 #include <stdint.h>
 #include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define ARG_LENGTH(...) ARG_LENGTH__(__VA_ARGS__)
+#define ARG_LENGTH__(...) ARG_LENGTH_(,##__VA_ARGS__,                          \
+    63, 62, 61, 60, 59, 58, 57, 56, 55, 54, 53, 52, 51, 50, 49, 48, 47, 46, 45,\
+    44, 43, 42, 41, 40, 39, 38, 37, 36, 35, 34, 33, 32, 31, 30, 29, 28, 27, 26,\
+    25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6,\
+    5, 4, 3, 2, 1, 0)
+#define ARG_LENGTH_(_, _63, _62, _61, _60, _59, _58, _57, _56, _55, _54, _53,  \
+    _52, _51, _50, _49, _48, _47, _46, _45, _44, _43, _42, _41, _40, _39, _38, \
+    _37, _36, _35, _34, _33, _32, _31, _30, _29, _28, _27, _26, _25, _24, _23, \
+    _22, _21, _20, _19, _18, _17, _16, _15, _14, _13, _12, _11, _10, _9, _8,   \
+    _7, _6, _5, _4, _3, _2, _1, Count, ...) Count
 
 // ╔════════════════╗
 // ║     stdlib     ║
@@ -34,72 +44,35 @@ typedef uint16_t KChar;
 
 typedef struct KString {
     const char* data;
+    size_t size;
     KInt length;
-    KBoolean releasable;
-    KBoolean released;
+    char __flags;
 } KString;
 
-static KString KString_new(const char* data, const KInt length) {
-    return (KString) { data, length, true, false };
-}
+KString* KString_new(const char* data, KInt length, KInt size);
+KString* KString_clone(const KString* self);
+void KString_free(KString* self);
 
-static void KString_free(KString* str) {
-    if(str->releasable && !str->released) {
-        free((void*)str->data);
-        str->released = true;
-    }
-}
+#define KArrayDef(Name, Type)                              \
+typedef struct Name {                                      \
+    const Type* elements;                                  \
+    size_t size;				                           \
+    KInt length;				                           \
+    char __flags;                                          \
+} Name;                                                    \
+                                                           \
+Name* Name##_new(const Type* elements, const KInt length); \
+Name* _##Name##_of(const int n, ...);
 
-#define ARG_LENGTH(...) ARG_LENGTH__(__VA_ARGS__)
-#define ARG_LENGTH__(...) ARG_LENGTH_(,##__VA_ARGS__,                          \
-    63, 62, 61, 60, 59, 58, 57, 56, 55, 54, 53, 52, 51, 50, 49, 48, 47, 46, 45,\
-    44, 43, 42, 41, 40, 39, 38, 37, 36, 35, 34, 33, 32, 31, 30, 29, 28, 27, 26,\
-    25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6,\
-    5, 4, 3, 2, 1, 0)
-#define ARG_LENGTH_(_, _63, _62, _61, _60, _59, _58, _57, _56, _55, _54, _53,  \
-    _52, _51, _50, _49, _48, _47, _46, _45, _44, _43, _42, _41, _40, _39, _38, \
-    _37, _36, _35, _34, _33, _32, _31, _30, _29, _28, _27, _26, _25, _24, _23, \
-    _22, _21, _20, _19, _18, _17, _16, _15, _14, _13, _12, _11, _10, _9, _8,   \
-    _7, _6, _5, _4, _3, _2, _1, Count, ...) Count
-
-#define KArrayDef(Name, Type, VarargType)                       \
-typedef struct Name {                                           \
-    const Type* elements;                                       \
-    KInt size;				                                    \
-    KBoolean releasable;                                        \
-    KBoolean released;                                          \
-} Name;                                                         \
-                                                                \
-static Name Name##_new(const Type* elements, const KInt size) { \
-    return (Name){ elements, size, true, false };               \
-}                                                               \
-                                                                \
-static Name _##Name##_of(const int n, ...) {                    \
-    va_list args;                                               \
-    va_start(args, n);                                          \
-    Type* elements = (Type*)malloc(n * sizeof(Type));           \
-    for (int i = 0; i < n; i++)                                 \
-        elements[i] = (Type)va_arg(args, VarargType);           \
-    va_end(args);                                               \
-    return (Name){ (const Type*) elements, n, true, false };    \
-}                                                               \
-                                                                \
-static void Name##_free(Name* arr) {                            \
-    if(arr->releasable && !arr->released) {                     \
-        free((void*)arr->elements);                             \
-        arr->released = true;                                   \
-    }                                                           \
-}
-
-KArrayDef(KCharArray,	 KChar,    int32_t)
-KArrayDef(KBooleanArray, KBoolean, int32_t)
-KArrayDef(KByteArray,	 KByte,    int32_t)
-KArrayDef(KShortArray,	 KShort,   int32_t)
-KArrayDef(KIntArray,	 KInt,     int32_t)
-KArrayDef(KLongArray,	 KLong,    int64_t)
-KArrayDef(KFloatArray,	 KFloat,   double)
-KArrayDef(KDoubleArray,  KDouble,  double)
-KArrayDef(KArray,        void*,    void*)
+KArrayDef(KCharArray,	 KChar   )
+KArrayDef(KBooleanArray, KBoolean)
+KArrayDef(KByteArray,	 KByte   )
+KArrayDef(KShortArray,	 KShort  )
+KArrayDef(KIntArray,	 KInt    )
+KArrayDef(KLongArray,	 KLong   )
+KArrayDef(KFloatArray,	 KFloat  )
+KArrayDef(KDoubleArray,  KDouble )
+KArrayDef(KArray,        void*   )
 #undef KArrayDef
 
 #define KCharArray_of(...)    _KCharArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
@@ -111,11 +84,31 @@ KArrayDef(KArray,        void*,    void*)
 #define KDoubleArray_of(...)  _KDoubleArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
 #define KArray_of(...)        _KArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
 
-#define KCallbackDef(Name, Type, ...)       \
-struct Name {                               \
-    void *m;                                \
-    Type (*invoke)(Name* _, ##__VA_ARGS__); \
-    void (*free)(Name* _);                  \
+#define KArrayCloneFreeDef(Name, Type) \
+Name* Name##_clone(const Name* self);  \
+void Name##_free(Name* self);
+
+KArrayCloneFreeDef(KCharArray,    KChar)
+KArrayCloneFreeDef(KBooleanArray, KBoolean)
+KArrayCloneFreeDef(KByteArray,    KByte)
+KArrayCloneFreeDef(KShortArray,   KShort)
+KArrayCloneFreeDef(KIntArray,     KInt)
+KArrayCloneFreeDef(KLongArray,    KLong)
+KArrayCloneFreeDef(KFloatArray,   KFloat)
+KArrayCloneFreeDef(KDoubleArray,  KDouble)
+#undef KArrayCloneFreeDef
+
+KArray* KArray_clone(const KArray* self, void* (*cloneOp)(void*));
+void KArray_free(const KArray* self, void (*freeOp)(void*));
+
+#define KCallbackDef(Name, Type, ...)          \
+struct Name {                                  \
+    char __flags;                              \
+    Type (*invoke)(Name* self, ##__VA_ARGS__); \
+    Name* (*clone)(Name* self);                \
+    KBoolean (*equals)(Name* self, Name* obj); \
+    KInt (*hashCode)(Name* self);              \
+    void (*free)(Name* self);                  \
 };
 
 // ╔═══════════════════╗

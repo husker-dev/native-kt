@@ -7,8 +7,9 @@ import com.huskerdev.nativekt.plugin.CMakeBuildType
 import com.huskerdev.nativekt.plugin.NATIVE_TASK_GROUP
 import com.huskerdev.nativekt.plugin.NativeKtNativeInterface
 import com.huskerdev.nativekt.plugin.NativeProject
-import com.huskerdev.nativekt.printers.c.CHeaderPrinter
+import com.huskerdev.nativekt.printers.c.CApiHeaderPrinter
 import com.huskerdev.nativekt.printers.DefPrinter
+import com.huskerdev.nativekt.printers.c.CApiImplPrinter
 import com.huskerdev.nativekt.printers.kotlin.KotlinNativePrinter
 import com.huskerdev.nativekt.utils.*
 import com.huskerdev.webidl.resolver.IdlResolver
@@ -357,7 +358,7 @@ private abstract class PrepareNativesKn @Inject constructor(
             val linkerOpts = arrayListOf<String>()
 
             // Generate header
-            CHeaderPrinter(
+            CApiHeaderPrinter(
                 idl = idl,
                 target = headerFile,
                 guardName = moduleName.uppercase(),
@@ -366,6 +367,18 @@ private abstract class PrepareNativesKn @Inject constructor(
             when(val buildSystem = buildSystem) {
                 is BuildSystem.CMake -> {
                     val buildDir = File(nativesBuildDir, "build")
+
+                    CApiHeaderPrinter(
+                        idl = idl,
+                        target = File(buildDir, "api.h"),
+                        isInternal = true
+                    )
+
+                    CApiImplPrinter(
+                        idl = idl,
+                        target = File(buildDir, "api.c"),
+                        classPath = moduleClasspath
+                    )
 
                     // Create CMake file
                     File(nativesBuildDir, "CMakeLists.txt").writeText($$"""
@@ -377,14 +390,14 @@ private abstract class PrepareNativesKn @Inject constructor(
                             File(buildDir, "common").absolutePath.replace("\\", "/")
                         }")
                         
-                        add_library(lib_$$moduleName SHARED stub.c)
+                        add_library(lib_$$moduleName SHARED api.c)
                         target_link_libraries(lib_$$moduleName PUBLIC $$moduleName)
                         
-                        add_library(libstatic_$$moduleName STATIC stub.c)
+                        add_library(libstatic_$$moduleName STATIC api.c)
                         target_link_libraries(libstatic_$$moduleName PUBLIC $$moduleName)
                     """.trimIndent())
 
-                    File(nativesBuildDir, "stub.c").writeText("")
+                    //File(nativesBuildDir, "stub.c").writeText("")
 
                     // Configure CMake (if needed)
                     if(shouldInit) {
@@ -421,7 +434,6 @@ private abstract class PrepareNativesKn @Inject constructor(
                 target = File(kotlinFile),
                 classPath = moduleClasspath,
                 moduleName = moduleName,
-                is32Bit = targetType in setOf(TargetType.WATCHOS_ARM32, TargetType.WATCHOS_ARM64),
                 useCoroutines = useCoroutines,
                 expectActual = expectActual
             )

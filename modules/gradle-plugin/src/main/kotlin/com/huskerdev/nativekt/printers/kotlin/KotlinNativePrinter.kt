@@ -10,7 +10,6 @@ class KotlinNativePrinter(
     target: File,
     classPath: String,
     val moduleName: String,
-    val is32Bit: Boolean,
     useCoroutines: Boolean,
     val expectActual: Boolean
 ) {
@@ -22,7 +21,7 @@ class KotlinNativePrinter(
         val builder = StringBuilder()
         builder.append("""
             @file:OptIn(ExperimentalForeignApi::class)
-            @file:Suppress("unused")
+            @file:Suppress("unused", "UNNECESSARY_SAFE_CALL")
             
             package $classPath
             
@@ -40,46 +39,10 @@ class KotlinNativePrinter(
         if(useCoroutines)
             builder.append("${actual}suspend fun ${asyncFunctionName(moduleName)}() = Unit\n")
 
-        printLabel(builder, "String")
-        builder.append("""
-            
-            private fun toNativeString(of: String, arena: NativeArena) = cValue<$cinteropPath.KString> {
-                data = of.cstr.getPointer(arena.scope)
-                length = of.length
-                releasable = false
-                released = false
-                arena.ptr(data!!)
-            }
-            
-            private fun toNativeString(of: String, releasable: Boolean) = 
-            	cValue<$cinteropPath.KString> { toNativeString(of, this, releasable) }
-
-            private fun toNativeString(of: String, struct: $cinteropPath.KString, releasable: Boolean) = struct.apply {
-            	this.data = strdup(of)
-                this.length = of.length
-                this.releasable = releasable
-                this.released = false
-            }
-            
-            private fun toKotlinString(of: $cinteropPath.KString, dealloc: Boolean): String =
-                toKotlinString(of.data!!, dealloc)
-            
-            private fun toKotlinString(of: CValue<$cinteropPath.KString>, dealloc: Boolean): String =
-                of.useContents { toKotlinString(data!!, dealloc) }
-            
-            private fun toKotlinString(of: CValue<$cinteropPath.KString>, arena: NativeArena, dealloc: Boolean): String =
-                arena.toKotlinString(of.useContents { data }!!, dealloc)
-            
-        """.trimIndent())
-
         if(idl.dictionaries.isNotEmpty()) {
             printLabel(builder, "Dictionary")
             idl.dictionaries.values.forEach { printDictionaryCasts(builder, it) }
         }
-
-        printLabel(builder, "Arrays")
-        printArrayCasts(builder)
-        idl.enums.values.forEach { printEnumCast(builder, it) }
 
         if(idl.callbacks.isNotEmpty()) {
             printLabel(builder, "Callbacks")
@@ -97,442 +60,215 @@ class KotlinNativePrinter(
 
     private fun printDictionaryCasts(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
 
-        // to jvm
-        append("\nprivate fun toKotlinDictionary")
-        append(dictionary.name.capitalized())
-        append("(of: CPointer<")
-        append(cinteropPath)
-        append(".")
-        append(dictionary.name)
-        append(">?, dealloc: Boolean) = of!!.pointed.run {\n\t")
-        append(dictionary.name)
-        append("(\n\t\t")
-
-        dictionary.allFields().joinTo(builder, separator = ",\n\t\t") {
-            castFromNative(it.type, it.name, dealloc = false, deallocContent = false, useArena = false)
-        }
-        append("\n\t)\n")
-        append("}.also { if(dealloc) free(of) }\n")
-
-        // to native
-        append("\nprivate fun toNativeDictionary")
-        append(dictionary.name)
-        append("(of: ")
-        append(dictionary.name)
-        append(", releasable: Boolean) = allocStruct<")
-        append(cinteropPath)
-        append(".")
-        append(dictionary.name)
-        append(">().apply {\n\t")
-        append("val struct = pointed\n\t")
-
-        dictionary.allFields().joinTo(builder, separator = "\n\t") {
-            if(it.type.isArray() || it.type.isString())
-                castToNative(it.type, "of.${it.name}", dealloc = false, useArena = false, struct = "struct.${it.name}", releasable = "releasable")
-            else
-                "struct.${it.name} = ${castToNative(it.type, "of.${it.name}", dealloc = false, useArena = false, releasable = "releasable")}"
-        }
+        // free handle
+        append("\nprivate val _handle${dictionary.name}Free = staticCFunction<COpaquePointer?, Unit> {")
+        append("\n\t$cinteropPath.${dictionary.name}_free(it!!.reinterpret())")
         append("\n}\n")
+
+        // native (arena)
+
+        append("\nprivate fun MemScope.toNative${dictionary.name}OnArena(of: ${dictionary.name}): CPointer<$cinteropPath.${dictionary.name}> {")
+        append("\n\tval mem = alloc<$cinteropPath.${dictionary.name}>()")
+
+        dictionary.allFields().forEach {
+            append("\n\tmem.${it.name} = ${castToNative(it.type, "of.${it.name}", useArena = true, pin = false)}")
+        }
+
+        append("\n\tmem.__flags = 0")
+        append("\n\treturn mem.ptr")
+        append("\n}\n")
+
+        // native
+
+        append("\nprivate fun toNative${dictionary.name}(of: ${dictionary.name}): CPointer<$cinteropPath.${dictionary.name}> {")
+        append("\n\tval mem = malloc(sizeOf<$cinteropPath.${dictionary.name}>().convert())!!.reinterpret<$cinteropPath.${dictionary.name}>().pointed")
+
+        dictionary.allFields().forEach {
+            append("\n\tmem.${it.name} = ${castToNative(it.type, "of.${it.name}", useArena = false, pin = false)}")
+        }
+
+        append("\n\tmem.__flags = FLAG_RELEASABLE")
+        append("\n\treturn mem.ptr")
+        append("\n}\n")
+
+        // kotlin
+
+        append("\nprivate fun toKotlin${dictionary.name}(of: CPointer<$cinteropPath.${dictionary.name}>): ${dictionary.name} = of.pointed.let { mem -> ${dictionary.name}(")
+
+        dictionary.allFields().forEach {
+            append("\n\t${it.name} = ${castFromNative(it.type, "mem.${it.name}")},")
+        }
+        append("\n) }\n")
     }
 
     private fun printCallbackWrap(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
-        // header
-        append("\nprivate fun ")
-        append("toNativeCallback")
-        append(callback.name)
-        append("(of: ")
-        append(callback.name)
-        append(") =\n\t")
 
-        // body
-        append("allocStruct<")
-        append(cinteropPath)
-        append(".")
-        append(callback.name)
-        append(">().apply {\n\t\t")
-        append("val struct = pointed\n\t\t")
+        // Header
+        append("\nprivate val _invoke${callback.name.capitalized()}: CPointer<CFunction<(")
+        buildList {
+            add("CPointer<$cinteropPath.${callback.name}>")
+            callback.args.mapTo(this) { it.type.toKnType() }
+        }.joinTo(builder)
+        append(") -> ${callback.type.toKnType()}>> =")
 
-        // m =
-        append("struct.m = StableRef.create(of).asCPointer()\n\t\t")
+        // staticCFunction
+        append("\n\tstaticCFunction { ")
+        buildList {
+            add("_callback")
+            callback.args.mapTo(this) { it.name }
+        }.joinTo(builder)
+        append(" ->")
 
-        // invoke =
-        val args = listOf("_callback") + callback.args.map { it.name }
-
-        val castedArgs = callback.args.joinToString {
-            castFromNative(it.type, it.name, it.isDealloc(), deallocContent = false, useArena = false)
+        // Call
+        val args = callback.args.joinToString {
+            castFromNative(it.type, it.name)
         }
+        val call = "toKotlinCallback<${callback.name}>(_callback)($args)"
+        append("\n\t\t${castToNative(callback.type, call, useArena = false, pin = false)}")
 
-        val call = "_callback!!.pointed.m!!.asStableRef<${callback.name}>().get()($castedArgs)"
-
-        append("struct.invoke = staticCFunction { ")
-        args.joinTo(builder)
-        append(" ->\n\t\t\t")
-        append(castToNative(callback.type, call, dealloc = false, useArena = false, releasable = "true"))
-        append("\n\t\t}\n\t\t")
-
-        // free =
-        append("struct.free = freeCallbackFunction.reinterpret()\n\t}\n")
+        // End
+        append("\n\t}\n")
     }
 
     private fun printFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
-        append('\n')
-        printFunctionHeader(builder, function, isActual = expectActual)
-        append(" = ")
 
-        val useArena = function.args.any { it.type.isString() || it.type.isArray() || it.isDealloc() }
-
-        if(useArena)
-            append("NativeArena.use { arena ->")
-        append("\n\t")
-
-        val args = function.args.joinToString { arg ->
-            castToNative(arg.type, arg.name, arg.isDealloc(), useArena, releasable = "false")
+        val useArena = function.args.any {
+            it.type.isString() ||
+            it.type.isArray() ||
+            it.type.isDictionary() ||
+            it.type.isCallback()
         }
 
+        val args = function.args.joinToString {
+            castToNative(it.type, it.name, useArena = useArena, pin = function.isCritical())
+        }
+
+        val deallocFunc = if(function.isDealloc())
+            freeFuncFor(function.type, "_result_native")
+        else null
+
         val call = "$cinteropPath.${function.name}($args)"
-        append(castFromNative(function.type, call, function.isDealloc(), function.isDeallocContent(), useArena))
 
-        if(useArena)
+        // === Print ===
+
+        append('\n')
+        printFunctionHeader(builder, function, isActual = expectActual)
+
+        append(when {
+            useArena -> " = memScoped {"
+            deallocFunc != null -> " {"
+            else -> " = "
+        })
+
+        append("\n\t")
+        if(deallocFunc != null) {
+            append("val _result_native = $call")
+            append("\n\t")
+            append("val _result_kt = ${castFromNative(function.type, "_result_native")}")
+            append("\n\t")
+            append(deallocFunc)
+
+            if(function.type !is ResolvedIdlType.Void) {
+                append("\n\t")
+                if(!useArena)
+                    append("return ")
+                append("_result_kt")
+            }
+        } else
+            append(castFromNative(function.type, call))
+
+        if(useArena || deallocFunc != null)
             append("\n}")
-
         append("\n")
     }
 
-    private fun printArrayCasts(builder: StringBuilder) = builder.apply {
-        arrayOf(
-            "Byte", "Short", "Int", "Long", "Float", "Double"
-        ).forEach { type ->
-            append("""
-                
-                // Array: $type
-    
-                private fun toNative${type}Array(array: ${type}Array, arena: NativeArena) = cValue<$cinteropPath.K${type}Array> {
-                    elements = arena.pin(array).addressOf(0)
-                    size = array.size
-                    releasable = false
-                    released = false
-                    arena.ptr(elements!!)
-                }
-    
-                private fun toNative${type}Array(array: ${type}Array, releasable: Boolean) = 
-                    cValue<$cinteropPath.K${type}Array> { toNative${type}Array(array, this, releasable) }
-                
-                private fun toNative${type}Array(array: ${type}Array, struct: $cinteropPath.K${type}Array, releasable: Boolean) = struct.apply {
-                    val bytes = array.size * ${type}.SIZE_BYTES
-                    this.elements = mallocExact(bytes.toUInt()).reinterpret()
-                    this.size = array.size
-                    this.releasable = releasable
-                    this.released = false
-                    array.usePinned { memcpy(elements, it.addressOf(0), bytes.${if(is32Bit) "toUInt" else "toULong"}()) }
-                }
-    
-                private fun toKotlin${type}Array(struct: CValue<$cinteropPath.K${type}Array>, arena: NativeArena, dealloc: Boolean) = struct.useContents {
-                    ${type}Array(size) { elements!![it] }.also {
-                        if(dealloc) arena.freeMem(elements!!)
-                    }
-                }
-                
-                private fun toKotlin${type}Array(struct: CValue<$cinteropPath.K${type}Array>, dealloc: Boolean) = 
-                    struct.useContents { toKotlin${type}Array(this, dealloc) }
-    
-                private fun toKotlin${type}Array(struct: $cinteropPath.K${type}Array, dealloc: Boolean) =
-                    ${type}Array(struct.size) { struct.elements!![it] }
-                        .also { if(dealloc) free(struct.elements!!) }
-                
-            """.trimIndent())
+    private fun freeFuncFor(
+        type: ResolvedIdlType,
+        content: String
+    ) = when {
+        type.isString() -> "${cinteropPath}.KString_free($content?.reinterpret())"
+        type.isArray() -> (type as ResolvedIdlType.Default).firstParam { _, declaration ->
+            when (declaration) {
+                is BuiltinIdlDeclaration -> "${cinteropPath}.K${declaration.kind.simpleName()}Array_free($content?.reinterpret())"
+                is ResolvedIdlEnum -> "${cinteropPath}.KIntArray_free($content?.reinterpret())"
+                is ResolvedIdlDictionary -> "${cinteropPath}.KArray_free($content, _handle${declaration.name}Free)"
+                else -> throw UnsupportedOperationException(type.toString())
+            }
         }
-
-        // Char needs some changes:
-        // 1. .reinterpret() in toNativeCharArray
-        // 2. .toInt().toChar() in toKotlinCharArray
-        append("""
-            
-            // Array: Char
-
-            private fun toNativeCharArray(array: CharArray, arena: NativeArena) = cValue<$cinteropPath.KCharArray> {
-                elements = arena.pin(array).addressOf(0).reinterpret()
-                size = array.size
-                releasable = false
-                released = false
-                arena.ptr(elements!!)
-            }
-            
-            private fun toNativeCharArray(array: CharArray, releasable: Boolean) = 
-                cValue<$cinteropPath.KCharArray> { toNativeCharArray(array, this, releasable) }
-
-            private fun toNativeCharArray(array: CharArray, struct: $cinteropPath.KCharArray, releasable: Boolean) = struct.apply {
-            	val bytes = array.size * Char.SIZE_BYTES
-            	this.elements = mallocExact(bytes.toUInt()).reinterpret()
-            	this.size = array.size
-                this.releasable = releasable
-                this.released = false
-            	array.usePinned { memcpy(elements, it.addressOf(0), bytes.${if (is32Bit) "toUInt" else "toULong"}()) }
-            }
-
-            private fun toKotlinCharArray(struct: CValue<$cinteropPath.KCharArray>, arena: NativeArena, dealloc: Boolean) = struct.useContents {
-                CharArray(size) { elements!![it].toInt().toChar() }.also {
-                    if(dealloc) arena.freeMem(elements!!)
-                }
-            }
-            
-            private fun toKotlinCharArray(struct: CValue<$cinteropPath.KCharArray>, dealloc: Boolean) = 
-            	struct.useContents { toKotlinCharArray(this, dealloc) }
-
-            private fun toKotlinCharArray(struct: $cinteropPath.KCharArray, dealloc: Boolean) =
-                CharArray(struct.size) { struct.elements!![it].toInt().toChar() }
-                    .also { if(dealloc) free(struct.elements!!) }
-            
-        """.trimIndent())
-
-        // Booleans needs to be cast to bytes
-        append("""
-            
-            // Array: Boolean
-
-            private fun toNativeBooleanArray(array: BooleanArray, arena: NativeArena) = cValue<$cinteropPath.KBooleanArray> {
-            	val byteArray = array.map { it.toByte() }.toByteArray()
-            	elements = arena.pin(byteArray).addressOf(0).reinterpret()
-            	size = array.size
-                releasable = false
-                released = false
-            	arena.ptr(elements!!)
-            }
-
-            private fun toNativeBooleanArray(array: BooleanArray, releasable: Boolean) = 
-                cValue<$cinteropPath.KBooleanArray> { toNativeBooleanArray(array, this, releasable) }
-            
-            private fun toNativeBooleanArray(array: BooleanArray, struct: $cinteropPath.KBooleanArray, releasable: Boolean) = struct.apply {
-            	val bytes = array.size * Byte.SIZE_BYTES
-            	this.elements = mallocExact(bytes.toUInt()).reinterpret()
-            	this.size = array.size
-                this.releasable = releasable
-                this.released = false
-            	val byteArray = array.map { it.toByte() }.toByteArray()
-            	byteArray.usePinned { memcpy(elements, it.addressOf(0), bytes.${if (is32Bit) "toUInt" else "toULong"}()) }
-            }
-
-            private fun toKotlinBooleanArray(struct: CValue<$cinteropPath.KBooleanArray>, arena: NativeArena, dealloc: Boolean) = struct.useContents {
-            	BooleanArray(size) { elements!![it].value }.also {
-            		if(dealloc) arena.freeMem(elements!!)
-            	}
-            }
-
-            private fun toKotlinBooleanArray(struct: CValue<$cinteropPath.KBooleanArray>, dealloc: Boolean) = 
-                struct.useContents { toKotlinBooleanArray(this, dealloc) }
-            
-            private fun toKotlinBooleanArray(struct: $cinteropPath.KBooleanArray, dealloc: Boolean) =
-            	BooleanArray(struct.size) { struct.elements!![it].value }
-                    .also { if(dealloc) free(struct.elements!!) }
-            
-        """.trimIndent())
-
-        // Enum casts
-        append("""
-            // Array: Enum
-
-            private fun <T: Enum<T>, N: CPrimitiveVar> toNativeEnumArray(
-                array: Array<T>,
-                arena: NativeArena,
-                typeSize: Long,
-                setter: (from: Array<T>, to: CPointer<N>) -> Unit
-            ) = cValue<$cinteropPath.KIntArray> {
-                val bytes = array.size * typeSize
-                elements = arena.ptr(mallocExact(bytes.toUInt()).reinterpret())
-                size = array.size
-                releasable = false
-                released = false
-                setter(array, elements!!.reinterpret())
-            }
-            
-            private fun <T: Enum<T>, N: CPrimitiveVar> toNativeEnumArray(
-                array: Array<T>,
-                typeSize: Long,
-                setter: (from: Array<T>, to: CPointer<N>) -> Unit,
-                releasable: Boolean
-            ) = cValue<$cinteropPath.KIntArray> {
-                toNativeEnumArray(array, typeSize, setter, this, releasable)
-            }
-            
-            private fun <T: Enum<T>, N: CPrimitiveVar> toNativeEnumArray(
-                array: Array<T>,
-                typeSize: Long,
-                setter: (from: Array<T>, to: CPointer<N>) -> Unit,
-                struct: $cinteropPath.KIntArray, 
-                releasable: Boolean
-            ) = struct.apply {
-                val bytes = array.size * typeSize
-                this.elements = mallocExact(bytes.toUInt()).reinterpret()
-                this.size = array.size
-                this.releasable = releasable
-                this.released = false
-                setter(array, elements!!.reinterpret())
-            }
-            
-            private fun <T: Enum<T>, N: CPrimitiveVar> toKotlinEnumArray(
-                struct: CValue<$cinteropPath.KIntArray>,
-                arena: NativeArena, 
-                dealloc: Boolean,
-                converter: (size: Int, elements: CPointer<N>) -> Array<T>
-            ) = struct.useContents {
-                converter(size, this.elements!!.reinterpret()).also {
-                    if(dealloc) arena.freeMem(this.elements!!)
-                }
-            }
-            
-            private fun <T: Enum<T>, N: CPrimitiveVar> toKotlinEnumArray(
-                struct: CValue<$cinteropPath.KIntArray>,
-                dealloc: Boolean,
-                converter: (size: Int, elements: CPointer<N>) -> Array<T>
-            ) = struct.useContents { toKotlinEnumArray(this, dealloc, converter) }
-            
-            private fun <T: Enum<T>, N: CPrimitiveVar> toKotlinEnumArray(
-                struct: $cinteropPath.KIntArray,
-                dealloc: Boolean,
-                converter: (size: Int, elements: CPointer<N>) -> Array<T>
-            ) = converter(struct.size, struct.elements!!.reinterpret())
-                    .also { if(dealloc) free(struct.elements!!) }
-            
-            // Object array
-            
-            private fun <T: Any, N: CPointed> toNativeArray(
-                array: Array<T>,
-                converter: (from: T, releasable: Boolean) -> CPointer<N>,
-                arena: NativeArena? = null,
-                releasable: Boolean
-            ) = cValue<$cinteropPath.KArray> {
-                toNativeArray(array, converter, arena, this, releasable)
-            }
-            
-             private fun <T: Any, N: CPointed> toNativeArray(
-                array: Array<T>,
-                converter: (from: T, releasable: Boolean) -> CPointer<N>,
-                arena: NativeArena? = null,
-                struct: $cinteropPath.KArray,
-                releasable: Boolean
-            ) = struct.apply {
-                this.elements = mallocExact((array.size * size_t.SIZE_BYTES).toUInt()).reinterpret()
-                this.size = array.size
-                this.releasable = releasable
-                this.released = false
-                for(i in array.indices)
-                    elements!![i] = converter(array[i], releasable)
-                arena?.ptr(elements!!.reinterpret())
-            }
-            
-            private fun <T: Any, N: CPointed> toKotlinArray(
-                struct: CValue<$cinteropPath.KArray>,
-                converter: (from: CPointer<N>, dealloc: Boolean) -> T,
-                dealloc: Boolean,
-                deallocContent: Boolean,
-                arena: NativeArena? = null
-            ) = struct.useContents {
-                toKotlinArray(this, converter, dealloc, deallocContent, arena)
-            }
-            
-            @Suppress("unchecked_cast")
-            private fun <T: Any, N: CPointed> toKotlinArray(
-                struct: $cinteropPath.KArray,
-                converter: (from: CPointer<N>, dealloc: Boolean) -> T,
-                dealloc: Boolean,
-                deallocContent: Boolean,
-                arena: NativeArena? = null
-            ): Array<T> {
-                return Array<Any>(struct.size) { 
-                    converter(struct.elements!![it]!!.reinterpret(), deallocContent) 
-                }.also {
-                    if(dealloc) arena?.freeMem(struct.elements!!) ?: free(struct.elements!!)
-                } as Array<T>
-            }
-            
-        """.trimIndent())
+        type.isCallback() -> "callbackFree($content?.reinterpret())"
+        type.isDictionary() -> "${cinteropPath}.${(type as ResolvedIdlType.Default).declaration.name.capitalized()}_free($content)"
+        else -> null
     }
 
-    private fun printEnumCast(builder: StringBuilder, enum: ResolvedIdlEnum) = builder.apply {
-        append("""
-            
-            private val _${enum.name}ToKt = { size: Int, elements: CPointer<${cinteropPath}.${enum.name}.Var> ->
-                Array(size) { ${enum.name}.entries[elements[it].value.ordinal] }
-            }
-            
-            private val _${enum.name}ToNative = { from: Array<${enum.name}>, to: CPointer<${cinteropPath}.${enum.name}.Var> ->
-                for(i in from.indices)
-                    to[i].value = ${cinteropPath}.${enum.name}.entries[from[i].ordinal]
-            }
-            
-        """.trimIndent())
-    }
-
-    private fun castFromNative(type: ResolvedIdlType, content: String, dealloc: Boolean, deallocContent: Boolean, useArena: Boolean): String = when(type) {
+    private fun castFromNative(type: ResolvedIdlType, content: String): String = when(type) {
         is ResolvedIdlType.Void -> content
         is ResolvedIdlType.Default -> when(val decl = type.declaration) {
             is BuiltinIdlDeclaration -> when(decl.kind) {
                 WebIDLBuiltinKind.CHAR -> "$content.toInt().toChar()"
-                WebIDLBuiltinKind.STRING ->
-                    if(useArena) "toKotlinString($content, arena, $dealloc)"
-                    else "toKotlinString($content, $dealloc)"
+                WebIDLBuiltinKind.STRING -> "toKotlinString($content!!.reinterpret())"
                 WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
                     when (declaration) {
-                        is BuiltinIdlDeclaration -> {
-                            val name = declaration.kind.simpleName()
-                            if (useArena) "toKotlin${name}Array($content, arena, $dealloc)"
-                            else "toKotlin${name}Array($content, $dealloc)"
-                        }
-                        is ResolvedIdlEnum -> {
-                            if (useArena) "toKotlinEnumArray($content, arena, $dealloc, _${declaration.name}ToKt)"
-                            else "toKotlinEnumArray($content, $dealloc, _${declaration.name}ToKt)"
-                        }
-                        is ResolvedIdlDictionary -> "toKotlinArray($content, ::toKotlinDictionary${declaration.name}, $dealloc, $deallocContent${if(useArena) ", arena" else ""})"
+                        is BuiltinIdlDeclaration -> "toKotlin${declaration.kind.simpleName()}Array($content!!.reinterpret())"
+                        is ResolvedIdlEnum -> "toKotlinEnumArray<${declaration.name}>($content!!.reinterpret())"
+                        is ResolvedIdlDictionary -> "toKotlinArray($content!!.reinterpret(), ::toKotlin${declaration.name})"
                         else -> throw UnsupportedOperationException(type.toString())
                     }
                 }
                 else -> content
             }
-            is ResolvedIdlCallbackFunction ->
-                if(useArena) "arena.toKotlinCallback<${decl.name}>($content!!.reinterpret(), $dealloc)"
-                else "toKotlinCallback<${decl.name}>($content!!.reinterpret(), $dealloc)"
+            is ResolvedIdlCallbackFunction -> "toKotlinCallback($content!!)"
             is ResolvedIdlEnum -> "${decl.name}.entries[${content}.ordinal]"
-            is ResolvedIdlDictionary -> "toKotlinDictionary${decl.name}(${content}, $dealloc)"
+            is ResolvedIdlDictionary -> "toKotlin${decl.name}(${content}!!)"
             else -> throw UnsupportedOperationException(type.toString())
         }
         else -> throw UnsupportedOperationException(type.toString())
     }
 
-    private fun castToNative(type: ResolvedIdlType, content: String, dealloc: Boolean, useArena: Boolean, struct: String? = null, releasable: String): String {
-        val struct = if(struct != null) ", struct = $struct" else ""
-        val releasable = "releasable = $releasable"
-        return when(type) {
-            is ResolvedIdlType.Void -> content
-            is ResolvedIdlType.Default -> when(val decl = type.declaration) {
-                is BuiltinIdlDeclaration -> when(decl.kind) {
-                    WebIDLBuiltinKind.STRING ->
-                        if(useArena) "toNativeString($content, arena)"
-                        else "toNativeString($content$struct, $releasable)"
-                    WebIDLBuiltinKind.CHAR -> "$content.code.toUShort()"
-                    WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
-                        when (declaration) {
-                            is BuiltinIdlDeclaration -> {
-                                val name = declaration.kind.simpleName()
-                                if (useArena) "toNative${name}Array($content, arena)"
-                                else "toNative${name}Array($content$struct, $releasable)"
-                            }
-                            is ResolvedIdlEnum -> {
-                                if (useArena) "toNativeEnumArray($content, arena, sizeOf<${cinteropPath}.${declaration.name}.Var>(), _${declaration.name}ToNative)"
-                                else "toNativeEnumArray($content, sizeOf<${cinteropPath}.${declaration.name}.Var>(), _${declaration.name}ToNative$struct, $releasable)"
-                            }
-                            is ResolvedIdlDictionary -> "toNativeArray($content, ::toNativeDictionary${declaration.name}${if(useArena) ", arena" else ""}$struct, $releasable)"
-                            else -> throw UnsupportedOperationException(type.toString())
-                        }
+    private fun castToNative(type: ResolvedIdlType, content: String, useArena: Boolean, pin: Boolean): String = when(type) {
+        is ResolvedIdlType.Void -> content
+        is ResolvedIdlType.Default -> when(val decl = type.declaration) {
+            is BuiltinIdlDeclaration -> when(decl.kind) {
+                WebIDLBuiltinKind.STRING ->
+                    if(useArena) "toNativeStringOnArena($content, $pin).reinterpret()"
+                    else "toNativeString($content).reinterpret()"
+                WebIDLBuiltinKind.CHAR -> "$content.code.toUShort()"
+                WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
+                    when (declaration) {
+                        is BuiltinIdlDeclaration ->
+                            if (useArena) "toNative${declaration.kind.simpleName()}ArrayOnArena($content, $pin).reinterpret()"
+                            else "toNative${declaration.kind.simpleName()}Array($content).reinterpret()"
+                        is ResolvedIdlEnum ->
+                            if (useArena) "toNativeEnumArrayOnArena($content, $pin).reinterpret()"
+                            else "toNativeEnumArray($content).reinterpret()"
+                        is ResolvedIdlDictionary ->
+                            if (useArena) "toNativeArrayOnArena($content, ::toNative${declaration.name}OnArena).reinterpret()"
+                            else "toNativeArray($content, ::toNative${declaration.name}).reinterpret()"
+                        else -> throw UnsupportedOperationException(type.toString())
                     }
-                    else -> content
                 }
-                is ResolvedIdlEnum -> "${cinteropPath}.${decl.name}.entries[${content}.ordinal]"
-                is ResolvedIdlCallbackFunction ->
-                    if(dealloc) "arena.callback(toNativeCallback${decl.name}($content))"
-                    else "toNativeCallback${decl.name}($content)"
-                is ResolvedIdlDictionary -> "toNativeDictionary${decl.name}(${content}, $releasable)"
-                else -> throw UnsupportedOperationException(type.toString())
+                else -> content
             }
+            is ResolvedIdlEnum -> "${cinteropPath}.${decl.name}.entries[$content.ordinal]"
+            is ResolvedIdlCallbackFunction ->
+                if(useArena) "toNativeCallbackOnArena($content, _invoke${decl.name.capitalized()}).reinterpret()"
+                else "toNativeCallback($content, _invoke${decl.name.capitalized()}).reinterpret()"
+            is ResolvedIdlDictionary ->
+                if (useArena) "toNative${decl.name}OnArena($content)"
+                else "toNative${decl.name}($content)"
             else -> throw UnsupportedOperationException(type.toString())
         }
+        else -> throw UnsupportedOperationException(type.toString())
+    }
+
+    private fun ResolvedIdlType.toKnType(): String = when(this) {
+        is ResolvedIdlType.Void -> "Unit"
+        is ResolvedIdlType.Default -> {
+            val value = "${cinteropPath}.${toCDefType(ptr = false)}"
+            when {
+                isString() || isArray() || isCallback() || isDictionary() -> "CPointer<$value>?"
+                else -> value
+            }
+        }
+        else -> throw UnsupportedOperationException(toString())
     }
 }

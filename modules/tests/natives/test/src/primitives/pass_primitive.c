@@ -39,8 +39,8 @@ KBoolean passDouble(const KDouble arg) {
     return arg == 1.1;
 }
 
-KBoolean passString(const KString arg) {
-    return !arg.releasable && arg.length == 11 && strncmp(arg.data, "test string", arg.length) == 0;
+KBoolean passString(KString* arg) {
+    return !(arg->__flags & 1) && arg->length == 11 && strncmp(arg->data, "test string", arg->length) == 0;
 }
 
 KBoolean passEnum(const MyEnum arg) {

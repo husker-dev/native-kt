@@ -29,7 +29,7 @@ public class AMD64LinuxCallingConvention extends AbstractAMD64CallingConvention 
 
         // Integers
         if(intOps.length == 6) {
-            new RegToReg(RDI, RAX, Integer.class).emit(buf);
+            new RegToReg(RDI, RAX, intOps[5].type).emit(buf);
 
             for(int i = 0; i < intOps.length-1; i++)
                 intOps[i].emit(buf);

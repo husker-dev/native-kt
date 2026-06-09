@@ -34,15 +34,15 @@ class KotlinJvmPrinter(
         fun invokerChooser(indent: String) = when {
             useForeignApi && useJNI -> """
                 $implName = when(NativeKtUtils.getInvoker()) {
-                    NativeKtUtils.Invoker.FOREIGN -> ${moduleName.capitalized()}Foreign()
-                    NativeKtUtils.Invoker.JNI     -> ${moduleName.capitalized()}JNI()
+                    NativeKtUtils.Invoker.FOREIGN -> ${moduleName.capitalized()}Foreign(libraryPath)
+                    NativeKtUtils.Invoker.JNI     -> ${moduleName.capitalized()}JNI(libraryPath)
                 }
             """.replaceIndent(indent)
             useJNI -> """
-                $implName = ${moduleName.capitalized()}JNI()
+                $implName = ${moduleName.capitalized()}JNI(libraryPath)
             """.replaceIndent(indent)
             useForeignApi -> """
-                $implName = ${moduleName.capitalized()}Foreign()
+                $implName = ${moduleName.capitalized()}Foreign(libraryPath)
             """.replaceIndent(indent)
            else -> ""
         }
@@ -78,7 +78,7 @@ class KotlinJvmPrinter(
                 if(isLib$${moduleName.capitalized()}Loaded_) return
                 isLib$${moduleName.capitalized()}Loaded_ = true
                 
-                NativeKtUtils.loadLibrary("$$moduleName", $$useUniversalMacOSLib)
+                val libraryPath = NativeKtUtils.resolveLibraryFile("$$moduleName", $$useUniversalMacOSLib)
 
 
         """.trimIndent())
@@ -89,11 +89,11 @@ class KotlinJvmPrinter(
                 builder.append("""
                 
                     if(NativeKtUtils.isJvmciAvailable()) 
-                        $implName = ${moduleName.capitalized()}JVMCI($implName!!)
+                        $implName = ${moduleName.capitalized()}JVMCI(libraryPath, $implName!!)
                 """.replaceIndent("\t"))
             } else {
                 builder.append("""
-                    $implName = ${moduleName.capitalized()}JVMCI()
+                    $implName = ${moduleName.capitalized()}JVMCI(libraryPath)
                 """.replaceIndent("\t"))
             }
         }
@@ -124,6 +124,7 @@ class KotlinJvmPrinter(
             private var $implName: $nativeInvoker? = null
             
             private sealed interface $nativeInvoker {
+                fun _address(name: String): Long
                 
         """.trimIndent())
 

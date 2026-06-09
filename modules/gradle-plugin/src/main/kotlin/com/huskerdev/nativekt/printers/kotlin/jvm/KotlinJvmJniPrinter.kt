@@ -22,19 +22,15 @@ class KotlinJvmJniPrinter(
 
         builder.append("class ")
         builder.append(name)
+        builder.append("(libraryPath: String)")
         if(parentClass != null)
             builder.append(": $parentClass")
         builder.append(" {\n")
 
         if(isAndroid) {
             // Static functions
-            builder.append("${indent}\tcompanion object {\n")
-            builder.append("""
-                @JvmStatic external fun JNILoad(${if(isAndroidCriticalEnabled) "critical: Boolean" else ""})
-                init {
-                    JNILoad(${if(isAndroidCriticalEnabled) "supportsCritical" else ""})
-                }
-            """.replaceIndent("$indent\t\t"))
+            builder.append("$indent\tcompanion object {\n")
+            builder.append("$indent\t\t@JvmStatic external fun JNILoad(${if(isAndroidCriticalEnabled) "critical: Boolean" else ""})")
             builder.append("\n")
 
             idl.globalOperators().forEach { function ->
@@ -63,15 +59,27 @@ class KotlinJvmJniPrinter(
                 builder.append("\n")
             }
             builder.append("${indent}\t}\n")
+            builder.append("""
+                init {
+                    System.load(libraryPath);
+                    JNILoad(${if (isAndroidCriticalEnabled) "supportsCritical" else ""})
+                }
+            """.replaceIndent("$indent\t"))
+            builder.append("\n")
         } else {
             // Instance methods
             builder.append("""
                 companion object {
                     @JvmStatic external fun JNILoad()
-                    init {
-                        JNILoad()
-                    }
                 }
+                init {
+                    System.load(libraryPath)
+                    JNILoad()
+                }
+                
+                override fun _address(name: String): Long =
+                    NativeKtUtils.findAddress(name)
+                
             """.replaceIndent("$indent\t"))
             builder.append("\n")
 

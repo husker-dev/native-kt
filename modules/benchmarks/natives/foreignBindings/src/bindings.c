@@ -8,7 +8,7 @@ KInt callForeignAdd(KInt a, KInt b) {
     return a + b;
 }
 
-KInt callForeignString(KString arg) {
+KInt callForeignString(KString* arg) {
     return 10;
 }
 
@@ -21,6 +21,6 @@ KInt callCriticalForeignAdd(KInt a, KInt b) {
     return a + b;
 }
 
-KInt callCriticalForeignString(KString arg) {
+KInt callCriticalForeignString(KString* arg) {
     return 10;
 }

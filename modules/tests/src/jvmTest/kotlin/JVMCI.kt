@@ -1,5 +1,6 @@
 import com.huskerdev.nativekt.jvm.NativeKtUtils
 import natives.test.*
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -7,6 +8,11 @@ import kotlin.test.fail
 
 
 class JVMCI {
+
+    @BeforeTest
+    fun printInfo() {
+        println("JVM: ${System.getProperty("java.vendor.version")}")
+    }
 
     fun withJVMCI(block: () -> Unit) {
         if(!NativeKtUtils.isJvmciAvailable())

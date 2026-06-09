@@ -1,0 +1,109 @@
+package = nativekt.internals
+---
+
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdbool.h>
+
+typedef int32_t  KInt;
+typedef int64_t  KLong;
+typedef float    KFloat;
+typedef double   KDouble;
+typedef int8_t   KByte;
+typedef int16_t  KShort;
+typedef bool     KBoolean;
+typedef uint16_t KChar;
+
+// ╔════════════════╗
+// ║     String     ║
+// ╚════════════════╝
+
+typedef struct KString {
+    const char* data;
+    size_t size;
+    KInt length;
+    char __flags;
+} KString;
+
+// ╔════════════════╗
+// ║     Arrays     ║
+// ╚════════════════╝
+
+typedef struct KCharArray {
+    const KChar* elements;
+    size_t size;
+    KInt length;
+    char __flags;
+} KCharArray;
+
+typedef struct KBooleanArray {
+    const KBoolean* elements;
+    size_t size;
+    KInt length;
+    char __flags;
+} KBooleanArray;
+
+typedef struct KByteArray {
+    const KByte* elements;
+    size_t size;
+    KInt length;
+    char __flags;
+} KByteArray;
+
+typedef struct KShortArray {
+    const KShort* elements;
+    size_t size;
+    KInt length;
+    char __flags;
+} KShortArray;
+
+typedef struct KIntArray {
+    const KInt* elements;
+    size_t size;
+    KInt length;
+    char __flags;
+} KIntArray;
+
+typedef struct KLongArray {
+    const KLong* elements;
+    size_t size;
+    KInt length;
+    char __flags;
+} KLongArray;
+
+typedef struct KFloatArray {
+    const KFloat* elements;
+    size_t size;
+    KInt length;
+    char __flags;
+} KFloatArray;
+
+typedef struct KDoubleArray {
+    const KDouble* elements;
+    size_t size;
+    KInt length;
+    char __flags;
+} KDoubleArray;
+
+typedef struct KArray {
+    const void** elements;
+    size_t size;
+    KInt length;
+    char __flags;
+} KArray;
+
+// ╔══════════════════╗
+// ║     Callback     ║
+// ╚══════════════════╝
+
+typedef struct _AbstractCallback _AbstractCallback;
+
+struct _AbstractCallback {
+    char __flags;
+    void (*invoke)(_AbstractCallback* self);
+    _AbstractCallback* (*clone)(_AbstractCallback* self);
+    KBoolean (*equals)(_AbstractCallback* self, _AbstractCallback* obj);
+    KInt (*hashCode)(_AbstractCallback* self);
+    void (*free)(_AbstractCallback* self);
+    void* __stableRef;
+};

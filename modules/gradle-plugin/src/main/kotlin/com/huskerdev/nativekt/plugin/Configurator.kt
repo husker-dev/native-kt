@@ -3,7 +3,7 @@ package com.huskerdev.nativekt.plugin
 import com.android.build.api.variant.KotlinMultiplatformAndroidComponentsExtension
 import com.huskerdev.nativekt.TargetType
 import com.huskerdev.nativekt.configurators.*
-import com.huskerdev.nativekt.printers.c.CHeaderPrinter
+import com.huskerdev.nativekt.printers.c.CApiHeaderPrinter
 import com.huskerdev.nativekt.printers.rust.RustPrinter
 import com.huskerdev.nativekt.utils.validateIDL
 import com.huskerdev.nativekt.utils.dir
@@ -15,7 +15,6 @@ import org.gradle.api.tasks.TaskProvider
 import org.gradle.internal.extensions.stdlib.capitalized
 import org.gradle.kotlin.dsl.the
 import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
-import org.jetbrains.kotlin.gradle.dsl.KotlinJsProjectExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinProjectExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinSingleJavaTargetExtension
@@ -78,7 +77,7 @@ fun NativeKtPlugin.configureKotlin(
 
         when(module.buildSystem) {
             is BuildSystem.CMake -> {
-                CHeaderPrinter(
+                CApiHeaderPrinter(
                     idl = idl,
                     target = module.getHeaderFile(project),
                     guardName = module.name.uppercase()
@@ -227,7 +226,6 @@ private fun getTargetType(
 ): TargetType {
     when (kotlin) {
         is KotlinSingleJavaTargetExtension -> return TargetType.JVM
-        is KotlinJsProjectExtension -> return TargetType.JS
         is KotlinAndroidProjectExtension -> return TargetType.ANDROID
     }
     kotlin as KotlinTargetsContainer

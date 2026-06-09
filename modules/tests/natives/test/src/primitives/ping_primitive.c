@@ -32,7 +32,7 @@ KDouble pingDouble(const KDouble arg) {
     return arg;
 }
 
-KString pingString(const KString arg) {
+KString* pingString(KString* arg) {
     return arg;
 }
 

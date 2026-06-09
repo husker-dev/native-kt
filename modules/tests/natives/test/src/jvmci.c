@@ -1,6 +1,7 @@
 #include <api.h>
 #include <stdio.h>
 #include <string.h>
+#include <inttypes.h>
 
 // JVMCI
 
@@ -35,7 +36,7 @@ KBoolean jvmci5(
     const KInt a1, const KLong a2, const KInt a3, const KLong a4,
     const KInt a5, const KLong a6, const KInt a7, const KInt a8, const KLong a9
 ) {
-    printf("jvmci5  | a1: %d, a2: %lld, a3: %d, a4: %lld, a5: %d, a6: %lld, a7: %d, a8: %d, a9: %lld\n", a1, a2, a3, a4, a5, a6, a7, a8, a9);
+    printf("jvmci5  | a1: %d, a2: %" PRId64 ", a3: %d, a4: %" PRId64 ", a5: %d, a6: %" PRId64 ", a7: %d, a8: %d, a9: %" PRId64 "\n", a1, a2, a3, a4, a5, a6, a7, a8, a9);
     fflush(stdout);
     return a1 == 1 && a2 == 2 && a3 == 3 && a4 == 4 && a5 == 5 && a6 == 6 && a7 == 7 && a8 == 8 && a9 == 9;
 }
@@ -60,7 +61,7 @@ KBoolean jvmci7(
 }
 
 KBoolean jvmci8(const KInt a1, const KDouble a2, const KFloat a3, const KLong a4) {
-    printf("jvmci8  | a1: %d, a2: %f, a3: %f, a4: %lld\n", a1, a2, a3, a4);
+    printf("jvmci8  | a1: %d, a2: %f, a3: %f, a4: %" PRId64 "\n", a1, a2, a3, a4);
     fflush(stdout);
     return a1 == 1 && a2 == 2.0 && a3 == 3.0 && a4 == 4.0;
 }
@@ -69,18 +70,18 @@ KBoolean jvmci9(
     const KInt a1, const KDouble a2, const KFloat a3, const KLong a4,
     const KLong a5, const KDouble a6, const KFloat a7, const KFloat a8, const KInt a9
 ) {
-    printf("jvmci9  | a1: %d, a2: %f, a3: %f, a4: %lld, a5: %lld, a6: %f, a7: %f, a8: %f, a9: %d\n", a1, a2, a3, a4, a5, a6, a7, a8, a9);
+    printf("jvmci9  | a1: %d, a2: %f, a3: %f, a4: %" PRId64 ", a5: %" PRId64 ", a6: %f, a7: %f, a8: %f, a9: %d\n", a1, a2, a3, a4, a5, a6, a7, a8, a9);
     fflush(stdout);
     return a1 == 1 && a2 == 2.0 && a3 == 3.0 && a4 == 4 && a5 == 5 && a6 == 6.0 && a7 == 7.0 && a8 == 8.0 && a9 == 9;
 }
 
 KBoolean jvmci10(
-    const KString a1, const KDouble a2, const KFloat a3, const KLong a4,
-    const KLong a5, const KDouble a6, const KString a7, const KFloat a8, const KInt a9
+    KString* a1, const KDouble a2, const KFloat a3, const KLong a4,
+    const KLong a5, const KDouble a6, KString* a7, const KFloat a8, const KInt a9
 ) {
-    printf("jvmci10 | a1: %s, a2: %f, a3: %f, a4: %lld, a5: %lld, a6: %f, a7: %s, a8: %f, a9: %d\n", a1.data, a2, a3, a4, a5, a6, a7.data, a8, a9);
+    printf("jvmci10 | a1: %s, a2: %f, a3: %f, a4: %" PRId64 ", a5: %" PRId64 ", a6: %f, a7: %s (%d, %" PRId64 ", %d), a8: %f, a9: %d\n", a1->data, a2, a3, a4, a5, a6, a7->data, a7->length, a7->size, a7->__flags, a8, a9);
     fflush(stdout);
-    return strncmp(a1.data, "string1", 7) == 0 && a2 == 2.0 && a3 == 3.0 && a4 == 4 && a5 == 5 && a6 == 6.0 && strncmp(a7.data, "string7", 7) == 0 && a8 == 8.0 && a9 == 9;
+    return strncmp(a1->data, "string1", 7) == 0 && a2 == 2.0 && a3 == 3.0 && a4 == 4 && a5 == 5 && a6 == 6.0 && strncmp(a7->data, "string7", 7) == 0 && a8 == 8.0 && a9 == 9;
 }
 
 KBoolean jvmci11(
@@ -110,33 +111,33 @@ KDouble jvmci15() {
     return 1.5;
 }
 
-KBoolean jvmciArray(const KIntArray array) {
-    return array.size == 3 &&
-        array.elements[0] == 1 &&
-        array.elements[1] == 2 &&
-        array.elements[2] == 3;
+KBoolean jvmciArray(KIntArray* array) {
+    return array->length == 3 &&
+        array->elements[0] == 1 &&
+        array->elements[1] == 2 &&
+        array->elements[2] == 3;
 }
 
-KBoolean jvmciSomeArrays(const KIntArray array1, const KFloatArray array2, const KDoubleArray array3) {
-    return array1.size == 3 &&
-        array1.elements[0] == 1 &&
-        array1.elements[1] == 2 &&
-        array1.elements[2] == 3 &&
-        array2.size == 3 &&
-        array2.elements[0] == 4.0 &&
-        array2.elements[1] == 5.0 &&
-        array2.elements[2] == 6.0 &&
-        array3.size == 3 &&
-        array3.elements[0] == 7.0 &&
-        array3.elements[1] == 8.0 &&
-        array3.elements[2] == 9.0;
+KBoolean jvmciSomeArrays(KIntArray* array1, KFloatArray* array2, KDoubleArray* array3) {
+    return array1->length == 3 &&
+        array1->elements[0] == 1 &&
+        array1->elements[1] == 2 &&
+        array1->elements[2] == 3 &&
+        array2->length == 3 &&
+        array2->elements[0] == 4.0 &&
+        array2->elements[1] == 5.0 &&
+        array2->elements[2] == 6.0 &&
+        array3->length == 3 &&
+        array3->elements[0] == 7.0 &&
+        array3->elements[1] == 8.0 &&
+        array3->elements[2] == 9.0;
 }
 
-KBoolean jvmciEnum(const MyEnum enum1, const MyEnum enum2, const KIntArray enumArray){
-    const MyEnum *elements = (MyEnum*)enumArray.elements;
+KBoolean jvmciEnum(const MyEnum enum1, const MyEnum enum2, KIntArray* enumArray){
+    const MyEnum *elements = (MyEnum*)enumArray->elements;
 
     return enum1 == MyEnum_CASE1 && enum2 == MyEnum_CASE2 &&
-        enumArray.size == 3 &&
+        enumArray->length == 3 &&
             elements[0] == MyEnum_CASE1 &&
             elements[1] == MyEnum_CASE2 &&
             elements[2] == MyEnum_CASE1;

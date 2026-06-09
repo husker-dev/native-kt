@@ -158,7 +158,7 @@ class KotlinCommonPrinter(
         append(dictionary.name)
 
         if(dictionary.allFields().any { it.type.isArray() }) {
-            append("{\n")
+            append(" {\n")
             // equals
             append("""
                 override fun equals(other: Any?): Boolean {

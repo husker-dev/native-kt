@@ -9,6 +9,10 @@ group = "com.huskerdev"
 version = projectDir.parentFile.parentFile.resolve("VERSION").readText()
 
 kotlin {
+    jvmToolchain {
+        vendor = JvmVendorSpec.GRAAL_VM
+        languageVersion = JavaLanguageVersion.of(23)
+    }
     jvm()
 
     sourceSets.commonMain.dependencies {

@@ -109,4 +109,7 @@ tasks.withType<Test>().configureEach {
     if (name.contains("jvm", ignoreCase = true)) {
         jvmArgs = listOf("--enable-native-access=ALL-UNNAMED")
     }
+    testLogging {
+        showStandardStreams = true
+    }
 }
