@@ -288,8 +288,8 @@ class KotlinJvmForeignPrinter(
         content: String
     ) = when {
         type.isString() -> "handleKStringFree.invoke($content)"
-        type.isArray() -> (type as ResolvedIdlType.Default).firstParam { _, declaration ->
-            when (declaration) {
+        type.isArray() -> (type as ResolvedIdlType.Default).arrayType { type ->
+            when (val declaration = type.declaration) {
                 is BuiltinIdlDeclaration -> "handleK${declaration.kind.simpleName()}ArrayFree.invoke($content)"
                 is ResolvedIdlEnum -> "handleKIntArrayFree.invoke($content)"
                 is ResolvedIdlDictionary -> "handleKArrayFree.invoke($content, address${declaration.name}Free)"
@@ -306,8 +306,8 @@ class KotlinJvmForeignPrinter(
         is ResolvedIdlType.Default -> when(type.declaration) {
             is BuiltinIdlDeclaration -> when((type.declaration as BuiltinIdlDeclaration).kind) {
                 WebIDLBuiltinKind.STRING -> "ForeignUtils.toJvmString($content)"
-                WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
-                    when (declaration) {
+                WebIDLBuiltinKind.LIST -> type.arrayType { type ->
+                    when (val declaration = type.declaration) {
                         is BuiltinIdlDeclaration -> "ForeignUtils.toJvm${declaration.kind.simpleName()}Array($content)"
                         is ResolvedIdlEnum -> "ForeignUtils.toJvmEnumArray($content, ${declaration.name}::class.java)"
                         is ResolvedIdlDictionary -> "ForeignUtils.toJvmArray($content, ::toJvmDictionary${declaration.name}, ${declaration.name}::class.java)"
@@ -336,8 +336,8 @@ class KotlinJvmForeignPrinter(
                     WebIDLBuiltinKind.STRING ->
                         if (useArena) "ForeignUtils.toNativeStringOnArena(arena, $content)"
                         else "ForeignUtils.toNativeString($content)"
-                    WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
-                        when (declaration) {
+                    WebIDLBuiltinKind.LIST -> type.arrayType { type ->
+                        when (val declaration = type.declaration) {
                             is BuiltinIdlDeclaration -> {
                                 val name = declaration.kind.simpleName()
                                 if (useArena) "ForeignUtils.toNative${name}ArrayOnArena(arena, $content)"
@@ -387,5 +387,11 @@ class KotlinJvmForeignPrinter(
             is ResolvedIdlEnum -> "ValueLayout.JAVA_INT"
             else -> "ValueLayout.ADDRESS"
         }
+    }
+
+    fun ResolvedIdlType.toKotlinForeignType(): String {
+        return if(isCallback() || isString() || isArray() || isDictionary())
+            "MemorySegment"
+        else toKotlinType(enumAsInt = true)
     }
 }

@@ -17,6 +17,7 @@ import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.internal.extensions.stdlib.capitalized
 import org.gradle.kotlin.dsl.the
@@ -160,71 +161,70 @@ private abstract class PrepareNativesAndroid: DefaultTask() {
 
     @get:Input abstract var buildSystem: BuildSystem
 
-    init {
-        doLast {
-            val idl = Json.decodeFromString<IdlResolver>(idl)
+    @TaskAction
+    fun action() {
+        val idl = Json.decodeFromString<IdlResolver>(idl)
 
-            val srcList = arrayListOf("api.c", "jni_bindings.c")
+        val srcList = arrayListOf("api.c", "jni_bindings.c")
 
-            // Create Kotlin/Android bindings
-            KotlinAndroidPrinter(
-                idl = idl,
-                target = File(kotlinFile),
-                classPath = moduleClasspath,
-                moduleName = moduleName,
-                useCoroutines = useCoroutines,
-                expectActual = expectActual,
-                isAndroidCriticalEnabled = useAndroidCriticalNative
-            )
+        // Create Kotlin/Android bindings
+        KotlinAndroidPrinter(
+            idl = idl,
+            target = File(kotlinFile),
+            classPath = moduleClasspath,
+            moduleName = moduleName,
+            useCoroutines = useCoroutines,
+            expectActual = expectActual,
+            isAndroidCriticalEnabled = useAndroidCriticalNative
+        )
 
-            CJniUtilsPrinter(
-                idl = idl,
-                target = File(nativesBuildDir, "jni_utils.h"),
-                classPath = moduleClasspath,
-                name = "${moduleName.capitalized()}JNI",
-                isAndroid = true
-            )
+        CJniUtilsPrinter(
+            idl = idl,
+            target = File(nativesBuildDir, "jni_utils.h"),
+            classPath = moduleClasspath,
+            name = "${moduleName.capitalized()}JNI",
+            isAndroid = true
+        )
 
-            CJniPrinter(
-                idl = idl,
-                target = File(nativesBuildDir, "jni_bindings.c"),
-                classPath = moduleClasspath,
-                name = "${moduleName.capitalized()}JNI",
-                isAndroid = true,
-                isAndroidCriticalEnabled = useAndroidCriticalNative
-            )
+        CJniPrinter(
+            idl = idl,
+            target = File(nativesBuildDir, "jni_bindings.c"),
+            classPath = moduleClasspath,
+            name = "${moduleName.capitalized()}JNI",
+            isAndroid = true,
+            isAndroidCriticalEnabled = useAndroidCriticalNative
+        )
 
-            CApiHeaderPrinter(
-                idl = idl,
-                target = File(nativesBuildDir, "api.h"),
-                isInternal = true
-            )
+        CApiHeaderPrinter(
+            idl = idl,
+            target = File(nativesBuildDir, "api.h"),
+            isInternal = true
+        )
 
-            CApiImplPrinter(
-                idl = idl,
-                target = File(nativesBuildDir, "api.c"),
-                classPath = moduleClasspath
-            )
+        CApiImplPrinter(
+            idl = idl,
+            target = File(nativesBuildDir, "api.c"),
+            classPath = moduleClasspath
+        )
 
-            when(buildSystem) {
-                is BuildSystem.CMake -> {
-                    File(nativesBuildDir, "CMakeLists.txt").writeText($$"""
-                        cmake_minimum_required(VERSION 3.15)
+        when(buildSystem) {
+            is BuildSystem.CMake -> {
+                File(nativesBuildDir, "CMakeLists.txt").writeText($$"""
+                    cmake_minimum_required(VERSION 3.15)
+            
+                    project("$$moduleName")
+            
+                    add_subdirectory("$${
+                        projectDir.replace("\\", "/")
+                    }" "$${
+                        nativesBuildDir.replace("\\", "/")
+                    }/sub/${ANDROID_ABI}")
                 
-                        project("$$moduleName")
-                
-                        add_subdirectory("$${
-                            projectDir.replace("\\", "/")
-                        }" "$${
-                            nativesBuildDir.replace("\\", "/")
-                        }/sub/${ANDROID_ABI}")
-                
-                        add_library(lib$$moduleName SHARED $<TARGET_OBJECTS:$$moduleName> $${srcList.joinToString(" ")})
-                    """.trimIndent())
-                }
-                is BuildSystem.Cargo -> {
+                    add_library(lib$$moduleName SHARED $<TARGET_OBJECTS:$$moduleName> $${srcList.joinToString(" ")})
+                """.trimIndent())
+            }
+            is BuildSystem.Cargo -> {
 
-                }
             }
         }
     }
@@ -247,39 +247,41 @@ private abstract class CompileNativesAndroid @Inject constructor(
 
     init {
         group = NATIVE_TASK_GROUP
-        doLast {
-            when(val buildSystem = buildSystem) {
-                is BuildSystem.CMake -> {
-                    val toolchain = File(ndkDir, "build/cmake/android.toolchain.cmake")
+    }
 
-                    androidTargets.forEach { abi ->
-                        val targetBuildDir = File(nativesBuildDir, abi)
+    @TaskAction
+    fun action() {
+        when(val buildSystem = buildSystem) {
+            is BuildSystem.CMake -> {
+                val toolchain = File(ndkDir, "build/cmake/android.toolchain.cmake")
 
-                        // Generate CMake build
-                        cmakeGen(execOps,
-                            dir = File(nativesBuildDir),
-                            buildDir = targetBuildDir,
-                            buildType = buildSystem.buildType,
-                            args = LinkedHashSet(buildSystem.args).apply {
-                                this += "-DCMAKE_TOOLCHAIN_FILE=\"$toolchain\""
-                                this += "-DANDROID_ABI=$abi"
-                                this += "-DANDROID_PLATFORM=android-$compileSdk"
-                            }
-                        )
+                androidTargets.forEach { abi ->
+                    val targetBuildDir = File(nativesBuildDir, abi)
 
-                        // Build
-                        cmakeBuild(execOps, targetBuildDir)
+                    // Generate CMake build
+                    cmakeGen(execOps,
+                        dir = File(nativesBuildDir),
+                        buildDir = targetBuildDir,
+                        buildType = buildSystem.buildType,
+                        args = LinkedHashSet(buildSystem.args).apply {
+                            this += "-DCMAKE_TOOLCHAIN_FILE=\"$toolchain\""
+                            this += "-DANDROID_ABI=$abi"
+                            this += "-DANDROID_PLATFORM=android-$compileSdk"
+                        }
+                    )
 
-                        // Copy library to jniLibs dir
-                        File(targetBuildDir, "liblib$moduleName.so").copyTo(
-                            File(outputFolder.get().asFile, "$abi/lib$moduleName.so"),
-                            overwrite = true
-                        )
-                    }
+                    // Build
+                    cmakeBuild(execOps, targetBuildDir)
+
+                    // Copy library to jniLibs dir
+                    File(targetBuildDir, "liblib$moduleName.so").copyTo(
+                        File(outputFolder.get().asFile, "$abi/lib$moduleName.so"),
+                        overwrite = true
+                    )
                 }
-                is BuildSystem.Cargo -> {
+            }
+            is BuildSystem.Cargo -> {
 
-                }
             }
         }
     }

@@ -10,14 +10,12 @@ import com.huskerdev.nativekt.printers.c.CApiImplPrinter
 import com.huskerdev.nativekt.printers.c.CEmscriptenPrinter
 import com.huskerdev.nativekt.printers.kotlin.KotlinJsPrinter
 import com.huskerdev.nativekt.utils.*
-import com.huskerdev.webidl.resolver.BuiltinIdlDeclaration
 import com.huskerdev.webidl.resolver.IdlResolver
-import com.huskerdev.webidl.resolver.ResolvedIdlType
-import com.huskerdev.webidl.resolver.WebIDLBuiltinKind
 import kotlinx.serialization.json.Json
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.internal.extensions.stdlib.capitalized
 import org.gradle.process.ExecOperations
@@ -137,101 +135,100 @@ private abstract class PrepareNativesJs: DefaultTask() {
 
     @get:Input abstract var buildSystem: BuildSystem
 
-    init {
-        doLast {
-            val idl = Json.decodeFromString<IdlResolver>(idl)
+    @TaskAction
+    fun action() {
+        val idl = Json.decodeFromString<IdlResolver>(idl)
 
-            // Create Kotlin/JS bindings
-            KotlinJsPrinter(
-                idl = idl,
-                target = File(kotlinFile),
-                classPath = moduleClasspath,
-                moduleName = moduleName,
-                useCoroutines = useCoroutines,
-                expectActual = expectActual
-            )
+        // Create Kotlin/JS bindings
+        KotlinJsPrinter(
+            idl = idl,
+            target = File(kotlinFile),
+            classPath = moduleClasspath,
+            moduleName = moduleName,
+            useCoroutines = useCoroutines,
+            expectActual = expectActual
+        )
 
-            when(buildSystem) {
-                is BuildSystem.CMake -> {
-                    CApiHeaderPrinter(
-                        idl = idl,
-                        target = File(nativesBuildDir, "api.h"),
-                        isInternal = true
-                    )
-                    CApiImplPrinter(
-                        idl = idl,
-                        target = File(nativesBuildDir, "api.c"),
-                        classPath = moduleClasspath
-                    )
-                    CEmscriptenPrinter(
-                        idl = idl,
-                        target = File(nativesBuildDir, "emscripten_bindings.c")
-                    )
+        when(buildSystem) {
+            is BuildSystem.CMake -> {
+                CApiHeaderPrinter(
+                    idl = idl,
+                    target = File(nativesBuildDir, "api.h"),
+                    isInternal = true
+                )
+                CApiImplPrinter(
+                    idl = idl,
+                    target = File(nativesBuildDir, "api.c"),
+                    classPath = moduleClasspath
+                )
+                CEmscriptenPrinter(
+                    idl = idl,
+                    target = File(nativesBuildDir, "emscripten_bindings.c")
+                )
 
-                    val exportedFunctions = buildList {
-                        addAll(listOf(
-                            "free",
-                            "malloc",
-                            "KString_free",
-                            "KCharArray_free",
-                            "KBooleanArray_free",
-                            "KByteArray_free",
-                            "KShortArray_free",
-                            "KIntArray_free",
-                            "KLongArray_free",
-                            "KFloatArray_free",
-                            "KDoubleArray_free",
-                            "KArray_free"
-                        ))
-                        idl.dictionaries.values.mapTo(this) { "${it.name}_free" }
-                        idl.globalOperators().mapTo(this) { it.name }
-                    }.joinToString(separator = ",") { "_$it" }
+                val exportedFunctions = buildList {
+                    addAll(listOf(
+                        "free",
+                        "malloc",
+                        "KString_free",
+                        "KCharArray_free",
+                        "KBooleanArray_free",
+                        "KByteArray_free",
+                        "KShortArray_free",
+                        "KIntArray_free",
+                        "KLongArray_free",
+                        "KFloatArray_free",
+                        "KDoubleArray_free",
+                        "KArray_free"
+                    ))
+                    idl.dictionaries.values.mapTo(this) { "${it.name}_free" }
+                    idl.globalOperators().mapTo(this) { it.name }
+                }.joinToString(separator = ",") { "_$it" }
 
-                    val runtimeFunctions = listOf(
-                        "UTF8ToString", "stringToUTF8", "lengthBytesUTF8",
-                        "HEAP8", "HEAP16", "HEAP32", "HEAPF32", "HEAPF64",
-                        "addFunction", "wasmTable"
-                    ).joinToString(separator = ",")
+                val runtimeFunctions = listOf(
+                    "UTF8ToString", "stringToUTF8", "lengthBytesUTF8",
+                    "HEAP8", "HEAP16", "HEAP32", "HEAPF32", "HEAPF64",
+                    "addFunction", "wasmTable"
+                ).joinToString(separator = ",")
 
-                    // ASSERTIONS=2 -s SAFE_HEAP=1 -s STACK_OVERFLOW_CHECK=1
-                    val args = listOf(
-                        "--no-entry",
+                // ASSERTIONS=2 -s SAFE_HEAP=1 -s STACK_OVERFLOW_CHECK=1
+                val args = listOf(
+                    "--no-entry",
 
-                        "SAFE_HEAP=1",
-                        "ASSERTIONS=2",
-                        "STACK_OVERFLOW_CHECK=1",
+                    "SAFE_HEAP=1",
+                    "ASSERTIONS=2",
+                    "STACK_OVERFLOW_CHECK=1",
 
-                        "ALLOW_MEMORY_GROWTH=1",
-                        "ALLOW_TABLE_GROWTH=1",
-                        "MODULARIZE=1",
-                        "EXPORT_ES6=1",
-                        "WASM_BIGINT=${if (useJsBigInt) "1" else "0"}",
-                        "EXPORTED_RUNTIME_METHODS=$runtimeFunctions",
-                        "EXPORTED_FUNCTIONS=$exportedFunctions",
-                    ).joinToString(separator = " ") { "-s $it" }
+                    "ALLOW_MEMORY_GROWTH=1",
+                    "ALLOW_TABLE_GROWTH=1",
+                    "MODULARIZE=1",
+                    "EXPORT_ES6=1",
+                    "WASM_BIGINT=${if (useJsBigInt) "1" else "0"}",
+                    "EXPORTED_RUNTIME_METHODS=$runtimeFunctions",
+                    "EXPORTED_FUNCTIONS=$exportedFunctions",
+                ).joinToString(separator = " ") { "-s $it" }
 
-                    // Create CMakeLists.txt with Emscripten linker flags
-                    File(nativesBuildDir, "CMakeLists.txt").writeText($$"""
-                        cmake_minimum_required(VERSION 3.15)
+                // Create CMakeLists.txt with Emscripten linker flags
+                File(nativesBuildDir, "CMakeLists.txt").writeText($$"""
+                    cmake_minimum_required(VERSION 3.15)
+            
+                    project("$$moduleName")
+                    
+                    set(EXTRA_LINK_FLAGS "" CACHE STRING "Extra linker flags")
+            
+                    add_subdirectory("$${
+                        projectDir.replace("\\", "/")
+                    }" "$${
+                        File(nativesBuildDir, "sub").absolutePath.replace("\\", "/")
+                    }")
                 
-                        project("$$moduleName")
-                        
-                        set(EXTRA_LINK_FLAGS "" CACHE STRING "Extra linker flags")
-                
-                        add_subdirectory("$${
-                                projectDir.replace("\\", "/")
-                            }" "$${
-                                File(nativesBuildDir, "sub").absolutePath.replace("\\", "/")
-                            }")
-                
-                        add_executable(lib$$moduleName $<TARGET_OBJECTS:$$moduleName> emscripten_bindings.c api.c)
-                        
-                        set_target_properties(lib$$moduleName PROPERTIES LINK_FLAGS "${EXTRA_LINK_FLAGS} $$args")
-                    """.trimIndent())
-                }
-                is BuildSystem.Cargo -> {
+                    add_executable(lib$$moduleName $<TARGET_OBJECTS:$$moduleName> emscripten_bindings.c api.c)
+                    
+                    set_target_properties(lib$$moduleName PROPERTIES LINK_FLAGS "${EXTRA_LINK_FLAGS} $$args")
+                """.trimIndent())
+            }
+            is BuildSystem.Cargo -> {
 
-                }
             }
         }
     }
@@ -249,19 +246,42 @@ private abstract class CompileNativesJs @Inject constructor(
 
     init {
         group = NATIVE_TASK_GROUP
-        doLast {
-            val emsdk = System.getenv()["EMSDK"]
-                ?: throw UnsupportedOperationException("Environment variable 'EMSDK' is not specified")
+    }
 
-            // val cmakeBuildDir = File(cmakeBuildDir)
-            val resourcesDir = File(resourcesDir)
+    @TaskAction
+    fun action() {
+        val emsdk = System.getenv()["EMSDK"]
+            ?: throw UnsupportedOperationException("Environment variable 'EMSDK' is not specified")
 
-            when(val buildSystem = buildSystem) {
-                is BuildSystem.CMake -> {
-                    // Generate CMake build
-                    val toolchain = File(emsdk, "upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake")
-                    val buildDir = File(nativesBuildDir, "build")
+        // val cmakeBuildDir = File(cmakeBuildDir)
+        val resourcesDir = File(resourcesDir)
 
+        when(val buildSystem = buildSystem) {
+            is BuildSystem.CMake -> {
+                // Generate CMake build
+                val toolchain = File(emsdk, "upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake")
+                val buildDir = File(nativesBuildDir, "build")
+
+                cmakeGen(
+                    execOps,
+                    dir = File(nativesBuildDir),
+                    buildDir = buildDir,
+                    buildType = buildSystem.buildType,
+                    args = LinkedHashSet(buildSystem.args).apply {
+                        this += "-DCMAKE_TOOLCHAIN_FILE=\"$toolchain\""
+                    }
+                )
+
+                // Reload with extra flags
+                val extraFlags = File(nativesBuildDir, "sub/CMakeFiles/${moduleName}.dir/flags.make")
+                    .readLines()
+                    .firstOrNull { it.startsWith("C_FLAGS =") }
+                    ?.replace("C_FLAGS =", "")
+                    ?.replace("-O3", "")
+                    ?.replace("-DNDEBUG", "")
+                    ?.trim()
+                    ?: ""
+                if(extraFlags.isNotEmpty()) {
                     cmakeGen(
                         execOps,
                         dir = File(nativesBuildDir),
@@ -269,72 +289,27 @@ private abstract class CompileNativesJs @Inject constructor(
                         buildType = buildSystem.buildType,
                         args = LinkedHashSet(buildSystem.args).apply {
                             this += "-DCMAKE_TOOLCHAIN_FILE=\"$toolchain\""
+                            this += "-DEXTRA_LINK_FLAGS=\"${extraFlags}\""
                         }
                     )
-
-                    // Reload with extra flags
-                    val extraFlags = File(nativesBuildDir, "sub/CMakeFiles/${moduleName}.dir/flags.make")
-                        .readLines()
-                        .firstOrNull { it.startsWith("C_FLAGS =") }
-                        ?.replace("C_FLAGS =", "")
-                        ?.replace("-O3", "")
-                        ?.replace("-DNDEBUG", "")
-                        ?.trim()
-                        ?: ""
-                    if(extraFlags.isNotEmpty()) {
-                        cmakeGen(
-                            execOps,
-                            dir = File(nativesBuildDir),
-                            buildDir = buildDir,
-                            buildType = buildSystem.buildType,
-                            args = LinkedHashSet(buildSystem.args).apply {
-                                this += "-DCMAKE_TOOLCHAIN_FILE=\"$toolchain\""
-                                this += "-DEXTRA_LINK_FLAGS=\"${extraFlags}\""
-                            }
-                        )
-                    }
-
-                    // Build
-                    cmakeBuild(execOps, buildDir)
-
-                    // Copy .js file
-                    buildDir.listFiles()!!.first {
-                        it.name == "lib$moduleName.js"
-                    }.copyTo(File(resourcesDir, "lib$moduleName.js"), overwrite = true)
-
-                    // Cope .wasm file
-                    buildDir.listFiles()!!.first {
-                        it.name == "lib$moduleName.wasm"
-                    }.copyTo(File(resourcesDir, "lib$moduleName.wasm"), overwrite = true)
                 }
-                is BuildSystem.Cargo -> {
 
-                }
+                // Build
+                cmakeBuild(execOps, buildDir)
+
+                // Copy .js file
+                buildDir.listFiles()!!.first {
+                    it.name == "lib$moduleName.js"
+                }.copyTo(File(resourcesDir, "lib$moduleName.js"), overwrite = true)
+
+                // Cope .wasm file
+                buildDir.listFiles()!!.first {
+                    it.name == "lib$moduleName.wasm"
+                }.copyTo(File(resourcesDir, "lib$moduleName.wasm"), overwrite = true)
+            }
+            is BuildSystem.Cargo -> {
+
             }
         }
     }
-}
-
-internal fun ResolvedIdlType.isLongType(): Boolean {
-    return isLong() || (
-            // is Long array
-            this is ResolvedIdlType.Default &&
-            declaration is BuiltinIdlDeclaration &&
-            (declaration as BuiltinIdlDeclaration).kind == WebIDLBuiltinKind.LIST &&
-            firstParam { type, _ -> type.isLong() }
-    )
-}
-
-internal fun IdlResolver.isUsingLong(): Boolean {
-    // operators
-    if(globalOperators().any { op ->
-        op.type.isLongType() || op.args.any { it.type.isLongType() }
-    }) return true
-
-    // callbacks
-    if(callbacks.values.any { cb ->
-        cb.type.isLongType() || cb.args.any { it.type.isLongType() }
-    }) return true
-
-    return false
 }

@@ -367,8 +367,8 @@ internal fun cloneFuncFor(
 ) = when {
     type.isString() -> "KString_clone($content)"
     type.isArray() -> {
-        (type as ResolvedIdlType.Default).firstParam { _, declaration ->
-            when (declaration) {
+        (type as ResolvedIdlType.Default).arrayType { type ->
+            when (val declaration = type.declaration) {
                 is BuiltinIdlDeclaration -> {
                     val name = declaration.kind.simpleName()
                     "K${name}Array_clone($content)"
@@ -389,8 +389,8 @@ internal fun freeFuncFor(
     content: String
 ) = when {
     type.isString() -> "KString_free($content)"
-    type.isArray() -> (type as ResolvedIdlType.Default).firstParam { _, declaration ->
-        when (declaration) {
+    type.isArray() -> (type as ResolvedIdlType.Default).arrayType { type ->
+        when (val declaration = type.declaration) {
             is BuiltinIdlDeclaration -> "K${declaration.kind.simpleName()}Array_free($content)"
             is ResolvedIdlEnum -> "KIntArray_free($content)"
             is ResolvedIdlDictionary -> "KArray_free($content, (void*) ${declaration.name}_free)"
@@ -407,8 +407,8 @@ internal fun forceFreeFuncFor(
     content: String
 ) = when {
     type.isString() -> "_KString_forceFree($content)"
-    type.isArray() -> (type as ResolvedIdlType.Default).firstParam { _, declaration ->
-        when (declaration) {
+    type.isArray() -> (type as ResolvedIdlType.Default).arrayType { type ->
+        when (val declaration = type.declaration) {
             is BuiltinIdlDeclaration -> "_K${declaration.kind.simpleName()}Array_forceFree($content)"
             is ResolvedIdlEnum -> "_KIntArray_forceFree($content)"
             is ResolvedIdlDictionary -> "_KArray_forceFree($content, (void*) _${declaration.name}_forceFree)"

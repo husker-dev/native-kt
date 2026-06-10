@@ -1,7 +1,7 @@
 package com.huskerdev.nativekt.printers.c
 
 import com.huskerdev.nativekt.utils.*
-import com.huskerdev.nativekt.utils.firstParam
+import com.huskerdev.nativekt.utils.arrayType
 import com.huskerdev.webidl.resolver.*
 import java.io.File
 
@@ -150,8 +150,8 @@ class CJniPrinter(
         function.args.forEach { arg ->
             when {
                 arg.type.isString() -> "JNI_releaseStringOnStack(env, __native_${arg.name})"
-                arg.type.isArray() -> (arg.type as ResolvedIdlType.Default).firstParam { _, declaration ->
-                    when (declaration) {
+                arg.type.isArray() -> (arg.type as ResolvedIdlType.Default).arrayType { type ->
+                    when (val declaration = type.declaration) {
                         is BuiltinIdlDeclaration -> "JNI_release${declaration.kind.simpleName()}ArrayOnStack(env, __native_${arg.name})"
                         is ResolvedIdlEnum -> "free((void*)__native_${arg.name}->elements)"
                         is ResolvedIdlDictionary -> forceFreeFuncFor(arg.type, "__native_${arg.name}")
@@ -192,8 +192,8 @@ internal fun castJniToJava(type: ResolvedIdlType, content: String): String {
             is BuiltinIdlDeclaration -> when(decl.kind) {
                 WebIDLBuiltinKind.STRING ->
                     "JNI_toKotlinString(env, $content)"
-                WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
-                    when (declaration) {
+                WebIDLBuiltinKind.LIST -> type.arrayType { type ->
+                    when (val declaration = type.declaration) {
                         is BuiltinIdlDeclaration ->
                             "JNI_toKotlin${declaration.kind.simpleName()}Array(env, $content)"
                         is ResolvedIdlEnum -> "JNI_toKotlinEnumArray(env, $content, enum${declaration.name}Class, enum${declaration.name}Values)"
@@ -223,8 +223,8 @@ internal fun castJavaToJNI(
             WebIDLBuiltinKind.STRING ->
                 if(onStack) "JNI_toNativeStringOnStack(env, $content, alloca(JNI_StringStackSize))"
                 else "JNI_toNativeString(env, $content, /* flags */ $flags)"
-            WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
-                when (declaration) {
+            WebIDLBuiltinKind.LIST -> type.arrayType { type ->
+                when (val declaration = type.declaration) {
                     is BuiltinIdlDeclaration -> {
                         val name = declaration.kind.simpleName()
                         if(onStack) "JNI_toNative${name}ArrayOnStack(env, $content, alloca(JNI_ArrayStackSize))"

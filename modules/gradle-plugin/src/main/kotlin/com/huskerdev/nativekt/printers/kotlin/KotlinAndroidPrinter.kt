@@ -50,7 +50,7 @@ class KotlinAndroidPrinter(
                 get() = _isLib${moduleName.capitalized()}Loaded
             
             @Throws(UnsupportedOperationException::class)
-            ${actual}fun ${syncFunctionName(moduleName)}() {
+            ${actual}fun ${syncLoadFunctionName(moduleName)}() {
                 if(_isLib${moduleName.capitalized()}Loaded) return
                 _isLib${moduleName.capitalized()}Loaded = true
     
@@ -58,8 +58,8 @@ class KotlinAndroidPrinter(
                 TestJNI.JNILoad(supportsCritical)
             }
             
-            ${actual}fun ${asyncFunctionName(moduleName)}(onReady: () -> Unit) {
-                ${syncFunctionName(moduleName)}()
+            ${actual}fun ${asyncLoadFunctionName(moduleName)}(onReady: () -> Unit) {
+                ${syncLoadFunctionName(moduleName)}()
                 onReady()
             }
             
@@ -68,8 +68,8 @@ class KotlinAndroidPrinter(
         if(useCoroutines) {
             builder.append("""
                 
-                ${actual}suspend fun ${asyncFunctionName(moduleName)}() =
-                    ${syncFunctionName(moduleName)}()
+                ${actual}suspend fun ${asyncLoadFunctionName(moduleName)}() =
+                    ${syncLoadFunctionName(moduleName)}()
                 
             """.trimIndent())
         }

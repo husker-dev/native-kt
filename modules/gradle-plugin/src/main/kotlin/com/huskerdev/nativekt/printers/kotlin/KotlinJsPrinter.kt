@@ -57,10 +57,10 @@ class KotlinJsPrinter(
             ${actual}val isLib${moduleName.capitalized()}Loaded: Boolean
                 get() = isLib${moduleName.capitalized()}Loaded_
             
-            ${actual}fun ${syncFunctionName(moduleName)}(): Unit = 
+            ${actual}fun ${syncLoadFunctionName(moduleName)}(): Unit = 
                 throw UnsupportedOperationException("Synchronous library loading is not supported in JS")
                 
-            ${actual}fun ${asyncFunctionName(moduleName)}(onReady: () -> Unit) {
+            ${actual}fun ${asyncLoadFunctionName(moduleName)}(onReady: () -> Unit) {
                 if(isLib${moduleName.capitalized()}Loaded) 
                     return
                 
@@ -78,11 +78,11 @@ class KotlinJsPrinter(
         if(useCoroutines) {
             builder.append("""
                 
-                ${actual}suspend fun ${asyncFunctionName(moduleName)}() {
+                ${actual}suspend fun ${asyncLoadFunctionName(moduleName)}() {
                     if(isLib${moduleName.capitalized()}Loaded)
                         return
                     suspendCancellableCoroutine { continuation ->
-                        ${asyncFunctionName(moduleName)} {
+                        ${asyncLoadFunctionName(moduleName)} {
                             continuation.resume(Unit)
                         }
                     }
@@ -216,14 +216,13 @@ class KotlinJsPrinter(
             if (fields.any { it.type.isDouble() })
                 append("\n\tval HEAPF64 = _module.HEAPF64")
             if (fields.any {
-                it.type.isInt() || it.type.isDictionary() || it.type.isString() ||
-                        it.type.isString() || it.type.isDictionary() || it.type.isEnum() }
-            ) append("\n\tval HEAP32 = _module.HEAP32")
+                it.type.isInt() || it.type.isDictionary() || it.type.isString() || it.type.isString() || it.type.isDictionary() || it.type.isEnum()
+            }) append("\n\tval HEAP32 = _module.HEAP32")
             if (fields.any { it.type.isFloat() })
                 append("\n\tval HEAPF32 = _module.HEAPF32")
-            if (fields.any { it.type.getAlignment() == 2 })
+            if (fields.any { it.type.isChar() || it.type.isShort() })
                 append("\n\tval HEAP16 = _module.HEAP16")
-            if (toNative || fields.any { it.type.getAlignment() == 1 })
+            if (toNative || fields.any { it.type.isByte() || it.type.isBoolean() })
                 append("\n\tval HEAP8 = _module.HEAP8")
         }
 
@@ -397,8 +396,8 @@ class KotlinJsPrinter(
         content: String
     ) = when {
         type.isString() -> "_module._KString_free($content)"
-        type.isArray() -> (type as ResolvedIdlType.Default).firstParam { _, declaration ->
-            when (declaration) {
+        type.isArray() -> (type as ResolvedIdlType.Default).arrayType { type ->
+            when (val declaration = type.declaration) {
                 is BuiltinIdlDeclaration -> "_module._K${declaration.kind.simpleName()}Array_free($content)"
                 is ResolvedIdlEnum -> "_module._KIntArray_free($content)"
                 is ResolvedIdlDictionary -> "_module._KArray_free($content, _module._${declaration.name}_freeAddr())"
@@ -421,8 +420,8 @@ class KotlinJsPrinter(
                 WebIDLBuiltinKind.STRING ->
                     if(useArena) "toNativeStringOnArena($content)"
                     else "toNativeString(_module, $content)"
-                WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
-                    when (declaration) {
+                WebIDLBuiltinKind.LIST -> type.arrayType { type ->
+                    when (val declaration = type.declaration) {
                         is BuiltinIdlDeclaration ->
                             if (useArena) "toNative${declaration.kind.simpleName()}ArrayOnArena($content)"
                             else "toNative${declaration.kind.simpleName()}Array(_module, $content)"
@@ -459,8 +458,8 @@ class KotlinJsPrinter(
                 WebIDLBuiltinKind.SHORT -> "$content.toShort()"
                 WebIDLBuiltinKind.FLOAT -> "$content.truncF32()"
                 WebIDLBuiltinKind.STRING -> "toKotlinString(_module, $content)"
-                WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
-                    when (declaration) {
+                WebIDLBuiltinKind.LIST -> type.arrayType { type ->
+                    when (val declaration = type.declaration) {
                         is BuiltinIdlDeclaration -> "toKotlin${declaration.kind.simpleName()}Array(_module, $content)"
                         is ResolvedIdlEnum -> "toKotlinEnumArray<${declaration.name}>(_module, $content)"
                         is ResolvedIdlDictionary -> "toKotlinArray(_module, $content, ::toKotlin${declaration.name})"

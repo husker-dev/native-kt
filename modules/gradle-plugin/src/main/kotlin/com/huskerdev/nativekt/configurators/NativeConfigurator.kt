@@ -21,6 +21,7 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.internal.extensions.stdlib.capitalized
 import org.gradle.kotlin.dsl.the
@@ -348,96 +349,93 @@ private abstract class PrepareNativesKn @Inject constructor(
 
     @get:Input abstract var buildSystem: BuildSystem
 
-    init {
-        doLast {
-            val idl = Json.decodeFromString<IdlResolver>(idl)
+    @TaskAction
+    fun action() {
+        val idl = Json.decodeFromString<IdlResolver>(idl)
 
-            val headerFile = File(headerFile)
-            headerFile.parentFile.mkdirs()
+        val headerFile = File(headerFile)
+        headerFile.parentFile.mkdirs()
 
-            val linkerOpts = arrayListOf<String>()
+        val linkerOpts = arrayListOf<String>()
 
-            // Generate header
-            CApiHeaderPrinter(
-                idl = idl,
-                target = headerFile,
-                guardName = moduleName.uppercase(),
-            )
+        // Generate header
+        CApiHeaderPrinter(
+            idl = idl,
+            target = headerFile,
+            guardName = moduleName.uppercase(),
+        )
 
-            when(val buildSystem = buildSystem) {
-                is BuildSystem.CMake -> {
-                    val buildDir = File(nativesBuildDir, "build")
+        when(val buildSystem = buildSystem) {
+            is BuildSystem.CMake -> {
+                val buildDir = File(nativesBuildDir, "build")
 
-                    CApiHeaderPrinter(
-                        idl = idl,
-                        target = File(buildDir, "api.h"),
-                        isInternal = true
-                    )
+                CApiHeaderPrinter(
+                    idl = idl,
+                    target = File(buildDir, "api.h"),
+                    isInternal = true
+                )
 
-                    CApiImplPrinter(
-                        idl = idl,
-                        target = File(buildDir, "api.c"),
-                        classPath = moduleClasspath
-                    )
+                CApiImplPrinter(
+                    idl = idl,
+                    target = File(buildDir, "api.c"),
+                    classPath = moduleClasspath
+                )
 
-                    // Create CMake file
-                    File(nativesBuildDir, "CMakeLists.txt").writeText($$"""
-                        cmake_minimum_required(VERSION 3.15)
-                
-                        project("$$moduleName")
-                
-                        add_subdirectory("$$projectDir" "$${
-                            File(buildDir, "common").absolutePath.replace("\\", "/")
-                        }")
+                // Create CMake file
+                File(nativesBuildDir, "CMakeLists.txt").writeText($$"""
+                    cmake_minimum_required(VERSION 3.15)
+            
+                    project("$$moduleName")
+            
+                    add_subdirectory("$$projectDir" "$${
+                        File(buildDir, "common").absolutePath.replace("\\", "/")
+                    }")
                         
-                        add_library(lib_$$moduleName SHARED api.c)
-                        target_link_libraries(lib_$$moduleName PUBLIC $$moduleName)
-                        
-                        add_library(libstatic_$$moduleName STATIC api.c)
-                        target_link_libraries(libstatic_$$moduleName PUBLIC $$moduleName)
-                    """.trimIndent())
+                    add_library(lib_$$moduleName SHARED api.c)
+                    target_link_libraries(lib_$$moduleName PUBLIC $$moduleName)
+                    
+                    add_library(libstatic_$$moduleName STATIC api.c)
+                    target_link_libraries(libstatic_$$moduleName PUBLIC $$moduleName)
+                """.trimIndent())
 
-                    //File(nativesBuildDir, "stub.c").writeText("")
-
-                    // Configure CMake (if needed)
-                    if(shouldInit) {
-                        configureCMake(
-                            execOps, targetType,
-                            cmakeArgs = LinkedHashSet(buildSystem.args),
-                            cmakeDir = File(nativesBuildDir),
-                            cmakeBuildDir = buildDir,
-                            cmakeBuildType = buildSystem.buildType
-                        )
-                    }
-
-                    // Get linker opts
-                    linkerOpts += if(shouldInit)
-                        extractLinkerOpts(buildDir, moduleName)
-                    else emptyList()
+                // Configure CMake (if needed)
+                if(shouldInit) {
+                    configureCMake(
+                        execOps, targetType,
+                        cmakeArgs = LinkedHashSet(buildSystem.args),
+                        cmakeDir = File(nativesBuildDir),
+                        cmakeBuildDir = buildDir,
+                        cmakeBuildType = buildSystem.buildType
+                    )
                 }
-                is BuildSystem.Cargo -> {
 
-                }
+                // Get linker opts
+                linkerOpts += if(shouldInit)
+                    extractLinkerOpts(buildDir, moduleName)
+                else emptyList()
             }
+            is BuildSystem.Cargo -> {
 
-            // Create .def file
-            DefPrinter(
-                target = defFile.get().asFile,
-                headerFile = headerFile,
-                classPath = moduleClasspath,
-                linkerOpts = linkerOpts
-            )
-
-            // Generate Kotlin files
-            KotlinNativePrinter(
-                idl = idl,
-                target = File(kotlinFile),
-                classPath = moduleClasspath,
-                moduleName = moduleName,
-                useCoroutines = useCoroutines,
-                expectActual = expectActual
-            )
+            }
         }
+
+        // Create .def file
+        DefPrinter(
+            target = defFile.get().asFile,
+            headerFile = headerFile,
+            classPath = moduleClasspath,
+            linkerOpts = linkerOpts
+        )
+
+        // Generate Kotlin files
+        KotlinNativePrinter(
+            idl = idl,
+            target = File(kotlinFile),
+            classPath = moduleClasspath,
+            moduleName = moduleName,
+            useCoroutines = useCoroutines,
+            expectActual = expectActual
+        )
     }
 }
 
@@ -449,14 +447,16 @@ private abstract class CompileNativesKn @Inject constructor(
 
     init {
         group = NATIVE_TASK_GROUP
-        doLast {
-            when(buildSystem) {
-                is BuildSystem.CMake -> {
-                    cmakeBuild(execOps, File(nativesBuildDir, "build"))
-                }
-                is BuildSystem.Cargo -> {
+    }
 
-                }
+    @TaskAction
+    fun action() {
+        when(buildSystem) {
+            is BuildSystem.CMake -> {
+                cmakeBuild(execOps, File(nativesBuildDir, "build"))
+            }
+            is BuildSystem.Cargo -> {
+
             }
         }
     }

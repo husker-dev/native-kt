@@ -17,6 +17,7 @@ import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.internal.extensions.stdlib.capitalized
 import org.gradle.jvm.tasks.Jar
@@ -190,129 +191,128 @@ private abstract class PrepareNativesJvm: DefaultTask() {
 
     @get:Input abstract var buildSystem: BuildSystem
 
-    init {
-        doLast {
-            File(libsDir).fresh()
+    @TaskAction
+    fun action() {
+        File(libsDir).fresh()
 
-            val idl = Json.decodeFromString<IdlResolver>(idl)
+        val idl = Json.decodeFromString<IdlResolver>(idl)
 
-            val nativesBuildDir = File(nativesBuildDir)
-            nativesBuildDir.fresh()
+        val nativesBuildDir = File(nativesBuildDir)
+        nativesBuildDir.fresh()
 
-            val srcList = arrayListOf("api.c")
-            val includeList = arrayListOf<String>()
+        val srcList = arrayListOf("api.c")
+        val includeList = arrayListOf<String>()
 
-            // Generate all files
+        // Generate all files
 
-            KotlinJvmPrinter(
+        KotlinJvmPrinter(
+            idl = idl,
+            target = File(kotlinFile),
+            classPath = moduleClasspath,
+            moduleName = moduleName,
+            useCoroutines = useCoroutines,
+            expectActual = expectActual,
+            useJNI = useJNI,
+            useForeignApi = useForeignApi,
+            useJVMCI = useJVMCI,
+            useUniversalMacOSLib = useUniversalMacOSLib
+        )
+
+        if(useJNI) {
+            srcList += "jni_bindings.c"
+            includeList += listOf("include", "include/${jdkPlatformName()}")
+
+            CJniUtilsPrinter(
                 idl = idl,
-                target = File(kotlinFile),
+                target = File(nativesBuildDir, "jni_utils.h"),
                 classPath = moduleClasspath,
-                moduleName = moduleName,
-                useCoroutines = useCoroutines,
-                expectActual = expectActual,
-                useJNI = useJNI,
-                useForeignApi = useForeignApi,
-                useJVMCI = useJVMCI,
-                useUniversalMacOSLib = useUniversalMacOSLib
+                name = "${moduleName.capitalized()}JNI",
+                isAndroid = false
             )
 
-            if(useJNI) {
-                srcList += "jni_bindings.c"
-                includeList += listOf("include", "include/${jdkPlatformName()}")
+            CJniPrinter(
+                idl = idl,
+                target = File(nativesBuildDir, "jni_bindings.c"),
+                classPath = moduleClasspath,
+                name = "${moduleName.capitalized()}JNI",
+                isAndroid = false,
+                isAndroidCriticalEnabled = false
+            )
 
-                CJniUtilsPrinter(
-                    idl = idl,
-                    target = File(nativesBuildDir, "jni_utils.h"),
-                    classPath = moduleClasspath,
-                    name = "${moduleName.capitalized()}JNI",
-                    isAndroid = false
-                )
-
-                CJniPrinter(
-                    idl = idl,
-                    target = File(nativesBuildDir, "jni_bindings.c"),
-                    classPath = moduleClasspath,
-                    name = "${moduleName.capitalized()}JNI",
-                    isAndroid = false,
-                    isAndroidCriticalEnabled = false
-                )
-
-                // unpack jni headers
-                val includeDir = File(nativesBuildDir, "include")
-                if(!includeDir.exists()) {
-                    arrayOf(
-                        "darwin/jawt_md.h",
-                        "darwin/jni_md.h",
-                        "linux/jawt_md.h",
-                        "linux/jni_md.h",
-                        "win32/jawt_md.h",
-                        "win32/jni_md.h",
-                        "win32/bridge/AccessBridgeCallbacks.h",
-                        "win32/bridge/AccessBridgeCalls.h",
-                        "win32/bridge/AccessBridgePackages.h",
-                        "classfile_constants.h",
-                        "jawt.h",
-                        "jdwpTransport.h",
-                        "jni.h",
-                        "jvmti.h",
-                        "jvmticmlr.h",
-                    ).forEach { path ->
-                        this::class.java.getResourceAsStream("/com/huskerdev/nativekt/include/${path}").use { ins ->
-                            if(ins == null)
-                                throw NullPointerException("Can not find header: $path")
-                            val file = File(includeDir, path)
-                            file.parentFile.mkdirs()
-                            file.outputStream().use { ins.copyTo(it) }
-                        }
+            // unpack jni headers
+            val includeDir = File(nativesBuildDir, "include")
+            if(!includeDir.exists()) {
+                arrayOf(
+                    "darwin/jawt_md.h",
+                    "darwin/jni_md.h",
+                    "linux/jawt_md.h",
+                    "linux/jni_md.h",
+                    "win32/jawt_md.h",
+                    "win32/jni_md.h",
+                    "win32/bridge/AccessBridgeCallbacks.h",
+                    "win32/bridge/AccessBridgeCalls.h",
+                    "win32/bridge/AccessBridgePackages.h",
+                    "classfile_constants.h",
+                    "jawt.h",
+                    "jdwpTransport.h",
+                    "jni.h",
+                    "jvmti.h",
+                    "jvmticmlr.h",
+                ).forEach { path ->
+                    this::class.java.getResourceAsStream("/com/huskerdev/nativekt/include/${path}").use { ins ->
+                        if(ins == null)
+                            throw NullPointerException("Can not find header: $path")
+                        val file = File(includeDir, path)
+                        file.parentFile.mkdirs()
+                        file.outputStream().use { ins.copyTo(it) }
                     }
                 }
             }
+        }
 
-            if(useForeignApi || useJVMCI) {
-                srcList += "externals.c"
+        if(useForeignApi || useJVMCI) {
+            srcList += "externals.c"
 
-                CExportedPrinter(
-                    idl = idl,
-                    target = File(nativesBuildDir, "externals.c"),
-                    classPath = moduleClasspath
-                )
-            }
-
-            CApiHeaderPrinter(
+            CExportedPrinter(
                 idl = idl,
-                target = File(nativesBuildDir, "api.h"),
-                isInternal = true
-            )
-
-            CApiImplPrinter(
-                idl = idl,
-                target = File(nativesBuildDir, "api.c"),
+                target = File(nativesBuildDir, "externals.c"),
                 classPath = moduleClasspath
             )
+        }
 
-            when(buildSystem) {
-                is BuildSystem.CMake -> {
-                    val platformBuildDir = File(nativesBuildDir, "${platformName()}${libArch.capitalized()}")
+        CApiHeaderPrinter(
+            idl = idl,
+            target = File(nativesBuildDir, "api.h"),
+            isInternal = true
+        )
 
-                    File(nativesBuildDir, "CMakeLists.txt").writeText($$"""
-                        cmake_minimum_required(VERSION 3.15)
-                
-                        project("$$moduleName")
-                
-                        add_subdirectory("$${projectDir.replace("\\", "/")}" 
-                            "$${File(platformBuildDir, "sub").absolutePath.replace("\\", "/")}")
-                
-                        add_library(lib_$$moduleName SHARED $${srcList.joinToString(" ")})
-                        
-                        target_link_libraries(lib_$$moduleName PRIVATE $$moduleName)
-                        
-                        target_include_directories(lib_$$moduleName PRIVATE $${includeList.joinToString(" ") { "\"$it\"" }})
-                    """.trimIndent())
-                }
-                is BuildSystem.Cargo -> {
+        CApiImplPrinter(
+            idl = idl,
+            target = File(nativesBuildDir, "api.c"),
+            classPath = moduleClasspath
+        )
 
-                }
+        when(buildSystem) {
+            is BuildSystem.CMake -> {
+                val platformBuildDir = File(nativesBuildDir, "${platformName()}${libArch.capitalized()}")
+
+                File(nativesBuildDir, "CMakeLists.txt").writeText($$"""
+                    cmake_minimum_required(VERSION 3.15)
+            
+                    project("$$moduleName")
+            
+                    add_subdirectory("$${projectDir.replace("\\", "/")}" 
+                        "$${File(platformBuildDir, "sub").absolutePath.replace("\\", "/")}")
+            
+                    add_library(lib_$$moduleName SHARED $${srcList.joinToString(" ")})
+                    
+                    target_link_libraries(lib_$$moduleName PRIVATE $$moduleName)
+                    
+                    target_include_directories(lib_$$moduleName PRIVATE $${includeList.joinToString(" ") { "\"$it\"" }})
+                """.trimIndent())
+            }
+            is BuildSystem.Cargo -> {
+
             }
         }
     }
@@ -333,40 +333,42 @@ private abstract class CompileNativesJvm @Inject constructor(
 
     init {
         group = NATIVE_TASK_GROUP
-        doLast {
-            when(val buildSystem = buildSystem) {
-                is BuildSystem.CMake -> {
-                    val platformBuildDir = File(nativesBuildDir, "${platformName()}${libArch.capitalized()}")
+    }
 
-                    // Generate CMake build
-                    val args = LinkedHashSet(buildSystem.args)
+    @TaskAction
+    fun action() {
+        when(val buildSystem = buildSystem) {
+            is BuildSystem.CMake -> {
+                val platformBuildDir = File(nativesBuildDir, "${platformName()}${libArch.capitalized()}")
+
+                // Generate CMake build
+                val args = LinkedHashSet(buildSystem.args)
+                args += setOf(
+                    "-DCMAKE_C_COMPILER=clang",
+                    "-DCMAKE_CXX_COMPILER=clang++"
+                )
+                if (Os.isFamily(Os.FAMILY_MAC) && useUniversalMacOSLib) {
                     args += setOf(
-                        "-DCMAKE_C_COMPILER=clang",
-                        "-DCMAKE_CXX_COMPILER=clang++"
+                        "-DCMAKE_C_FLAGS=\"-arch x86_64 -arch arm64\"",
+                        "-DCMAKE_CXX_FLAGS=\"-arch x86_64 -arch arm64\""
                     )
-                    if (Os.isFamily(Os.FAMILY_MAC) && useUniversalMacOSLib) {
-                        args += setOf(
-                            "-DCMAKE_C_FLAGS=\"-arch x86_64 -arch arm64\"",
-                            "-DCMAKE_CXX_FLAGS=\"-arch x86_64 -arch arm64\""
-                        )
-                    }
-                    cmakeGen(execOps,
-                        dir = File(nativesBuildDir),
-                        buildDir = platformBuildDir,
-                        buildType = buildSystem.buildType,
-                        args = args
-                    )
-
-                    // Build
-                    cmakeBuild(execOps, platformBuildDir)
-
-                    platformBuildDir.listFiles()!!.first {
-                        it.name == libOutFileName
-                    }.copyTo(File(targetLibFile), overwrite = true)
                 }
-                is BuildSystem.Cargo -> {
+                cmakeGen(execOps,
+                    dir = File(nativesBuildDir),
+                    buildDir = platformBuildDir,
+                    buildType = buildSystem.buildType,
+                    args = args
+                )
 
-                }
+                // Build
+                cmakeBuild(execOps, platformBuildDir)
+
+                platformBuildDir.listFiles()!!.first {
+                    it.name == libOutFileName
+                }.copyTo(File(targetLibFile), overwrite = true)
+            }
+            is BuildSystem.Cargo -> {
+
             }
         }
     }

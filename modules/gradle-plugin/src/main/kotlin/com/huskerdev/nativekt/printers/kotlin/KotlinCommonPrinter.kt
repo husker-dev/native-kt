@@ -1,12 +1,12 @@
 package com.huskerdev.nativekt.printers.kotlin
 
 import com.huskerdev.nativekt.utils.allFields
-import com.huskerdev.nativekt.utils.asyncFunctionName
+import com.huskerdev.nativekt.utils.asyncLoadFunctionName
 import com.huskerdev.nativekt.utils.globalOperators
 import com.huskerdev.nativekt.utils.isArray
 import com.huskerdev.nativekt.utils.printFunctionHeader
 import com.huskerdev.nativekt.utils.printLabel
-import com.huskerdev.nativekt.utils.syncFunctionName
+import com.huskerdev.nativekt.utils.syncLoadFunctionName
 import com.huskerdev.nativekt.utils.toKotlinType
 import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlCallbackFunction
@@ -36,13 +36,13 @@ class KotlinCommonPrinter(
              * @throws UnsupportedOperationException When called in Kotlin/JS
              */
             @Throws(UnsupportedOperationException::class)
-            expect fun ${syncFunctionName(moduleName)}()
+            expect fun ${syncLoadFunctionName(moduleName)}()
             
             /**
              * Initializes the native library `${moduleName}` asynchronously.
              * @param onReady Invoked when the native library is loaded.
              */
-            expect fun ${asyncFunctionName(moduleName)}(onReady: () -> Unit)
+            expect fun ${asyncLoadFunctionName(moduleName)}(onReady: () -> Unit)
             
         """.trimIndent())
         if(useCoroutines)
@@ -51,7 +51,7 @@ class KotlinCommonPrinter(
                 /**
                  * Initializes the native library `${moduleName}` asynchronously.
                  */
-                expect suspend fun ${asyncFunctionName(moduleName)}()
+                expect suspend fun ${asyncLoadFunctionName(moduleName)}()
                 
             """.trimIndent())
 

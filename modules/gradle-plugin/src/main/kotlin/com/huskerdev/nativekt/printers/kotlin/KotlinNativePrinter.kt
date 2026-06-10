@@ -32,12 +32,12 @@ class KotlinNativePrinter(
             ${actual}val isLib${moduleName.capitalized()}Loaded: Boolean = true
             
             @Throws(UnsupportedOperationException::class)
-            ${actual}fun ${syncFunctionName(moduleName)}() = Unit
-            ${actual}fun ${asyncFunctionName(moduleName)}(onReady: () -> Unit) = onReady()
+            ${actual}fun ${syncLoadFunctionName(moduleName)}() = Unit
+            ${actual}fun ${asyncLoadFunctionName(moduleName)}(onReady: () -> Unit) = onReady()
             
         """.trimIndent())
         if(useCoroutines)
-            builder.append("${actual}suspend fun ${asyncFunctionName(moduleName)}() = Unit\n")
+            builder.append("${actual}suspend fun ${asyncLoadFunctionName(moduleName)}() = Unit\n")
 
         if(idl.dictionaries.isNotEmpty()) {
             printLabel(builder, "Dictionary")
@@ -187,8 +187,8 @@ class KotlinNativePrinter(
         content: String
     ) = when {
         type.isString() -> "${cinteropPath}.KString_free($content?.reinterpret())"
-        type.isArray() -> (type as ResolvedIdlType.Default).firstParam { _, declaration ->
-            when (declaration) {
+        type.isArray() -> (type as ResolvedIdlType.Default).arrayType { type ->
+            when (val declaration = type.declaration) {
                 is BuiltinIdlDeclaration -> "${cinteropPath}.K${declaration.kind.simpleName()}Array_free($content?.reinterpret())"
                 is ResolvedIdlEnum -> "${cinteropPath}.KIntArray_free($content?.reinterpret())"
                 is ResolvedIdlDictionary -> "${cinteropPath}.KArray_free($content, _handle${declaration.name}Free)"
@@ -206,8 +206,8 @@ class KotlinNativePrinter(
             is BuiltinIdlDeclaration -> when(decl.kind) {
                 WebIDLBuiltinKind.CHAR -> "$content.toInt().toChar()"
                 WebIDLBuiltinKind.STRING -> "toKotlinString($content!!.reinterpret())"
-                WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
-                    when (declaration) {
+                WebIDLBuiltinKind.LIST -> type.arrayType { type ->
+                    when (val declaration = type.declaration) {
                         is BuiltinIdlDeclaration -> "toKotlin${declaration.kind.simpleName()}Array($content!!.reinterpret())"
                         is ResolvedIdlEnum -> "toKotlinEnumArray<${declaration.name}>($content!!.reinterpret())"
                         is ResolvedIdlDictionary -> "toKotlinArray($content!!.reinterpret(), ::toKotlin${declaration.name})"
@@ -232,8 +232,8 @@ class KotlinNativePrinter(
                     if(useArena) "toNativeStringOnArena($content, $pin).reinterpret()"
                     else "toNativeString($content).reinterpret()"
                 WebIDLBuiltinKind.CHAR -> "$content.code.toUShort()"
-                WebIDLBuiltinKind.LIST -> type.firstParam { _, declaration ->
-                    when (declaration) {
+                WebIDLBuiltinKind.LIST -> type.arrayType { type ->
+                    when (val declaration = type.declaration) {
                         is BuiltinIdlDeclaration ->
                             if (useArena) "toNative${declaration.kind.simpleName()}ArrayOnArena($content, $pin).reinterpret()"
                             else "toNative${declaration.kind.simpleName()}Array($content).reinterpret()"

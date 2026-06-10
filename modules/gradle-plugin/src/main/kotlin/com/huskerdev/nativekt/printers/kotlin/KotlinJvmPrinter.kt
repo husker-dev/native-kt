@@ -3,11 +3,11 @@ package com.huskerdev.nativekt.printers.kotlin
 import com.huskerdev.nativekt.printers.kotlin.jvm.KotlinJvmCIPrinter
 import com.huskerdev.nativekt.printers.kotlin.jvm.KotlinJvmForeignPrinter
 import com.huskerdev.nativekt.printers.kotlin.jvm.KotlinJvmJniPrinter
-import com.huskerdev.nativekt.utils.asyncFunctionName
+import com.huskerdev.nativekt.utils.asyncLoadFunctionName
 import com.huskerdev.nativekt.utils.functionHeader
 import com.huskerdev.nativekt.utils.globalOperators
 import com.huskerdev.nativekt.utils.printFunctionHeader
-import com.huskerdev.nativekt.utils.syncFunctionName
+import com.huskerdev.nativekt.utils.syncLoadFunctionName
 import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlOperation
 import org.gradle.internal.extensions.stdlib.capitalized
@@ -74,7 +74,7 @@ class KotlinJvmPrinter(
                 get() = isLib$${moduleName.capitalized()}Loaded_
             
             @Throws(UnsupportedOperationException::class)
-            $${actual}fun $${syncFunctionName(moduleName)}() {
+            $${actual}fun $${syncLoadFunctionName(moduleName)}() {
                 if(isLib$${moduleName.capitalized()}Loaded_) return
                 isLib$${moduleName.capitalized()}Loaded_ = true
                 
@@ -101,8 +101,8 @@ class KotlinJvmPrinter(
             
             }
             
-            ${actual}fun ${asyncFunctionName(moduleName)}(onReady: () -> Unit) {
-                ${syncFunctionName(moduleName)}()
+            ${actual}fun ${asyncLoadFunctionName(moduleName)}(onReady: () -> Unit) {
+                ${syncLoadFunctionName(moduleName)}()
                 onReady()
             }
         """.trimIndent())
@@ -110,8 +110,8 @@ class KotlinJvmPrinter(
         if(useCoroutines) builder.append("""
             
             
-            ${actual}suspend fun ${asyncFunctionName(moduleName)}() =
-                ${syncFunctionName(moduleName)}()
+            ${actual}suspend fun ${asyncLoadFunctionName(moduleName)}() =
+                ${syncLoadFunctionName(moduleName)}()
         """.trimIndent())
 
         // Functions

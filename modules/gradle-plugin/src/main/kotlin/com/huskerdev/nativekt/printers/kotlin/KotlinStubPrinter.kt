@@ -1,9 +1,9 @@
 package com.huskerdev.nativekt.printers.kotlin
 
-import com.huskerdev.nativekt.utils.asyncFunctionName
+import com.huskerdev.nativekt.utils.asyncLoadFunctionName
 import com.huskerdev.nativekt.utils.globalOperators
 import com.huskerdev.nativekt.utils.printFunctionHeader
-import com.huskerdev.nativekt.utils.syncFunctionName
+import com.huskerdev.nativekt.utils.syncLoadFunctionName
 import com.huskerdev.webidl.resolver.IdlResolver
 import java.io.File
 
@@ -21,13 +21,13 @@ class KotlinStubPrinter(
             
             actual val isLibTestLoaded: Boolean = false
             
-            actual fun ${syncFunctionName(moduleName)}() = Unit
-            actual fun ${asyncFunctionName(moduleName)}(onReady: () -> Unit) = Unit
+            actual fun ${syncLoadFunctionName(moduleName)}() = Unit
+            actual fun ${asyncLoadFunctionName(moduleName)}(onReady: () -> Unit) = Unit
             
         """.trimIndent())
 
         if(useCoroutines)
-            builder.append("actual suspend fun ${asyncFunctionName(moduleName)}() = Unit")
+            builder.append("actual suspend fun ${asyncLoadFunctionName(moduleName)}() = Unit")
 
         idl.globalOperators().forEach {
             builder.append("\n")

@@ -111,7 +111,7 @@ internal fun printCriticalNativeFunctionContent(builder: StringBuilder, name: St
         when {
             it.type.isString() -> listOf("const char* _arr_${it.name}", "int32_t _length_${it.name}, size_t _size_${it.name}")
             it.type.isArray() -> {
-                val type = (it.type as ResolvedIdlType.Default).firstParam { type, _ -> type.toCDefType(enumAsInt = true) }
+                val type = (it.type as ResolvedIdlType.Default).arrayType { type -> type.toCDefType(enumAsInt = true) }
                 listOf("$type* _arr_${it.name}", "int32_t _length_${it.name}")
             }
             else -> listOf("${it.type.toCDefType(enumAsInt = true)} _arg_${it.name}")

@@ -14,6 +14,7 @@ import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.internal.extensions.stdlib.capitalized
 import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
@@ -63,18 +64,17 @@ private abstract class PrepareNativesStub: DefaultTask() {
     @get:Input abstract var moduleClasspath: String
     @get:Input abstract var useCoroutines: Boolean
 
-    init {
-        doLast {
-            srcDir.get().asFile.fresh()
+    @TaskAction
+    fun action() {
+        srcDir.get().asFile.fresh()
 
-            // Create stub sources
-            KotlinStubPrinter(
-                idl = Json.decodeFromString<IdlResolver>(idl),
-                target = File(targetFile),
-                classPath = moduleClasspath,
-                moduleName = moduleName,
-                useCoroutines = useCoroutines
-            )
-        }
+        // Create stub sources
+        KotlinStubPrinter(
+            idl = Json.decodeFromString<IdlResolver>(idl),
+            target = File(targetFile),
+            classPath = moduleClasspath,
+            moduleName = moduleName,
+            useCoroutines = useCoroutines
+        )
     }
 }
