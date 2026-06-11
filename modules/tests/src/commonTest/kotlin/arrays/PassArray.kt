@@ -49,6 +49,11 @@ class PassArray {
     }
 
     @Test
+    fun passStringArray() = withLib {
+        assertTrue(natives.test.passStringArray(arrayOf("string1", "string2")))
+    }
+
+    @Test
     fun passEnumArray() = withLib {
         assertTrue(natives.test.passEnumArray(arrayOf(MyEnum.CASE1, MyEnum.CASE2)))
     }

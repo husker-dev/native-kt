@@ -137,9 +137,9 @@ class KotlinJsPrinter(
                 append("\nprivate fun $desc(block: (")
                 buildList {
                     add("Int")
-                    callback.args.mapTo(this) { toKtJsType(it.type) }
+                    callback.args.mapTo(this) { it.type.toKtJsType() }
                 }.joinTo(builder)
-                append(") -> ${toKtJsType(callback.type)}): JsAny = js(\"block\")")
+                append(") -> ${callback.type.toKtJsType()}): JsAny = js(\"block\")")
             }
         append("\n")
 
@@ -170,7 +170,7 @@ class KotlinJsPrinter(
     ) = builder.apply {
         val args = buildList {
             add("_c: Int")
-            callback.args.mapTo(this) { "${it.name}: ${toKtJsType(it.type)}" }
+            callback.args.mapTo(this) { "${it.name}: ${it.type.toKtJsType()}" }
         }
         val castedArgs = callback.args.map {
             castToKotlin(it.type, it.name)
@@ -200,7 +200,7 @@ class KotlinJsPrinter(
     private fun printDictionaryLayout(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
         append("\nprivate val _layout${dictionary.name} = CStructLayout(")
         buildList {
-            dictionary.allFields().mapTo(this) { toLayoutType(it.type) }
+            dictionary.allFields().mapTo(this) { it.type.toLayoutType() }
             add("Byte::class")
         }.joinTo(builder)
         append(")")
@@ -212,44 +212,34 @@ class KotlinJsPrinter(
 
         fun heaps(toNative: Boolean) = buildString {
             if (fields.any { it.type.isLong() })
-                append("\n\tval HEAP64 = BigInt64Array(_module.HEAP8.buffer, 0, _module.HEAP8.buffer.byteLength / 8)")
+                append("\n\tval HEAP64 = BigInt64Array(module.HEAP8.buffer, 0, _module.HEAP8.buffer.byteLength / 8)")
             if (fields.any { it.type.isDouble() })
-                append("\n\tval HEAPF64 = _module.HEAPF64")
+                append("\n\tval HEAPF64 = module.HEAPF64")
             if (fields.any {
                 it.type.isInt() || it.type.isDictionary() || it.type.isString() || it.type.isString() || it.type.isDictionary() || it.type.isEnum()
-            }) append("\n\tval HEAP32 = _module.HEAP32")
+            }) append("\n\tval HEAP32 = module.HEAP32")
             if (fields.any { it.type.isFloat() })
-                append("\n\tval HEAPF32 = _module.HEAPF32")
+                append("\n\tval HEAPF32 = module.HEAPF32")
             if (fields.any { it.type.isChar() || it.type.isShort() })
-                append("\n\tval HEAP16 = _module.HEAP16")
+                append("\n\tval HEAP16 = module.HEAP16")
             if (toNative || fields.any { it.type.isByte() || it.type.isBoolean() })
-                append("\n\tval HEAP8 = _module.HEAP8")
+                append("\n\tval HEAP8 = module.HEAP8")
         }
 
         fun ref(i: Int, mem: String): String {
-            return when(val declaration = (fields[i].type as ResolvedIdlType.Default).declaration) {
-                is BuiltinIdlDeclaration -> when(declaration.kind) {
-                    WebIDLBuiltinKind.BYTE,
-                    WebIDLBuiltinKind.BOOLEAN -> "HEAP8[$mem + _layout$name[$i]]"
-                    WebIDLBuiltinKind.SHORT,
-                    WebIDLBuiltinKind.CHAR -> "HEAP16[($mem + _layout$name[$i]) shr 1]"
-                    WebIDLBuiltinKind.INT,
-                    WebIDLBuiltinKind.STRING,
-                    WebIDLBuiltinKind.LIST -> "HEAP32[($mem + _layout$name[$i]) shr 2]"
-                    WebIDLBuiltinKind.LONG -> "HEAP64[($mem + _layout$name[$i]) shr 3]"
-                    WebIDLBuiltinKind.FLOAT -> "HEAPF32[($mem + _layout$name[$i]) shr 2]"
-                    WebIDLBuiltinKind.DOUBLE -> "HEAPF64[($mem + _layout$name[$i]) shr 3]"
-                    else -> throw UnsupportedOperationException()
-                }
-                is ResolvedIdlEnum,
-                is ResolvedIdlCallbackFunction,
-                is ResolvedIdlDictionary -> "HEAP32[($mem + _layout$name[$i]) shr 2]"
-                else -> throw UnsupportedOperationException()
+            val type = fields[i].type
+            return when {
+                type.isByte() || type.isBoolean() -> "HEAP8[$mem + _layout$name[$i]]"
+                type.isShort() || type.isChar() -> "HEAP16[($mem + _layout$name[$i]) shr 1]"
+                type.isFloat() -> "HEAPF32[($mem + _layout$name[$i]) shr 2]"
+                type.isDouble() -> "HEAPF64[($mem + _layout$name[$i]) shr 3]"
+                type.isLong() -> "HEAP64[($mem + _layout$name[$i]) shr 3]"
+                else -> "HEAP32[($mem + _layout$name[$i]) shr 2]"
             }
         }
 
         // to native (arena)
-        append("\nfun Arena.toNative${name}OnArena(of: $name) = alloc(_layout$name.size).apply {")
+        append("\nprivate fun Arena.toNative${name}OnArena(of: $name) = alloc(_layout$name.size).apply {")
         append(heaps(true))
         buildList {
             fields.forEachIndexed { i, field ->
@@ -266,7 +256,7 @@ class KotlinJsPrinter(
         append("\n}\n")
 
         // to native
-        append("\nfun toNative$name(of: $name) = _module._malloc(_layout$name.size).apply {")
+        append("\nprivate fun toNative$name(module: Module, of: $name) = _module._malloc(_layout$name.size).apply {")
         append(heaps(true))
         buildList {
             fields.forEachIndexed { i, field ->
@@ -283,7 +273,7 @@ class KotlinJsPrinter(
         append("\n}\n")
 
         // to kotlin
-        append("\nfun toKotlin$name(of: Int): $name {")
+        append("\nprivate fun toKotlin$name(module: Module, of: Int): $name {")
         append(heaps(false))
         append("\n\treturn $name(")
         fields.mapIndexed { i, field ->
@@ -380,11 +370,11 @@ class KotlinJsPrinter(
         idl.globalOperators().forEach { function ->
             append("\tfun _${function.name}")
             function.args.joinTo(buffer, prefix = "(", postfix = ")") {
-                "${it.name}: ${toKtJsType(it.type)}"
+                "${it.name}: ${it.type.toKtJsType()}"
             }
             if(function.type !is ResolvedIdlType.Void) {
                 append(": ")
-                append(toKtJsType(function.type))
+                append(function.type.toKtJsType())
             }
             append("\n")
         }
@@ -394,130 +384,96 @@ class KotlinJsPrinter(
     private fun freeFuncFor(
         type: ResolvedIdlType,
         content: String
-    ) = when {
-        type.isString() -> "_module._KString_free($content)"
-        type.isArray() -> (type as ResolvedIdlType.Default).arrayType { type ->
-            when (val declaration = type.declaration) {
-                is BuiltinIdlDeclaration -> "_module._K${declaration.kind.simpleName()}Array_free($content)"
-                is ResolvedIdlEnum -> "_module._KIntArray_free($content)"
-                is ResolvedIdlDictionary -> "_module._KArray_free($content, _module._${declaration.name}_freeAddr())"
-                else -> throw UnsupportedOperationException(type.toString())
-            }
-        }
+    ): String = when {
         type.isCallback() -> "callbackFree($content)"
-        type.isDictionary() -> "_module._${(type as ResolvedIdlType.Default).declaration.name.capitalized()}_free($content)"
-        else -> null
-    }
-
-    private fun castToNative(type: ResolvedIdlType, content: String, useArena: Boolean): String = when(type) {
-        is ResolvedIdlType.Void -> content
-        is ResolvedIdlType.Default -> when(val decl = type.declaration) {
-            is BuiltinIdlDeclaration -> when(decl.kind) {
-                WebIDLBuiltinKind.BOOLEAN -> "$content.toInt()"
-                WebIDLBuiltinKind.CHAR -> "$content.code"
-                WebIDLBuiltinKind.BYTE -> "$content.toInt()"
-                WebIDLBuiltinKind.SHORT -> "$content.toInt()"
-                WebIDLBuiltinKind.STRING ->
-                    if(useArena) "toNativeStringOnArena($content)"
-                    else "toNativeString(_module, $content)"
-                WebIDLBuiltinKind.LIST -> type.arrayType { type ->
-                    when (val declaration = type.declaration) {
-                        is BuiltinIdlDeclaration ->
-                            if (useArena) "toNative${declaration.kind.simpleName()}ArrayOnArena($content)"
-                            else "toNative${declaration.kind.simpleName()}Array(_module, $content)"
-                        is ResolvedIdlEnum ->
-                            if (useArena) "toNativeEnumArrayOnArena($content)"
-                            else "toNativeEnumArray(_module, $content)"
-                        is ResolvedIdlDictionary ->
-                            if (useArena) "toNativeArrayOnArena($content, ::toNative${declaration.name})"
-                            else "toNativeArray(_module, $content, ::toNative${declaration.name})"
-                        else -> throw UnsupportedOperationException(type.toString())
-                    }
+        type.isArray() -> type.arrayType { type ->
+            when {
+                type.isPrimitive() -> "_module._${type.toCType()}Array_free($content)"
+                type.isEnum() -> "_module._KIntArray_free($content)"
+                else -> {
+                    val fn = freeFuncFor(type, "").split("(")[0]
+                    "_module._KArray_free($content, ${fn}Addr())"
                 }
-                else -> content
             }
-            is ResolvedIdlEnum -> "$content.ordinal"
-            is ResolvedIdlCallbackFunction ->
-                if(useArena) "toNativeCallbackOnArena($content, _invoke${decl.name})"
-                else "toNativeCallback($content, _invoke${decl.name})"
-            is ResolvedIdlDictionary ->
-                if (useArena) "toNative${decl.name}OnArena($content)"
-                else "toNative${decl.name}($content)"
-            else -> throw UnsupportedOperationException(type.toString())
         }
-        is ResolvedIdlType.Union -> throw UnsupportedOperationException(type.toString())
+        else -> "_module._${type.toCType(ptr = false)}_free($content)"
     }
 
-    private fun castToKotlin(type: ResolvedIdlType, content: String): String = when(type) {
-        is ResolvedIdlType.Void -> content
-        is ResolvedIdlType.Default -> when(val decl = type.declaration) {
-            is BuiltinIdlDeclaration -> when(decl.kind) {
-                WebIDLBuiltinKind.BOOLEAN -> "$content.toBoolean()"
-                WebIDLBuiltinKind.CHAR -> "$content.toChar()"
-                WebIDLBuiltinKind.BYTE -> "$content.toByte()"
-                WebIDLBuiltinKind.SHORT -> "$content.toShort()"
-                WebIDLBuiltinKind.FLOAT -> "$content.truncF32()"
-                WebIDLBuiltinKind.STRING -> "toKotlinString(_module, $content)"
-                WebIDLBuiltinKind.LIST -> type.arrayType { type ->
-                    when (val declaration = type.declaration) {
-                        is BuiltinIdlDeclaration -> "toKotlin${declaration.kind.simpleName()}Array(_module, $content)"
-                        is ResolvedIdlEnum -> "toKotlinEnumArray<${declaration.name}>(_module, $content)"
-                        is ResolvedIdlDictionary -> "toKotlinArray(_module, $content, ::toKotlin${declaration.name})"
-                        else -> throw UnsupportedOperationException(type.toString())
-                    }
+    private fun castToNative(type: ResolvedIdlType, content: String, useArena: Boolean): String = when {
+        type.isBoolean() -> "$content.toInt()"
+        type.isChar() -> "$content.code"
+        type.isByte() -> "$content.toInt()"
+        type.isShort() -> "$content.toInt()"
+        type.isEnum() -> "$content.ordinal"
+        type.isString() ->
+            if(useArena) "toNativeKStringOnArena($content)"
+            else "toNativeKString(_module, $content)"
+        type.isCallback() ->
+            if(useArena) "toNativeCallbackOnArena($content, _invoke${type.declaration.name})"
+            else "toNativeCallback($content, _invoke${type.declaration.name})"
+        type.isDictionary() ->
+            if (useArena) "toNative${type.declaration.name}OnArena($content)"
+            else "toNative${type.declaration.name}(_module, $content)"
+        type.isArray() -> type.arrayType { type ->
+            when {
+                type.isPrimitive() ->
+                    if (useArena) "toNative${type.toCType()}ArrayOnArena($content)"
+                    else "toNative${type.toCType()}Array(_module, $content)"
+                type.isEnum() ->
+                    if (useArena) "toNativeEnumArrayOnArena($content)"
+                    else "toNativeEnumArray(_module, $content)"
+                else -> {
+                    val fn = castToNative(type, "", useArena).split("(")[0]
+                    if (useArena) "toNativeKArrayOnArena($content, ::$fn)"
+                    else "toNativeKArray(_module, $content, ::$fn)"
                 }
-                else -> content
             }
-            is ResolvedIdlEnum -> "${decl.name}.entries[$content]"
-            is ResolvedIdlCallbackFunction -> "toKotlinCallback(_module, $content)"
-            is ResolvedIdlDictionary -> "toKotlin${decl.name}($content)"
-            else -> throw UnsupportedOperationException(type.toString())
         }
-        else -> throw UnsupportedOperationException(type.toString())
+        else -> content
     }
 
-    private fun toKtJsType(type: ResolvedIdlType): String = when(type) {
-        is ResolvedIdlType.Void -> "Unit"
-        is ResolvedIdlType.Default -> when(val decl = type.declaration) {
-            is BuiltinIdlDeclaration -> when(decl.kind) {
-                WebIDLBuiltinKind.BOOLEAN -> "Int"
-                WebIDLBuiltinKind.FLOAT -> "Float"
-                WebIDLBuiltinKind.CHAR -> "Int"
-                WebIDLBuiltinKind.INT -> "Int"
-                WebIDLBuiltinKind.DOUBLE -> "Double"
-                WebIDLBuiltinKind.BYTE -> "Int"
-                WebIDLBuiltinKind.SHORT -> "Int"
-                WebIDLBuiltinKind.LONG -> "Long"
-                WebIDLBuiltinKind.STRING -> "Int"
-                WebIDLBuiltinKind.LIST -> "Int"
-                else -> throw UnsupportedOperationException()
+    private fun castToKotlin(type: ResolvedIdlType, content: String): String = when {
+        type.isBoolean() -> "$content.toBoolean()"
+        type.isChar() -> "$content.toChar()"
+        type.isByte() -> "$content.toByte()"
+        type.isShort() -> "$content.toShort()"
+        type.isFloat() -> "$content.truncF32()"
+        type.isEnum() -> "${type.declaration.name}.entries[$content]"
+        type.isString() -> "toKotlinKString(_module, $content)"
+        type.isCallback() -> "toKotlinCallback(_module, $content)"
+        type.isDictionary() -> "toKotlin${type.declaration.name}(_module, $content)"
+        type.isArray() -> type.arrayType { type ->
+            when {
+                type.isPrimitive() -> "toKotlin${type.toCType()}Array(_module, $content)"
+                type.isEnum() -> "toKotlinEnumArray<${type.declaration.name}>(_module, $content)"
+                else -> {
+                    val fn = castToKotlin(type, "").split("(")[0]
+                    "toKotlinKArray(_module, $content, ::$fn)"
+                }
             }
-            is ResolvedIdlEnum -> "Int"
-            else -> "Int"
         }
-        else -> throw UnsupportedOperationException(type.toString())
+        else -> content
     }
 
-    private fun toLayoutType(type: ResolvedIdlType): String = when(type) {
-        is ResolvedIdlType.Void -> throw UnsupportedOperationException(type.toString())
-        is ResolvedIdlType.Default -> when(val decl = type.declaration) {
-            is BuiltinIdlDeclaration -> when(decl.kind) {
-                WebIDLBuiltinKind.BOOLEAN -> "Boolean::class"
-                WebIDLBuiltinKind.FLOAT -> "Float::class"
-                WebIDLBuiltinKind.CHAR -> "Char::class"
-                WebIDLBuiltinKind.INT -> "Int::class"
-                WebIDLBuiltinKind.DOUBLE -> "Double::class"
-                WebIDLBuiltinKind.BYTE -> "Byte::class"
-                WebIDLBuiltinKind.SHORT -> "Short::class"
-                WebIDLBuiltinKind.LONG -> "Long::class"
-                WebIDLBuiltinKind.STRING -> "CStructLayout.Ptr::class"
-                WebIDLBuiltinKind.LIST -> "CStructLayout.Ptr::class"
-                else -> throw UnsupportedOperationException()
-            }
-            is ResolvedIdlEnum -> "Int::class"
-            else -> "CStructLayout.Ptr::class"
-        }
-        else -> throw UnsupportedOperationException(type.toString())
+    private fun ResolvedIdlType.toKtJsType(): String = when {
+        isVoid() -> "Unit"
+        isFloat() -> "Float"
+        isDouble() -> "Double"
+        isLong() -> "Long"
+        else -> "Int"
+    }
+
+    private fun ResolvedIdlType.toLayoutType(): String = when {
+        isBoolean() -> "Boolean::class"
+        isChar() -> "Char::class"
+        isByte() -> "Byte::class"
+        isShort() -> "Short::class"
+        isInt() -> "Int::class"
+        isLong() -> "Long::class"
+        isFloat() -> "Float::class"
+        isDouble() -> "Double::class"
+        isEnum() -> "Int::class"
+        else -> "CStructLayout.Ptr::class"
     }
 
     private fun ResolvedIdlCallbackFunction.descName() = buildString {
@@ -527,25 +483,13 @@ class KotlinJsPrinter(
         args.joinTo(this, separator = "") { it.type.toInternalDesc().capitalized() }
     }
 
-    fun ResolvedIdlType.toInternalDesc(): String = when(this) {
-        is ResolvedIdlType.Void -> "v"
-        is ResolvedIdlType.Default -> when(val declaration = declaration) {
-            is BuiltinIdlDeclaration -> when(declaration.kind) {
-                WebIDLBuiltinKind.CHAR -> "i"
-                WebIDLBuiltinKind.BOOLEAN -> "i"
-                WebIDLBuiltinKind.BYTE -> "i"
-                WebIDLBuiltinKind.SHORT -> "i"
-                WebIDLBuiltinKind.INT -> "i"
-                WebIDLBuiltinKind.LONG -> "j"
-                WebIDLBuiltinKind.FLOAT -> "f"
-                WebIDLBuiltinKind.DOUBLE -> "d"
-                WebIDLBuiltinKind.STRING -> "p"
-                WebIDLBuiltinKind.LIST -> "p"
-                else -> throw UnsupportedOperationException(toString())
-            }
-            is ResolvedIdlEnum -> "i"
-            else -> "p"
-        }
-        else -> throw UnsupportedOperationException(toString())
+    private fun ResolvedIdlType.toInternalDesc(): String = when {
+        isVoid() -> "v"
+        isFloat() -> "f"
+        isDouble() -> "d"
+        isLong() -> "j"
+        isChar() || isBoolean() || isByte() ||
+                isShort() || isInt() || isEnum() -> "i"
+        else -> "p"
     }
 }

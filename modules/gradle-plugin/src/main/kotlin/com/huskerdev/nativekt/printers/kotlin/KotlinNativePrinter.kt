@@ -185,90 +185,74 @@ class KotlinNativePrinter(
     private fun freeFuncFor(
         type: ResolvedIdlType,
         content: String
-    ) = when {
-        type.isString() -> "${cinteropPath}.KString_free($content?.reinterpret())"
-        type.isArray() -> (type as ResolvedIdlType.Default).arrayType { type ->
-            when (val declaration = type.declaration) {
-                is BuiltinIdlDeclaration -> "${cinteropPath}.K${declaration.kind.simpleName()}Array_free($content?.reinterpret())"
-                is ResolvedIdlEnum -> "${cinteropPath}.KIntArray_free($content?.reinterpret())"
-                is ResolvedIdlDictionary -> "${cinteropPath}.KArray_free($content, _handle${declaration.name}Free)"
-                else -> throw UnsupportedOperationException(type.toString())
+    ): String? = when {
+        type.isArray() -> type.arrayType { type ->
+            when {
+                type.isPrimitive() -> "${cinteropPath}.${type.toCType()}Array_free($content?.reinterpret())"
+                type.isEnum() -> "${cinteropPath}.KIntArray_free($content?.reinterpret())"
+                else -> "${cinteropPath}.KArray_free($content, _handle${type.toCType(ptr = false)}Free)"
             }
         }
         type.isCallback() -> "callbackFree($content?.reinterpret())"
-        type.isDictionary() -> "${cinteropPath}.${(type as ResolvedIdlType.Default).declaration.name.capitalized()}_free($content)"
+        type.isDictionary() -> "${cinteropPath}.${type.toCType(ptr = false)}_free($content)"
         else -> null
     }
 
-    private fun castFromNative(type: ResolvedIdlType, content: String): String = when(type) {
-        is ResolvedIdlType.Void -> content
-        is ResolvedIdlType.Default -> when(val decl = type.declaration) {
-            is BuiltinIdlDeclaration -> when(decl.kind) {
-                WebIDLBuiltinKind.CHAR -> "$content.toInt().toChar()"
-                WebIDLBuiltinKind.STRING -> "toKotlinString($content!!.reinterpret())"
-                WebIDLBuiltinKind.LIST -> type.arrayType { type ->
-                    when (val declaration = type.declaration) {
-                        is BuiltinIdlDeclaration -> "toKotlin${declaration.kind.simpleName()}Array($content!!.reinterpret())"
-                        is ResolvedIdlEnum -> "toKotlinEnumArray<${declaration.name}>($content!!.reinterpret())"
-                        is ResolvedIdlDictionary -> "toKotlinArray($content!!.reinterpret(), ::toKotlin${declaration.name})"
-                        else -> throw UnsupportedOperationException(type.toString())
-                    }
-                }
-                else -> content
-            }
-            is ResolvedIdlCallbackFunction -> "toKotlinCallback($content!!)"
-            is ResolvedIdlEnum -> "${decl.name}.entries[${content}.ordinal]"
-            is ResolvedIdlDictionary -> "toKotlin${decl.name}(${content}!!)"
-            else -> throw UnsupportedOperationException(type.toString())
-        }
-        else -> throw UnsupportedOperationException(type.toString())
-    }
-
-    private fun castToNative(type: ResolvedIdlType, content: String, useArena: Boolean, pin: Boolean): String = when(type) {
-        is ResolvedIdlType.Void -> content
-        is ResolvedIdlType.Default -> when(val decl = type.declaration) {
-            is BuiltinIdlDeclaration -> when(decl.kind) {
-                WebIDLBuiltinKind.STRING ->
-                    if(useArena) "toNativeStringOnArena($content, $pin).reinterpret()"
-                    else "toNativeString($content).reinterpret()"
-                WebIDLBuiltinKind.CHAR -> "$content.code.toUShort()"
-                WebIDLBuiltinKind.LIST -> type.arrayType { type ->
-                    when (val declaration = type.declaration) {
-                        is BuiltinIdlDeclaration ->
-                            if (useArena) "toNative${declaration.kind.simpleName()}ArrayOnArena($content, $pin).reinterpret()"
-                            else "toNative${declaration.kind.simpleName()}Array($content).reinterpret()"
-                        is ResolvedIdlEnum ->
-                            if (useArena) "toNativeEnumArrayOnArena($content, $pin).reinterpret()"
-                            else "toNativeEnumArray($content).reinterpret()"
-                        is ResolvedIdlDictionary ->
-                            if (useArena) "toNativeArrayOnArena($content, ::toNative${declaration.name}OnArena).reinterpret()"
-                            else "toNativeArray($content, ::toNative${declaration.name}).reinterpret()"
-                        else -> throw UnsupportedOperationException(type.toString())
-                    }
-                }
-                else -> content
-            }
-            is ResolvedIdlEnum -> "${cinteropPath}.${decl.name}.entries[$content.ordinal]"
-            is ResolvedIdlCallbackFunction ->
-                if(useArena) "toNativeCallbackOnArena($content, _invoke${decl.name.capitalized()}).reinterpret()"
-                else "toNativeCallback($content, _invoke${decl.name.capitalized()}).reinterpret()"
-            is ResolvedIdlDictionary ->
-                if (useArena) "toNative${decl.name}OnArena($content)"
-                else "toNative${decl.name}($content)"
-            else -> throw UnsupportedOperationException(type.toString())
-        }
-        else -> throw UnsupportedOperationException(type.toString())
-    }
-
-    private fun ResolvedIdlType.toKnType(): String = when(this) {
-        is ResolvedIdlType.Void -> "Unit"
-        is ResolvedIdlType.Default -> {
-            val value = "${cinteropPath}.${toCDefType(ptr = false)}"
+    private fun castFromNative(type: ResolvedIdlType, content: String): String = when {
+        type.isChar() -> "$content.toInt().toChar()"
+        type.isString() -> "toKotlinKString($content!!.reinterpret())"
+        type.isCallback() -> "toKotlinCallback($content!!)"
+        type.isEnum() -> "${type.declaration.name}.entries[${content}.ordinal]"
+        type.isDictionary() -> "toKotlin${type.declaration.name}(${content}!!)"
+        type.isArray() -> type.arrayType { type ->
             when {
-                isString() || isArray() || isCallback() || isDictionary() -> "CPointer<$value>?"
-                else -> value
+                type.isPrimitive() -> "toKotlin${type.toCType()}Array($content!!.reinterpret())"
+                type.isEnum() -> "toKotlinEnumArray<${type.declaration.name}>($content!!.reinterpret())"
+                else -> {
+                    val fn = castFromNative(type, "").split("(")[0]
+                    "toKotlinKArray($content!!.reinterpret(), ::$fn)"
+                }
             }
         }
-        else -> throw UnsupportedOperationException(toString())
+        else -> content
+    }
+
+    private fun castToNative(type: ResolvedIdlType, content: String, useArena: Boolean, pin: Boolean): String = when {
+        type.isChar() -> "$content.code.toUShort()"
+        type.isEnum() -> "${cinteropPath}.${type.declaration.name}.entries[$content.ordinal]"
+        type.isString() ->
+            if(useArena) "toNativeKStringOnArena($content, $pin).reinterpret()"
+            else "toNativeKString($content).reinterpret()"
+        type.isCallback() ->
+            if(useArena) "toNativeCallbackOnArena($content, _invoke${type.declaration.name.capitalized()}).reinterpret()"
+            else "toNativeCallback($content, _invoke${type.declaration.name.capitalized()}).reinterpret()"
+        type.isDictionary() ->
+            if (useArena) "toNative${type.declaration.name}OnArena($content)"
+            else "toNative${type.declaration.name}($content)"
+        type.isArray() -> type.arrayType { type ->
+            when {
+                type.isPrimitive() ->
+                    if (useArena) "toNative${type.toCType()}ArrayOnArena($content, $pin).reinterpret()"
+                    else "toNative${type.toCType()}Array($content).reinterpret()"
+                type.isEnum() ->
+                    if (useArena) "toNativeEnumArrayOnArena($content, $pin).reinterpret()"
+                    else "toNativeEnumArray($content).reinterpret()"
+                else -> {
+                    val fn = castToNative(type, "", useArena, false).split("(")[0]
+                    if (useArena) "toNativeKArrayOnArena($content, ::$fn).reinterpret()"
+                    else "toNativeKArray($content, ::$fn).reinterpret()"
+                }
+            }
+        }
+        else -> content
+    }
+
+    private fun ResolvedIdlType.toKnType(): String = when {
+        isVoid() -> "Unit"
+        else -> {
+            val ref = "${cinteropPath}.${toCType(ptr = false)}"
+            if(isString() || isArray() || isCallback() || isDictionary())
+                "CPointer<$ref>?" else ref
+        }
     }
 }

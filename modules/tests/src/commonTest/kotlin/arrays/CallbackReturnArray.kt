@@ -49,6 +49,11 @@ class CallbackReturnArray {
     }
 
     @Test
+    fun callbackReturnStringArray() = withLib {
+        assertTrue(natives.test.callbackReturnStringArray { arrayOf("string1", "string2") })
+    }
+
+    @Test
     fun callbackReturnEnumArray() = withLib {
         assertTrue(natives.test.callbackReturnEnumArray { arrayOf(MyEnum.CASE1, MyEnum.CASE2) })
     }

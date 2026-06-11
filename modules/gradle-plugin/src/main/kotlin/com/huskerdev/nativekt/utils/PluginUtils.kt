@@ -120,10 +120,7 @@ fun validateIDL(idl: IdlResolver) {
                     UNSIGNED_SHORT,
                     UNSIGNED_LONG,
                     OBJECT -> throw UnsupportedOperationException("Unsupported type: ${declaration.kind}")
-                    STRING -> {
-                        if(isInsideArray)
-                            throw UnsupportedOperationException("String arrays are not supported yet")
-                    }
+                    STRING,
                     VOID,
                     BOOLEAN,
                     CHAR,

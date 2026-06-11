@@ -80,6 +80,7 @@ namespace global {
     boolean passLongArray(Array<long> arg);
     boolean passFloatArray(Array<float> arg);
     boolean passDoubleArray(Array<double> arg);
+    boolean passStringArray(Array<string> arg);
     boolean passEnumArray(Array<MyEnum> arg);
     boolean passDictionaryArray(Array<MyDictionary> arg);
 
@@ -92,6 +93,7 @@ namespace global {
     [Dealloc] Array<long> returnLongArray();
     [Dealloc] Array<float> returnFloatArray();
     [Dealloc] Array<double> returnDoubleArray();
+    [Dealloc] Array<string> returnStringArray();
     [Dealloc] Array<MyEnum> returnEnumArray();
     [Dealloc, DeallocContent] Array<MyDictionary> returnDictionaryArray();
 
@@ -104,6 +106,7 @@ namespace global {
     Array<long> pingLongArray(Array<long> arg);
     Array<float> pingFloatArray(Array<float> arg);
     Array<double> pingDoubleArray(Array<double> arg);
+    Array<string> pingStringArray(Array<string> arg);
     Array<MyEnum> pingEnumArray(Array<MyEnum> arg);
     Array<MyDictionary> pingDictionaryArray(Array<MyDictionary> arg);
 
@@ -116,6 +119,7 @@ namespace global {
     boolean callbackArgLongArray(CallbackPassLongArray arg);
     boolean callbackArgFloatArray(CallbackPassFloatArray arg);
     boolean callbackArgDoubleArray(CallbackPassDoubleArray arg);
+    boolean callbackArgStringArray(CallbackPassStringArray arg);
     boolean callbackArgEnumArray(CallbackPassEnumArray arg);
     boolean callbackArgDictionaryArray(CallbackPassDictionaryArray arg);
 
@@ -128,6 +132,7 @@ namespace global {
     boolean callbackReturnLongArray(CallbackReturnLongArray arg);
     boolean callbackReturnFloatArray(CallbackReturnFloatArray arg);
     boolean callbackReturnDoubleArray(CallbackReturnDoubleArray arg);
+    boolean callbackReturnStringArray(CallbackReturnStringArray arg);
     boolean callbackReturnEnumArray(CallbackReturnEnumArray arg);
     boolean callbackReturnDictionaryArray(CallbackReturnDictionaryArray arg);
 
@@ -215,6 +220,7 @@ callback CallbackPassIntArray = boolean (Array<int> arg);
 callback CallbackPassLongArray = boolean (Array<long> arg);
 callback CallbackPassFloatArray = boolean (Array<float> arg);
 callback CallbackPassDoubleArray = boolean (Array<double> arg);
+callback CallbackPassStringArray = boolean (Array<string> arg);
 callback CallbackPassEnumArray = boolean (Array<MyEnum> arg);
 callback CallbackPassDictionaryArray = boolean (Array<MyDictionary> arg);
 
@@ -226,6 +232,7 @@ callback CallbackReturnIntArray = Array<int> ();
 callback CallbackReturnLongArray = Array<long> ();
 callback CallbackReturnFloatArray = Array<float> ();
 callback CallbackReturnDoubleArray = Array<double> ();
+callback CallbackReturnStringArray = Array<string> ();
 callback CallbackReturnEnumArray = Array<MyEnum> ();
 callback CallbackReturnDictionaryArray = Array<MyDictionary> ();
 
@@ -270,6 +277,7 @@ dictionary TypeDictionary {
     Array<long> a18;
     Array<float> a19;
     Array<double> a20;
-    Array<MyEnum> a21;
-    Array<MyDictionary> a22;
+    Array<string> a21;
+    Array<MyEnum> a22;
+    Array<MyDictionary> a23;
 };

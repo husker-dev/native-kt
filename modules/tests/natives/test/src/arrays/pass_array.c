@@ -1,4 +1,6 @@
 #include <api.h>
+#include <stdio.h>
+#include <string.h>
 
 KBoolean passArray(KIntArray* arg) {
     return !(arg->__flags & 1) &&
@@ -60,6 +62,19 @@ KBoolean passDoubleArray(KDoubleArray* arg) {
         arg->length == 2 &&
         arg->elements[0] == 1.1 &&
         arg->elements[1] == 2.2;
+}
+
+KBoolean passStringArray(KArray* arg) {
+    const KString* el1 = (KString*) arg->elements[0];
+    const KString* el2 = (KString*) arg->elements[1];
+
+    printf("%d|%d, %s|%d, %s|%d", arg->__flags & 1, arg->length, el1->data, el1->length, el2->data, el2->length);
+    fflush(stdout);
+
+    return !(arg->__flags & 1) &&
+        arg->length == 2 &&
+        strncmp(el1->data, "string1", el1->length) == 0 &&
+        strncmp(el2->data, "string2", el2->length) == 0;
 }
 
 KBoolean passEnumArray(KIntArray* arg) {

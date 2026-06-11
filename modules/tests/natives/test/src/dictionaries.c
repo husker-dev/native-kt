@@ -39,17 +39,20 @@ KBoolean passBigDictionary(TypeDictionary* arg) {
             arg->a20->elements[0] == 1.2 &&
             arg->a20->elements[1] == 3.4 &&
         arg->a21->length == 2 &&
-            arg->a21->elements[0] == MyEnum_CASE1 &&
-            arg->a21->elements[1] == MyEnum_CASE2 &&
+            strncmp(((KString*)arg->a21->elements[0])->data, "string1", ((KString*)arg->a21->elements[0])->length) == 0 &&
+            strncmp(((KString*)arg->a21->elements[1])->data, "string2", ((KString*)arg->a21->elements[1])->length) == 0 &&
         arg->a22->length == 2 &&
-            ((MyDictionary**)arg->a22->elements)[0]->a == 1 &&
-            ((MyDictionary**)arg->a22->elements)[0]->b == 2 &&
-            ((MyDictionary**)arg->a22->elements)[0]->c == 3 &&
-            ((MyDictionary**)arg->a22->elements)[0]->d == 4 &&
-            ((MyDictionary**)arg->a22->elements)[1]->a == 5 &&
-            ((MyDictionary**)arg->a22->elements)[1]->b == 6 &&
-            ((MyDictionary**)arg->a22->elements)[1]->c == 7 &&
-            ((MyDictionary**)arg->a22->elements)[1]->d == 8;
+            arg->a22->elements[0] == MyEnum_CASE1 &&
+            arg->a22->elements[1] == MyEnum_CASE2 &&
+        arg->a23->length == 2 &&
+            ((MyDictionary**)arg->a23->elements)[0]->a == 1 &&
+            ((MyDictionary**)arg->a23->elements)[0]->b == 2 &&
+            ((MyDictionary**)arg->a23->elements)[0]->c == 3 &&
+            ((MyDictionary**)arg->a23->elements)[0]->d == 4 &&
+            ((MyDictionary**)arg->a23->elements)[1]->a == 5 &&
+            ((MyDictionary**)arg->a23->elements)[1]->b == 6 &&
+            ((MyDictionary**)arg->a23->elements)[1]->c == 7 &&
+            ((MyDictionary**)arg->a23->elements)[1]->d == 8;
 }
 
 TypeDictionary* returnBigDictionary(VoidCallback* callback) {
@@ -78,6 +81,7 @@ TypeDictionary* returnBigDictionary(VoidCallback* callback) {
         KLongArray_new(longElements, 2),
         KFloatArray_of(1.2f, 3.4f),
         KDoubleArray_of(1.2, 3.4),
+        KArray_of(KString_new(strdup("string1"), 7, 7), KString_new(strdup("string2"), 7, 7)),
         KIntArray_of(MyEnum_CASE1, MyEnum_CASE2),
         KArray_of(MyDictionary_new(1, 2, 3, 4), MyDictionary_new(5, 6, 7, 8))
     );

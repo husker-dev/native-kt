@@ -38,8 +38,8 @@ class KotlinJvmForeignPrinter(
         builder.append($$"""
             private val handle = SymbolLookup.libraryLookup(java.nio.file.Paths.get(libraryPath), Arena.global())
             
-            private val addressKArrayFree = ForeignUtils.address(handle, "${prefix}KArray_free")
-            private val handleKArrayFree = ForeignUtils.handle(addressKArrayFree, false, null, ValueLayout.ADDRESS, ValueLayout.ADDRESS)
+            private val addressKArrayFree = address(handle, "${prefix}KArray_free")
+            private val handleKArrayFree = handle(addressKArrayFree, false, null, ValueLayout.ADDRESS, ValueLayout.ADDRESS)
             
         """.replaceIndent("\t"))
 
@@ -51,8 +51,8 @@ class KotlinJvmForeignPrinter(
             ))
             idl.dictionaries.values.mapTo(this) { it.name }
         }.forEach {
-            builder.append("\n\tprivate val address${it.capitalized()}Free = ForeignUtils.address(handle, \"\${prefix}${it}_free\")")
-            builder.append("\n\tprivate val handle${it.capitalized()}Free = ForeignUtils.handle(address${it.capitalized()}Free, false, null, ValueLayout.ADDRESS)\n")
+            builder.append("\n\tprivate val address${it.capitalized()}Free = address(handle, \"\${prefix}${it}_free\")")
+            builder.append("\n\tprivate val handle${it.capitalized()}Free = handle(address${it.capitalized()}Free, false, null, ValueLayout.ADDRESS)\n")
         }
         builder.append("\n")
 
@@ -63,7 +63,7 @@ class KotlinJvmForeignPrinter(
         builder.append("""
             
             override fun _address(name: String): Long =
-                ForeignUtils.address(handle, name).address()
+                address(handle, name).address()
             
         """.replaceIndent("$indent\t"))
 
@@ -89,14 +89,14 @@ class KotlinJvmForeignPrinter(
 
         // to native (heap)
         append("\n\t\tprivate fun toNativeDictionary${name.capitalized()}(of: $name) = ")
-        append("ForeignUtils.malloc($layout.size).apply {")
+        append("malloc($layout.size).apply {")
 
         fields.forEachIndexed { i, it ->
             val value = castToNative(it.type, "of.${it.name}", useArena = false)
             val set = "set(${it.type.toForeignType()}, $layout[$i], ${value})"
             append("\n\t\t\t$set")
         }
-        append("\n\t\t\tset(ValueLayout.JAVA_BYTE, $layout[${fields.size}], ForeignUtils.FLAG_RELEASABLE)")
+        append("\n\t\t\tset(ValueLayout.JAVA_BYTE, $layout[${fields.size}], FLAG_RELEASABLE)")
 
         append("\n\t\t}\n")
 
@@ -109,7 +109,7 @@ class KotlinJvmForeignPrinter(
             val set = "set(${it.type.toForeignType()}, $layout[$i], ${value})"
             append("\n\t\t\t$set")
         }
-        append("\n\t\t\tset(ValueLayout.JAVA_BYTE, $layout[${fields.size}], ForeignUtils.FLAG_ON_STACK)")
+        append("\n\t\t\tset(ValueLayout.JAVA_BYTE, $layout[${fields.size}], FLAG_ON_STACK)")
 
         append("\n\t\t}\n")
 
@@ -131,7 +131,7 @@ class KotlinJvmForeignPrinter(
 
         append("${indent}\tprivate val handle")
         append(function.name.capitalized())
-        append($$" = ForeignUtils.lookup(handle, \"${prefix}")
+        append($$" = lookup(handle, \"${prefix}")
         append(function.name)
         if(isCriticalAlt)
             append("_")
@@ -241,7 +241,7 @@ class KotlinJvmForeignPrinter(
 
         append("\n\t\t@JvmStatic fun invoke${callback.name}($args): $type =\n\t\t\t")
 
-        val call = "(ForeignUtils.callbacks[_callback.address()] as ${callback.name})($lambdaArgs)"
+        val call = "(callbacks[_callback.address()] as ${callback.name})($lambdaArgs)"
 
         append(castToNative(callback.type, call, useArena = false))
         append("\n")
@@ -250,7 +250,7 @@ class KotlinJvmForeignPrinter(
     private fun printCallbackUpcall(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
         append("\n\t\tprivate val upcall")
         append(callback.name)
-        append(" = ForeignUtils.upcall(\n\t\t\t")
+        append(" = upcall(\n\t\t\t")
 
         // lookup
         append("lookup, \"invoke${callback.name}\",\n\t\t\t")
@@ -288,108 +288,85 @@ class KotlinJvmForeignPrinter(
         content: String
     ) = when {
         type.isString() -> "handleKStringFree.invoke($content)"
-        type.isArray() -> (type as ResolvedIdlType.Default).arrayType { type ->
-            when (val declaration = type.declaration) {
-                is BuiltinIdlDeclaration -> "handleK${declaration.kind.simpleName()}ArrayFree.invoke($content)"
-                is ResolvedIdlEnum -> "handleKIntArrayFree.invoke($content)"
-                is ResolvedIdlDictionary -> "handleKArrayFree.invoke($content, address${declaration.name}Free)"
-                else -> throw UnsupportedOperationException(type.toString())
+        type.isArray() -> type.arrayType { type ->
+            when {
+                type.isPrimitive() -> "handle${type.toCType()}ArrayFree.invoke($content)"
+                type.isEnum() ->
+                    "handleKIntArrayFree.invoke($content)"
+                else -> "handleKArrayFree.invoke($content, address${type.toCType(ptr = false)}Free)"
             }
         }
-        type.isCallback() -> "ForeignUtils.callbackFree($content)"
-        type.isDictionary() -> "handle${(type as ResolvedIdlType.Default).declaration.name.capitalized()}Free.invoke($content)"
+        type.isCallback() -> "callbackFree($content)"
+        type.isDictionary() || type.isString() -> "handle${type.toCType(ptr = false)}Free.invoke($content)"
         else -> null
     }
 
-    private fun castFromNative(type: ResolvedIdlType, content: String): String = when(type) {
-        is ResolvedIdlType.Void -> content
-        is ResolvedIdlType.Default -> when(type.declaration) {
-            is BuiltinIdlDeclaration -> when((type.declaration as BuiltinIdlDeclaration).kind) {
-                WebIDLBuiltinKind.STRING -> "ForeignUtils.toJvmString($content)"
-                WebIDLBuiltinKind.LIST -> type.arrayType { type ->
-                    when (val declaration = type.declaration) {
-                        is BuiltinIdlDeclaration -> "ForeignUtils.toJvm${declaration.kind.simpleName()}Array($content)"
-                        is ResolvedIdlEnum -> "ForeignUtils.toJvmEnumArray($content, ${declaration.name}::class.java)"
-                        is ResolvedIdlDictionary -> "ForeignUtils.toJvmArray($content, ::toJvmDictionary${declaration.name}, ${declaration.name}::class.java)"
-                        else -> throw UnsupportedOperationException(type.toString())
-                    }
+    private fun castFromNative(type: ResolvedIdlType, content: String): String = when {
+        type.isString() -> "toJvmKString($content)"
+        type.isCallback() -> "toJvmCallback($content)"
+        type.isEnum() -> "${type.declaration.name}.entries[$content]"
+        type.isDictionary() -> "toJvmDictionary${type.declaration.name}(${content})"
+        type.isArray() -> type.arrayType { type ->
+            when {
+                type.isPrimitive() -> "toJvm${type.toCType()}Array($content)"
+                type.isEnum() -> "toJvmEnumArray($content, ${type.declaration.name}::class.java)"
+                else -> {
+                    val fn = castFromNative(type, "").split("(")[0]
+                    "toJvmKArray($content, ::$fn, ${type.toKotlinType()}::class.java)"
                 }
-                else -> content
             }
-            is ResolvedIdlCallbackFunction -> "ForeignUtils.toJvmCallback($content)"
-            is ResolvedIdlEnum -> "${type.declaration.name}.entries[$content]"
-            is ResolvedIdlDictionary -> "toJvmDictionary${type.declaration.name}(${content})"
-            else -> throw UnsupportedOperationException(type.toString())
         }
-        else -> throw UnsupportedOperationException(type.toString())
+        else -> content
     }
 
     private fun castToNative(
         type: ResolvedIdlType,
         content: String,
         useArena: Boolean,
-    ): String {
-        return when (type) {
-            is ResolvedIdlType.Void -> content
-            is ResolvedIdlType.Default -> when (type.declaration) {
-                is BuiltinIdlDeclaration -> when ((type.declaration as BuiltinIdlDeclaration).kind) {
-                    WebIDLBuiltinKind.STRING ->
-                        if (useArena) "ForeignUtils.toNativeStringOnArena(arena, $content)"
-                        else "ForeignUtils.toNativeString($content)"
-                    WebIDLBuiltinKind.LIST -> type.arrayType { type ->
-                        when (val declaration = type.declaration) {
-                            is BuiltinIdlDeclaration -> {
-                                val name = declaration.kind.simpleName()
-                                if (useArena) "ForeignUtils.toNative${name}ArrayOnArena(arena, $content)"
-                                else "ForeignUtils.toNative${name}Array($content)"
-                            }
-                            is ResolvedIdlEnum ->
-                                if (useArena) "ForeignUtils.toNativeEnumArrayOnArena(arena, $content)"
-                                else "ForeignUtils.toNativeEnumArray($content)"
-                            is ResolvedIdlDictionary ->
-                                if (useArena) "ForeignUtils.toNativeArrayOnArena(arena, $content, ::toNativeDictionary${declaration.name}OnArena)"
-                                else "ForeignUtils.toNativeArray($content, ::toNativeDictionary${declaration.name})"
-                            else -> throw UnsupportedOperationException(type.toString())
-                        }
-                    }
-                    else -> content
+    ): String = when {
+        type.isEnum() -> "$content.ordinal"
+        type.isString() ->
+            if (useArena) "toNativeKStringOnArena(arena, $content)"
+            else "toNativeKString($content)"
+        type.isCallback() ->
+            if (useArena) "createCallbackOnArena(arena, $content, upcall${type.declaration.name})"
+            else "createCallback($content, upcall${type.declaration.name})"
+        type.isDictionary() ->
+            if (useArena) "toNativeDictionary${type.declaration.name}OnArena(arena, $content)"
+            else "toNativeDictionary${type.declaration.name}($content)"
+        type.isArray() -> type.arrayType { type ->
+            when {
+                type.isPrimitive() ->
+                    if (useArena) "toNative${type.toCType()}ArrayOnArena(arena, $content)"
+                    else "toNative${type.toCType()}Array($content)"
+                type.isEnum() ->
+                    if (useArena) "toNativeEnumArrayOnArena(arena, $content)"
+                    else "toNativeEnumArray($content)"
+                else -> {
+                    val fn = castToNative(type, "", useArena).split("(")[0]
+                    if (useArena) "toNativeKArrayOnArena(arena, $content, ::$fn)"
+                    else "toNativeKArray($content, ::$fn)"
                 }
-                is ResolvedIdlCallbackFunction ->
-                    if (useArena) "ForeignUtils.createCallbackOnArena(arena, $content, upcall${type.declaration.name})"
-                    else "ForeignUtils.createCallback($content, upcall${type.declaration.name})"
-                is ResolvedIdlEnum -> "$content.ordinal"
-                is ResolvedIdlDictionary ->
-                    if (useArena) "toNativeDictionary${type.declaration.name}OnArena(arena, $content)"
-                    else "toNativeDictionary${type.declaration.name}($content)"
-                else -> throw UnsupportedOperationException(type.toString())
             }
-            else -> throw UnsupportedOperationException(type.toString())
         }
+        else -> content
     }
 
-    fun ResolvedIdlType.toForeignType(): String = when(this) {
-        is ResolvedIdlType.Union -> throw UnsupportedOperationException("Union type are not unsupported")
-        is ResolvedIdlType.Void -> "null"
-        is ResolvedIdlType.Default -> when(declaration) {
-            is BuiltinIdlDeclaration -> when(val a = (declaration as BuiltinIdlDeclaration).kind) {
-                WebIDLBuiltinKind.CHAR -> "ValueLayout.JAVA_CHAR"
-                WebIDLBuiltinKind.BOOLEAN -> "ValueLayout.JAVA_BOOLEAN"
-                WebIDLBuiltinKind.BYTE -> "ValueLayout.JAVA_BYTE"
-                WebIDLBuiltinKind.SHORT -> "ValueLayout.JAVA_SHORT"
-                WebIDLBuiltinKind.INT -> "ValueLayout.JAVA_INT"
-                WebIDLBuiltinKind.LONG -> "ValueLayout.JAVA_LONG"
-                WebIDLBuiltinKind.FLOAT -> "ValueLayout.JAVA_FLOAT"
-                WebIDLBuiltinKind.DOUBLE -> "ValueLayout.JAVA_DOUBLE"
-                WebIDLBuiltinKind.STRING -> "ValueLayout.ADDRESS"
-                WebIDLBuiltinKind.LIST -> "ValueLayout.ADDRESS"
-                else -> throw UnsupportedOperationException(a.toString())
-            }
-            is ResolvedIdlEnum -> "ValueLayout.JAVA_INT"
-            else -> "ValueLayout.ADDRESS"
-        }
+    private fun ResolvedIdlType.toForeignType(): String = when {
+        isVoid() -> "null"
+        isChar() -> "ValueLayout.JAVA_CHAR"
+        isBoolean() -> "ValueLayout.JAVA_BOOLEAN"
+        isByte() -> "ValueLayout.JAVA_BYTE"
+        isShort() -> "ValueLayout.JAVA_SHORT"
+        isInt() -> "ValueLayout.JAVA_INT"
+        isLong() -> "ValueLayout.JAVA_LONG"
+        isFloat() -> "ValueLayout.JAVA_FLOAT"
+        isDouble() -> "ValueLayout.JAVA_DOUBLE"
+        isEnum() -> "ValueLayout.JAVA_INT"
+        else -> "ValueLayout.ADDRESS"
     }
 
-    fun ResolvedIdlType.toKotlinForeignType(): String {
+    private fun ResolvedIdlType.toKotlinForeignType(): String {
         return if(isCallback() || isString() || isArray() || isDictionary())
             "MemorySegment"
         else toKotlinType(enumAsInt = true)

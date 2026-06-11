@@ -1,5 +1,6 @@
 #include <api.h>
 #include <stdlib.h>
+#include <string.h>
 
 KCharArray* returnCharArray() {
     return KCharArray_of('a', 'b');
@@ -34,6 +35,13 @@ KFloatArray* returnFloatArray() {
 
 KDoubleArray* returnDoubleArray() {
     return KDoubleArray_of(1.1, 2.2);
+}
+
+KArray* returnStringArray() {
+    return KArray_of(
+        KString_new(strdup("string1"), 7, 7),
+        KString_new(strdup("string2"), 7, 7)
+    );
 }
 
 KIntArray* returnEnumArray() {

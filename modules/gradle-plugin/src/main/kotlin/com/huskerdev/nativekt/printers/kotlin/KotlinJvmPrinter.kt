@@ -59,6 +59,7 @@ class KotlinJvmPrinter(
         if(useForeignApi)
             builder.append("""
                 import com.huskerdev.nativekt.jvm.foreign.*
+                import com.huskerdev.nativekt.jvm.foreign.ForeignUtils.*
                 import java.lang.foreign.*
                 import java.lang.invoke.*
                 

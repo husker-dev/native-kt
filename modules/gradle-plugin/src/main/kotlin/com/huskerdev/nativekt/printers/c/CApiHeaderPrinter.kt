@@ -66,13 +66,13 @@ class CApiHeaderPrinter(
 
     private fun printFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
         append("\n")
-        append(function.type.toCDefType())
+        append(function.type.toCType())
         append(" ")
         append(function.name)
         append("(")
 
         function.args.joinTo(builder) {
-            "${it.type.toCDefType()} ${it.name}"
+            "${it.type.toCType()} ${it.name}"
         }
 
         append(");")
@@ -98,7 +98,7 @@ class CApiHeaderPrinter(
 
         buildList {
             dictionary.allFields().mapTo(this) { field ->
-                "${field.type.toCDefType()} ${field.name};"
+                "${field.type.toCType()} ${field.name};"
             }
             add("char __flags;")
         }.joinTo(builder, separator = "\n\t")
@@ -112,7 +112,7 @@ class CApiHeaderPrinter(
         append("\n$name* ${name}_new(")
 
         dictionary.allFields().joinTo(builder) { field ->
-            "${field.type.toCDefType()} ${field.name}"
+            "${field.type.toCType()} ${field.name}"
         }
         append(");")
 
@@ -135,8 +135,8 @@ class CApiHeaderPrinter(
 
         callbacks.forEach { callback ->
             names += callback.name + ","
-            types += callback.type.toCDefType() + if(callback.args.isNotEmpty()) "," else ""
-            args += callback.args.joinToString { "${it.type.toCDefType()} ${it.name}" }
+            types += callback.type.toCType() + if(callback.args.isNotEmpty()) "," else ""
+            args += callback.args.joinToString { "${it.type.toCType()} ${it.name}" }
         }
 
         val width1 = max(column1.length, names.maxOf { it.length })
@@ -364,58 +364,47 @@ class CApiHeaderPrinter(
 internal fun cloneFuncFor(
     type: ResolvedIdlType,
     content: String
-) = when {
-    type.isString() -> "KString_clone($content)"
-    type.isArray() -> {
-        (type as ResolvedIdlType.Default).arrayType { type ->
-            when (val declaration = type.declaration) {
-                is BuiltinIdlDeclaration -> {
-                    val name = declaration.kind.simpleName()
-                    "K${name}Array_clone($content)"
-                }
-                is ResolvedIdlEnum -> "KIntArray_clone($content)"
-                is ResolvedIdlDictionary -> "KArray_clone($content, (void*) ${declaration.name}_clone)"
-                else -> throw UnsupportedOperationException(type.toString())
-            }
+): String = when {
+    type.isArray() -> type.arrayType { type ->
+        when {
+            type.isPrimitive() -> "K${type.toKotlinType()}Array_clone($content)"
+            type.isEnum() -> "KIntArray_clone($content)"
+            else -> "KArray_clone($content, (void*) ${cloneFuncFor(type, "").dropLast(2)})"
         }
     }
     type.isCallback() -> "$content->clone($content)"
-    type.isDictionary() -> "${(type as ResolvedIdlType.Default).declaration.name}_clone($content)"
+    type.isDictionary() || type.isString() -> "${type.toCType(ptr = false)}_clone($content)"
     else -> content
 }
 
 internal fun freeFuncFor(
     type: ResolvedIdlType,
     content: String
-) = when {
-    type.isString() -> "KString_free($content)"
-    type.isArray() -> (type as ResolvedIdlType.Default).arrayType { type ->
-        when (val declaration = type.declaration) {
-            is BuiltinIdlDeclaration -> "K${declaration.kind.simpleName()}Array_free($content)"
-            is ResolvedIdlEnum -> "KIntArray_free($content)"
-            is ResolvedIdlDictionary -> "KArray_free($content, (void*) ${declaration.name}_free)"
-            else -> throw UnsupportedOperationException(type.toString())
+): String? = when {
+    type.isArray() -> type.arrayType { type ->
+        when {
+            type.isPrimitive() -> "K${type.toKotlinType()}Array_free($content)"
+            type.isEnum() -> "KIntArray_free($content)"
+            else -> "KArray_free($content, (void*) ${freeFuncFor(type, "")!!.dropLast(2)})"
         }
     }
     type.isCallback() -> "_AbstractCallback_free((_AbstractCallback*) $content)"
-    type.isDictionary() -> "${(type as ResolvedIdlType.Default).declaration.name}_free(${content})"
+    type.isDictionary() || type.isString() -> "${type.toCType(ptr = false)}_free($content)"
     else -> null
 }
 
 internal fun forceFreeFuncFor(
     type: ResolvedIdlType,
     content: String
-) = when {
-    type.isString() -> "_KString_forceFree($content)"
-    type.isArray() -> (type as ResolvedIdlType.Default).arrayType { type ->
-        when (val declaration = type.declaration) {
-            is BuiltinIdlDeclaration -> "_K${declaration.kind.simpleName()}Array_forceFree($content)"
-            is ResolvedIdlEnum -> "_KIntArray_forceFree($content)"
-            is ResolvedIdlDictionary -> "_KArray_forceFree($content, (void*) _${declaration.name}_forceFree)"
-            else -> throw UnsupportedOperationException(type.toString())
+): String? = when {
+    type.isArray() -> type.arrayType { type ->
+        when {
+            type.isPrimitive() -> "_K${type.toKotlinType()}Array_forceFree($content)"
+            type.isEnum() -> "_KIntArray_forceFree($content)"
+            else -> "_KArray_forceFree($content, (void*) ${forceFreeFuncFor(type, "")!!.dropLast(2)})"
         }
     }
     type.isCallback() -> "__AbstractCallback_forceFree((_AbstractCallback*) $content)"
-    type.isDictionary() -> "_${(type as ResolvedIdlType.Default).declaration.name}_forceFree($content)"
+    type.isDictionary() || type.isString() -> "_${type.toCType(ptr = false)}_forceFree($content)"
     else -> null
 }

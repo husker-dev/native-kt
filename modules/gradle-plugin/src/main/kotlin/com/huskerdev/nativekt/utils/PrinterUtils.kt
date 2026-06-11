@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalContracts::class)
+
 package com.huskerdev.nativekt.utils
 
 import com.huskerdev.webidl.parser.IdlAttributedHolder
@@ -5,6 +7,7 @@ import com.huskerdev.webidl.parser.IdlExtendedAttribute
 import com.huskerdev.webidl.resolver.*
 import org.gradle.internal.extensions.stdlib.capitalized
 import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
 
 fun asyncLoadFunctionName(moduleName: String) =
     "loadLib${moduleName.capitalized()}"
@@ -21,159 +24,92 @@ fun <T> ResolvedIdlType.Default.arrayType(block: (type: ResolvedIdlType.Default)
 }
 
 fun ResolvedIdlType.arrayTypeOrNull(): ResolvedIdlType.Default? {
-    if (this !is ResolvedIdlType.Default)
-        return null
-    val param = parameters.firstOrNull()
-        ?: return null
-    val type = param as? ResolvedIdlType.Default
-        ?: return null
-    return type
+    contract {
+        returnsNotNull() implies(this@arrayTypeOrNull is ResolvedIdlType.Default)
+    }
+    return (this as? ResolvedIdlType.Default)?.parameters?.firstOrNull() as? ResolvedIdlType.Default
 }
 
-@OptIn(ExperimentalContracts::class)
 fun ResolvedIdlType.builtinOrNull(): BuiltinIdlDeclaration? {
+    contract {
+        returnsNotNull() implies(this@builtinOrNull is ResolvedIdlType.Default)
+    }
     if (this !is ResolvedIdlType.Default ||
         declaration !is BuiltinIdlDeclaration) return null
     return declaration as BuiltinIdlDeclaration
 }
 
-internal fun WebIDLBuiltinKind.simpleName() = when(this) {
-    WebIDLBuiltinKind.CHAR -> "Char"
-    WebIDLBuiltinKind.BOOLEAN -> "Boolean"
-    WebIDLBuiltinKind.BYTE -> "Byte"
-    WebIDLBuiltinKind.SHORT -> "Short"
-    WebIDLBuiltinKind.INT -> "Int"
-    WebIDLBuiltinKind.LONG -> "Long"
-    WebIDLBuiltinKind.FLOAT -> "Float"
-    WebIDLBuiltinKind.DOUBLE -> "Double"
-    else -> throw UnsupportedOperationException(toString())
-}
-
-fun ResolvedIdlType.toKotlinType(
+internal fun ResolvedIdlType.toKotlinType(
     stringAsBytes: Boolean = false,
     enumAsInt: Boolean = false
-): String = when(this) {
-    is ResolvedIdlType.Void -> "Unit"
-    is ResolvedIdlType.Default -> when(val declaration = declaration) {
-        is BuiltinIdlDeclaration -> when(declaration.kind) {
-            WebIDLBuiltinKind.CHAR -> "Char"
-            WebIDLBuiltinKind.BOOLEAN -> "Boolean"
-            WebIDLBuiltinKind.BYTE -> "Byte"
-            WebIDLBuiltinKind.SHORT -> "Short"
-            WebIDLBuiltinKind.INT -> "Int"
-            WebIDLBuiltinKind.LONG -> "Long"
-            WebIDLBuiltinKind.FLOAT -> "Float"
-            WebIDLBuiltinKind.DOUBLE -> "Double"
-            WebIDLBuiltinKind.STRING -> if(stringAsBytes) "ByteArray" else "String"
-            WebIDLBuiltinKind.LIST -> arrayType { type ->
-                when (val declaration = type.declaration) {
-                    is BuiltinIdlDeclaration -> when (declaration.kind) {
-                        WebIDLBuiltinKind.CHAR -> "CharArray"
-                        WebIDLBuiltinKind.BOOLEAN -> "BooleanArray"
-                        WebIDLBuiltinKind.BYTE -> "ByteArray"
-                        WebIDLBuiltinKind.SHORT -> "ShortArray"
-                        WebIDLBuiltinKind.INT -> "IntArray"
-                        WebIDLBuiltinKind.LONG -> "LongArray"
-                        WebIDLBuiltinKind.FLOAT -> "FloatArray"
-                        WebIDLBuiltinKind.DOUBLE -> "DoubleArray"
-                        else -> "Array<${type.toKotlinType(stringAsBytes, enumAsInt)}>"
-                    }
-                    is ResolvedIdlEnum -> if (enumAsInt) "IntArray" else "Array<${declaration.name}>"
-                    else -> "Array<${type.toKotlinType(stringAsBytes, enumAsInt)}>"
-                }
-            }
-            else -> throw UnsupportedOperationException(toString())
+): String = when {
+    isVoid() -> "Unit"
+    isChar() -> "Char"
+    isBoolean() -> "Boolean"
+    isByte() -> "Byte"
+    isShort() -> "Short"
+    isInt() -> "Int"
+    isLong() -> "Long"
+    isFloat() -> "Float"
+    isDouble() -> "Double"
+    isString() -> if(stringAsBytes) "ByteArray" else "String"
+    isEnum() -> if(enumAsInt) "Int" else declaration.name
+    isArray() -> arrayType { type ->
+        when {
+            type.isPrimitive() -> "${type.toKotlinType()}Array"
+            type.isEnum() && enumAsInt -> "IntArray"
+            else -> "Array<${type.toKotlinType(stringAsBytes, enumAsInt)}>"
         }
-        is ResolvedIdlEnum -> if(enumAsInt) "Int" else declaration.name
-        is ResolvedIdlCallbackFunction,
-        is ResolvedIdlDictionary -> declaration.name
-        else -> declaration.name
     }
-    else -> throw UnsupportedOperationException(toString())
+    else -> (this as ResolvedIdlType.Default).declaration.name
 }
 
-fun ResolvedIdlType.toCDefType(
+fun ResolvedIdlType.toCType(
     enumAsInt: Boolean = false,
     ptr: Boolean = true
 ): String {
     val ptr = if(ptr) "*" else ""
-    return when(this) {
-        is ResolvedIdlType.Void -> "void"
-        is ResolvedIdlType.Default -> when(val declaration = declaration) {
-            is BuiltinIdlDeclaration -> when(declaration.kind) {
-                WebIDLBuiltinKind.CHAR -> "KChar"
-                WebIDLBuiltinKind.BOOLEAN -> "KBoolean"
-                WebIDLBuiltinKind.BYTE -> "KByte"
-                WebIDLBuiltinKind.SHORT -> "KShort"
-                WebIDLBuiltinKind.INT -> "KInt"
-                WebIDLBuiltinKind.LONG -> "KLong"
-                WebIDLBuiltinKind.FLOAT -> "KFloat"
-                WebIDLBuiltinKind.DOUBLE -> "KDouble"
-                WebIDLBuiltinKind.STRING -> "KString$ptr"
-                WebIDLBuiltinKind.LIST -> arrayType { type ->
-                    when (val declaration = type.declaration) {
-                        is BuiltinIdlDeclaration -> when (declaration.kind) {
-                            WebIDLBuiltinKind.CHAR -> "KCharArray$ptr"
-                            WebIDLBuiltinKind.BOOLEAN -> "KBooleanArray$ptr"
-                            WebIDLBuiltinKind.BYTE -> "KByteArray$ptr"
-                            WebIDLBuiltinKind.SHORT -> "KShortArray$ptr"
-                            WebIDLBuiltinKind.INT -> "KIntArray$ptr"
-                            WebIDLBuiltinKind.LONG -> "KLongArray$ptr"
-                            WebIDLBuiltinKind.FLOAT -> "KFloatArray$ptr"
-                            WebIDLBuiltinKind.DOUBLE -> "KDoubleArray$ptr"
-                            WebIDLBuiltinKind.STRING -> "KStringArray$ptr"
-                            else -> throw UnsupportedOperationException()
-                        }
-                        is ResolvedIdlEnum -> "KIntArray$ptr"
-                        is ResolvedIdlDictionary -> "KArray$ptr"
-                        else -> throw UnsupportedOperationException(declaration.name)
-                    }
-                }
-                else -> throw UnsupportedOperationException(toString())
+    return when {
+        isVoid() -> "void"
+        isChar() -> "KChar"
+        isBoolean() -> "KBoolean"
+        isByte() -> "KByte"
+        isShort() -> "KShort"
+        isInt() -> "KInt"
+        isLong() -> "KLong"
+        isFloat() -> "KFloat"
+        isDouble() -> "KDouble"
+        isEnum() -> if(enumAsInt) "KInt" else declaration.name
+        isString() -> "KString$ptr"
+        isArray() -> arrayType { type ->
+            when {
+                type.isPrimitive() -> "${type.toCType()}Array$ptr"
+                type.isEnum() -> "KIntArray$ptr"
+                else -> "KArray$ptr"
             }
-            is ResolvedIdlEnum -> if(enumAsInt) "KInt" else declaration.name
-            is ResolvedIdlCallbackFunction,
-            is ResolvedIdlDictionary -> "${declaration.name}$ptr"
-            else -> throw UnsupportedOperationException(declaration.name)
         }
-        else -> throw UnsupportedOperationException(toString())
+        else -> "${(this as ResolvedIdlType.Default).declaration.name}$ptr"
     }
 }
 
-fun ResolvedIdlType.toJNIType(): String = when(this) {
-    is ResolvedIdlType.Void -> "void"
-    is ResolvedIdlType.Default -> when(val declaration = declaration) {
-        is BuiltinIdlDeclaration -> when(declaration.kind) {
-            WebIDLBuiltinKind.CHAR -> "jchar"
-            WebIDLBuiltinKind.BOOLEAN -> "jboolean"
-            WebIDLBuiltinKind.BYTE -> "jbyte"
-            WebIDLBuiltinKind.SHORT -> "jshort"
-            WebIDLBuiltinKind.INT -> "jint"
-            WebIDLBuiltinKind.LONG -> "jlong"
-            WebIDLBuiltinKind.FLOAT -> "jfloat"
-            WebIDLBuiltinKind.DOUBLE -> "jdouble"
-            WebIDLBuiltinKind.STRING -> "jstring"
-            WebIDLBuiltinKind.LIST -> arrayType { type ->
-                when (val declaration = type.declaration) {
-                    is BuiltinIdlDeclaration -> when (declaration.kind) {
-                        WebIDLBuiltinKind.CHAR -> "jcharArray"
-                        WebIDLBuiltinKind.BOOLEAN -> "jbooleanArray"
-                        WebIDLBuiltinKind.BYTE -> "jbyteArray"
-                        WebIDLBuiltinKind.SHORT -> "jshortArray"
-                        WebIDLBuiltinKind.INT -> "jintArray"
-                        WebIDLBuiltinKind.LONG -> "jlongArray"
-                        WebIDLBuiltinKind.FLOAT -> "jfloatArray"
-                        WebIDLBuiltinKind.DOUBLE -> "jdoubleArray"
-                        else -> "jobjectArray"
-                    }
-                    else -> "jobjectArray"
-                }
-            }
-            else -> throw UnsupportedOperationException(toString())
+fun ResolvedIdlType.toJNIType(): String = when {
+    isVoid() -> "void"
+    isChar() -> "jchar"
+    isBoolean() -> "jboolean"
+    isByte() -> "jbyte"
+    isShort() -> "jshort"
+    isInt() -> "jint"
+    isLong() -> "jlong"
+    isFloat() -> "jfloat"
+    isDouble() -> "jdouble"
+    isString() -> "jstring"
+    isArray() -> arrayType { type ->
+        when {
+            isPrimitive() -> "${type.toJNIType()}Array"
+            else -> "jobjectArray"
         }
-        else -> "jobject"
     }
-    else -> throw UnsupportedOperationException(toString())
+    else -> "jobject"
 }
 
 fun ResolvedIdlOperation.toJavaDesc(
@@ -189,37 +125,31 @@ fun ResolvedIdlOperation.toJavaDesc(
 fun ResolvedIdlType.toJavaDesc(
     classpath: String,
     isCritical: Boolean = false
-): String = when(this) {
-    is ResolvedIdlType.Void -> "V"
-    is ResolvedIdlType.Default -> when(val declaration = declaration) {
-        is BuiltinIdlDeclaration -> when(declaration.kind) {
-            WebIDLBuiltinKind.CHAR -> "C"
-            WebIDLBuiltinKind.BOOLEAN -> "Z"
-            WebIDLBuiltinKind.BYTE -> "B"
-            WebIDLBuiltinKind.SHORT -> "S"
-            WebIDLBuiltinKind.INT -> "I"
-            WebIDLBuiltinKind.LONG -> "J"
-            WebIDLBuiltinKind.FLOAT -> "F"
-            WebIDLBuiltinKind.DOUBLE -> "D"
-            WebIDLBuiltinKind.STRING -> if(isCritical) "[B" else "Ljava/lang/String;"
-            WebIDLBuiltinKind.LIST -> arrayType { type ->
-                "[${type.toJavaDesc(classpath, isCritical)}"
-            }
-            else -> throw UnsupportedOperationException(toString())
-        }
-        is ResolvedIdlEnum if (isCritical) -> "I"
-        is ResolvedIdlEnum,
-        is ResolvedIdlDictionary,
-        is ResolvedIdlCallbackFunction -> "L${classpath.replace(".", "/")}/${declaration.name};"
-        else -> "Ljava/lang/Object;"
+): String = when {
+    isVoid() -> "V"
+    isChar() -> "C"
+    isBoolean() -> "Z"
+    isByte() -> "B"
+    isShort() -> "S"
+    isInt() -> "I"
+    isLong() -> "J"
+    isFloat() -> "F"
+    isDouble() -> "D"
+    isString() -> if(isCritical) "[B" else "Ljava/lang/String;"
+    isEnum() && isCritical -> "I"
+    isArray() -> arrayType { type ->
+        "[${type.toJavaDesc(classpath, isCritical)}"
     }
-    else -> throw UnsupportedOperationException(toString())
+    else -> "L${classpath.replace(".", "/")}/${(this as ResolvedIdlType.Default).declaration.name};"
 }
 
 // ===== Simple types ======
 
-fun ResolvedIdlType.isPrimitive(): Boolean =
-    builtinOrNull()?.kind in setOf(
+fun ResolvedIdlType.isPrimitive(): Boolean {
+    contract {
+        returns(true) implies(this@isPrimitive is ResolvedIdlType.Default)
+    }
+    return builtinOrNull()?.kind in setOf(
         WebIDLBuiltinKind.CHAR,
         WebIDLBuiltinKind.BOOLEAN,
         WebIDLBuiltinKind.BYTE,
@@ -229,65 +159,149 @@ fun ResolvedIdlType.isPrimitive(): Boolean =
         WebIDLBuiltinKind.FLOAT,
         WebIDLBuiltinKind.DOUBLE,
     )
+}
 
-fun ResolvedIdlType.isString(): Boolean =
-    builtinOrNull()?.kind == WebIDLBuiltinKind.STRING
+fun ResolvedIdlType.isVoid(): Boolean {
+    contract {
+        returns(true) implies(this@isVoid is ResolvedIdlType.Void)
+    }
+    return this is ResolvedIdlType.Void
+}
 
-fun ResolvedIdlType.isLong(): Boolean =
-    builtinOrNull()?.kind == WebIDLBuiltinKind.LONG
+fun ResolvedIdlType.isString(): Boolean {
+    contract {
+        returns(true) implies(this@isString is ResolvedIdlType.Default)
+    }
+    return builtinOrNull()?.kind == WebIDLBuiltinKind.STRING
+}
 
-fun ResolvedIdlType.isInt(): Boolean =
-    builtinOrNull()?.kind == WebIDLBuiltinKind.INT
+fun ResolvedIdlType.isLong(): Boolean {
+    contract {
+        returns(true) implies(this@isLong is ResolvedIdlType.Default)
+    }
+    return builtinOrNull()?.kind == WebIDLBuiltinKind.LONG
+}
 
-fun ResolvedIdlType.isDouble(): Boolean =
-    builtinOrNull()?.kind == WebIDLBuiltinKind.DOUBLE
+fun ResolvedIdlType.isInt(): Boolean {
+    contract {
+        returns(true) implies(this@isInt is ResolvedIdlType.Default)
+    }
+    return builtinOrNull()?.kind == WebIDLBuiltinKind.INT
+}
 
-fun ResolvedIdlType.isFloat(): Boolean =
-    builtinOrNull()?.kind == WebIDLBuiltinKind.FLOAT
+fun ResolvedIdlType.isDouble(): Boolean {
+    contract {
+        returns(true) implies(this@isDouble is ResolvedIdlType.Default)
+    }
+    return builtinOrNull()?.kind == WebIDLBuiltinKind.DOUBLE
+}
 
-fun ResolvedIdlType.isBoolean(): Boolean =
-    builtinOrNull()?.kind == WebIDLBuiltinKind.BOOLEAN
+fun ResolvedIdlType.isFloat(): Boolean {
+    contract {
+        returns(true) implies(this@isFloat is ResolvedIdlType.Default)
+    }
+    return builtinOrNull()?.kind == WebIDLBuiltinKind.FLOAT
+}
 
-fun ResolvedIdlType.isShort(): Boolean =
-    builtinOrNull()?.kind == WebIDLBuiltinKind.SHORT
+fun ResolvedIdlType.isBoolean(): Boolean {
+    contract {
+        returns(true) implies(this@isBoolean is ResolvedIdlType.Default)
+    }
+    return builtinOrNull()?.kind == WebIDLBuiltinKind.BOOLEAN
+}
 
-fun ResolvedIdlType.isByte(): Boolean =
-    builtinOrNull()?.kind == WebIDLBuiltinKind.BYTE
+fun ResolvedIdlType.isShort(): Boolean {
+    contract {
+        returns(true) implies(this@isShort is ResolvedIdlType.Default)
+    }
+    return builtinOrNull()?.kind == WebIDLBuiltinKind.SHORT
+}
 
-fun ResolvedIdlType.isChar(): Boolean =
-    builtinOrNull()?.kind == WebIDLBuiltinKind.CHAR
+fun ResolvedIdlType.isByte(): Boolean {
+    contract {
+        returns(true) implies(this@isByte is ResolvedIdlType.Default)
+    }
+    return builtinOrNull()?.kind == WebIDLBuiltinKind.BYTE
+}
 
-fun ResolvedIdlType.isArray(): Boolean =
-    builtinOrNull()?.kind == WebIDLBuiltinKind.LIST
+fun ResolvedIdlType.isChar(): Boolean {
+    contract {
+        returns(true) implies(this@isChar is ResolvedIdlType.Default)
+    }
+    return builtinOrNull()?.kind == WebIDLBuiltinKind.CHAR
+}
 
-fun ResolvedIdlType.isCallback(): Boolean =
-    this is ResolvedIdlType.Default && declaration is ResolvedIdlCallbackFunction
+fun ResolvedIdlType.isArray(): Boolean {
+    contract {
+        returns(true) implies(this@isArray is ResolvedIdlType.Default)
+    }
+    return builtinOrNull()?.kind == WebIDLBuiltinKind.LIST
+}
 
-fun ResolvedIdlType.isEnum(): Boolean =
-    this is ResolvedIdlType.Default && declaration is ResolvedIdlEnum
+fun ResolvedIdlType.isCallback(): Boolean {
+    contract {
+        returns(true) implies(this@isCallback is ResolvedIdlType.Default)
+    }
+    return this is ResolvedIdlType.Default && declaration is ResolvedIdlCallbackFunction
+}
 
-fun ResolvedIdlType.isDictionary(): Boolean =
-    this is ResolvedIdlType.Default && declaration is ResolvedIdlDictionary
+fun ResolvedIdlType.isEnum(): Boolean {
+    contract {
+        returns(true) implies(this@isEnum is ResolvedIdlType.Default)
+    }
+    return this is ResolvedIdlType.Default && declaration is ResolvedIdlEnum
+}
+
+fun ResolvedIdlType.isDictionary(): Boolean {
+    contract {
+        returns(true) implies(this@isDictionary is ResolvedIdlType.Default)
+    }
+    return this is ResolvedIdlType.Default && declaration is ResolvedIdlDictionary
+}
 
 // ==== Arrays =====
 
-fun ResolvedIdlType.isStringArray(): Boolean =
-    arrayTypeOrNull()?.isString() ?: false
+fun ResolvedIdlType.isStringArray(): Boolean {
+    contract {
+        returns(true) implies(this@isStringArray is ResolvedIdlType.Default)
+    }
+    return arrayTypeOrNull()?.isString() ?: false
+}
 
-fun ResolvedIdlType.isEnumArray(): Boolean =
-    arrayTypeOrNull()?.isEnum() ?: false
+fun ResolvedIdlType.isEnumArray(): Boolean {
+    contract {
+        returns(true) implies(this@isEnumArray is ResolvedIdlType.Default)
+    }
+    return arrayTypeOrNull()?.isEnum() ?: false
+}
 
-fun ResolvedIdlType.isDictionaryArray(): Boolean =
-    arrayTypeOrNull()?.isDictionary() ?: false
+fun ResolvedIdlType.isDictionaryArray(): Boolean {
+    contract {
+        returns(true) implies(this@isDictionaryArray is ResolvedIdlType.Default)
+    }
+    return arrayTypeOrNull()?.isDictionary() ?: false
+}
 
-fun ResolvedIdlType.isBooleanArray(): Boolean =
-    arrayTypeOrNull()?.isBoolean() ?: false
+fun ResolvedIdlType.isBooleanArray(): Boolean {
+    contract {
+        returns(true) implies(this@isBooleanArray is ResolvedIdlType.Default)
+    }
+    return arrayTypeOrNull()?.isBoolean() ?: false
+}
 
-fun ResolvedIdlType.isLongArray(): Boolean =
-    arrayTypeOrNull()?.isLong() ?: false
+fun ResolvedIdlType.isLongArray(): Boolean {
+    contract {
+        returns(true) implies(this@isLongArray is ResolvedIdlType.Default)
+    }
+    return arrayTypeOrNull()?.isLong() ?: false
+}
 
-internal fun ResolvedIdlType.isAnyLongType(): Boolean =
-    isLong() || isLongArray ()
+internal fun ResolvedIdlType.isAnyLongType(): Boolean {
+    contract {
+        returns(true) implies(this@isAnyLongType is ResolvedIdlType.Default)
+    }
+    return isLong() || isLongArray()
+}
 
 internal fun IdlResolver.isUsingLong(): Boolean {
     // operators

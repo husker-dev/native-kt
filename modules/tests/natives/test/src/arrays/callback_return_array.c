@@ -1,4 +1,5 @@
 #include <api.h>
+#include <string.h>
 
 KBoolean callbackReturnCharArray(CallbackReturnCharArray* arg) {
     const KCharArray* array = arg->invoke(arg);
@@ -62,6 +63,17 @@ KBoolean callbackReturnDoubleArray(CallbackReturnDoubleArray* arg) {
         array->length == 2 &&
         array->elements[0] == 1.1 &&
         array->elements[1] == 2.2;
+}
+
+KBoolean callbackReturnStringArray(CallbackReturnStringArray* arg) {
+    const KArray* array = arg->invoke(arg);
+    const KString* el1 = (KString*) array->elements[0];
+    const KString* el2 = (KString*) array->elements[1];
+
+    return (array->__flags & 1) &&
+        array->length == 2 &&
+        strncmp(el1->data, "string1", el1->length) == 0 &&
+        strncmp(el2->data, "string2", el2->length) == 0;
 }
 
 KBoolean callbackReturnEnumArray(CallbackReturnEnumArray* arg) {

@@ -15,15 +15,15 @@ class CStructLayout(
         var maxAlignment = 0
         types.forEach { type ->
             val typeSize = when(type) {
-                Ptr::class -> 4
+                Boolean::class -> 1
+                Char::class -> 2
+                Byte::class -> 1
+                Short::class -> 2
                 Int::class -> 4
                 Long::class -> 8
                 Float::class -> 4
                 Double::class -> 8
-                Char::class -> 2
-                Short::class -> 2
-                Byte::class -> 1
-                Boolean::class -> 1
+                Ptr::class -> 4
                 else -> throw UnsupportedOperationException(type.toString())
             }
 

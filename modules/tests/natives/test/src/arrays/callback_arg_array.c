@@ -1,4 +1,5 @@
 #include <api.h>
+#include <string.h>
 
 KBoolean callbackArgCharArray(CallbackPassCharArray* arg) {
     return arg->invoke(arg, KCharArray_of('a', 'b'));
@@ -33,6 +34,13 @@ KBoolean callbackArgFloatArray(CallbackPassFloatArray* arg) {
 
 KBoolean callbackArgDoubleArray(CallbackPassDoubleArray* arg) {
     return arg->invoke(arg, KDoubleArray_of(1.1, 2.2));
+}
+
+KBoolean callbackArgStringArray(CallbackPassStringArray* arg) {
+    return arg->invoke(arg, KArray_of(
+        KString_new(strdup("string1"), 7, 7),
+        KString_new(strdup("string2"), 7, 7)
+    ));
 }
 
 KBoolean callbackArgEnumArray(CallbackPassEnumArray* arg) {

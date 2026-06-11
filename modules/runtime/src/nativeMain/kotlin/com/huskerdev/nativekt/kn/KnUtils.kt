@@ -16,7 +16,11 @@ const val FLAG_ON_STACK = 2.toByte()
 // ║     String     ║
 // ╚════════════════╝
 
-fun MemScope.toNativeStringOnArena(str: String, pin: Boolean): CPointer<KString> {
+val _handleKStringFree = staticCFunction<COpaquePointer?, Unit> {
+    KString_free(it!!.reinterpret())
+}
+
+fun MemScope.toNativeKStringOnArena(str: String, pin: Boolean = false): CPointer<KString> {
     val bytes = str.cstr
     val mem = alloc<KString>()
     mem.size = bytes.size.convert()
@@ -30,7 +34,7 @@ fun MemScope.toNativeStringOnArena(str: String, pin: Boolean): CPointer<KString>
     return mem.ptr
 }
 
-fun toNativeString(str: String): CPointer<KString> {
+fun toNativeKString(str: String): CPointer<KString> {
     val bytes = str.cstr
     val mem = malloc(sizeOf<KString>().convert())!!.reinterpret<KString>().pointed
     mem.size = bytes.size.convert()
@@ -41,7 +45,7 @@ fun toNativeString(str: String): CPointer<KString> {
     return mem.ptr
 }
 
-fun toKotlinString(struct: CPointer<KString>): String =
+fun toKotlinKString(struct: CPointer<KString>): String =
     struct.pointed.data!!.toKString()
 
 // ╔════════════════╗
@@ -50,7 +54,7 @@ fun toKotlinString(struct: CPointer<KString>): String =
 
 // Char
 
-fun MemScope.toNativeCharArrayOnArena(arr: CharArray, pin: Boolean): CPointer<KCharArray> {
+fun MemScope.toNativeKCharArrayOnArena(arr: CharArray, pin: Boolean): CPointer<KCharArray> {
     val mem = alloc<KCharArray>()
     mem.size = (arr.size * Char.SIZE_BYTES).convert()
     mem.elements = if(pin) {
@@ -64,7 +68,7 @@ fun MemScope.toNativeCharArrayOnArena(arr: CharArray, pin: Boolean): CPointer<KC
     return mem.ptr
 }
 
-fun toNativeCharArray(arr: CharArray): CPointer<KCharArray> {
+fun toNativeKCharArray(arr: CharArray): CPointer<KCharArray> {
     val mem = malloc(sizeOf<KCharArray>().convert())!!.reinterpret<KCharArray>().pointed
     mem.size = (arr.size * Char.SIZE_BYTES).convert()
     mem.elements = malloc(mem.size.convert())!!.reinterpret()
@@ -74,23 +78,23 @@ fun toNativeCharArray(arr: CharArray): CPointer<KCharArray> {
     return mem.ptr
 }
 
-fun toKotlinCharArray(struct: CPointer<KCharArray>): CharArray =
+fun toKotlinKCharArray(struct: CPointer<KCharArray>): CharArray =
     struct.pointed.run { CharArray(length) { elements!![it].toInt().toChar() } }
 
 // Boolean
 
-fun MemScope.toNativeBooleanArrayOnArena(array: BooleanArray, pin: Boolean): CPointer<KBooleanArray> =
-    toNativeByteArrayOnArena(array.map { it.toByte() }.toByteArray(), pin).reinterpret()
+fun MemScope.toNativeKBooleanArrayOnArena(array: BooleanArray, pin: Boolean): CPointer<KBooleanArray> =
+    toNativeKByteArrayOnArena(array.map { it.toByte() }.toByteArray(), pin).reinterpret()
 
-fun toNativeBooleanArray(array: BooleanArray): CPointer<KBooleanArray> =
-    toNativeByteArray(array.map { it.toByte() }.toByteArray()).reinterpret()
+fun toNativeKBooleanArray(array: BooleanArray): CPointer<KBooleanArray> =
+    toNativeKByteArray(array.map { it.toByte() }.toByteArray()).reinterpret()
 
-fun toKotlinBooleanArray(struct: CPointer<KBooleanArray>): BooleanArray =
+fun toKotlinKBooleanArray(struct: CPointer<KBooleanArray>): BooleanArray =
     struct.pointed.run { BooleanArray(length) { elements!![it].value } }
 
 // Byte
 
-fun MemScope.toNativeByteArrayOnArena(arr: ByteArray, pin: Boolean): CPointer<KByteArray> {
+fun MemScope.toNativeKByteArrayOnArena(arr: ByteArray, pin: Boolean): CPointer<KByteArray> {
     val mem = alloc<KByteArray>()
     mem.size = (arr.size * Byte.SIZE_BYTES).convert()
     mem.elements = if(pin) {
@@ -104,7 +108,7 @@ fun MemScope.toNativeByteArrayOnArena(arr: ByteArray, pin: Boolean): CPointer<KB
     return mem.ptr
 }
 
-fun toNativeByteArray(arr: ByteArray): CPointer<KByteArray> {
+fun toNativeKByteArray(arr: ByteArray): CPointer<KByteArray> {
     val mem = malloc(sizeOf<KByteArray>().convert())!!.reinterpret<KByteArray>().pointed
     mem.size = (arr.size * Byte.SIZE_BYTES).convert()
     mem.elements = malloc(mem.size.convert())!!.reinterpret()
@@ -114,12 +118,12 @@ fun toNativeByteArray(arr: ByteArray): CPointer<KByteArray> {
     return mem.ptr
 }
 
-fun toKotlinByteArray(struct: CPointer<KByteArray>): ByteArray =
+fun toKotlinKByteArray(struct: CPointer<KByteArray>): ByteArray =
     struct.pointed.run { ByteArray(length) { elements!![it] } }
 
 // Short
 
-fun MemScope.toNativeShortArrayOnArena(arr: ShortArray, pin: Boolean): CPointer<KShortArray> {
+fun MemScope.toNativeKShortArrayOnArena(arr: ShortArray, pin: Boolean): CPointer<KShortArray> {
     val mem = alloc<KShortArray>()
     mem.size = (arr.size * Short.SIZE_BYTES).convert()
     mem.elements = if(pin) {
@@ -133,7 +137,7 @@ fun MemScope.toNativeShortArrayOnArena(arr: ShortArray, pin: Boolean): CPointer<
     return mem.ptr
 }
 
-fun toNativeShortArray(arr: ShortArray): CPointer<KShortArray> {
+fun toNativeKShortArray(arr: ShortArray): CPointer<KShortArray> {
     val mem = malloc(sizeOf<KShortArray>().convert())!!.reinterpret<KShortArray>().pointed
     mem.size = (arr.size * Short.SIZE_BYTES).convert()
     mem.elements = malloc(mem.size.convert())!!.reinterpret()
@@ -143,12 +147,12 @@ fun toNativeShortArray(arr: ShortArray): CPointer<KShortArray> {
     return mem.ptr
 }
 
-fun toKotlinShortArray(struct: CPointer<KShortArray>): ShortArray =
+fun toKotlinKShortArray(struct: CPointer<KShortArray>): ShortArray =
     struct.pointed.run { ShortArray(length) { elements!![it] } }
 
 // Int
 
-fun MemScope.toNativeIntArrayOnArena(arr: IntArray, pin: Boolean): CPointer<KIntArray> {
+fun MemScope.toNativeKIntArrayOnArena(arr: IntArray, pin: Boolean): CPointer<KIntArray> {
     val mem = alloc<KIntArray>()
     mem.size = (arr.size * Int.SIZE_BYTES).convert()
     mem.elements = if(pin) {
@@ -162,7 +166,7 @@ fun MemScope.toNativeIntArrayOnArena(arr: IntArray, pin: Boolean): CPointer<KInt
     return mem.ptr
 }
 
-fun toNativeIntArray(arr: IntArray): CPointer<KIntArray> {
+fun toNativeKIntArray(arr: IntArray): CPointer<KIntArray> {
     val mem = malloc(sizeOf<KIntArray>().convert())!!.reinterpret<KIntArray>().pointed
     mem.size = (arr.size * Int.SIZE_BYTES).convert()
     mem.elements = malloc(mem.size.convert())!!.reinterpret()
@@ -172,12 +176,12 @@ fun toNativeIntArray(arr: IntArray): CPointer<KIntArray> {
     return mem.ptr
 }
 
-fun toKotlinIntArray(struct: CPointer<KIntArray>): IntArray =
+fun toKotlinKIntArray(struct: CPointer<KIntArray>): IntArray =
     struct.pointed.run { IntArray(length) { elements!![it] } }
 
 // Long
 
-fun MemScope.toNativeLongArrayOnArena(arr: LongArray, pin: Boolean): CPointer<KLongArray> {
+fun MemScope.toNativeKLongArrayOnArena(arr: LongArray, pin: Boolean): CPointer<KLongArray> {
     val mem = alloc<KLongArray>()
     mem.size = (arr.size * Long.SIZE_BYTES).convert()
     mem.elements = if(pin) {
@@ -191,7 +195,7 @@ fun MemScope.toNativeLongArrayOnArena(arr: LongArray, pin: Boolean): CPointer<KL
     return mem.ptr
 }
 
-fun toNativeLongArray(arr: LongArray): CPointer<KLongArray> {
+fun toNativeKLongArray(arr: LongArray): CPointer<KLongArray> {
     val mem = malloc(sizeOf<KLongArray>().convert())!!.reinterpret<KLongArray>().pointed
     mem.size = (arr.size * Long.SIZE_BYTES).convert()
     mem.elements = malloc(mem.size.convert())!!.reinterpret()
@@ -201,12 +205,12 @@ fun toNativeLongArray(arr: LongArray): CPointer<KLongArray> {
     return mem.ptr
 }
 
-fun toKotlinLongArray(struct: CPointer<KLongArray>): LongArray =
+fun toKotlinKLongArray(struct: CPointer<KLongArray>): LongArray =
     struct.pointed.run { LongArray(length) { elements!![it] } }
 
 // Float
 
-fun MemScope.toNativeFloatArrayOnArena(arr: FloatArray, pin: Boolean): CPointer<KFloatArray> {
+fun MemScope.toNativeKFloatArrayOnArena(arr: FloatArray, pin: Boolean): CPointer<KFloatArray> {
     val mem = alloc<KFloatArray>()
     mem.size = (arr.size * Float.SIZE_BYTES).convert()
     mem.elements = if(pin) {
@@ -220,7 +224,7 @@ fun MemScope.toNativeFloatArrayOnArena(arr: FloatArray, pin: Boolean): CPointer<
     return mem.ptr
 }
 
-fun toNativeFloatArray(arr: FloatArray): CPointer<KFloatArray> {
+fun toNativeKFloatArray(arr: FloatArray): CPointer<KFloatArray> {
     val mem = malloc(sizeOf<KFloatArray>().convert())!!.reinterpret<KFloatArray>().pointed
     mem.size = (arr.size * Float.SIZE_BYTES).convert()
     mem.elements = malloc(mem.size.convert())!!.reinterpret()
@@ -230,12 +234,12 @@ fun toNativeFloatArray(arr: FloatArray): CPointer<KFloatArray> {
     return mem.ptr
 }
 
-fun toKotlinFloatArray(struct: CPointer<KFloatArray>): FloatArray =
+fun toKotlinKFloatArray(struct: CPointer<KFloatArray>): FloatArray =
     struct.pointed.run { FloatArray(length) { elements!![it] } }
 
 // Double
 
-fun MemScope.toNativeDoubleArrayOnArena(arr: DoubleArray, pin: Boolean): CPointer<KDoubleArray> {
+fun MemScope.toNativeKDoubleArrayOnArena(arr: DoubleArray, pin: Boolean): CPointer<KDoubleArray> {
     val mem = alloc<KDoubleArray>()
     mem.size = (arr.size * Double.SIZE_BYTES).convert()
     mem.elements = if(pin) {
@@ -249,7 +253,7 @@ fun MemScope.toNativeDoubleArrayOnArena(arr: DoubleArray, pin: Boolean): CPointe
     return mem.ptr
 }
 
-fun toNativeDoubleArray(arr: DoubleArray): CPointer<KDoubleArray> {
+fun toNativeKDoubleArray(arr: DoubleArray): CPointer<KDoubleArray> {
     val mem = malloc(sizeOf<KDoubleArray>().convert())!!.reinterpret<KDoubleArray>().pointed
     mem.size = (arr.size * Double.SIZE_BYTES).convert()
     mem.elements = malloc(mem.size.convert())!!.reinterpret()
@@ -259,26 +263,26 @@ fun toNativeDoubleArray(arr: DoubleArray): CPointer<KDoubleArray> {
     return mem.ptr
 }
 
-fun toKotlinDoubleArray(struct: CPointer<KDoubleArray>): DoubleArray =
+fun toKotlinKDoubleArray(struct: CPointer<KDoubleArray>): DoubleArray =
     struct.pointed.run { DoubleArray(length) { elements!![it] } }
 
 // Enum
 
 fun <T: Enum<T>> MemScope.toNativeEnumArrayOnArena(arr: Array<T>, pin: Boolean): CPointer<KIntArray> =
-    toNativeIntArrayOnArena(IntArray(arr.size) { arr[it].ordinal }, pin)
+    toNativeKIntArrayOnArena(IntArray(arr.size) { arr[it].ordinal }, pin)
 
 fun <T: Enum<T>> toNativeEnumArray(arr: Array<T>): CPointer<KIntArray> =
-    toNativeIntArray(IntArray(arr.size) { arr[it].ordinal })
+    toNativeKIntArray(IntArray(arr.size) { arr[it].ordinal })
 
 inline fun <reified T: Enum<T>> toKotlinEnumArray(struct: CPointer<KIntArray>): Array<T> {
     val entries = enumEntries<T>()
-    val ints = toKotlinIntArray(struct)
+    val ints = toKotlinKIntArray(struct)
     return Array(ints.size) { entries[ints[it]] }
 }
 
 // Object
 
-fun <T: Any, N: CPointed> MemScope.toNativeArrayOnArena(
+fun <T: Any, N: CPointed> MemScope.toNativeKArrayOnArena(
     arr: Array<T>,
     converter: (T) -> CPointer<N>
 ): CPointer<KArray> {
@@ -293,7 +297,7 @@ fun <T: Any, N: CPointed> MemScope.toNativeArrayOnArena(
     return mem.ptr
 }
 
-fun <T: Any, N: CPointed> toNativeArray(
+fun <T: Any, N: CPointed> toNativeKArray(
     arr: Array<T>,
     converter: (T) -> CPointer<N>
 ): CPointer<KArray> {
@@ -308,7 +312,7 @@ fun <T: Any, N: CPointed> toNativeArray(
     return mem.ptr
 }
 
-inline fun <reified T: Any, N: CPointed> toKotlinArray(
+inline fun <reified T: Any, N: CPointed> toKotlinKArray(
     struct: CPointer<KArray>,
     converter: (CPointer<N>) -> T
 ): Array<T> = struct.pointed.run { Array(length) { converter(elements!![it]!!.reinterpret()) } }

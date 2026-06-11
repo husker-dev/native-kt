@@ -49,6 +49,11 @@ class CallbackArgArray {
     }
 
     @Test
+    fun callbackArgStringArray() = withLib {
+        assertTrue(natives.test.callbackArgStringArray { it.contentEquals(arrayOf("string1", "string2")) })
+    }
+
+    @Test
     fun callbackArgEnumArray() = withLib {
         assertTrue(natives.test.callbackArgEnumArray { it.contentEquals(arrayOf(MyEnum.CASE1, MyEnum.CASE2)) })
     }

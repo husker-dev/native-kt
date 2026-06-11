@@ -3,7 +3,7 @@ package com.huskerdev.nativekt.printers.c
 import com.huskerdev.nativekt.utils.allFields
 import com.huskerdev.nativekt.utils.isPrimitive
 import com.huskerdev.nativekt.utils.printLabel
-import com.huskerdev.nativekt.utils.toCDefType
+import com.huskerdev.nativekt.utils.toCType
 import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlDictionary
 import java.io.File
@@ -65,7 +65,7 @@ class CApiImplPrinter(
         dictionary.allFields().joinTo(builder) { field ->
             val const = if(field.type.isPrimitive())
                 "const " else ""
-            "$const${field.type.toCDefType()} ${field.name}"
+            "$const${field.type.toCType()} ${field.name}"
         }
         append(") {\n\t")
 

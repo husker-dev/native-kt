@@ -56,6 +56,12 @@ class PingArray {
     }
 
     @Test
+    fun pingStringArray() = withLib {
+        val arr = arrayOf("string1", "string2")
+        assertContentEquals(arr, pingStringArray(arr))
+    }
+
+    @Test
     fun pingEnumArray() = withLib {
         val arr = arrayOf(MyEnum.CASE1, MyEnum.CASE2)
         assertContentEquals(arr, pingEnumArray(arr))

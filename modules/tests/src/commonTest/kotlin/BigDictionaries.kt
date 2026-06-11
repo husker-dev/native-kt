@@ -46,6 +46,7 @@ private fun createTestDictionary(callback: VoidCallback) = TypeDictionary(
     longArrayOf(1, 2),
     floatArrayOf(1.2f, 3.4f),
     doubleArrayOf(1.2, 3.4),
+    arrayOf("string1", "string2"),
     arrayOf(MyEnum.CASE1, MyEnum.CASE2),
     arrayOf(MyDictionary(1, 2, 3, 4), MyDictionary(5, 6, 7, 8))
 )

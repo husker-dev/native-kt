@@ -68,11 +68,11 @@ class CExportedPrinter(
 
     private fun printFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
         // == Type and name ==
-        append("\nNATIVEKT_EXPORT ${function.type.toCDefType()} ${function.exportedName()}")
+        append("\nNATIVEKT_EXPORT ${function.type.toCType()} ${function.exportedName()}")
 
         // == Function args ==
         function.args.joinTo(this, prefix = "(", postfix = ") {\n") {
-            "${it.type.toCDefType()} _arg_${it.name}"
+            "${it.type.toCType()} _arg_${it.name}"
         }
 
         // == Function call ==
@@ -102,7 +102,7 @@ class CExportedPrinter(
 
 internal fun printCriticalNativeFunctionContent(builder: StringBuilder, name: String, function: ResolvedIdlOperation) = builder.apply {
     // == Type and name ==
-    append(function.type.toCDefType(enumAsInt = true))
+    append(function.type.toCType(enumAsInt = true))
     append(" ")
     append(name)
 
@@ -111,10 +111,10 @@ internal fun printCriticalNativeFunctionContent(builder: StringBuilder, name: St
         when {
             it.type.isString() -> listOf("const char* _arr_${it.name}", "int32_t _length_${it.name}, size_t _size_${it.name}")
             it.type.isArray() -> {
-                val type = (it.type as ResolvedIdlType.Default).arrayType { type -> type.toCDefType(enumAsInt = true) }
+                val type = (it.type as ResolvedIdlType.Default).arrayType { type -> type.toCType(enumAsInt = true) }
                 listOf("$type* _arr_${it.name}", "int32_t _length_${it.name}")
             }
-            else -> listOf("${it.type.toCDefType(enumAsInt = true)} _arg_${it.name}")
+            else -> listOf("${it.type.toCType(enumAsInt = true)} _arg_${it.name}")
         }
     }.joinTo(this, prefix = "(", postfix = ") {")
 
@@ -124,7 +124,7 @@ internal fun printCriticalNativeFunctionContent(builder: StringBuilder, name: St
         when {
             it.type.isString() -> append("\n\tKString _arg_$name = (KString) { _arr_$name, _size_$name,_length_$name,  K_FLAG_ON_STACK };")
             it.type.isArray() -> {
-                val type = it.type.toCDefType(enumAsInt = true, ptr = false)
+                val type = it.type.toCType(enumAsInt = true, ptr = false)
                 append("\n\t$type _arg_$name = ($type) { _arr_$name, sizeof(_arr_$name[0]) * _length_$name, _length_$name, K_FLAG_ON_STACK };")
             }
         }

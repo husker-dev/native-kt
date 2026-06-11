@@ -2,7 +2,7 @@ package com.huskerdev.nativekt.printers.c
 
 import com.huskerdev.nativekt.utils.allFields
 import com.huskerdev.nativekt.utils.printLabel
-import com.huskerdev.nativekt.utils.toCDefType
+import com.huskerdev.nativekt.utils.toCType
 import com.huskerdev.nativekt.utils.toJavaDesc
 import com.huskerdev.webidl.resolver.*
 import org.gradle.internal.extensions.stdlib.capitalized
@@ -36,14 +36,14 @@ class CJniUtilsPrinter(
         printLabel(builder, "String")
         builder.append("""
             
-            jclass stringClass;
+            jclass classString;
             jmethodID stringConstructor, stringGetBytes;
             jstring stringUTF8Const;
             typedef struct KString KString;
             
             const size_t JNI_StringStackSize = sizeof(KString) + sizeof(intptr_t) * 2;
 
-            jstring JNI_toKotlinString(JNIEnv *env, KString* str) {
+            jstring JNI_toKotlinKString(JNIEnv *env, KString* str) {
                 if(K_OBJECT_IS_ON_STACK(str->__flags))
                     return (jstring)((intptr_t*)((char*)str + sizeof(KString)))[0];
                 
@@ -52,12 +52,12 @@ class CJniUtilsPrinter(
                 jbyteArray bytes = (*env)->NewByteArray(env, size);
                 (*env)->SetByteArrayRegion(env, bytes, 0, size, (jbyte*)str->data);
             
-                jstring result = (jstring)(*env)->NewObject(env, stringClass, stringConstructor, bytes, stringUTF8Const);
+                jstring result = (jstring)(*env)->NewObject(env, classString, stringConstructor, bytes, stringUTF8Const);
                 (*env)->DeleteLocalRef(env, bytes);
                 return result;
             }
             
-            KString* JNI_toNativeStringOnStack(JNIEnv *env, jstring obj, void* mem) {
+            KString* JNI_toNativeKStringOnStack(JNIEnv *env, jstring obj, void* mem) {
                 jbyteArray bytes = (jbyteArray) (*env)->CallObjectMethod(env, obj, stringGetBytes, stringUTF8Const);
                 ((size_t*)((char*)mem + sizeof(KString)))[0] = (size_t) obj;
                 ((size_t*)((char*)mem + sizeof(KString)))[1] = (size_t) bytes;
@@ -71,12 +71,12 @@ class CJniUtilsPrinter(
                 return result;
             }
             
-            void JNI_releaseStringOnStack(JNIEnv *env, KString* str) {
+            void JNI_releaseKStringOnStack(JNIEnv *env, KString* str) {
                 jbyteArray bytes = (jbyteArray)((size_t*)((char*)str + sizeof(KString)))[1];
                 (*env)->ReleaseByteArrayElements(env, bytes, (jbyte*) str->data, JNI_ABORT);
             }
             
-            KString* JNI_toNativeString(JNIEnv *env, jstring obj, char flags) {
+            KString* JNI_toNativeKString(JNIEnv *env, jstring obj, char flags) {
                 jbyteArray bytes = (jbyteArray) (*env)->CallObjectMethod(env, obj, stringGetBytes, stringUTF8Const);
                 jsize length = (*env)->GetStringLength(env, obj);
                 jsize size = (*env)->GetArrayLength(env, bytes);
@@ -106,7 +106,7 @@ class CJniUtilsPrinter(
             const size_t JNI_ArrayStackSize = sizeof(KArray) + sizeof(size_t);
 
             #define KArrayCast(Name, JType)                                                              \
-            K##Name##Array* JNI_toNative##Name##Array(JNIEnv *env, JType##Array arr, char flags) {       \
+            K##Name##Array* JNI_toNativeK##Name##Array(JNIEnv *env, JType##Array arr, char flags) {      \
                 KInt length = (*env)->GetArrayLength(env, arr);                                          \
                 size_t size = length * sizeof(JType);                                                    \
                                                                                                          \
@@ -125,7 +125,7 @@ class CJniUtilsPrinter(
                 return result;                                                                           \
             }                                                                                            \
                                                                                                          \
-            K##Name##Array* JNI_toNative##Name##ArrayOnStack(JNIEnv *env, JType##Array arr, void* mem) { \
+            K##Name##Array* JNI_toNativeK##Name##ArrayOnStack(JNIEnv *env, JType##Array arr, void* mem) {\
                 ((size_t*)((char*)mem + sizeof(K##Name##Array)))[0] = (size_t) arr;                      \
                 KInt length = (*env)->GetArrayLength(env, arr);                                          \
                 K##Name##Array* result = (K##Name##Array*)mem;                                           \
@@ -138,12 +138,12 @@ class CJniUtilsPrinter(
                 return result;                                                                           \
             }                                                                                            \
                                                                                                          \
-            void JNI_release##Name##ArrayOnStack(JNIEnv *env, K##Name##Array* arr) {                     \
+            void JNI_releaseK##Name##ArrayOnStack(JNIEnv *env, K##Name##Array* arr) {                    \
                 JType##Array elements = (JType##Array)*((size_t*)((char*)arr + sizeof(K##Name##Array))); \
                 (*env)->Release##Name##ArrayElements(env, elements, (JType*)arr->elements, JNI_ABORT);   \
             }                                                                                            \
                                                                                                          \
-            JType##Array JNI_toKotlin##Name##Array(JNIEnv *env, K##Name##Array* arr) {                   \
+            JType##Array JNI_toKotlinK##Name##Array(JNIEnv *env, K##Name##Array* arr) {                  \
                 if(K_OBJECT_IS_ON_STACK(arr->__flags))                                                   \
                     return (JType##Array)*((size_t*)((char*)arr + sizeof(K##Name##Array)));              \
                 JType##Array result = (*env)->New##Name##Array(env, arr->length);                        \
@@ -167,7 +167,7 @@ class CJniUtilsPrinter(
         printLabel(builder, "Object array")
         builder.append("""
                 
-            KArray* JNI_toNativeArray(
+            KArray* JNI_toNativeKArray(
                 JNIEnv *env, 
                 jobjectArray src,
                 void* (*converter)(JNIEnv*, jobject, char),
@@ -191,7 +191,7 @@ class CJniUtilsPrinter(
                 return result;
             }
             
-            KArray* JNI_toNativeArrayOnStack(
+            KArray* JNI_toNativeKArrayOnStack(
                 JNIEnv *env,
                 jobjectArray src,
                 void* (*converter)(JNIEnv*, jobject, char),
@@ -217,7 +217,7 @@ class CJniUtilsPrinter(
                 return result;
             }
             
-            jobjectArray JNI_toKotlinArray(
+            jobjectArray JNI_toKotlinKArray(
                 JNIEnv *env, 
                 KArray* src, 
                 jobject (*converter)(JNIEnv*, void*),
@@ -240,10 +240,10 @@ class CJniUtilsPrinter(
             builder.append("\njmethodID enumOrdinal;")
 
             idl.enums.values.joinTo(builder, prefix = "\njclass ", postfix = ";") {
-                "enum${it.name}Class"
+                "class${it.name}"
             }
             idl.enums.values.joinTo(builder, prefix = "\njmethodID ", postfix = ";") {
-                "enum${it.name}Values"
+                "values${it.name}"
             }
             builder.append("""
                 
@@ -470,7 +470,7 @@ class CJniUtilsPrinter(
     private fun printStructs(builder: StringBuilder) = builder.apply {
         append("\n")
         idl.dictionaries.values
-            .map { "struct${it.name}Class" }
+            .map { "class${it.name}" }
             .chunked(3)
             .joinTo(builder, prefix = "jclass ", separator = ",\n\t", postfix = ";\n") { it.joinToString() }
 
@@ -497,7 +497,7 @@ class CJniUtilsPrinter(
             append("\n// ${struct.name}\n")
 
             // to JVM
-            append("\njobject JNI_toKotlinDictionary${struct.name}(JNIEnv *env, ${struct.name}* src) {\n\t")
+            append("\njobject JNI_toKotlin${struct.name}(JNIEnv *env, ${struct.name}* src) {\n\t")
             append("return (*env)->CallObjectMethod(env, struct${struct.name}Companion, struct${struct.name}Constructor, \n\t\t")
 
             struct.allFields().joinTo(builder, separator = ",\n\t\t") {
@@ -506,7 +506,7 @@ class CJniUtilsPrinter(
             append("\n\t);\n}\n")
 
             // to Native
-            append("\n${struct.name}* JNI_toNativeDictionary${struct.name}(JNIEnv *env, jobject src, char flags) {\n\t")
+            append("\n${struct.name}* JNI_toNative${struct.name}(JNIEnv *env, jobject src, char flags) {\n\t")
             append("${struct.name}* result = malloc(sizeof(${struct.name}));\n\t")
             append("*result = (${struct.name}) {\n\t\t")
 
@@ -525,16 +525,16 @@ class CJniUtilsPrinter(
 
     private fun printCallbackInvokeDef(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
         val args = listOf("${callback.name}* _callback") +
-                callback.args.map { "${it.type.toCDefType()} ${it.name}" }
+                callback.args.map { "${it.type.toCType()} ${it.name}" }
 
-        append("${callback.type.toCDefType()} JNI_CALLBACK_INVOKE_${callback.name}(${args.joinToString()});\n")
+        append("${callback.type.toCType()} JNI_CALLBACK_INVOKE_${callback.name}(${args.joinToString()});\n")
     }
 
     private fun printCallbackInvoke(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
         val args = buildList {
             add("${callback.name}* callback")
             callback.args.mapTo(this) {
-                "${it.type.toCDefType()} __${it.name}"
+                "${it.type.toCType()} __${it.name}"
             }
         }.joinToString()
 
@@ -547,7 +547,7 @@ class CJniUtilsPrinter(
 
         append("""
             
-            ${callback.type.toCDefType()} JNI_CALLBACK_INVOKE_${callback.name}(${args}) {
+            ${callback.type.toCType()} JNI_CALLBACK_INVOKE_${callback.name}(${args}) {
                 jobject obj = (jobject)((size_t*)((char*)callback + sizeof(_AbstractCallback)))[0];
                 JNIEnv *env = (JNIEnv*)((size_t*)((char*)callback + sizeof(_AbstractCallback)))[1];
                 jint status = env == NULL ? JVM_attach(&env) : JNI_OK;
@@ -557,7 +557,7 @@ class CJniUtilsPrinter(
         val call = "(*env)->${callback.type.toMethodCall()}(env, obj, $jvmArgs)"
 
         if(callback.type !is ResolvedIdlType.Void) {
-            append(callback.type.toCDefType())
+            append(callback.type.toCType())
             append(" result = ")
             append(castJavaToJNI(callback.type, call, onStack = false, flags = "K_FLAG_RELEASABLE"))
         } else
@@ -586,9 +586,9 @@ class CJniUtilsPrinter(
                 objectHashCode = (*env)->GetMethodID(env, objectClass, "hashCode", "()I");
                 
                 // String
-                stringClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "java/lang/String"));
-                stringConstructor = (*env)->GetMethodID(env, stringClass, "<init>", "([BLjava/lang/String;)V");
-                stringGetBytes = (*env)->GetMethodID(env, stringClass, "getBytes", "(Ljava/lang/String;)[B");
+                classString = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "java/lang/String"));
+                stringConstructor = (*env)->GetMethodID(env, classString, "<init>", "([BLjava/lang/String;)V");
+                stringGetBytes = (*env)->GetMethodID(env, classString, "getBytes", "(Ljava/lang/String;)[B");
                 stringUTF8Const = (*env)->NewGlobalRef(env, (*env)->NewStringUTF(env, "UTF-8"));
                 
         """.replaceIndent())
@@ -599,8 +599,8 @@ class CJniUtilsPrinter(
             append("\n\tenumOrdinal = (*env)->GetMethodID(env, (*env)->FindClass(env, \"java/lang/Enum\"), \"ordinal\", \"()I\");\n")
             idl.enums.values.forEach { enum ->
                 val classPath = "${classPath.replace(".", "/")}/${enum.name}"
-                val classFieldName = "enum${enum.name}Class"
-                val valuesFieldName = "enum${enum.name}Values"
+                val classFieldName = "class${enum.name}"
+                val valuesFieldName = "values${enum.name}"
 
                 append("\n\t$classFieldName = (*env)->NewGlobalRef(env, (*env)->FindClass(env, \"$classPath\"));")
                 append("\n\t$valuesFieldName = (*env)->GetStaticMethodID(env, $classFieldName, \"values\", \"()[L$classPath;\");\n")
@@ -612,7 +612,7 @@ class CJniUtilsPrinter(
             append("// Struct")
             idl.dictionaries.values.forEach { struct ->
                 val structClassPath = "${classPath.replace(".", "/")}/${struct.name}"
-                val classFieldName = "struct${struct.name}Class"
+                val classFieldName = "class${struct.name}"
                 val companionFieldName = "struct${struct.name}Companion"
                 val constructorFieldName = "struct${struct.name}Constructor"
 

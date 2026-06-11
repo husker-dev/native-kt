@@ -25,6 +25,8 @@ typedef struct KString {
     char __flags;
 } KString;
 
+void KString_free(KString* self);
+
 // ╔════════════════╗
 // ║     Arrays     ║
 // ╚════════════════╝

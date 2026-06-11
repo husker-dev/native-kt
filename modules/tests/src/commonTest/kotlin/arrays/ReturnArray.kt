@@ -49,6 +49,11 @@ class ReturnArray {
     }
 
     @Test
+    fun returnStringArray() = withLib {
+        assertContentEquals(arrayOf("string1", "string2"), natives.test.returnStringArray())
+    }
+
+    @Test
     fun returnEnumArray() = withLib {
         assertContentEquals(arrayOf(MyEnum.CASE1, MyEnum.CASE2), natives.test.returnEnumArray())
     }
