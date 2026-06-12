@@ -14,6 +14,11 @@ class CallbackReturnArray {
     }
 
     @Test
+    fun callbackReturnCharArrayN() = withLib {
+        assertTrue(natives.test.callbackReturnCharArrayN { null })
+    }
+
+    @Test
     fun callbackReturnBooleanArray() = withLib {
         assertTrue(natives.test.callbackReturnBooleanArray { booleanArrayOf(true, false) })
     }
@@ -54,6 +59,11 @@ class CallbackReturnArray {
     }
 
     @Test
+    fun callbackReturnStringArrayN() = withLib {
+        assertTrue(natives.test.callbackReturnStringArrayN { arrayOf(null, null) })
+    }
+
+    @Test
     fun callbackReturnEnumArray() = withLib {
         assertTrue(natives.test.callbackReturnEnumArray { arrayOf(MyEnum.CASE1, MyEnum.CASE2) })
     }
@@ -65,6 +75,13 @@ class CallbackReturnArray {
                 MyDictionary(1, 2, 3, 4),
                 MyDictionary(5, 6, 7, 8)
             )
+        })
+    }
+
+    @Test
+    fun callbackReturnDictionaryArrayN() = withLib {
+        assertTrue(natives.test.callbackReturnDictionaryArrayN {
+            arrayOf(null, null)
         })
     }
 }

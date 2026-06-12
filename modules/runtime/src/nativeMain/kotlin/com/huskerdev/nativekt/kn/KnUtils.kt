@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalForeignApi::class, UnsafeNumber::class)
+@file:OptIn(ExperimentalForeignApi::class, UnsafeNumber::class, ExperimentalContracts::class, ExperimentalExtendedContracts::class)
 @file:Suppress("unused")
 
 package com.huskerdev.nativekt.kn
@@ -6,6 +6,9 @@ package com.huskerdev.nativekt.kn
 import kotlinx.cinterop.*
 import nativekt.internals.*
 import platform.posix.*
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.ExperimentalExtendedContracts
+import kotlin.contracts.contract
 import kotlin.enums.enumEntries
 import kotlin.experimental.and
 
@@ -17,10 +20,15 @@ const val FLAG_ON_STACK = 2.toByte()
 // ╚════════════════╝
 
 val _handleKStringFree = staticCFunction<COpaquePointer?, Unit> {
-    KString_free(it!!.reinterpret())
+    if(it == null) return@staticCFunction
+    KString_free(it.reinterpret())
 }
 
-fun MemScope.toNativeKStringOnArena(str: String, pin: Boolean = false): CPointer<KString> {
+fun MemScope.toNativeKStringOnArena(str: String?, pin: Boolean = false): CPointer<KString>? {
+    contract {
+        (str != null).implies(returnsNotNull())
+    }
+    if(str == null) return null
     val bytes = str.cstr
     val mem = alloc<KString>()
     mem.size = bytes.size.convert()
@@ -34,7 +42,11 @@ fun MemScope.toNativeKStringOnArena(str: String, pin: Boolean = false): CPointer
     return mem.ptr
 }
 
-fun toNativeKString(str: String): CPointer<KString> {
+fun toNativeKString(str: String?): CPointer<KString>? {
+    contract {
+        (str != null).implies(returnsNotNull())
+    }
+    if(str == null) return null
     val bytes = str.cstr
     val mem = malloc(sizeOf<KString>().convert())!!.reinterpret<KString>().pointed
     mem.size = bytes.size.convert()
@@ -45,8 +57,13 @@ fun toNativeKString(str: String): CPointer<KString> {
     return mem.ptr
 }
 
-fun toKotlinKString(struct: CPointer<KString>): String =
-    struct.pointed.data!!.toKString()
+fun toKotlinKString(struct: CPointer<KString>?): String? {
+    contract {
+        (struct != null).implies(returnsNotNull())
+    }
+    if(struct == null) return null
+    return struct.pointed.data!!.toKString()
+}
 
 // ╔════════════════╗
 // ║     Arrays     ║
@@ -54,7 +71,11 @@ fun toKotlinKString(struct: CPointer<KString>): String =
 
 // Char
 
-fun MemScope.toNativeKCharArrayOnArena(arr: CharArray, pin: Boolean): CPointer<KCharArray> {
+fun MemScope.toNativeKCharArrayOnArena(arr: CharArray?, pin: Boolean): CPointer<KCharArray>? {
+    contract {
+        (arr != null).implies(returnsNotNull())
+    }
+    if(arr == null) return null
     val mem = alloc<KCharArray>()
     mem.size = (arr.size * Char.SIZE_BYTES).convert()
     mem.elements = if(pin) {
@@ -68,7 +89,11 @@ fun MemScope.toNativeKCharArrayOnArena(arr: CharArray, pin: Boolean): CPointer<K
     return mem.ptr
 }
 
-fun toNativeKCharArray(arr: CharArray): CPointer<KCharArray> {
+fun toNativeKCharArray(arr: CharArray?): CPointer<KCharArray>? {
+    contract {
+        (arr != null).implies(returnsNotNull())
+    }
+    if(arr == null) return null
     val mem = malloc(sizeOf<KCharArray>().convert())!!.reinterpret<KCharArray>().pointed
     mem.size = (arr.size * Char.SIZE_BYTES).convert()
     mem.elements = malloc(mem.size.convert())!!.reinterpret()
@@ -78,23 +103,47 @@ fun toNativeKCharArray(arr: CharArray): CPointer<KCharArray> {
     return mem.ptr
 }
 
-fun toKotlinKCharArray(struct: CPointer<KCharArray>): CharArray =
-    struct.pointed.run { CharArray(length) { elements!![it].toInt().toChar() } }
+fun toKotlinKCharArray(struct: CPointer<KCharArray>?): CharArray? {
+    contract {
+        (struct != null).implies(returnsNotNull())
+    }
+    if(struct == null) return null
+    return struct.pointed.run { CharArray(length) { elements!![it].toInt().toChar() } }
+}
 
 // Boolean
 
-fun MemScope.toNativeKBooleanArrayOnArena(array: BooleanArray, pin: Boolean): CPointer<KBooleanArray> =
-    toNativeKByteArrayOnArena(array.map { it.toByte() }.toByteArray(), pin).reinterpret()
+fun MemScope.toNativeKBooleanArrayOnArena(arr: BooleanArray?, pin: Boolean): CPointer<KBooleanArray>? {
+    contract {
+        (arr != null).implies(returnsNotNull())
+    }
+    if(arr == null) return null
+    return toNativeKByteArrayOnArena(ByteArray(arr.size) { arr[it].toByte() }, pin).reinterpret()
+}
 
-fun toNativeKBooleanArray(array: BooleanArray): CPointer<KBooleanArray> =
-    toNativeKByteArray(array.map { it.toByte() }.toByteArray()).reinterpret()
+fun toNativeKBooleanArray(arr: BooleanArray?): CPointer<KBooleanArray>? {
+    contract {
+        (arr != null).implies(returnsNotNull())
+    }
+    if(arr == null) return null
+    return toNativeKByteArray(ByteArray(arr.size) { arr[it].toByte() }).reinterpret()
+}
 
-fun toKotlinKBooleanArray(struct: CPointer<KBooleanArray>): BooleanArray =
-    struct.pointed.run { BooleanArray(length) { elements!![it].value } }
+fun toKotlinKBooleanArray(struct: CPointer<KBooleanArray>?): BooleanArray? {
+    contract {
+        (struct != null).implies(returnsNotNull())
+    }
+    if(struct == null) return null
+    return struct.pointed.run { BooleanArray(length) { elements!![it].value } }
+}
 
 // Byte
 
-fun MemScope.toNativeKByteArrayOnArena(arr: ByteArray, pin: Boolean): CPointer<KByteArray> {
+fun MemScope.toNativeKByteArrayOnArena(arr: ByteArray?, pin: Boolean): CPointer<KByteArray>? {
+    contract {
+        (arr != null).implies(returnsNotNull())
+    }
+    if(arr == null) return null
     val mem = alloc<KByteArray>()
     mem.size = (arr.size * Byte.SIZE_BYTES).convert()
     mem.elements = if(pin) {
@@ -108,7 +157,11 @@ fun MemScope.toNativeKByteArrayOnArena(arr: ByteArray, pin: Boolean): CPointer<K
     return mem.ptr
 }
 
-fun toNativeKByteArray(arr: ByteArray): CPointer<KByteArray> {
+fun toNativeKByteArray(arr: ByteArray?): CPointer<KByteArray>? {
+    contract {
+        (arr != null).implies(returnsNotNull())
+    }
+    if(arr == null) return null
     val mem = malloc(sizeOf<KByteArray>().convert())!!.reinterpret<KByteArray>().pointed
     mem.size = (arr.size * Byte.SIZE_BYTES).convert()
     mem.elements = malloc(mem.size.convert())!!.reinterpret()
@@ -118,12 +171,21 @@ fun toNativeKByteArray(arr: ByteArray): CPointer<KByteArray> {
     return mem.ptr
 }
 
-fun toKotlinKByteArray(struct: CPointer<KByteArray>): ByteArray =
-    struct.pointed.run { ByteArray(length) { elements!![it] } }
+fun toKotlinKByteArray(struct: CPointer<KByteArray>?): ByteArray? {
+    contract {
+        (struct != null).implies(returnsNotNull())
+    }
+    if(struct == null) return null
+    return struct.pointed.run { ByteArray(length) { elements!![it] } }
+}
 
 // Short
 
-fun MemScope.toNativeKShortArrayOnArena(arr: ShortArray, pin: Boolean): CPointer<KShortArray> {
+fun MemScope.toNativeKShortArrayOnArena(arr: ShortArray?, pin: Boolean): CPointer<KShortArray>? {
+    contract {
+        (arr != null).implies(returnsNotNull())
+    }
+    if(arr == null) return null
     val mem = alloc<KShortArray>()
     mem.size = (arr.size * Short.SIZE_BYTES).convert()
     mem.elements = if(pin) {
@@ -137,7 +199,11 @@ fun MemScope.toNativeKShortArrayOnArena(arr: ShortArray, pin: Boolean): CPointer
     return mem.ptr
 }
 
-fun toNativeKShortArray(arr: ShortArray): CPointer<KShortArray> {
+fun toNativeKShortArray(arr: ShortArray?): CPointer<KShortArray>? {
+    contract {
+        (arr != null).implies(returnsNotNull())
+    }
+    if(arr == null) return null
     val mem = malloc(sizeOf<KShortArray>().convert())!!.reinterpret<KShortArray>().pointed
     mem.size = (arr.size * Short.SIZE_BYTES).convert()
     mem.elements = malloc(mem.size.convert())!!.reinterpret()
@@ -147,12 +213,21 @@ fun toNativeKShortArray(arr: ShortArray): CPointer<KShortArray> {
     return mem.ptr
 }
 
-fun toKotlinKShortArray(struct: CPointer<KShortArray>): ShortArray =
-    struct.pointed.run { ShortArray(length) { elements!![it] } }
+fun toKotlinKShortArray(struct: CPointer<KShortArray>?): ShortArray? {
+    contract {
+        (struct != null).implies(returnsNotNull())
+    }
+    if(struct == null) return null
+    return struct.pointed.run { ShortArray(length) { elements!![it] } }
+}
 
 // Int
 
-fun MemScope.toNativeKIntArrayOnArena(arr: IntArray, pin: Boolean): CPointer<KIntArray> {
+fun MemScope.toNativeKIntArrayOnArena(arr: IntArray?, pin: Boolean): CPointer<KIntArray>? {
+    contract {
+        (arr != null).implies(returnsNotNull())
+    }
+    if(arr == null) return null
     val mem = alloc<KIntArray>()
     mem.size = (arr.size * Int.SIZE_BYTES).convert()
     mem.elements = if(pin) {
@@ -166,7 +241,11 @@ fun MemScope.toNativeKIntArrayOnArena(arr: IntArray, pin: Boolean): CPointer<KIn
     return mem.ptr
 }
 
-fun toNativeKIntArray(arr: IntArray): CPointer<KIntArray> {
+fun toNativeKIntArray(arr: IntArray?): CPointer<KIntArray>? {
+    contract {
+        (arr != null).implies(returnsNotNull())
+    }
+    if(arr == null) return null
     val mem = malloc(sizeOf<KIntArray>().convert())!!.reinterpret<KIntArray>().pointed
     mem.size = (arr.size * Int.SIZE_BYTES).convert()
     mem.elements = malloc(mem.size.convert())!!.reinterpret()
@@ -176,12 +255,21 @@ fun toNativeKIntArray(arr: IntArray): CPointer<KIntArray> {
     return mem.ptr
 }
 
-fun toKotlinKIntArray(struct: CPointer<KIntArray>): IntArray =
-    struct.pointed.run { IntArray(length) { elements!![it] } }
+fun toKotlinKIntArray(struct: CPointer<KIntArray>?): IntArray? {
+    contract {
+        (struct != null).implies(returnsNotNull())
+    }
+    if(struct == null) return null
+    return struct.pointed.run { IntArray(length) { elements!![it] } }
+}
 
 // Long
 
-fun MemScope.toNativeKLongArrayOnArena(arr: LongArray, pin: Boolean): CPointer<KLongArray> {
+fun MemScope.toNativeKLongArrayOnArena(arr: LongArray?, pin: Boolean): CPointer<KLongArray>? {
+    contract {
+        (arr != null).implies(returnsNotNull())
+    }
+    if(arr == null) return null
     val mem = alloc<KLongArray>()
     mem.size = (arr.size * Long.SIZE_BYTES).convert()
     mem.elements = if(pin) {
@@ -195,7 +283,11 @@ fun MemScope.toNativeKLongArrayOnArena(arr: LongArray, pin: Boolean): CPointer<K
     return mem.ptr
 }
 
-fun toNativeKLongArray(arr: LongArray): CPointer<KLongArray> {
+fun toNativeKLongArray(arr: LongArray?): CPointer<KLongArray>? {
+    contract {
+        (arr != null).implies(returnsNotNull())
+    }
+    if(arr == null) return null
     val mem = malloc(sizeOf<KLongArray>().convert())!!.reinterpret<KLongArray>().pointed
     mem.size = (arr.size * Long.SIZE_BYTES).convert()
     mem.elements = malloc(mem.size.convert())!!.reinterpret()
@@ -205,12 +297,21 @@ fun toNativeKLongArray(arr: LongArray): CPointer<KLongArray> {
     return mem.ptr
 }
 
-fun toKotlinKLongArray(struct: CPointer<KLongArray>): LongArray =
-    struct.pointed.run { LongArray(length) { elements!![it] } }
+fun toKotlinKLongArray(struct: CPointer<KLongArray>?): LongArray? {
+    contract {
+        (struct != null).implies(returnsNotNull())
+    }
+    if(struct == null) return null
+    return struct.pointed.run { LongArray(length) { elements!![it] } }
+}
 
 // Float
 
-fun MemScope.toNativeKFloatArrayOnArena(arr: FloatArray, pin: Boolean): CPointer<KFloatArray> {
+fun MemScope.toNativeKFloatArrayOnArena(arr: FloatArray?, pin: Boolean): CPointer<KFloatArray>? {
+    contract {
+        (arr != null).implies(returnsNotNull())
+    }
+    if(arr == null) return null
     val mem = alloc<KFloatArray>()
     mem.size = (arr.size * Float.SIZE_BYTES).convert()
     mem.elements = if(pin) {
@@ -224,7 +325,11 @@ fun MemScope.toNativeKFloatArrayOnArena(arr: FloatArray, pin: Boolean): CPointer
     return mem.ptr
 }
 
-fun toNativeKFloatArray(arr: FloatArray): CPointer<KFloatArray> {
+fun toNativeKFloatArray(arr: FloatArray?): CPointer<KFloatArray>? {
+    contract {
+        (arr != null).implies(returnsNotNull())
+    }
+    if(arr == null) return null
     val mem = malloc(sizeOf<KFloatArray>().convert())!!.reinterpret<KFloatArray>().pointed
     mem.size = (arr.size * Float.SIZE_BYTES).convert()
     mem.elements = malloc(mem.size.convert())!!.reinterpret()
@@ -234,12 +339,21 @@ fun toNativeKFloatArray(arr: FloatArray): CPointer<KFloatArray> {
     return mem.ptr
 }
 
-fun toKotlinKFloatArray(struct: CPointer<KFloatArray>): FloatArray =
-    struct.pointed.run { FloatArray(length) { elements!![it] } }
+fun toKotlinKFloatArray(struct: CPointer<KFloatArray>?): FloatArray? {
+    contract {
+        (struct != null).implies(returnsNotNull())
+    }
+    if(struct == null) return null
+    return struct.pointed.run { FloatArray(length) { elements!![it] } }
+}
 
 // Double
 
-fun MemScope.toNativeKDoubleArrayOnArena(arr: DoubleArray, pin: Boolean): CPointer<KDoubleArray> {
+fun MemScope.toNativeKDoubleArrayOnArena(arr: DoubleArray?, pin: Boolean): CPointer<KDoubleArray>? {
+    contract {
+        (arr != null).implies(returnsNotNull())
+    }
+    if(arr == null) return null
     val mem = alloc<KDoubleArray>()
     mem.size = (arr.size * Double.SIZE_BYTES).convert()
     mem.elements = if(pin) {
@@ -253,7 +367,11 @@ fun MemScope.toNativeKDoubleArrayOnArena(arr: DoubleArray, pin: Boolean): CPoint
     return mem.ptr
 }
 
-fun toNativeKDoubleArray(arr: DoubleArray): CPointer<KDoubleArray> {
+fun toNativeKDoubleArray(arr: DoubleArray?): CPointer<KDoubleArray>? {
+    contract {
+        (arr != null).implies(returnsNotNull())
+    }
+    if(arr == null) return null
     val mem = malloc(sizeOf<KDoubleArray>().convert())!!.reinterpret<KDoubleArray>().pointed
     mem.size = (arr.size * Double.SIZE_BYTES).convert()
     mem.elements = malloc(mem.size.convert())!!.reinterpret()
@@ -263,18 +381,37 @@ fun toNativeKDoubleArray(arr: DoubleArray): CPointer<KDoubleArray> {
     return mem.ptr
 }
 
-fun toKotlinKDoubleArray(struct: CPointer<KDoubleArray>): DoubleArray =
-    struct.pointed.run { DoubleArray(length) { elements!![it] } }
+fun toKotlinKDoubleArray(struct: CPointer<KDoubleArray>?): DoubleArray? {
+    contract {
+        (struct != null).implies(returnsNotNull())
+    }
+    if(struct == null) return null
+    return struct.pointed.run { DoubleArray(length) { elements!![it] } }
+}
 
 // Enum
 
-fun <T: Enum<T>> MemScope.toNativeEnumArrayOnArena(arr: Array<T>, pin: Boolean): CPointer<KIntArray> =
-    toNativeKIntArrayOnArena(IntArray(arr.size) { arr[it].ordinal }, pin)
+fun <T: Enum<T>> MemScope.toNativeEnumArrayOnArena(arr: Array<T>?, pin: Boolean): CPointer<KIntArray>? {
+    contract {
+        (arr != null).implies(returnsNotNull())
+    }
+    if(arr == null) return null
+    return toNativeKIntArrayOnArena(IntArray(arr.size) { arr[it].ordinal }, pin)
+}
 
-fun <T: Enum<T>> toNativeEnumArray(arr: Array<T>): CPointer<KIntArray> =
-    toNativeKIntArray(IntArray(arr.size) { arr[it].ordinal })
+fun <T: Enum<T>> toNativeEnumArray(arr: Array<T>?): CPointer<KIntArray>? {
+    contract {
+        (arr != null).implies(returnsNotNull())
+    }
+    if(arr == null) return null
+    return toNativeKIntArray(IntArray(arr.size) { arr[it].ordinal })
+}
 
-inline fun <reified T: Enum<T>> toKotlinEnumArray(struct: CPointer<KIntArray>): Array<T> {
+inline fun <reified T: Enum<T>> toKotlinEnumArray(struct: CPointer<KIntArray>?): Array<T>? {
+    contract {
+        (struct != null).implies(returnsNotNull())
+    }
+    if(struct == null) return null
     val entries = enumEntries<T>()
     val ints = toKotlinKIntArray(struct)
     return Array(ints.size) { entries[ints[it]] }
@@ -282,10 +419,14 @@ inline fun <reified T: Enum<T>> toKotlinEnumArray(struct: CPointer<KIntArray>): 
 
 // Object
 
-fun <T: Any, N: CPointed> MemScope.toNativeKArrayOnArena(
-    arr: Array<T>,
-    converter: (T) -> CPointer<N>
-): CPointer<KArray> {
+fun <T, N: CPointed> MemScope.toNativeKArrayOnArena(
+    arr: Array<T>?,
+    converter: (T) -> CPointer<N>?
+): CPointer<KArray>? {
+    contract {
+        (arr != null).implies(returnsNotNull())
+    }
+    if(arr == null) return null
     val mem = alloc<KArray>()
     mem.size = (arr.size * intptr_t.SIZE_BYTES).convert()
     mem.elements = allocArray<COpaquePointerVar>(arr.size)
@@ -297,10 +438,14 @@ fun <T: Any, N: CPointed> MemScope.toNativeKArrayOnArena(
     return mem.ptr
 }
 
-fun <T: Any, N: CPointed> toNativeKArray(
-    arr: Array<T>,
-    converter: (T) -> CPointer<N>
-): CPointer<KArray> {
+fun <T, N: CPointed> toNativeKArray(
+    arr: Array<T>?,
+    converter: (T) -> CPointer<N>?
+): CPointer<KArray>? {
+    contract {
+        (arr != null).implies(returnsNotNull())
+    }
+    if(arr == null) return null
     val mem = malloc(sizeOf<KArray>().convert())!!.reinterpret<KArray>().pointed
     mem.size = (arr.size * intptr_t.SIZE_BYTES).convert()
     mem.elements = malloc(mem.size.convert())!!.reinterpret()
@@ -312,40 +457,60 @@ fun <T: Any, N: CPointed> toNativeKArray(
     return mem.ptr
 }
 
-inline fun <reified T: Any, N: CPointed> toKotlinKArray(
-    struct: CPointer<KArray>,
-    converter: (CPointer<N>) -> T
-): Array<T> = struct.pointed.run { Array(length) { converter(elements!![it]!!.reinterpret()) } }
+@Suppress("unchecked_cast")
+fun <T, N: CPointer<*>> toKotlinKArray(
+    struct: CPointer<KArray>?,
+    converter: (N?) -> T?
+): Array<T?>? {
+    contract {
+        (struct != null).implies(returnsNotNull())
+    }
+    if(struct == null) return null
+    val arr = struct.pointed
+    return Array<Any?>(arr.length) {
+        (arr.elements!![it] as N?)?.run { converter(this) }
+    } as Array<T?>?
+}
 
+@Suppress("unchecked_cast")
+fun <T: Any, N: CPointer<*>> toKotlinKArray(
+    struct: CPointer<KArray>,
+    converter: (N?) -> T?
+): Array<T> = toKotlinKArray<T?, N>(struct, converter) as Array<T>
 
 // ╔═══════════════════╗
 // ║     Callbacks     ║
 // ╚═══════════════════╝
 
 private fun callbackClone(self: CPointer<_AbstractCallback>?): CPointer<_AbstractCallback>? {
+    contract {
+        (self != null).implies(returnsNotNull())
+    }
+    if(self == null) return null
     val mem = malloc(sizeOf<_AbstractCallback>().convert())!!.reinterpret<_AbstractCallback>().pointed
     mem.__flags = FLAG_RELEASABLE
-    mem.invoke = self!!.pointed.invoke
+    mem.invoke = self.pointed.invoke
     mem.clone = callbackClone
     mem.equals = callbackEquals
     mem.hashCode = callbackHashCode
     mem.free = callbackFree
-    mem.__stableRef = StableRef.create(toKotlinCallback(self.reinterpret())).asCPointer()
+    mem.__stableRef = StableRef.create(toKotlinCallback(self)).asCPointer()
     return mem.ptr
 }
 
 private fun callbackEquals(self: CPointer<_AbstractCallback>?, obj: CPointer<_AbstractCallback>?): Boolean =
-    toKotlinCallback<Int>(self!!.reinterpret()) == toKotlinCallback<Int>(obj!!.reinterpret())
+    toKotlinCallback<Int>(self!!.reinterpret()) == toKotlinCallback<Int>(obj?.reinterpret())
 
 private fun callbackHashCode(self: CPointer<_AbstractCallback>?): Int =
     toKotlinCallback<Int>(self!!.reinterpret()).hashCode()
 
 fun callbackFree(self: CPointer<_AbstractCallback>?) {
-    val pointed = self!!.pointed
-    if(pointed.__flags and FLAG_RELEASABLE != FLAG_RELEASABLE)
+    if(self == null) return
+
+    if(self.pointed.__flags and FLAG_RELEASABLE != FLAG_RELEASABLE)
         return
 
-    pointed.__stableRef!!.asStableRef<Any>().dispose()
+    self.pointed.__stableRef!!.asStableRef<Any>().dispose()
     free(self)
 }
 
@@ -356,9 +521,13 @@ val callbackFree = staticCFunction(::callbackFree)
 
 
 fun MemScope.toNativeCallbackOnArena(
-    of: Any,
+    of: Any?,
     invoke: COpaquePointer
-): COpaquePointer {
+): COpaquePointer? {
+    contract {
+        (of != null).implies(returnsNotNull())
+    }
+    if(of == null) return null
     val stableRef = StableRef.create(of)
     defer { stableRef.dispose() }
 
@@ -374,9 +543,13 @@ fun MemScope.toNativeCallbackOnArena(
 }
 
 fun toNativeCallback(
-    of: Any,
+    of: Any?,
     invoke: COpaquePointer
-): COpaquePointer {
+): COpaquePointer? {
+    contract {
+        (of != null).implies(returnsNotNull())
+    }
+    if(of == null) return null
     val mem = malloc(sizeOf<_AbstractCallback>().convert())!!.reinterpret<_AbstractCallback>().pointed
     mem.__flags = FLAG_RELEASABLE
     mem.invoke = invoke.reinterpret()
@@ -389,6 +562,13 @@ fun toNativeCallback(
 }
 
 @Suppress("unchecked_cast")
-fun <T: Any> toKotlinCallback(
-    callback: COpaquePointer
-): T = callback.reinterpret<_AbstractCallback>().pointed.__stableRef!!.asStableRef<Any>().get() as T
+fun <T> toKotlinCallback(callback: COpaquePointer?): T? {
+    contract {
+        (callback != null).implies(returnsNotNull())
+    }
+    if(callback == null) return null
+    return callback.reinterpret<_AbstractCallback>().pointed.__stableRef!!.asStableRef<Any>().get() as T?
+}
+
+fun <T: Any> toKotlinCallback(callback: COpaquePointer): T =
+    toKotlinCallback<T?>(callback)

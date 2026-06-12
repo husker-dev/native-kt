@@ -4,6 +4,10 @@ KCharArray* pingCharArray(KCharArray* arg) {
     return arg;
 }
 
+KCharArray* pingCharArrayN(KCharArray* arg) {
+    return arg;
+}
+
 KBooleanArray* pingBooleanArray(KBooleanArray* arg) {
     return arg;
 }
@@ -36,10 +40,18 @@ KArray* pingStringArray(KArray* arg) {
     return arg;
 }
 
+KArray* pingStringArrayN(KArray* arg) {
+    return arg;
+}
+
 KIntArray* pingEnumArray(KIntArray* arg) {
     return arg;
 }
 
 KArray* pingDictionaryArray(KArray* arg) {
+    return arg;
+}
+
+KArray* pingDictionaryArrayN(KArray* arg) {
     return arg;
 }

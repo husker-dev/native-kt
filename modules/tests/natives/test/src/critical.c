@@ -21,6 +21,10 @@ KBoolean criticalString(KString* a1) {
     return a1->length == 11 && strncmp(a1->data, "test string", a1->length) == 0;
 }
 
+KBoolean criticalStringN(KString* a1) {
+    return a1 == NULL;
+}
+
 KBoolean criticalPrimitivesArray(KCharArray* a1, KBooleanArray* a2, KByteArray* a3, KShortArray* a4, KIntArray* a5, KLongArray* a6, KFloatArray* a7, KDoubleArray* a8) {
     return a1->length == 2 &&
             a1->elements[0] == 'a' &&
@@ -48,12 +52,20 @@ KBoolean criticalPrimitivesArray(KCharArray* a1, KBooleanArray* a2, KByteArray* 
             a8->elements[1] == 2.2;
 }
 
+KBoolean criticalPrimitivesArrayN(KCharArray* a1, KBooleanArray* a2, KByteArray* a3, KShortArray* a4, KIntArray* a5, KLongArray* a6, KFloatArray* a7, KDoubleArray* a8) {
+    return a1 == NULL && a2 == NULL && a3 == NULL && a4 == NULL && a5 == NULL && a6 == NULL && a7 == NULL && a8 == NULL;
+}
+
 KBoolean criticalEnumArray(KIntArray* a1) {
     const MyEnum* elements = (MyEnum*)a1->elements;
 
     return a1->length == 2 &&
            elements[0] == MyEnum_CASE1 &&
            elements[1] == MyEnum_CASE2;
+}
+
+KBoolean criticalEnumArrayN(KIntArray* a1) {
+    return a1 == NULL;
 }
 
 KChar criticalReturnChar() {

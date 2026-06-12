@@ -59,6 +59,11 @@ class PassPrimitive {
     }
 
     @Test
+    fun passStringN() = withLib {
+        assertTrue(natives.test.passStringN(null))
+    }
+
+    @Test
     fun passEnum() = withLib {
         assertTrue(natives.test.passEnum(MyEnum.CASE2))
     }
@@ -66,5 +71,10 @@ class PassPrimitive {
     @Test
     fun passDictionary() = withLib {
         assertTrue(natives.test.passDictionary(MyDictionary(1, 2, 3, 4)))
+    }
+
+    @Test
+    fun passDictionaryN() = withLib {
+        assertTrue(natives.test.passDictionaryN(null))
     }
 }

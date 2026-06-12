@@ -102,12 +102,18 @@ class CJniPrinter(
 
         // write args
         argsToCast.joinTo(this, separator = "") {
-            "\n\t${it.type.toCType().padEnd(typeMaxLength)} __native_${it.name} = ${castJavaToJNI(
-                it.type, 
-                "__jvm_${it.name}",
-                onStack = true,
-                flags = "0"
-            )};"
+            buildString {
+                append("\n\t${it.type.toCType().padEnd(typeMaxLength)} __native_${it.name} = ")
+                if(it.type.isNullable && !it.type.isPrimitive() && !it.type.isEnum())
+                    append("__jvm_${it.name} == 0 ? NULL : ")
+                append(castJavaToJNI(
+                    it.type,
+                    "__jvm_${it.name}",
+                    onStack = true,
+                    flags = "0"
+                ))
+                append(";")
+            }
         }
 
         // ===========
@@ -155,7 +161,6 @@ class CJniPrinter(
                 type.isArray() -> type.arrayType { type ->
                     when {
                         type.isPrimitive() -> "JNI_release${type.toCType()}ArrayOnStack(env, $name)"
-                        type.isEnum() -> "free((void*) $name->elements)"
                         else -> forceFreeFuncFor(arg.type, name)
                     }
                 }
@@ -190,17 +195,17 @@ internal fun castJniToJava(
     type: ResolvedIdlType,
     content: String
 ): String = when {
-    type.isEnum() -> "JNI_toKotlinEnum(env, $content, class${type.declaration.name}, values${type.declaration.name})"
-    type.isDictionary() -> "JNI_toKotlin${type.declaration.name}(env, $content)"
+    type.isEnum() -> "JNI_toKotlinEnum(env, $content, class${type.toCType()}, values${type.toCType()})"
+    type.isDictionary() -> "JNI_toKotlin${type.toCType(ptr = false)}(env, $content)"
     type.isString() -> "JNI_toKotlinKString(env, $content)"
     type.isCallback() -> "JNI_toKotlinCallback(env, (_AbstractCallback*) $content)"
     type.isArray() -> type.arrayType { type ->
         when {
             type.isPrimitive() -> "JNI_toKotlin${type.toCType(ptr = false)}Array(env, $content)"
-            type.isEnum() -> "JNI_toKotlinEnumArray(env, $content, class${type.declaration.name}, values${type.declaration.name})"
+            type.isEnum() -> "JNI_toKotlinEnumArray(env, $content, class${type.toCType()}, values${type.toCType()})"
             else -> {
                 val cast = castJniToJava(type, "").split("(")[0]
-                "JNI_toKotlinKArray(env, $content, (jobject(*)(JNIEnv*, void*)) $cast, class${type.toKotlinType()})"
+                "JNI_toKotlinKArray(env, $content, (jobject(*)(JNIEnv*, void*)) $cast, class${type.toKotlinType(printNullable = false)})"
             }
         }
     }
@@ -214,12 +219,12 @@ internal fun castJavaToJNI(
     flags: String
 ): String = when {
     type.isEnum() -> "JNI_toNativeEnum(env, $content)"
-    type.isDictionary() -> "JNI_toNative${type.declaration.name}(env, $content, $flags)"
+    type.isDictionary() -> "JNI_toNative${type.toCType(ptr = false)}(env, $content, $flags)"
     type.isString() ->
         if(onStack) "JNI_toNativeKStringOnStack(env, $content, alloca(JNI_StringStackSize))"
         else "JNI_toNativeKString(env, $content, $flags)"
     type.isCallback() -> {
-        val name = type.declaration.name
+        val name = type.toCType(ptr = false)
         if (onStack) "($name*) JNI_toNativeCallbackOnStack(env, $content, (void(*)())JNI_CALLBACK_INVOKE_$name, alloca(_AbstractCallbackSize))"
         else "($name*) JNI_toNativeCallback(env, $content, (void(*)())JNI_CALLBACK_INVOKE_$name, $flags)"
     }

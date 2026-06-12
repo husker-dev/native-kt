@@ -20,12 +20,13 @@ class KotlinNativePrinter(
 
         val builder = StringBuilder()
         builder.append("""
-            @file:OptIn(ExperimentalForeignApi::class)
+            @file:OptIn(ExperimentalForeignApi::class, ExperimentalContracts::class, ExperimentalExtendedContracts::class)
             @file:Suppress("unused", "UNNECESSARY_SAFE_CALL")
             
             package $classPath
             
             import kotlinx.cinterop.*
+            import kotlin.contracts.*
             import com.huskerdev.nativekt.kn.*
             import platform.posix.*
             
@@ -59,46 +60,90 @@ class KotlinNativePrinter(
     }
 
     private fun printDictionaryCasts(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
+        val name = dictionary.name
 
         // free handle
-        append("\nprivate val _handle${dictionary.name}Free = staticCFunction<COpaquePointer?, Unit> {")
-        append("\n\t$cinteropPath.${dictionary.name}_free(it!!.reinterpret())")
-        append("\n}\n")
+        append($$"""
+            
+            private val _handle$${name}Free = staticCFunction<COpaquePointer?, Unit> {
+                if(it == null) return@staticCFunction
+                $$cinteropPath.$${name}_free(it.reinterpret())
+            }
+            
+        """.trimIndent())
 
         // native (arena)
 
-        append("\nprivate fun MemScope.toNative${dictionary.name}OnArena(of: ${dictionary.name}): CPointer<$cinteropPath.${dictionary.name}> {")
-        append("\n\tval mem = alloc<$cinteropPath.${dictionary.name}>()")
+        append($$"""
+            
+            private fun MemScope.toNative$${name}OnArena(of: $$name?): CPointer<$$cinteropPath.$$name>? {
+                contract {
+                    (of != null).implies(returnsNotNull())
+                }
+                if(of == null) return null
+                val mem = alloc<$$cinteropPath.$$name>()
+        """.trimIndent())
 
         dictionary.allFields().forEach {
             append("\n\tmem.${it.name} = ${castToNative(it.type, "of.${it.name}", useArena = true, pin = false)}")
         }
-
-        append("\n\tmem.__flags = 0")
-        append("\n\treturn mem.ptr")
-        append("\n}\n")
+        append("""
+            
+                mem.__flags = 0
+                return mem.ptr
+            }
+            
+        """.trimIndent())
 
         // native
 
-        append("\nprivate fun toNative${dictionary.name}(of: ${dictionary.name}): CPointer<$cinteropPath.${dictionary.name}> {")
-        append("\n\tval mem = malloc(sizeOf<$cinteropPath.${dictionary.name}>().convert())!!.reinterpret<$cinteropPath.${dictionary.name}>().pointed")
+        append($$"""
+            
+            private fun toNative$$name(of: $$name?): CPointer<$$cinteropPath.$$name>? {
+                contract {
+                    (of != null).implies(returnsNotNull())
+                }
+                if(of == null) return null
+                val mem = malloc(sizeOf<$$cinteropPath.$$name>().convert())!!.reinterpret<$$cinteropPath.$$name>().pointed
+        """.trimIndent())
 
         dictionary.allFields().forEach {
             append("\n\tmem.${it.name} = ${castToNative(it.type, "of.${it.name}", useArena = false, pin = false)}")
         }
-
-        append("\n\tmem.__flags = FLAG_RELEASABLE")
-        append("\n\treturn mem.ptr")
-        append("\n}\n")
+        append("""
+            
+                mem.__flags = FLAG_RELEASABLE
+                return mem.ptr
+            }
+            
+        """.trimIndent())
 
         // kotlin
 
-        append("\nprivate fun toKotlin${dictionary.name}(of: CPointer<$cinteropPath.${dictionary.name}>): ${dictionary.name} = of.pointed.let { mem -> ${dictionary.name}(")
+        append($$"""
+            
+            private fun toKotlin$$name(of: CPointer<$$cinteropPath.$$name>?): $$name? {
+                contract {
+                    (of != null).implies(returnsNotNull())
+                }
+                if(of == null) return null
+                val mem = of.pointed
+                return $$name(
+        """.trimIndent())
 
         dictionary.allFields().forEach {
-            append("\n\t${it.name} = ${castFromNative(it.type, "mem.${it.name}")},")
+            append("\n\t\t${it.name} = ${castFromNative(it.type, "mem.${it.name}")},")
         }
-        append("\n) }\n")
+        append("\n\t)\n}\n")
+
+        // kotlin (not-null)
+
+        append($$"""
+            
+            private fun toKotlin$$name(of: CPointer<$$cinteropPath.$$name>): $$name =
+                toKotlin$$name(of as CPointer<$$cinteropPath.$$name>?)
+            
+        """.trimIndent())
     }
 
     private fun printCallbackWrap(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
@@ -198,53 +243,66 @@ class KotlinNativePrinter(
         else -> null
     }
 
-    private fun castFromNative(type: ResolvedIdlType, content: String): String = when {
-        type.isChar() -> "$content.toInt().toChar()"
-        type.isString() -> "toKotlinKString($content!!.reinterpret())"
-        type.isCallback() -> "toKotlinCallback($content!!)"
-        type.isEnum() -> "${type.declaration.name}.entries[${content}.ordinal]"
-        type.isDictionary() -> "toKotlin${type.declaration.name}(${content}!!)"
-        type.isArray() -> type.arrayType { type ->
-            when {
-                type.isPrimitive() -> "toKotlin${type.toCType()}Array($content!!.reinterpret())"
-                type.isEnum() -> "toKotlinEnumArray<${type.declaration.name}>($content!!.reinterpret())"
-                else -> {
-                    val fn = castFromNative(type, "").split("(")[0]
-                    "toKotlinKArray($content!!.reinterpret(), ::$fn)"
+    private fun castFromNative(type: ResolvedIdlType, content: String): String {
+        val nullable = if(type.isNullable) "?" else "!!"
+        val nullable1 = if(type.isNullable) "" else "!!"
+        return when {
+            type.isChar() -> "$content.toInt().toChar()"
+            type.isString() -> "toKotlinKString($content$nullable.reinterpret())"
+            type.isCallback() -> "toKotlinCallback($content$nullable1)"
+            type.isEnum() -> "${type.declaration.name}.entries[${content}.ordinal]"
+            type.isDictionary() -> "toKotlin${type.declaration.name}($content$nullable1)"
+            type.isArray() -> type.arrayType { type ->
+                when {
+                    type.isPrimitive() -> "toKotlin${type.toCType()}Array($content$nullable.reinterpret())"
+                    type.isEnum() -> "toKotlinEnumArray<${type.declaration.name}>($content$nullable.reinterpret())"
+                    else -> {
+                        val fn = castFromNative(type, "").split("(")[0]
+                        if(type.isNullable) {
+                            val nType = if(type.isString())
+                                 "nativekt.internals.KString"
+                            else "$cinteropPath.${type.toCType(ptr = false)}"
+
+                            "toKotlinKArray<${type.toKotlinType()}, CPointer<$nType>>($content?.reinterpret(), ::$fn)"
+                        } else "toKotlinKArray($content!!.reinterpret(), ::$fn)"
+                    }
                 }
             }
+            else -> content
         }
-        else -> content
     }
 
-    private fun castToNative(type: ResolvedIdlType, content: String, useArena: Boolean, pin: Boolean): String = when {
-        type.isChar() -> "$content.code.toUShort()"
-        type.isEnum() -> "${cinteropPath}.${type.declaration.name}.entries[$content.ordinal]"
-        type.isString() ->
-            if(useArena) "toNativeKStringOnArena($content, $pin).reinterpret()"
-            else "toNativeKString($content).reinterpret()"
-        type.isCallback() ->
-            if(useArena) "toNativeCallbackOnArena($content, _invoke${type.declaration.name.capitalized()}).reinterpret()"
-            else "toNativeCallback($content, _invoke${type.declaration.name.capitalized()}).reinterpret()"
-        type.isDictionary() ->
-            if (useArena) "toNative${type.declaration.name}OnArena($content)"
-            else "toNative${type.declaration.name}($content)"
-        type.isArray() -> type.arrayType { type ->
-            when {
-                type.isPrimitive() ->
-                    if (useArena) "toNative${type.toCType()}ArrayOnArena($content, $pin).reinterpret()"
-                    else "toNative${type.toCType()}Array($content).reinterpret()"
-                type.isEnum() ->
-                    if (useArena) "toNativeEnumArrayOnArena($content, $pin).reinterpret()"
-                    else "toNativeEnumArray($content).reinterpret()"
-                else -> {
-                    val fn = castToNative(type, "", useArena, false).split("(")[0]
-                    if (useArena) "toNativeKArrayOnArena($content, ::$fn).reinterpret()"
-                    else "toNativeKArray($content, ::$fn).reinterpret()"
+    private fun castToNative(type: ResolvedIdlType, content: String, useArena: Boolean, pin: Boolean): String {
+        val nullable = if(type.isNullable) "?" else ""
+        return when {
+            type.isChar() -> "$content.code.toUShort()"
+            type.isEnum() -> "${cinteropPath}.${type.declaration.name}.entries[$content.ordinal]"
+            type.isString() ->
+                if(useArena) "toNativeKStringOnArena($content, $pin)$nullable.reinterpret()"
+                else "toNativeKString($content)$nullable.reinterpret()"
+            type.isCallback() ->
+                if(useArena) "toNativeCallbackOnArena($content, _invoke${type.declaration.name.capitalized()})$nullable.reinterpret()"
+                else "toNativeCallback($content, _invoke${type.declaration.name.capitalized()})$nullable.reinterpret()"
+            type.isDictionary() ->
+                if (useArena) "toNative${type.declaration.name}OnArena($content)"
+                else "toNative${type.declaration.name}($content)"
+            type.isArray() -> type.arrayType { type ->
+                when {
+                    type.isPrimitive() ->
+                        if (useArena) "toNative${type.toCType()}ArrayOnArena($content, $pin)$nullable.reinterpret()"
+                        else "toNative${type.toCType()}Array($content)$nullable.reinterpret()"
+                    type.isEnum() ->
+                        if (useArena) "toNativeEnumArrayOnArena($content, $pin)$nullable.reinterpret()"
+                        else "toNativeEnumArray($content)$nullable.reinterpret()"
+                    else -> {
+                        val fn = castToNative(type, "", useArena, false).split("(")[0]
+                        if (useArena) "toNativeKArrayOnArena($content, ::$fn)$nullable.reinterpret()"
+                        else "toNativeKArray($content, ::$fn)$nullable.reinterpret()"
+                    }
                 }
             }
+            else -> content
         }
-        else -> content
     }
 
     private fun ResolvedIdlType.toKnType(): String = when {

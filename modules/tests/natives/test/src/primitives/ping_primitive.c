@@ -36,10 +36,18 @@ KString* pingString(KString* arg) {
     return arg;
 }
 
+KString* pingStringN(KString* arg) {
+    return arg;
+}
+
 MyEnum pingEnum(const MyEnum arg) {
     return arg;
 }
 
 MyDictionary* pingDictionary(MyDictionary* arg) {
+    return arg;
+}
+
+MyDictionary* pingDictionaryN(MyDictionary* arg) {
     return arg;
 }

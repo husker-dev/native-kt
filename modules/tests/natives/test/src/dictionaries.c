@@ -90,3 +90,15 @@ TypeDictionary* returnBigDictionary(VoidCallback* callback) {
 TypeDictionary* pingBigDictionary(TypeDictionary* arg) {
     return arg;
 }
+
+KBoolean passBigDictionaryN(TypeDictionary* arg) {
+    return arg == NULL;
+}
+
+TypeDictionary* returnBigDictionaryN() {
+    return NULL;
+}
+
+TypeDictionary* pingBigDictionaryN(TypeDictionary* arg) {
+    return arg;
+}

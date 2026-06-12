@@ -17,6 +17,11 @@ class CallbackArgPrimitive {
     }
 
     @Test
+    fun callbackVoidN() = withLib {
+        assertTrue(natives.test.callbackVoidN(null))
+    }
+
+    @Test
     fun callbackArgChar() = withLib {
         assertTrue(natives.test.callbackArgChar { it == 'a' })
     }
@@ -62,9 +67,19 @@ class CallbackArgPrimitive {
     }
 
     @Test
+    fun callbackArgStringN() = withLib {
+        assertTrue(natives.test.callbackArgStringN { it == null })
+    }
+
+    @Test
     fun callbackArgCallback() = withLib {
         val toPass = VoidCallback {}
         assertTrue(natives.test.callbackArgCallback(toPass) { it == toPass })
+    }
+
+    @Test
+    fun callbackArgCallbackN() = withLib {
+        assertTrue(natives.test.callbackArgCallbackN { it == null })
     }
 
     @Test
@@ -75,5 +90,10 @@ class CallbackArgPrimitive {
     @Test
     fun callbackArgDictionary() = withLib {
         assertTrue(natives.test.callbackArgDictionary { it == MyDictionary(1, 2, 3, 4) })
+    }
+
+    @Test
+    fun callbackArgDictionaryN() = withLib {
+        assertTrue(natives.test.callbackArgDictionaryN { it == null })
     }
 }

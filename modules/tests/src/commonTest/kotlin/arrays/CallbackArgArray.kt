@@ -14,6 +14,11 @@ class CallbackArgArray {
     }
 
     @Test
+    fun callbackArgCharArrayN() = withLib {
+        assertTrue(natives.test.callbackArgCharArrayN { it == null })
+    }
+
+    @Test
     fun callbackArgBooleanArray() = withLib {
         assertTrue(natives.test.callbackArgBooleanArray { it.contentEquals(booleanArrayOf(true, false)) })
     }
@@ -54,6 +59,11 @@ class CallbackArgArray {
     }
 
     @Test
+    fun callbackArgStringArrayN() = withLib {
+        assertTrue(natives.test.callbackArgStringArrayN { it.contentEquals(arrayOf(null, null)) })
+    }
+
+    @Test
     fun callbackArgEnumArray() = withLib {
         assertTrue(natives.test.callbackArgEnumArray { it.contentEquals(arrayOf(MyEnum.CASE1, MyEnum.CASE2)) })
     }
@@ -65,6 +75,13 @@ class CallbackArgArray {
                 MyDictionary(1, 2, 3, 4),
                 MyDictionary(5, 6, 7, 8)
             ))
+        })
+    }
+
+    @Test
+    fun callbackArgDictionaryArrayN() = withLib {
+        assertTrue(natives.test.callbackArgDictionaryArrayN {
+            it.contentEquals(arrayOf(null, null))
         })
     }
 }

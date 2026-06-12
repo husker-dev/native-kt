@@ -12,8 +12,10 @@ namespace global {
     boolean passFloat(float arg);
     boolean passDouble(double arg);
     boolean passString(string arg);
+    boolean passStringN(string? arg);
     boolean passEnum(MyEnum arg);
     boolean passDictionary(MyDictionary arg);
+    boolean passDictionaryN(MyDictionary? arg);
 
     // Primitives: return
     void returnVoid();
@@ -26,8 +28,10 @@ namespace global {
     float returnFloat();
     double returnDouble();
     [Dealloc] string returnString();
+    [Dealloc] string? returnStringN();
     MyEnum returnEnum();
     MyDictionary returnDictionary();
+    MyDictionary? returnDictionaryN();
 
     // Primitives: ping
     char pingChar(char arg);
@@ -39,11 +43,14 @@ namespace global {
     float pingFloat(float arg);
     double pingDouble(double arg);
     [Dealloc] string pingString(string arg);
+    [Dealloc] string? pingStringN(string? arg);
     MyEnum pingEnum(MyEnum arg);
     MyDictionary pingDictionary(MyDictionary arg);
+    MyDictionary? pingDictionaryN(MyDictionary? arg);
 
     // Primitives: callback arg
     void callbackVoid(VoidCallback arg);
+    boolean callbackVoidN(VoidCallback? arg);
     boolean callbackArgChar(CallbackPassChar arg);
     boolean callbackArgBoolean(CallbackPassBoolean arg);
     boolean callbackArgByte(CallbackPassByte arg);
@@ -53,9 +60,12 @@ namespace global {
     boolean callbackArgFloat(CallbackPassFloat arg);
     boolean callbackArgDouble(CallbackPassDouble arg);
     boolean callbackArgString(CallbackPassString arg);
+    boolean callbackArgStringN(CallbackPassStringN arg);
     boolean callbackArgCallback(VoidCallback pass, CallbackPassCallback arg);
+    boolean callbackArgCallbackN(CallbackPassCallbackN arg);
     boolean callbackArgEnum(CallbackPassEnum arg);
     boolean callbackArgDictionary(CallbackPassDictionary arg);
+    boolean callbackArgDictionaryN(CallbackPassDictionaryN arg);
 
     // Primitives: callback return
     boolean callbackReturnChar(CallbackReturnChar arg);
@@ -67,12 +77,16 @@ namespace global {
     boolean callbackReturnFloat(CallbackReturnFloat arg);
     boolean callbackReturnDouble(CallbackReturnDouble arg);
     boolean callbackReturnString(CallbackReturnString arg);
+    boolean callbackReturnStringN(CallbackReturnStringN arg);
     VoidCallback callbackReturnCallback(CallbackReturnCallback arg);
+    boolean callbackReturnCallbackN(CallbackReturnCallbackN arg);
     boolean callbackReturnEnum(CallbackReturnEnum arg);
     boolean callbackReturnDictionary(CallbackReturnDictionary arg);
+    boolean callbackReturnDictionaryN(CallbackReturnDictionaryN arg);
 
     // Arrays: pass
     boolean passCharArray(Array<char> arg);
+    boolean passCharArrayN(Array<char>? arg);
     boolean passBooleanArray(Array<boolean> arg);
     boolean passByteArray(Array<byte> arg);
     boolean passShortArray(Array<short> arg);
@@ -81,11 +95,14 @@ namespace global {
     boolean passFloatArray(Array<float> arg);
     boolean passDoubleArray(Array<double> arg);
     boolean passStringArray(Array<string> arg);
+    boolean passStringArrayN(Array<string?> arg);
     boolean passEnumArray(Array<MyEnum> arg);
     boolean passDictionaryArray(Array<MyDictionary> arg);
+    boolean passDictionaryArrayN(Array<MyDictionary?> arg);
 
     // Arrays: return
     [Dealloc] Array<char> returnCharArray();
+    [Dealloc] Array<char>? returnCharArrayN();
     [Dealloc] Array<boolean> returnBooleanArray();
     [Dealloc] Array<byte> returnByteArray();
     [Dealloc] Array<short> returnShortArray();
@@ -94,11 +111,14 @@ namespace global {
     [Dealloc] Array<float> returnFloatArray();
     [Dealloc] Array<double> returnDoubleArray();
     [Dealloc] Array<string> returnStringArray();
+    [Dealloc] Array<string?> returnStringArrayN();
     [Dealloc] Array<MyEnum> returnEnumArray();
-    [Dealloc, DeallocContent] Array<MyDictionary> returnDictionaryArray();
+    [Dealloc] Array<MyDictionary> returnDictionaryArray();
+    [Dealloc] Array<MyDictionary?> returnDictionaryArrayN();
 
     // Arrays: ping
     Array<char> pingCharArray(Array<char> arg);
+    Array<char>? pingCharArrayN(Array<char>? arg);
     Array<boolean> pingBooleanArray(Array<boolean> arg);
     Array<byte> pingByteArray(Array<byte> arg);
     Array<short> pingShortArray(Array<short> arg);
@@ -107,11 +127,14 @@ namespace global {
     Array<float> pingFloatArray(Array<float> arg);
     Array<double> pingDoubleArray(Array<double> arg);
     Array<string> pingStringArray(Array<string> arg);
+    Array<string?> pingStringArrayN(Array<string?> arg);
     Array<MyEnum> pingEnumArray(Array<MyEnum> arg);
     Array<MyDictionary> pingDictionaryArray(Array<MyDictionary> arg);
+    Array<MyDictionary?> pingDictionaryArrayN(Array<MyDictionary?> arg);
 
      // Arrays: callback arg
     boolean callbackArgCharArray(CallbackPassCharArray arg);
+    boolean callbackArgCharArrayN(CallbackPassCharArrayN arg);
     boolean callbackArgBooleanArray(CallbackPassBooleanArray arg);
     boolean callbackArgByteArray(CallbackPassByteArray arg);
     boolean callbackArgShortArray(CallbackPassShortArray arg);
@@ -120,11 +143,14 @@ namespace global {
     boolean callbackArgFloatArray(CallbackPassFloatArray arg);
     boolean callbackArgDoubleArray(CallbackPassDoubleArray arg);
     boolean callbackArgStringArray(CallbackPassStringArray arg);
+    boolean callbackArgStringArrayN(CallbackPassStringArrayN arg);
     boolean callbackArgEnumArray(CallbackPassEnumArray arg);
     boolean callbackArgDictionaryArray(CallbackPassDictionaryArray arg);
+    boolean callbackArgDictionaryArrayN(CallbackPassDictionaryArrayN arg);
 
     // Arrays: callback arg
     boolean callbackReturnCharArray(CallbackReturnCharArray arg);
+    boolean callbackReturnCharArrayN(CallbackReturnCharArrayN arg);
     boolean callbackReturnBooleanArray(CallbackReturnBooleanArray arg);
     boolean callbackReturnByteArray(CallbackReturnByteArray arg);
     boolean callbackReturnShortArray(CallbackReturnShortArray arg);
@@ -133,21 +159,31 @@ namespace global {
     boolean callbackReturnFloatArray(CallbackReturnFloatArray arg);
     boolean callbackReturnDoubleArray(CallbackReturnDoubleArray arg);
     boolean callbackReturnStringArray(CallbackReturnStringArray arg);
+    boolean callbackReturnStringArrayN(CallbackReturnStringArrayN arg);
     boolean callbackReturnEnumArray(CallbackReturnEnumArray arg);
     boolean callbackReturnDictionaryArray(CallbackReturnDictionaryArray arg);
+    boolean callbackReturnDictionaryArrayN(CallbackReturnDictionaryArrayN arg);
 
     // Dictionary
     boolean passBigDictionary(TypeDictionary arg);
     [Dealloc] TypeDictionary returnBigDictionary(VoidCallback callback);
     TypeDictionary pingBigDictionary(TypeDictionary arg);
 
+    boolean passBigDictionaryN(TypeDictionary? arg);
+    [Dealloc] TypeDictionary? returnBigDictionaryN();
+    TypeDictionary? pingBigDictionaryN(TypeDictionary? arg);
+
     // Critical
     [Critical] boolean criticalPrimitives(char a1, boolean a2, byte a3, short a4, int a5, long a6, float a7, double a8);
     [Critical] boolean criticalEnum(MyEnum a1);
     [Critical] boolean criticalString(string a1);
+    [Critical] boolean criticalStringN(string? a1);
 
     [Critical] boolean criticalPrimitivesArray(Array<char> a1, Array<boolean> a2, Array<byte> a3, Array<short> a4, Array<int> a5, Array<long> a6, Array<float> a7, Array<double> a8);
     [Critical] boolean criticalEnumArray(Array<MyEnum> a1);
+
+    [Critical] boolean criticalPrimitivesArrayN(Array<char>? a1, Array<boolean>? a2, Array<byte>? a3, Array<short>? a4, Array<int>? a5, Array<long>? a6, Array<float>? a7, Array<double>? a8);
+    [Critical] boolean criticalEnumArrayN(Array<MyEnum>? a1);
 
     [Critical] char criticalReturnChar();
     [Critical] boolean criticalReturnBoolean();
@@ -193,9 +229,12 @@ callback CallbackPassLong = boolean (long arg);
 callback CallbackPassFloat = boolean (float arg);
 callback CallbackPassDouble = boolean (double arg);
 callback CallbackPassString = boolean (string arg);
+callback CallbackPassStringN = boolean (string? arg);
 callback CallbackPassCallback = boolean (VoidCallback arg);
+callback CallbackPassCallbackN = boolean (VoidCallback? arg);
 callback CallbackPassEnum = boolean (MyEnum arg);
 callback CallbackPassDictionary = boolean (MyDictionary arg);
+callback CallbackPassDictionaryN = boolean (MyDictionary? arg);
 
 callback CallbackReturnChar = char ();
 callback CallbackReturnBoolean = boolean ();
@@ -206,13 +245,17 @@ callback CallbackReturnLong = long ();
 callback CallbackReturnFloat = float ();
 callback CallbackReturnDouble = double ();
 callback CallbackReturnString = string ();
+callback CallbackReturnStringN = string? ();
 callback CallbackReturnCallback = VoidCallback ();
+callback CallbackReturnCallbackN = VoidCallback? ();
 callback CallbackReturnEnum = MyEnum ();
 callback CallbackReturnDictionary = MyDictionary ();
+callback CallbackReturnDictionaryN = MyDictionary? ();
 
 // arrays
 
 callback CallbackPassCharArray = boolean (Array<char> arg);
+callback CallbackPassCharArrayN = boolean (Array<char>? arg);
 callback CallbackPassBooleanArray = boolean (Array<boolean> arg);
 callback CallbackPassByteArray = boolean (Array<byte> arg);
 callback CallbackPassShortArray = boolean (Array<short> arg);
@@ -221,10 +264,13 @@ callback CallbackPassLongArray = boolean (Array<long> arg);
 callback CallbackPassFloatArray = boolean (Array<float> arg);
 callback CallbackPassDoubleArray = boolean (Array<double> arg);
 callback CallbackPassStringArray = boolean (Array<string> arg);
+callback CallbackPassStringArrayN = boolean (Array<string?> arg);
 callback CallbackPassEnumArray = boolean (Array<MyEnum> arg);
 callback CallbackPassDictionaryArray = boolean (Array<MyDictionary> arg);
+callback CallbackPassDictionaryArrayN = boolean (Array<MyDictionary?> arg);
 
 callback CallbackReturnCharArray = Array<char> ();
+callback CallbackReturnCharArrayN = Array<char>? ();
 callback CallbackReturnBooleanArray = Array<boolean> ();
 callback CallbackReturnByteArray = Array<byte> ();
 callback CallbackReturnShortArray = Array<short> ();
@@ -233,8 +279,10 @@ callback CallbackReturnLongArray = Array<long> ();
 callback CallbackReturnFloatArray = Array<float> ();
 callback CallbackReturnDoubleArray = Array<double> ();
 callback CallbackReturnStringArray = Array<string> ();
+callback CallbackReturnStringArrayN = Array<string?> ();
 callback CallbackReturnEnumArray = Array<MyEnum> ();
 callback CallbackReturnDictionaryArray = Array<MyDictionary> ();
+callback CallbackReturnDictionaryArrayN = Array<MyDictionary?> ();
 
 // enum
 

@@ -14,6 +14,11 @@ class ReturnArray {
     }
 
     @Test
+    fun returnCharArrayN() = withLib {
+        assertContentEquals(null, natives.test.returnCharArrayN())
+    }
+
+    @Test
     fun returnBooleanArray() = withLib {
         assertContentEquals(booleanArrayOf(true, false), natives.test.returnBooleanArray())
     }
@@ -54,6 +59,11 @@ class ReturnArray {
     }
 
     @Test
+    fun returnStringArrayN() = withLib {
+        assertContentEquals(arrayOf(null, null), natives.test.returnStringArrayN())
+    }
+
+    @Test
     fun returnEnumArray() = withLib {
         assertContentEquals(arrayOf(MyEnum.CASE1, MyEnum.CASE2), natives.test.returnEnumArray())
     }
@@ -64,5 +74,10 @@ class ReturnArray {
             MyDictionary(1, 2, 3, 4),
             MyDictionary(5, 6, 7, 8)
         ), natives.test.returnDictionaryArray())
+    }
+
+    @Test
+    fun returnDictionaryArrayN() = withLib {
+        assertContentEquals(arrayOf(null, null), natives.test.returnDictionaryArrayN())
     }
 }

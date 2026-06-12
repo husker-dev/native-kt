@@ -6,6 +6,10 @@ KCharArray* returnCharArray() {
     return KCharArray_of('a', 'b');
 }
 
+KCharArray* returnCharArrayN() {
+    return NULL;
+}
+
 KBooleanArray* returnBooleanArray() {
     return KBooleanArray_of(true, false);
 }
@@ -44,6 +48,10 @@ KArray* returnStringArray() {
     );
 }
 
+KArray* returnStringArrayN() {
+    return KArray_of(NULL, NULL);
+}
+
 KIntArray* returnEnumArray() {
     return KIntArray_of(MyEnum_CASE1, MyEnum_CASE2);
 }
@@ -53,4 +61,8 @@ KArray* returnDictionaryArray() {
         MyDictionary_new(1, 2, 3, 4),
         MyDictionary_new(5, 6, 7, 8)
     );
+}
+
+KArray* returnDictionaryArrayN() {
+    return KArray_of(NULL, NULL);
 }

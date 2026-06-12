@@ -14,6 +14,7 @@ import natives.test.pingShort
 import withLib
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 class PingPrimitive {
 
@@ -63,6 +64,11 @@ class PingPrimitive {
     }
 
     @Test
+    fun pingStringN() = withLib {
+        assertNull(natives.test.pingStringN(null))
+    }
+
+    @Test
     fun pingEnum() = withLib {
         assertEquals(MyEnum.CASE2, natives.test.pingEnum(MyEnum.CASE2))
     }
@@ -73,6 +79,11 @@ class PingPrimitive {
             MyDictionary(1, 2, 3, 4),
             natives.test.pingDictionary(MyDictionary(1, 2, 3, 4))
         )
+    }
+
+    @Test
+    fun pingDictionaryN() = withLib {
+        assertNull(natives.test.pingDictionaryN(null))
     }
 
 }

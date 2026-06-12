@@ -2,18 +2,15 @@
 #include <stdio.h>
 #include <string.h>
 
-KBoolean passArray(KIntArray* arg) {
-    return !(arg->__flags & 1) &&
-        arg->length == 2 &&
-        arg->elements[0] == 1 &&
-        arg->elements[1] == 2;
-}
-
 KBoolean passCharArray(KCharArray* arg) {
     return !(arg->__flags & 1) &&
         arg->length == 2 &&
         arg->elements[0] == 'a' &&
         arg->elements[1] == 'b';
+}
+
+KBoolean passCharArrayN(KCharArray* arg) {
+    return arg == NULL;
 }
 
 KBoolean passBooleanArray(KBooleanArray* arg) {
@@ -68,13 +65,14 @@ KBoolean passStringArray(KArray* arg) {
     const KString* el1 = (KString*) arg->elements[0];
     const KString* el2 = (KString*) arg->elements[1];
 
-    printf("%d|%d, %s|%d, %s|%d", arg->__flags & 1, arg->length, el1->data, el1->length, el2->data, el2->length);
-    fflush(stdout);
-
     return !(arg->__flags & 1) &&
         arg->length == 2 &&
         strncmp(el1->data, "string1", el1->length) == 0 &&
         strncmp(el2->data, "string2", el2->length) == 0;
+}
+
+KBoolean passStringArrayN(KArray* arg) {
+    return arg->elements[0] == NULL && arg->elements[1] == NULL;
 }
 
 KBoolean passEnumArray(KIntArray* arg) {
@@ -99,4 +97,8 @@ KBoolean passDictionaryArray(KArray* arg) {
         elements[1]->b == 6 &&
         elements[1]->c == 7 &&
         elements[1]->d == 8;
+}
+
+KBoolean passDictionaryArrayN(KArray* arg) {
+    return arg->elements[0] == NULL && arg->elements[1] == NULL;
 }

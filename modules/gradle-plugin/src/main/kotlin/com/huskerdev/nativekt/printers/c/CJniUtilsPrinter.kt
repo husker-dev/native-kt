@@ -44,6 +44,8 @@ class CJniUtilsPrinter(
             const size_t JNI_StringStackSize = sizeof(KString) + sizeof(intptr_t) * 2;
 
             jstring JNI_toKotlinKString(JNIEnv *env, KString* str) {
+                if(str == NULL) 
+                    return NULL;
                 if(K_OBJECT_IS_ON_STACK(str->__flags))
                     return (jstring)((intptr_t*)((char*)str + sizeof(KString)))[0];
                 
@@ -72,11 +74,15 @@ class CJniUtilsPrinter(
             }
             
             void JNI_releaseKStringOnStack(JNIEnv *env, KString* str) {
+                if(str == NULL)
+                    return;
                 jbyteArray bytes = (jbyteArray)((size_t*)((char*)str + sizeof(KString)))[1];
                 (*env)->ReleaseByteArrayElements(env, bytes, (jbyte*) str->data, JNI_ABORT);
             }
             
             KString* JNI_toNativeKString(JNIEnv *env, jstring obj, char flags) {
+                if(obj == NULL)
+                    return NULL;
                 jbyteArray bytes = (jbyteArray) (*env)->CallObjectMethod(env, obj, stringGetBytes, stringUTF8Const);
                 jsize length = (*env)->GetStringLength(env, obj);
                 jsize size = (*env)->GetArrayLength(env, bytes);
@@ -107,6 +113,8 @@ class CJniUtilsPrinter(
 
             #define KArrayCast(Name, JType)                                                              \
             K##Name##Array* JNI_toNativeK##Name##Array(JNIEnv *env, JType##Array arr, char flags) {      \
+                if(arr == NULL)                                                                          \
+                    return NULL;                                                                         \
                 KInt length = (*env)->GetArrayLength(env, arr);                                          \
                 size_t size = length * sizeof(JType);                                                    \
                                                                                                          \
@@ -139,11 +147,15 @@ class CJniUtilsPrinter(
             }                                                                                            \
                                                                                                          \
             void JNI_releaseK##Name##ArrayOnStack(JNIEnv *env, K##Name##Array* arr) {                    \
+                if(arr == NULL)                                                                          \
+                    return;                                                                              \
                 JType##Array elements = (JType##Array)*((size_t*)((char*)arr + sizeof(K##Name##Array))); \
                 (*env)->Release##Name##ArrayElements(env, elements, (JType*)arr->elements, JNI_ABORT);   \
             }                                                                                            \
                                                                                                          \
             JType##Array JNI_toKotlinK##Name##Array(JNIEnv *env, K##Name##Array* arr) {                  \
+                if(arr == NULL)                                                                          \
+                    return NULL;                                                                         \
                 if(K_OBJECT_IS_ON_STACK(arr->__flags))                                                   \
                     return (JType##Array)*((size_t*)((char*)arr + sizeof(K##Name##Array)));              \
                 JType##Array result = (*env)->New##Name##Array(env, arr->length);                        \
@@ -173,6 +185,8 @@ class CJniUtilsPrinter(
                 void* (*converter)(JNIEnv*, jobject, char),
                 char flags
             ) {
+                if(src == NULL)
+                    return NULL;
                 int length = (*env)->GetArrayLength(env, src);
                 void** elements = malloc(length * sizeof(void*));
                 for(int i = 0; i < length; i++) {
@@ -223,6 +237,8 @@ class CJniUtilsPrinter(
                 jobject (*converter)(JNIEnv*, void*),
                 jclass clazz
             ) {
+                if(src == NULL)
+                    return NULL;
                 if(K_OBJECT_IS_ON_STACK(src->__flags))
                     return (jobjectArray)*((size_t*)((char*)src + sizeof(KArray)));
                 
@@ -269,6 +285,8 @@ class CJniUtilsPrinter(
                     jobjectArray src, 
                     char flags
                 ) {
+                    if(src == NULL)
+                        return NULL;
                     int length = (*env)->GetArrayLength(env, src);
                     KInt* elements = malloc(length * sizeof(KInt));
                     for(int i = 0; i < length; i++) {
@@ -318,6 +336,8 @@ class CJniUtilsPrinter(
                     jclass clazz,
                     jmethodID valuesMethod
                 ) {
+                    if(src == NULL)
+                        return NULL;
                     if(K_OBJECT_IS_ON_STACK(src->__flags))
                         return (jobjectArray)*((size_t*)((char*)src + sizeof(KArray)));
                     
@@ -371,7 +391,7 @@ class CJniUtilsPrinter(
                 }
                 
                 static void JNI_CALLBACK_free(_AbstractCallback* callback) {
-                    if (!K_OBJECT_IS_RELEASABLE(callback->__flags) || K_OBJECT_IS_ON_STACK(callback->__flags))
+                    if (callback == NULL || !K_OBJECT_IS_RELEASABLE(callback->__flags) || K_OBJECT_IS_ON_STACK(callback->__flags))
                         return;
                 
                     JNIEnv *env;
@@ -385,6 +405,8 @@ class CJniUtilsPrinter(
                 }
                 
                 static _AbstractCallback* JNI_CALLBACK_clone(_AbstractCallback* ref) {
+                    if(ref == NULL)
+                        return NULL;
                     jobject obj = (jobject)((size_t*)((char*)ref + sizeof(_AbstractCallback)))[0];
                 	JNIEnv *env = (JNIEnv*)((size_t*)((char*)ref + sizeof(_AbstractCallback)))[1];
                     jint status = env == NULL ? JVM_attach(&env) : JNI_OK;
@@ -401,6 +423,8 @@ class CJniUtilsPrinter(
                 }
                 
                 jobject JNI_toKotlinCallback(JNIEnv *env, _AbstractCallback* callback) {
+                    if(callback == NULL)
+                        return NULL;
                     return (jobject)((size_t*)((char*)callback + sizeof(_AbstractCallback)))[0];
                 }
                 
@@ -420,6 +444,8 @@ class CJniUtilsPrinter(
                 }
                 
                 _AbstractCallback* JNI_toNativeCallback(JNIEnv *env, jobject obj, void (*invoke)(), char flags) {
+                    if(obj == NULL)
+                        return NULL;
                     void* mem = malloc(_AbstractCallbackSize);
                     ((size_t*)((char*)mem + sizeof(_AbstractCallback)))[0] = (size_t) (*env)->NewGlobalRef(env, obj);
                     ((size_t*)((char*)mem + sizeof(_AbstractCallback)))[1] = (size_t) NULL;
@@ -498,6 +524,7 @@ class CJniUtilsPrinter(
 
             // to JVM
             append("\njobject JNI_toKotlin${struct.name}(JNIEnv *env, ${struct.name}* src) {\n\t")
+            append("if(src == NULL) return NULL;\n\t")
             append("return (*env)->CallObjectMethod(env, struct${struct.name}Companion, struct${struct.name}Constructor, \n\t\t")
 
             struct.allFields().joinTo(builder, separator = ",\n\t\t") {
@@ -507,6 +534,7 @@ class CJniUtilsPrinter(
 
             // to Native
             append("\n${struct.name}* JNI_toNative${struct.name}(JNIEnv *env, jobject src, char flags) {\n\t")
+            append("if(src == NULL) return NULL;\n\t")
             append("${struct.name}* result = malloc(sizeof(${struct.name}));\n\t")
             append("*result = (${struct.name}) {\n\t\t")
 

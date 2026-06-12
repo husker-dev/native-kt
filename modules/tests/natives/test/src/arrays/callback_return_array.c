@@ -9,6 +9,10 @@ KBoolean callbackReturnCharArray(CallbackReturnCharArray* arg) {
         array->elements[1] == 'b';
 }
 
+KBoolean callbackReturnCharArrayN(CallbackReturnCharArrayN* arg) {
+    return arg->invoke(arg) == NULL;
+}
+
 KBoolean callbackReturnBooleanArray(CallbackReturnBooleanArray* arg) {
     const KBooleanArray* array = arg->invoke(arg);
     return (array->__flags & 1) &&
@@ -76,6 +80,11 @@ KBoolean callbackReturnStringArray(CallbackReturnStringArray* arg) {
         strncmp(el2->data, "string2", el2->length) == 0;
 }
 
+KBoolean callbackReturnStringArrayN(CallbackReturnStringArrayN* arg) {
+    const KArray* array = arg->invoke(arg);
+    return array->elements[0] == NULL && array->elements[1] == NULL;
+}
+
 KBoolean callbackReturnEnumArray(CallbackReturnEnumArray* arg) {
     const KIntArray* array = arg->invoke(arg);
     const MyEnum* elements = (MyEnum*)array->elements;
@@ -100,4 +109,9 @@ KBoolean callbackReturnDictionaryArray(CallbackReturnDictionaryArray* arg) {
         elements[1]->b == 6 &&
         elements[1]->c == 7 &&
         elements[1]->d == 8;
+}
+
+KBoolean callbackReturnDictionaryArrayN(CallbackReturnDictionaryArrayN* arg) {
+    const KArray* array = arg->invoke(arg);
+    return array->elements[0] == NULL && array->elements[1] == NULL;
 }

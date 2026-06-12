@@ -23,6 +23,11 @@ class Critical {
     }
 
     @Test
+    fun criticalStringN() = withLib {
+        assertTrue(natives.test.criticalStringN(null))
+    }
+
+    @Test
     fun criticalPrimitivesArray() = withLib {
         assertTrue(natives.test.criticalPrimitivesArray(
             charArrayOf('a', 'b'),
@@ -37,10 +42,23 @@ class Critical {
     }
 
     @Test
+    fun criticalPrimitivesArrayN() = withLib {
+        assertTrue(natives.test.criticalPrimitivesArrayN(
+            null, null, null, null,
+            null, null, null, null
+        ))
+    }
+
+    @Test
     fun criticalEnumArray() = withLib {
         assertTrue(natives.test.criticalEnumArray(
             arrayOf(MyEnum.CASE1, MyEnum.CASE2)
         ))
+    }
+
+    @Test
+    fun criticalEnumArrayN() = withLib {
+        assertTrue(natives.test.criticalEnumArrayN(null))
     }
 
     @Test

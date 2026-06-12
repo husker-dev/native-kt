@@ -14,6 +14,12 @@ class PingArray {
     }
 
     @Test
+    fun pingCharArrayN() = withLib {
+        val arr = null
+        assertContentEquals(arr, pingCharArrayN(arr))
+    }
+
+    @Test
     fun pingBooleanArray() = withLib {
         val arr = booleanArrayOf(true, false)
         assertContentEquals(arr, pingBooleanArray(arr))
@@ -62,6 +68,12 @@ class PingArray {
     }
 
     @Test
+    fun pingStringArrayN() = withLib {
+        val arr: Array<String?> = arrayOf(null, null)
+        assertContentEquals(arr, pingStringArrayN(arr))
+    }
+
+    @Test
     fun pingEnumArray() = withLib {
         val arr = arrayOf(MyEnum.CASE1, MyEnum.CASE2)
         assertContentEquals(arr, pingEnumArray(arr))
@@ -74,5 +86,11 @@ class PingArray {
             MyDictionary(5, 6, 7, 8)
         )
         assertContentEquals(arr, pingDictionaryArray(arr))
+    }
+
+    @Test
+    fun pingDictionaryArrayN() = withLib {
+        val arr: Array<MyDictionary?> = arrayOf(null, null)
+        assertContentEquals(arr, pingDictionaryArrayN(arr))
     }
 }

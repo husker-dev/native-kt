@@ -45,10 +45,12 @@ class CApiImplPrinter(
             builder.append("""
                 
                 void _AbstractCallback_free(_AbstractCallback* self) {
+                    if(self == NULL) return;
                     self->free(self);
                 }
                 
                 void __AbstractCallback_forceFree(_AbstractCallback* self) {
+                    if(self == NULL) return;
                     self->__flags |= K_FLAG_RELEASABLE;
                     self->free(self);
                 }
@@ -86,6 +88,7 @@ class CApiImplPrinter(
 
     private fun printStructClone(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
         append("\n${dictionary.name}* ${dictionary.name}_clone(const ${dictionary.name}* self) {\n\t")
+        append("if(self == NULL) return NULL;\n\t")
 
         // malloc
         append("${dictionary.name}* result = (${dictionary.name}*) malloc(sizeof(${dictionary.name}));\n\t")
@@ -109,7 +112,7 @@ class CApiImplPrinter(
         append("""
             
             void ${dictionary.name}_free(${dictionary.name}* self) {
-                if(!K_OBJECT_IS_RELEASABLE(self->__flags))
+                if(self == NULL || !K_OBJECT_IS_RELEASABLE(self->__flags))
                     return;
             
         """.trimIndent())
@@ -128,6 +131,7 @@ class CApiImplPrinter(
 
         // forceFree
         append("\nvoid _${dictionary.name}_forceFree(${dictionary.name}* self) {")
+        append("\n\tif(self == NULL) return;")
         dictionary.allFields().forEach { field ->
             forceFreeFuncFor(
                 field.type,
@@ -156,6 +160,7 @@ class CApiImplPrinter(
             }
 
             KString* KString_clone(const KString* of) {
+                if(of == NULL) return NULL;
                 const KInt size = of->size;
                 void* data = malloc(size);
                 memcpy(data, of->data, size);
@@ -165,7 +170,7 @@ class CApiImplPrinter(
             }
 
             void KString_free(KString* self) {
-                if(!K_OBJECT_IS_RELEASABLE(self->__flags))
+                if(self == NULL || !K_OBJECT_IS_RELEASABLE(self->__flags))
                     return;
                 free((void*) self->data);
                 if(!K_OBJECT_IS_ON_STACK(self->__flags))
@@ -173,6 +178,7 @@ class CApiImplPrinter(
             }
             
             void _KString_forceFree(KString* self) {
+                if(self == NULL) return;
                 self->__flags |= K_FLAG_RELEASABLE;
                 KString_free(self);
             }
@@ -210,6 +216,7 @@ class CApiImplPrinter(
 
             #define KArrayCloneDef(Name, Type)                                     \
             Name* Name##_clone(const Name* of) {                                   \
+                if(of == NULL) return NULL;                                        \
                 const KInt size = of->size;                                        \
                 void** elements = malloc(size);                                    \
                 memcpy(elements, (void*) of->elements, size);                      \
@@ -224,7 +231,7 @@ class CApiImplPrinter(
             }                                                                      \
                                                                                    \
             void Name##_free(Name* arr) {                                          \
-                if(!K_OBJECT_IS_RELEASABLE(arr->__flags))                          \
+                if(arr == NULL || !K_OBJECT_IS_RELEASABLE(arr->__flags))           \
                     return;                                                        \
                 free((void*) arr->elements);                                       \
                 if(!K_OBJECT_IS_ON_STACK(arr->__flags))                            \
@@ -232,15 +239,21 @@ class CApiImplPrinter(
             }                                                                      \
                                                                                    \
             void _##Name##_forceFree(Name* self) {                                 \
+                if(self == NULL) return;                                           \
                 self->__flags |= K_FLAG_RELEASABLE;                                \
                 Name##_free(self);                                                 \
             }
             
             KArray* KArray_clone(const KArray* of, void* (*cloneOp)(void*)) {
+                if(of == NULL) return NULL;
             	const KInt size = of->size;
             	void** elements = malloc(size);
-            	for (int i = 0; i < of->length; i++)
-            		elements[i] = cloneOp((void*)of->elements[i]);
+            	for (int i = 0; i < of->length; i++) {
+                    void* element = (void*) of->elements[i];
+                    if(element != NULL) 
+                        elements[i] = cloneOp(element);
+            		else elements[i] = NULL;
+                }
             	KArray* result = (KArray*) malloc(sizeof(KArray));
             	*result = (KArray) { 
                     (const void**) elements, 
@@ -252,17 +265,21 @@ class CApiImplPrinter(
             }
             
             void KArray_free(const KArray* self, void (*freeOp)(void*)) {
-                if(!K_OBJECT_IS_RELEASABLE(self->__flags))
+                if(self == NULL || !K_OBJECT_IS_RELEASABLE(self->__flags))
                     return;
                 const void** elements = self->elements;
-                for (int i = 0; i < self->length; i++)
-                    freeOp((void*) elements[i]);
+                for (int i = 0; i < self->length; i++) {
+                    void* element = (void*) elements[i];
+                    if(element == NULL) continue;
+                    freeOp(element);
+                }
                 free((void*) elements);
                 if(!K_OBJECT_IS_ON_STACK(self->__flags))
                     free((void*) self);
             }
 
             void _KArray_forceFree(KArray* self, void (*freeOp)(void*)) {
+                if(self == NULL) return;
                 self->__flags |= K_FLAG_RELEASABLE;
                 KArray_free(self, freeOp);
             }

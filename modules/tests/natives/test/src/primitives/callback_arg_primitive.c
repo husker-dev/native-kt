@@ -5,6 +5,10 @@ void callbackVoid(VoidCallback* arg) {
     arg->invoke(arg);
 }
 
+KBoolean callbackVoidN(VoidCallback* arg) {
+    return arg == NULL;
+}
+
 KBoolean callbackArgChar(CallbackPassChar* arg) {
     return arg->invoke(arg, 'a');
 }
@@ -41,8 +45,16 @@ KBoolean callbackArgString(CallbackPassString* arg) {
     return arg->invoke(arg, KString_new(strdup("test string"), 11, 11));
 }
 
+KBoolean callbackArgStringN(CallbackPassStringN* arg) {
+    return arg->invoke(arg, NULL);
+}
+
 KBoolean callbackArgCallback(VoidCallback* pass, CallbackPassCallback* arg) {
     return arg->invoke(arg, pass);
+}
+
+KBoolean callbackArgCallbackN(CallbackPassCallbackN* arg) {
+    return arg->invoke(arg, NULL);
 }
 
 KBoolean callbackArgEnum(CallbackPassEnum* arg) {
@@ -51,4 +63,8 @@ KBoolean callbackArgEnum(CallbackPassEnum* arg) {
 
 KBoolean callbackArgDictionary(CallbackPassDictionary* arg) {
     return arg->invoke(arg, MyDictionary_new(1, 2, 3, 4));
+}
+
+KBoolean callbackArgDictionaryN(CallbackPassDictionaryN* arg) {
+    return arg->invoke(arg, NULL);
 }

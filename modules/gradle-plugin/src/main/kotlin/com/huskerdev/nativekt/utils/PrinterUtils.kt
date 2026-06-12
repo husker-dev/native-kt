@@ -41,34 +41,42 @@ fun ResolvedIdlType.builtinOrNull(): BuiltinIdlDeclaration? {
 
 internal fun ResolvedIdlType.toKotlinType(
     stringAsBytes: Boolean = false,
-    enumAsInt: Boolean = false
-): String = when {
-    isVoid() -> "Unit"
-    isChar() -> "Char"
-    isBoolean() -> "Boolean"
-    isByte() -> "Byte"
-    isShort() -> "Short"
-    isInt() -> "Int"
-    isLong() -> "Long"
-    isFloat() -> "Float"
-    isDouble() -> "Double"
-    isString() -> if(stringAsBytes) "ByteArray" else "String"
-    isEnum() -> if(enumAsInt) "Int" else declaration.name
-    isArray() -> arrayType { type ->
-        when {
-            type.isPrimitive() -> "${type.toKotlinType()}Array"
-            type.isEnum() && enumAsInt -> "IntArray"
-            else -> "Array<${type.toKotlinType(stringAsBytes, enumAsInt)}>"
+    enumAsInt: Boolean = false,
+    printNullable: Boolean = true
+): String {
+    val nullable = if(isNullable && printNullable) "?" else ""
+    return when {
+        isVoid() -> "Unit"
+        isChar() -> "Char"
+        isBoolean() -> "Boolean"
+        isByte() -> "Byte"
+        isShort() -> "Short"
+        isInt() -> "Int"
+        isLong() -> "Long"
+        isFloat() -> "Float"
+        isDouble() -> "Double"
+        isString() -> if(stringAsBytes) "ByteArray$nullable" else "String$nullable"
+        isEnum() -> if(enumAsInt) "Int" else declaration.name
+        isArray() -> arrayType { type ->
+            when {
+                type.isPrimitive() -> "${type.toKotlinType()}Array$nullable"
+                type.isEnum() && enumAsInt -> "IntArray$nullable"
+                else -> "Array<${type.toKotlinType(stringAsBytes, enumAsInt)}>$nullable"
+            }
         }
+        else -> "${(this as ResolvedIdlType.Default).declaration.name}$nullable"
     }
-    else -> (this as ResolvedIdlType.Default).declaration.name
 }
 
 fun ResolvedIdlType.toCType(
     enumAsInt: Boolean = false,
-    ptr: Boolean = true
+    ptr: Boolean = true,
+    printNullable: Boolean = false
 ): String {
     val ptr = if(ptr) "*" else ""
+    val nullable = if(printNullable) {
+        if (isNullable) " _Nullable" else " _Nonnull"
+    } else ""
     return when {
         isVoid() -> "void"
         isChar() -> "KChar"
@@ -80,15 +88,15 @@ fun ResolvedIdlType.toCType(
         isFloat() -> "KFloat"
         isDouble() -> "KDouble"
         isEnum() -> if(enumAsInt) "KInt" else declaration.name
-        isString() -> "KString$ptr"
+        isString() -> "KString$ptr$nullable"
         isArray() -> arrayType { type ->
             when {
-                type.isPrimitive() -> "${type.toCType()}Array$ptr"
-                type.isEnum() -> "KIntArray$ptr"
-                else -> "KArray$ptr"
+                type.isPrimitive() -> "${type.toCType()}Array$ptr$nullable"
+                type.isEnum() -> "KIntArray$ptr$nullable"
+                else -> "KArray$ptr$nullable"
             }
         }
-        else -> "${(this as ResolvedIdlType.Default).declaration.name}$ptr"
+        else -> "${(this as ResolvedIdlType.Default).declaration.name}$ptr$nullable"
     }
 }
 

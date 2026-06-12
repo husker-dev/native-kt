@@ -132,9 +132,11 @@ internal fun printCriticalNativeFunctionContent(builder: StringBuilder, name: St
 
     // == Call args ==
     val args = function.args.joinToString {
-        if(it.type.isString() || it.type.isArray())
-            "&_arg_${it.name}"
-        else "_arg_${it.name}"
+        if(it.type.isString() || it.type.isArray()) {
+            if(it.type.isNullable)
+                "_length_${it.name} == -1 ? 0 : &_arg_${it.name}"
+            else "&_arg_${it.name}"
+        } else "_arg_${it.name}"
     }
 
     // == Function call ==

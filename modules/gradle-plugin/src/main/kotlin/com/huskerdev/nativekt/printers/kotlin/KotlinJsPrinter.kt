@@ -122,10 +122,10 @@ class KotlinJsPrinter(
         // toNative
         append("""
             
-            fun Arena.toNativeCallbackOnArena(callback: Any, invoke: Int) =
+            fun Arena.toNativeCallbackOnArena(callback: Any?, invoke: Int) =
                 toNativeCallbackOnArena(callback, invoke, _callbackClone, _callbackEquals, _callbackHashCode, _callbackFree)
                 
-            fun toNativeCallback(callback: Any, invoke: Int) =
+            fun toNativeCallback(callback: Any?, invoke: Int) =
                 toNativeCallback(_module, callback, invoke, _callbackClone, _callbackEquals, _callbackHashCode, _callbackFree)
         
         """.trimIndent())
@@ -187,7 +187,7 @@ class KotlinJsPrinter(
         append(" ->\n\t\t")
 
         // body
-        val call = "toKotlinCallback<${callback.name}>(_module, _c)(${castedArgs.joinToString()})"
+        val call = "toKotlinCallback<${callback.name}>(_module, _c)!!(${castedArgs.joinToString()})"
         val casted = castToNative(callback.type, call, useArena = false)
 
         append(casted)
@@ -239,11 +239,11 @@ class KotlinJsPrinter(
         }
 
         // to native (arena)
-        append("\nprivate fun Arena.toNative${name}OnArena(of: $name) = alloc(_layout$name.size).apply {")
+        append("\nprivate fun Arena.toNative${name}OnArena(of: $name?) = of?.run { alloc(_layout$name.size).apply {")
         append(heaps(true))
         buildList {
             fields.forEachIndexed { i, field ->
-                val ref = "of.${field.name}"
+                val ref = field.name
                 val casted = when {
                     field.type.isBoolean() || field.type.isByte() ||
                     field.type.isShort() || field.type.isChar() -> ref
@@ -253,14 +253,14 @@ class KotlinJsPrinter(
             }
             add("\n\tHEAP8[this + _layout$name[${fields.size}]] = 0")
         }.joinTo(builder, separator = "")
-        append("\n}\n")
+        append("\n} } ?: 0\n")
 
         // to native
-        append("\nprivate fun toNative$name(module: Module, of: $name) = _module._malloc(_layout$name.size).apply {")
+        append("\nprivate fun toNative$name(module: Module, of: $name?) = of?.run { _module._malloc(_layout$name.size).apply {")
         append(heaps(true))
         buildList {
             fields.forEachIndexed { i, field ->
-                val ref = "of.${field.name}"
+                val ref = field.name
                 val casted = when {
                     field.type.isBoolean() || field.type.isByte() ||
                     field.type.isShort() || field.type.isChar() -> ref
@@ -270,10 +270,11 @@ class KotlinJsPrinter(
             }
             add("\n\tHEAP8[this + _layout$name[${fields.size}]] = FLAG_RELEASABLE")
         }.joinTo(builder, separator = "")
-        append("\n}\n")
+        append("\n} } ?: 0\n")
 
         // to kotlin
-        append("\nprivate fun toKotlin$name(module: Module, of: Int): $name {")
+        append("\nprivate fun toKotlin$name(module: Module, of: Int): $name? {")
+        append("\n\tif(of == 0) return null")
         append(heaps(false))
         append("\n\treturn $name(")
         fields.mapIndexed { i, field ->
@@ -432,27 +433,32 @@ class KotlinJsPrinter(
         else -> content
     }
 
-    private fun castToKotlin(type: ResolvedIdlType, content: String): String = when {
-        type.isBoolean() -> "$content.toBoolean()"
-        type.isChar() -> "$content.toChar()"
-        type.isByte() -> "$content.toByte()"
-        type.isShort() -> "$content.toShort()"
-        type.isFloat() -> "$content.truncF32()"
-        type.isEnum() -> "${type.declaration.name}.entries[$content]"
-        type.isString() -> "toKotlinKString(_module, $content)"
-        type.isCallback() -> "toKotlinCallback(_module, $content)"
-        type.isDictionary() -> "toKotlin${type.declaration.name}(_module, $content)"
-        type.isArray() -> type.arrayType { type ->
-            when {
-                type.isPrimitive() -> "toKotlin${type.toCType()}Array(_module, $content)"
-                type.isEnum() -> "toKotlinEnumArray<${type.declaration.name}>(_module, $content)"
-                else -> {
-                    val fn = castToKotlin(type, "").split("(")[0]
-                    "toKotlinKArray(_module, $content, ::$fn)"
+    private fun castToKotlin(type: ResolvedIdlType, content: String): String {
+        val assert = if(type.isNullable) "" else "!!"
+        return when {
+            type.isBoolean() -> "$content.toBoolean()"
+            type.isChar() -> "$content.toChar()"
+            type.isByte() -> "$content.toByte()"
+            type.isShort() -> "$content.toShort()"
+            type.isFloat() -> "$content.truncF32()"
+            type.isEnum() -> "${type.declaration.name}.entries[$content]"
+            type.isString() -> "toKotlinKString(_module, $content)$assert"
+            type.isCallback() -> "toKotlinCallback(_module, $content)$assert"
+            type.isDictionary() -> "toKotlin${type.declaration.name}(_module, $content)$assert"
+            type.isArray() -> type.arrayType { type ->
+                when {
+                    type.isPrimitive() -> "toKotlin${type.toCType()}Array(_module, $content)$assert"
+                    type.isEnum() -> "toKotlinEnumArray<${type.declaration.name}>(_module, $content)$assert"
+                    else -> {
+                        val fn = castToKotlin(type, "").split("(")[0]
+                        if(type.isNullable)
+                            "toKotlinKArray<${type.toKotlinType()}, Module>(_module, $content, ::$fn)$assert"
+                        else "toKotlinKArray(_module, $content, ::$fn)$assert"
+                    }
                 }
             }
+            else -> content
         }
-        else -> content
     }
 
     private fun ResolvedIdlType.toKtJsType(): String = when {

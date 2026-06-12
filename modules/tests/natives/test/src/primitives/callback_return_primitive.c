@@ -38,8 +38,16 @@ KBoolean callbackReturnString(CallbackReturnString* arg) {
     return (str->__flags & 1) && strncmp(str->data, "test string", str->length) == 0;
 }
 
+KBoolean callbackReturnStringN(CallbackReturnStringN* arg) {
+    return  arg->invoke(arg) == NULL;
+}
+
 VoidCallback* callbackReturnCallback(CallbackReturnCallback* arg) {
     return arg->invoke(arg);
+}
+
+KBoolean callbackReturnCallbackN(CallbackReturnCallbackN* arg) {
+    return arg->invoke(arg) == NULL;
 }
 
 KBoolean callbackReturnEnum(CallbackReturnEnum* arg) {
@@ -52,4 +60,8 @@ KBoolean callbackReturnDictionary(CallbackReturnDictionary* arg) {
         result->b == 2 &&
         result->c == 3 &&
         result->d == 4;
+}
+
+KBoolean callbackReturnDictionaryN(CallbackReturnDictionaryN* arg) {
+    return arg->invoke(arg) == NULL;
 }

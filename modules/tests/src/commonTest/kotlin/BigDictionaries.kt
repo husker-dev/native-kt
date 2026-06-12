@@ -23,6 +23,21 @@ class Dictionaries {
         val callback = VoidCallback {}
         assertEquals(createTestDictionary(callback), natives.test.pingBigDictionary(createTestDictionary(callback)))
     }
+
+    @Test
+    fun passBigDictionaryN() = withLib {
+        assertTrue(natives.test.passBigDictionaryN(null))
+    }
+
+    @Test
+    fun returnBigDictionaryN() = withLib {
+        assertEquals(null, natives.test.returnBigDictionaryN())
+    }
+
+    @Test
+    fun pingBigDictionaryN() = withLib {
+        assertEquals(null, natives.test.pingBigDictionaryN(null))
+    }
 }
 
 private fun createTestDictionary(callback: VoidCallback) = TypeDictionary(

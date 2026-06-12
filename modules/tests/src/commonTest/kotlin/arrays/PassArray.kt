@@ -14,6 +14,11 @@ class PassArray {
     }
 
     @Test
+    fun passCharArrayN() = withLib {
+        assertTrue(natives.test.passCharArrayN(null))
+    }
+
+    @Test
     fun passBooleanArray() = withLib {
         assertTrue(natives.test.passBooleanArray(booleanArrayOf(true, false)))
     }
@@ -54,6 +59,11 @@ class PassArray {
     }
 
     @Test
+    fun passStringArrayN() = withLib {
+        assertTrue(natives.test.passStringArrayN(arrayOf(null, null)))
+    }
+
+    @Test
     fun passEnumArray() = withLib {
         assertTrue(natives.test.passEnumArray(arrayOf(MyEnum.CASE1, MyEnum.CASE2)))
     }
@@ -64,5 +74,10 @@ class PassArray {
             MyDictionary(1, 2, 3, 4),
             MyDictionary(5, 6, 7, 8)
         )))
+    }
+
+    @Test
+    fun passDictionaryArrayN() = withLib {
+        assertTrue(natives.test.passDictionaryArrayN(arrayOf(null, null)))
     }
 }

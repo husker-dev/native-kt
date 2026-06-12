@@ -5,6 +5,10 @@ KBoolean callbackArgCharArray(CallbackPassCharArray* arg) {
     return arg->invoke(arg, KCharArray_of('a', 'b'));
 }
 
+KBoolean callbackArgCharArrayN(CallbackPassCharArrayN* arg) {
+    return arg->invoke(arg, NULL);
+}
+
 KBoolean callbackArgBooleanArray(CallbackPassBooleanArray* arg) {
     return arg->invoke(arg, KBooleanArray_of(true, false));
 }
@@ -43,6 +47,10 @@ KBoolean callbackArgStringArray(CallbackPassStringArray* arg) {
     ));
 }
 
+KBoolean callbackArgStringArrayN(CallbackPassStringArrayN* arg) {
+    return arg->invoke(arg, KArray_of(NULL, NULL));
+}
+
 KBoolean callbackArgEnumArray(CallbackPassEnumArray* arg) {
     return arg->invoke(arg, KIntArray_of(MyEnum_CASE1, MyEnum_CASE2));
 }
@@ -52,5 +60,9 @@ KBoolean callbackArgDictionaryArray(CallbackPassDictionaryArray* arg) {
         MyDictionary_new(1, 2, 3, 4),
         MyDictionary_new(5, 6, 7, 8)
     ));
+}
+
+KBoolean callbackArgDictionaryArrayN(CallbackPassDictionaryArrayN* arg) {
+    return arg->invoke(arg, KArray_of(NULL, NULL));
 }
 

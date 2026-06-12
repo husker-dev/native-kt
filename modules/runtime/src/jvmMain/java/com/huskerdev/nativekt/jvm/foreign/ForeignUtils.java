@@ -3,6 +3,8 @@ package com.huskerdev.nativekt.jvm.foreign;
 import com.huskerdev.nativekt.jvm.NativeKtUtils;
 import com.huskerdev.nativekt.jvm.jvmci.JVMCIUtils;
 import jdk.internal.foreign.MemorySessionImpl;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.lang.foreign.*;
 import java.lang.invoke.MethodHandle;
@@ -107,7 +109,9 @@ public class ForeignUtils {
 
     // String
 
-    public static MemorySegment toNativeKStringOnArena(Arena arena, String of) {
+    public static MemorySegment toNativeKStringOnArena(Arena arena, @Nullable String of) {
+        if(of == null)
+            return MemorySegment.NULL;
         MemorySegment stringMem = arena.allocateFrom(of);
 
         MemorySegment struct = arena.allocate(layoutString.getSize());
@@ -118,7 +122,10 @@ public class ForeignUtils {
         return struct;
     }
 
-    public static MemorySegment toNativeKString(String of) {
+    public static MemorySegment toNativeKString(@Nullable String of) {
+        if(of == null)
+            return MemorySegment.NULL;
+
         byte[] bytes = of.getBytes(StandardCharsets.UTF_8);
         MemorySegment stringMem = malloc(bytes.length);
         MemorySegment.copy(bytes, 0, stringMem, JAVA_BYTE, 0, bytes.length);
@@ -131,7 +138,11 @@ public class ForeignUtils {
         return struct;
     }
 
+    @Nullable
     public static String toJvmKString(MemorySegment struct) {
+        if(struct.address() == 0L)
+            return null;
+
         struct = struct.reinterpret(layoutString.getSize());
         MemorySegment data = struct.get(ADDRESS, layoutString.get(0));
         int size = (int) struct.get(JAVA_LONG, layoutString.get(1));
@@ -170,18 +181,30 @@ public class ForeignUtils {
 
     // Array: char
 
-    public static MemorySegment toNativeKCharArrayOnArena(Arena arena, char[] arr) {
+    @NotNull
+    public static MemorySegment toNativeKCharArrayDirect(@Nullable char[] arr) {
+        if(arr == null) return MemorySegment.NULL;
+        return MemorySegment.ofArray(arr);
+    }
+
+    @NotNull
+    public static MemorySegment toNativeKCharArrayOnArena(@NotNull Arena arena, @Nullable char[] arr) {
+        if(arr == null) return MemorySegment.NULL;
         MemorySegment dataMem = arena.allocateFrom(JAVA_CHAR, arr);
         return fillArray(arena.allocate(layoutArray.getSize()), dataMem, arr.length, FLAG_ON_STACK);
     }
 
-    public static MemorySegment toNativeKCharArray(char[] arr) {
+    @NotNull
+    public static MemorySegment toNativeKCharArray(@Nullable char[] arr) {
+        if(arr == null) return MemorySegment.NULL;
         MemorySegment dataMem = malloc(JAVA_CHAR.byteSize() * arr.length);
         MemorySegment.copy(arr, 0, dataMem, JAVA_CHAR, 0, arr.length);
         return fillArray(malloc(layoutArray.getSize()), dataMem, arr.length, FLAG_RELEASABLE);
     }
 
-    public static char[] toJvmKCharArray(MemorySegment struct) {
+    @Nullable
+    public static char[] toJvmKCharArray(@NotNull MemorySegment struct) {
+        if(struct.address() == 0L) return null;
         struct = struct.reinterpret(layoutArray.getSize());
         char[] result = new char[getLength(struct)];
         copyElements(struct, result, result.length, JAVA_CHAR);
@@ -190,21 +213,36 @@ public class ForeignUtils {
 
     // Array: boolean
 
-    public static MemorySegment toNativeKBooleanArrayOnArena(Arena arena, boolean[] arr) {
+    @NotNull
+    public static MemorySegment toNativeKBooleanArrayDirect(@Nullable boolean[] arr) {
+        if(arr == null) return MemorySegment.NULL;
+        byte[] bytes = new byte[arr.length];
+        for(int i = 0; i < arr.length; i++)
+            bytes[i] = (byte)(arr[i] ? 1 : 0);
+        return MemorySegment.ofArray(bytes);
+    }
+
+    @NotNull
+    public static MemorySegment toNativeKBooleanArrayOnArena(@NotNull Arena arena, @Nullable boolean[] arr) {
+        if(arr == null) return MemorySegment.NULL;
         byte[] bytes = new byte[arr.length];
         for(int i = 0; i < arr.length; i++)
             bytes[i] = (byte)(arr[i] ? 1 : 0);
         return toNativeKByteArrayOnArena(arena, bytes);
     }
 
-    public static MemorySegment toNativeKBooleanArray(boolean[] arr) {
+    @NotNull
+    public static MemorySegment toNativeKBooleanArray(@Nullable boolean[] arr) {
+        if(arr == null) return MemorySegment.NULL;
         byte[] bytes = new byte[arr.length];
         for(int i = 0; i < arr.length; i++)
             bytes[i] = (byte)(arr[i] ? 1 : 0);
         return toNativeKByteArray(bytes);
     }
 
-    public static boolean[] toJvmKBooleanArray(MemorySegment struct) {
+    @Nullable
+    public static boolean[] toJvmKBooleanArray(@NotNull MemorySegment struct) {
+        if(struct.address() == 0L) return null;
         byte[] bytes = toJvmKByteArray(struct);
         boolean[] result = new boolean[bytes.length];
         for(int i = 0; i < bytes.length; i++)
@@ -214,18 +252,30 @@ public class ForeignUtils {
 
     // Array: byte
 
-    public static MemorySegment toNativeKByteArrayOnArena(Arena arena, byte[] arr) {
+    @NotNull
+    public static MemorySegment toNativeKByteArrayDirect(@Nullable byte[] arr) {
+        if(arr == null) return MemorySegment.NULL;
+        return MemorySegment.ofArray(arr);
+    }
+
+    @NotNull
+    public static MemorySegment toNativeKByteArrayOnArena(@NotNull Arena arena, @Nullable byte[] arr) {
+        if(arr == null) return MemorySegment.NULL;
         MemorySegment dataMem = arena.allocateFrom(JAVA_BYTE, arr);
         return fillArray(arena.allocate(layoutArray.getSize()), dataMem, arr.length, FLAG_ON_STACK);
     }
 
-    public static MemorySegment toNativeKByteArray(byte[] arr) {
+    @NotNull
+    public static MemorySegment toNativeKByteArray(@Nullable byte[] arr) {
+        if(arr == null) return MemorySegment.NULL;
         MemorySegment dataMem = malloc(arr.length);
         MemorySegment.copy(arr, 0, dataMem, JAVA_BYTE, 0, arr.length);
         return fillArray(malloc(layoutArray.getSize()), dataMem, arr.length, FLAG_RELEASABLE);
     }
 
-    public static byte[] toJvmKByteArray(MemorySegment struct) {
+    @Nullable
+    public static byte[] toJvmKByteArray(@NotNull MemorySegment struct) {
+        if(struct.address() == 0L) return null;
         struct = struct.reinterpret(layoutArray.getSize());
         byte[] result = new byte[getLength(struct)];
         copyElements(struct, result, result.length, JAVA_BYTE);
@@ -234,18 +284,30 @@ public class ForeignUtils {
 
     // Array: short
 
-    public static MemorySegment toNativeKShortArrayOnArena(Arena arena, short[] arr) {
+    @NotNull
+    public static MemorySegment toNativeKShortArrayDirect(@Nullable short[] arr) {
+        if(arr == null) return MemorySegment.NULL;
+        return MemorySegment.ofArray(arr);
+    }
+
+    @NotNull
+    public static MemorySegment toNativeKShortArrayOnArena(@NotNull Arena arena, @Nullable short[] arr) {
+        if(arr == null) return MemorySegment.NULL;
         MemorySegment dataMem = arena.allocateFrom(JAVA_SHORT, arr);
         return fillArray(arena.allocate(layoutArray.getSize()), dataMem, arr.length, FLAG_ON_STACK);
     }
 
-    public static MemorySegment toNativeKShortArray(short[] arr) {
+    @NotNull
+    public static MemorySegment toNativeKShortArray(@Nullable short[] arr) {
+        if(arr == null) return MemorySegment.NULL;
         MemorySegment dataMem = malloc(JAVA_SHORT.byteSize() * arr.length);
         MemorySegment.copy(arr, 0, dataMem, JAVA_SHORT, 0, arr.length);
         return fillArray(malloc(layoutArray.getSize()), dataMem, arr.length, FLAG_RELEASABLE);
     }
 
-    public static short[] toJvmKShortArray(MemorySegment struct) {
+    @Nullable
+    public static short[] toJvmKShortArray(@NotNull MemorySegment struct) {
+        if(struct.address() == 0L) return null;
         struct = struct.reinterpret(layoutArray.getSize());
         short[] result = new short[getLength(struct)];
         copyElements(struct, result, result.length, JAVA_SHORT);
@@ -254,18 +316,30 @@ public class ForeignUtils {
 
     // Array: int
 
-    public static MemorySegment toNativeKIntArrayOnArena(Arena arena, int[] arr) {
+    @NotNull
+    public static MemorySegment toNativeKIntArrayDirect(@Nullable int[] arr) {
+        if(arr == null) return MemorySegment.NULL;
+        return MemorySegment.ofArray(arr);
+    }
+
+    @NotNull
+    public static MemorySegment toNativeKIntArrayOnArena(@NotNull Arena arena, @Nullable int[] arr) {
+        if(arr == null) return MemorySegment.NULL;
         MemorySegment dataMem = arena.allocateFrom(JAVA_INT, arr);
         return fillArray(arena.allocate(layoutArray.getSize()), dataMem, arr.length, FLAG_ON_STACK);
     }
 
-    public static MemorySegment toNativeKIntArray(int[] arr) {
+    @NotNull
+    public static MemorySegment toNativeKIntArray(@Nullable int[] arr) {
+        if(arr == null) return MemorySegment.NULL;
         MemorySegment dataMem = malloc(JAVA_INT.byteSize() * arr.length);
         MemorySegment.copy(arr, 0, dataMem, JAVA_INT, 0, arr.length);
         return fillArray(malloc(layoutArray.getSize()), dataMem, arr.length, FLAG_RELEASABLE);
     }
 
-    public static int[] toJvmKIntArray(MemorySegment struct) {
+    @Nullable
+    public static int[] toJvmKIntArray(@NotNull MemorySegment struct) {
+        if(struct.address() == 0L) return null;
         struct = struct.reinterpret(layoutArray.getSize());
         int[] result = new int[getLength(struct)];
         copyElements(struct, result, result.length, JAVA_INT);
@@ -274,18 +348,30 @@ public class ForeignUtils {
 
     // Array: long
 
-    public static MemorySegment toNativeKLongArrayOnArena(Arena arena, long[] arr) {
+    @NotNull
+    public static MemorySegment toNativeKLongArrayDirect(@Nullable long[] arr) {
+        if(arr == null) return MemorySegment.NULL;
+        return MemorySegment.ofArray(arr);
+    }
+
+    @NotNull
+    public static MemorySegment toNativeKLongArrayOnArena(@NotNull Arena arena, @Nullable long[] arr) {
+        if(arr == null) return MemorySegment.NULL;
         MemorySegment dataMem = arena.allocateFrom(JAVA_LONG, arr);
         return fillArray(arena.allocate(layoutArray.getSize()), dataMem, arr.length, FLAG_ON_STACK);
     }
 
-    public static MemorySegment toNativeKLongArray(long[] arr) {
+    @NotNull
+    public static MemorySegment toNativeKLongArray(@Nullable long[] arr) {
+        if(arr == null) return MemorySegment.NULL;
         MemorySegment dataMem = malloc(JAVA_LONG.byteSize() * arr.length);
         MemorySegment.copy(arr, 0, dataMem, JAVA_LONG, 0, arr.length);
         return fillArray(malloc(layoutArray.getSize()), dataMem, arr.length, FLAG_RELEASABLE);
     }
 
-    public static long[] toJvmKLongArray(MemorySegment struct) {
+    @Nullable
+    public static long[] toJvmKLongArray(@NotNull MemorySegment struct) {
+        if(struct.address() == 0L) return null;
         struct = struct.reinterpret(layoutArray.getSize());
         long[] result = new long[getLength(struct)];
         copyElements(struct, result, result.length, JAVA_LONG);
@@ -294,18 +380,30 @@ public class ForeignUtils {
 
     // Array: float
 
-    public static MemorySegment toNativeKFloatArrayOnArena(Arena arena, float[] arr) {
+    @NotNull
+    public static MemorySegment toNativeKFloatArrayDirect(@Nullable float[] arr) {
+        if(arr == null) return MemorySegment.NULL;
+        return MemorySegment.ofArray(arr);
+    }
+
+    @NotNull
+    public static MemorySegment toNativeKFloatArrayOnArena(@NotNull Arena arena, @Nullable float[] arr) {
+        if(arr == null) return MemorySegment.NULL;
         MemorySegment dataMem = arena.allocateFrom(JAVA_FLOAT, arr);
         return fillArray(arena.allocate(layoutArray.getSize()), dataMem, arr.length, FLAG_ON_STACK);
     }
 
-    public static MemorySegment toNativeKFloatArray(float[] arr) {
+    @NotNull
+    public static MemorySegment toNativeKFloatArray(@Nullable float[] arr) {
+        if(arr == null) return MemorySegment.NULL;
         MemorySegment dataMem = malloc(JAVA_FLOAT.byteSize() * arr.length);
         MemorySegment.copy(arr, 0, dataMem, JAVA_FLOAT, 0, arr.length);
         return fillArray(malloc(layoutArray.getSize()), dataMem, arr.length, FLAG_RELEASABLE);
     }
 
-    public static float[] toJvmKFloatArray(MemorySegment struct) {
+    @Nullable
+    public static float[] toJvmKFloatArray(@NotNull MemorySegment struct) {
+        if(struct.address() == 0L) return null;
         struct = struct.reinterpret(layoutArray.getSize());
         float[] result = new float[getLength(struct)];
         copyElements(struct, result, result.length, JAVA_FLOAT);
@@ -314,18 +412,30 @@ public class ForeignUtils {
 
     // Array: double
 
-    public static MemorySegment toNativeKDoubleArrayOnArena(Arena arena, double[] arr) {
+    @NotNull
+    public static MemorySegment toNativeKDoubleArrayDirect(@Nullable double[] arr) {
+        if(arr == null) return MemorySegment.NULL;
+        return MemorySegment.ofArray(arr);
+    }
+
+    @NotNull
+    public static MemorySegment toNativeKDoubleArrayOnArena(@NotNull Arena arena, @Nullable double[] arr) {
+        if(arr == null) return MemorySegment.NULL;
         MemorySegment dataMem = arena.allocateFrom(JAVA_DOUBLE, arr);
         return fillArray(arena.allocate(layoutArray.getSize()), dataMem, arr.length, FLAG_ON_STACK);
     }
 
-    public static MemorySegment toNativeKDoubleArray(double[] arr) {
+    @NotNull
+    public static MemorySegment toNativeKDoubleArray(@Nullable double[] arr) {
+        if(arr == null) return MemorySegment.NULL;
         MemorySegment dataMem = malloc(JAVA_DOUBLE.byteSize() * arr.length);
         MemorySegment.copy(arr, 0, dataMem, JAVA_DOUBLE, 0, arr.length);
         return fillArray(malloc(layoutArray.getSize()), dataMem, arr.length, FLAG_RELEASABLE);
     }
 
-    public static double[] toJvmKDoubleArray(MemorySegment struct) {
+    @Nullable
+    public static double[] toJvmKDoubleArray(@NotNull MemorySegment struct) {
+        if(struct.address() == 0L) return null;
         struct = struct.reinterpret(layoutArray.getSize());
         double[] result = new double[getLength(struct)];
         copyElements(struct, result, result.length, JAVA_DOUBLE);
@@ -334,14 +444,27 @@ public class ForeignUtils {
 
     // Array: enum
 
-    public static <T extends Enum<T>> MemorySegment toNativeEnumArrayOnArena(Arena arena, T[] arr) {
+    @NotNull
+    public static <T extends Enum<T>> MemorySegment toNativeEnumArrayDirect(@Nullable T[] arr) {
+        if(arr == null) return MemorySegment.NULL;
+        int[] intEnums = new int[arr.length];
+        for(int i = 0; i < arr.length; i++)
+            intEnums[i] = arr[i].ordinal();
+        return MemorySegment.ofArray(intEnums);
+    }
+
+    @NotNull
+    public static <T extends Enum<T>> MemorySegment toNativeEnumArrayOnArena(@NotNull Arena arena, @Nullable T[] arr) {
+        if(arr == null) return MemorySegment.NULL;
         int[] intEnums = new int[arr.length];
         for(int i = 0; i < arr.length; i++)
             intEnums[i] = arr[i].ordinal();
         return toNativeKIntArrayOnArena(arena, intEnums);
     }
 
-    public static <T extends Enum<T>> MemorySegment toNativeEnumArray(T[] arr) {
+    @NotNull
+    public static <T extends Enum<T>> MemorySegment toNativeEnumArray(@Nullable T[] arr) {
+        if(arr == null) return MemorySegment.NULL;
         int[] intEnums = new int[arr.length];
         for(int i = 0; i < arr.length; i++)
             intEnums[i] = arr[i].ordinal();
@@ -349,10 +472,12 @@ public class ForeignUtils {
     }
 
     @SuppressWarnings("unchecked")
+    @Nullable
     public static <T extends Enum<T>> T[] toJvmEnumArray(
-            MemorySegment struct,
-            Class<T> enumClass
+            @NotNull MemorySegment struct,
+            @NotNull Class<T> enumClass
     ) {
+        if(struct.address() == 0L) return null;
         int[] ordinals = toJvmKIntArray(struct);
 
         // Convert integers to enum values
@@ -364,8 +489,13 @@ public class ForeignUtils {
     }
 
     // Array: object
-
-    public static <T> MemorySegment toNativeKArrayOnArena(Arena arena, T[] arr, BiFunction<Arena, T, MemorySegment> cast) {
+    @NotNull
+    public static <T> MemorySegment toNativeKArrayOnArena(
+            @NotNull Arena arena,
+            @Nullable T[] arr,
+            @NotNull BiFunction<Arena, T, MemorySegment> cast
+    ) {
+        if(arr == null) return MemorySegment.NULL;
         MemorySegment dataMem = arena.allocate(ADDRESS, arr.length);
         VarHandle ptrHandle = ADDRESS.arrayElementVarHandle();
         for(int i = 0; i < arr.length; i++)
@@ -373,7 +503,12 @@ public class ForeignUtils {
         return fillArray(arena.allocate(layoutArray.getSize()), dataMem, arr.length, FLAG_ON_STACK);
     }
 
-    public static <T> MemorySegment toNativeKArray(T[] arr, Function<T, MemorySegment> cast) {
+    @NotNull
+    public static <T> MemorySegment toNativeKArray(
+            @Nullable T[] arr,
+            @NotNull Function<T, MemorySegment> cast
+    ) {
+        if(arr == null) return MemorySegment.NULL;
         MemorySegment dataMem = malloc(ADDRESS.byteSize() * arr.length);
         VarHandle ptrHandle = ADDRESS.arrayElementVarHandle();
         for(int i = 0; i < arr.length; i++)
@@ -382,7 +517,13 @@ public class ForeignUtils {
     }
 
     @SuppressWarnings("unchecked")
-    public static <T> T[] toJvmKArray(MemorySegment struct, Function<MemorySegment, T> cast, Class<T> clazz) {
+    @Nullable
+    public static <T> T[] toJvmKArray(
+            @NotNull MemorySegment struct,
+            @NotNull Function<MemorySegment, T> cast,
+            @NotNull Class<T> clazz
+    ) {
+        if(struct.address() == 0L) return null;
         struct = struct.reinterpret(layoutArray.getSize());
         T[] result = (T[]) java.lang.reflect.Array.newInstance(clazz, getLength(struct));
 
@@ -409,11 +550,13 @@ public class ForeignUtils {
         );
     }
 
+    @NotNull
     public static MemorySegment createCallbackOnArena(
-            Arena arena,
-            Object callback,
-            MemorySegment upcall
+            @NotNull Arena arena,
+            @Nullable Object callback,
+            @NotNull MemorySegment upcall
     ){
+        if(callback == null) return MemorySegment.NULL;
         MemorySegment struct = arena.allocate(layoutCallback.getSize());
         struct.set(JAVA_BYTE, layoutCallback.get(0), FLAG_ON_STACK);
         struct.set(ADDRESS, layoutCallback.get(1), upcall);
@@ -432,10 +575,12 @@ public class ForeignUtils {
         return struct;
     }
 
+    @NotNull
     public static MemorySegment createCallback(
-            Object callback,
-            MemorySegment upcall
+            @Nullable Object callback,
+            @NotNull MemorySegment upcall
     ) {
+        if(callback == null) return MemorySegment.NULL;
         MemorySegment struct = malloc(layoutCallback.getSize());
         struct.set(JAVA_BYTE, layoutCallback.get(0), FLAG_RELEASABLE);
         struct.set(ADDRESS, layoutCallback.get(1), upcall);
@@ -476,7 +621,9 @@ public class ForeignUtils {
     }
 
     @SuppressWarnings("unchecked")
-    public static <T> T toJvmCallback(MemorySegment segment) {
+    @Nullable
+    public static <T> T toJvmCallback(@NotNull MemorySegment segment) {
+        if(segment.address() == 0L) return null;
         return (T) callbacks.get(segment.address());
     }
 

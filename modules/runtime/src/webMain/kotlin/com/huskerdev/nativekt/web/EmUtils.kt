@@ -33,7 +33,8 @@ private val layoutCallback = CStructLayout(Byte::class, CStructLayout.Ptr::class
 
 // String
 
-fun Arena.toNativeKStringOnArena(str: String): Int {
+fun Arena.toNativeKStringOnArena(str: String?): Int {
+    if(str == null) return 0
     val size = module.lengthBytesUTF8(str) + 1
     val strMem = alloc(size)
     module.stringToUTF8(str, strMem, size)
@@ -46,7 +47,8 @@ fun Arena.toNativeKStringOnArena(str: String): Int {
     return mem
 }
 
-fun toNativeKString(module: EmModule, str: String): Int {
+fun toNativeKString(module: EmModule, str: String?): Int {
+    if(str == null) return 0
     val size = module.lengthBytesUTF8(str) + 1
     val strMem = module._malloc(size)
     module.stringToUTF8(str, strMem, size)
@@ -59,7 +61,8 @@ fun toNativeKString(module: EmModule, str: String): Int {
     return mem
 }
 
-fun toKotlinKString(module: EmModule, mem: Int): String {
+fun toKotlinKString(module: EmModule, mem: Int): String? {
+    if(mem == 0) return null
     return module.UTF8ToString(
         module.HEAP32[(mem + layoutString[0]) shr 2],
         module.HEAP32[(mem + layoutString[1]) shr 2]
@@ -81,7 +84,8 @@ private fun arrayLength(module: EmModule, mem: Int) = module.HEAP32[(mem + layou
 
 // Array: char
 
-fun Arena.toNativeKCharArrayOnArena(arr: CharArray): Int {
+fun Arena.toNativeKCharArrayOnArena(arr: CharArray?): Int {
+    if(arr == null) return 0
     val size = arr.size * 2
     val data = alloc(size)
     val heap = Uint16Array(module.HEAP8.buffer, data, arr.size)
@@ -89,7 +93,8 @@ fun Arena.toNativeKCharArrayOnArena(arr: CharArray): Int {
     return fillArray(module, alloc(layoutArray.size), data, size, arr.size, 0)
 }
 
-fun toNativeKCharArray(module: EmModule, arr: CharArray): Int {
+fun toNativeKCharArray(module: EmModule, arr: CharArray?): Int {
+    if(arr == null) return 0
     val size = arr.size * 2
     val data = module._malloc(size)
     val heap = Uint16Array(module.HEAP8.buffer, data, arr.size)
@@ -97,7 +102,8 @@ fun toNativeKCharArray(module: EmModule, arr: CharArray): Int {
     return fillArray(module, module._malloc(layoutArray.size), data, size, arr.size, FLAG_RELEASABLE)
 }
 
-fun toKotlinKCharArray(module: EmModule, mem: Int): CharArray {
+fun toKotlinKCharArray(module: EmModule, mem: Int): CharArray? {
+    if(mem == 0) return null
     val length = arrayLength(module, mem)
     val arr = Uint16Array(module.HEAP8.buffer, arrayData(module, mem), length)
     return CharArray(length) { arr[it] }
@@ -105,32 +111,41 @@ fun toKotlinKCharArray(module: EmModule, mem: Int): CharArray {
 
 // Array: boolean
 
-fun Arena.toNativeKBooleanArrayOnArena(arr: BooleanArray): Int =
-    toNativeKByteArrayOnArena(ByteArray(arr.size) { if(arr[it]) 1.toByte() else 0.toByte() })
+fun Arena.toNativeKBooleanArrayOnArena(arr: BooleanArray?): Int {
+    if(arr == null) return 0
+    return toNativeKByteArrayOnArena(ByteArray(arr.size) { if (arr[it]) 1.toByte() else 0.toByte() })
+}
 
-fun toNativeKBooleanArray(module: EmModule, arr: BooleanArray): Int =
-    toNativeKByteArray(module, ByteArray(arr.size) { if(arr[it]) 1.toByte() else 0.toByte() })
+fun toNativeKBooleanArray(module: EmModule, arr: BooleanArray?): Int {
+    if(arr == null) return 0
+    return toNativeKByteArray(module, ByteArray(arr.size) { if (arr[it]) 1.toByte() else 0.toByte() })
+}
 
-fun toKotlinKBooleanArray(module: EmModule, mem: Int): BooleanArray =
-    toKotlinKByteArray(module, mem).run { BooleanArray(size) { get(it) == 1.toByte() } }
+fun toKotlinKBooleanArray(module: EmModule, mem: Int): BooleanArray? {
+    if(mem == 0) return null
+    return toKotlinKByteArray(module, mem)!!.run { BooleanArray(size) { get(it) == 1.toByte() } }
+}
 
 // Array: byte
 
-fun Arena.toNativeKByteArrayOnArena(arr: ByteArray): Int {
+fun Arena.toNativeKByteArrayOnArena(arr: ByteArray?): Int {
+    if(arr == null) return 0
     val data = alloc(arr.size)
     val heap = Int8Array(module.HEAP8.buffer, data, arr.size)
     arr.forEachIndexed { i, it -> heap[i] = it }
     return fillArray(module, alloc(layoutArray.size), data, arr.size, arr.size, 0)
 }
 
-fun toNativeKByteArray(module: EmModule, arr: ByteArray): Int {
+fun toNativeKByteArray(module: EmModule, arr: ByteArray?): Int {
+    if(arr == null) return 0
     val data = module._malloc(arr.size)
     val heap = Int8Array(module.HEAP8.buffer, data, arr.size)
     arr.forEachIndexed { i, it -> heap[i] = it }
     return fillArray(module, module._malloc(layoutArray.size), data, arr.size, arr.size, FLAG_RELEASABLE)
 }
 
-fun toKotlinKByteArray(module: EmModule, mem: Int): ByteArray {
+fun toKotlinKByteArray(module: EmModule, mem: Int): ByteArray? {
+    if(mem == 0) return null
     val length = arrayLength(module, mem)
     val arr = Int8Array(module.HEAP8.buffer, arrayData(module, mem), length)
     return ByteArray(length) { arr[it] }
@@ -138,7 +153,8 @@ fun toKotlinKByteArray(module: EmModule, mem: Int): ByteArray {
 
 // Array: short
 
-fun Arena.toNativeKShortArrayOnArena(arr: ShortArray): Int {
+fun Arena.toNativeKShortArrayOnArena(arr: ShortArray?): Int {
+    if(arr == null) return 0
     val size = arr.size * 2
     val data = alloc(size)
     val heap = Int16Array(module.HEAP8.buffer, data, arr.size)
@@ -146,7 +162,8 @@ fun Arena.toNativeKShortArrayOnArena(arr: ShortArray): Int {
     return fillArray(module, alloc(layoutArray.size), data, size, arr.size, 0)
 }
 
-fun toNativeKShortArray(module: EmModule, arr: ShortArray): Int {
+fun toNativeKShortArray(module: EmModule, arr: ShortArray?): Int {
+    if(arr == null) return 0
     val size = arr.size * 2
     val data = module._malloc(size)
     val heap = Int16Array(module.HEAP8.buffer, data, arr.size)
@@ -154,7 +171,8 @@ fun toNativeKShortArray(module: EmModule, arr: ShortArray): Int {
     return fillArray(module, module._malloc(layoutArray.size), data, size, arr.size, FLAG_RELEASABLE)
 }
 
-fun toKotlinKShortArray(module: EmModule, mem: Int): ShortArray {
+fun toKotlinKShortArray(module: EmModule, mem: Int): ShortArray? {
+    if(mem == 0) return null
     val length = arrayLength(module, mem)
     val arr = Int16Array(module.HEAP8.buffer, arrayData(module, mem), length)
     return ShortArray(length) { arr[it] }
@@ -162,7 +180,8 @@ fun toKotlinKShortArray(module: EmModule, mem: Int): ShortArray {
 
 // Array: int
 
-fun Arena.toNativeKIntArrayOnArena(arr: IntArray): Int {
+fun Arena.toNativeKIntArrayOnArena(arr: IntArray?): Int {
+    if(arr == null) return 0
     val size = arr.size * 4
     val data = alloc(size)
     val heap = Int32Array(module.HEAP8.buffer, data, arr.size)
@@ -170,7 +189,8 @@ fun Arena.toNativeKIntArrayOnArena(arr: IntArray): Int {
     return fillArray(module, alloc(layoutArray.size), data, size, arr.size, 0)
 }
 
-fun toNativeKIntArray(module: EmModule, arr: IntArray): Int {
+fun toNativeKIntArray(module: EmModule, arr: IntArray?): Int {
+    if(arr == null) return 0
     val size = arr.size * 4
     val data = module._malloc(size)
     val heap = Int32Array(module.HEAP8.buffer, data, arr.size)
@@ -178,7 +198,8 @@ fun toNativeKIntArray(module: EmModule, arr: IntArray): Int {
     return fillArray(module, module._malloc(layoutArray.size), data, size, arr.size, FLAG_RELEASABLE)
 }
 
-fun toKotlinKIntArray(module: EmModule, mem: Int): IntArray {
+fun toKotlinKIntArray(module: EmModule, mem: Int): IntArray? {
+    if(mem == 0) return null
     val length = arrayLength(module, mem)
     val arr = Int32Array(module.HEAP8.buffer, arrayData(module, mem), length)
     return IntArray(length) { arr[it] }
@@ -186,7 +207,8 @@ fun toKotlinKIntArray(module: EmModule, mem: Int): IntArray {
 
 // Array: long
 
-fun Arena.toNativeKLongArrayOnArena(arr: LongArray): Int {
+fun Arena.toNativeKLongArrayOnArena(arr: LongArray?): Int {
+    if(arr == null) return 0
     val size = arr.size * 8
     val data = alloc(size)
     val heap = BigInt64Array(module.HEAP8.buffer, data, arr.size)
@@ -194,7 +216,8 @@ fun Arena.toNativeKLongArrayOnArena(arr: LongArray): Int {
     return fillArray(module, alloc(layoutArray.size), data, size, arr.size, 0)
 }
 
-fun toNativeKLongArray(module: EmModule, arr: LongArray): Int {
+fun toNativeKLongArray(module: EmModule, arr: LongArray?): Int {
+    if(arr == null) return 0
     val size = arr.size * 8
     val data = module._malloc(size)
     val heap = BigInt64Array(module.HEAP8.buffer, data, arr.size)
@@ -202,7 +225,8 @@ fun toNativeKLongArray(module: EmModule, arr: LongArray): Int {
     return fillArray(module, module._malloc(layoutArray.size), data, size, arr.size, FLAG_RELEASABLE)
 }
 
-fun toKotlinKLongArray(module: EmModule, mem: Int): LongArray {
+fun toKotlinKLongArray(module: EmModule, mem: Int): LongArray? {
+    if(mem == 0) return null
     val length = arrayLength(module, mem)
     val arr = BigInt64Array(module.HEAP8.buffer, arrayData(module, mem), length)
     return LongArray(length) { arr[it] }
@@ -210,7 +234,8 @@ fun toKotlinKLongArray(module: EmModule, mem: Int): LongArray {
 
 // Array: float
 
-fun Arena.toNativeKFloatArrayOnArena(arr: FloatArray): Int {
+fun Arena.toNativeKFloatArrayOnArena(arr: FloatArray?): Int {
+    if(arr == null) return 0
     val size = arr.size * 4
     val data = alloc(size)
     val heap = Float32Array(module.HEAPF32.buffer, data, arr.size)
@@ -218,7 +243,8 @@ fun Arena.toNativeKFloatArrayOnArena(arr: FloatArray): Int {
     return fillArray(module, alloc(layoutArray.size), data, size, arr.size, 0)
 }
 
-fun toNativeKFloatArray(module: EmModule, arr: FloatArray): Int {
+fun toNativeKFloatArray(module: EmModule, arr: FloatArray?): Int {
+    if(arr == null) return 0
     val size = arr.size * 4
     val data = module._malloc(size)
     val heap = Float32Array(module.HEAPF32.buffer, data, arr.size)
@@ -226,7 +252,8 @@ fun toNativeKFloatArray(module: EmModule, arr: FloatArray): Int {
     return fillArray(module, module._malloc(layoutArray.size), data, size, arr.size, FLAG_RELEASABLE)
 }
 
-fun toKotlinKFloatArray(module: EmModule, mem: Int): FloatArray {
+fun toKotlinKFloatArray(module: EmModule, mem: Int): FloatArray? {
+    if(mem == 0) return null
     val length = arrayLength(module, mem)
     val arr = Float32Array(module.HEAPF32.buffer, arrayData(module, mem), length)
     return FloatArray(length) { arr[it] }
@@ -234,7 +261,8 @@ fun toKotlinKFloatArray(module: EmModule, mem: Int): FloatArray {
 
 // Array: double
 
-fun Arena.toNativeKDoubleArrayOnArena(arr: DoubleArray): Int {
+fun Arena.toNativeKDoubleArrayOnArena(arr: DoubleArray?): Int {
+    if(arr == null) return 0
     val size = arr.size * 8
     val data = alloc(size)
     val heap = Float64Array(module.HEAPF64.buffer, data, arr.size)
@@ -242,7 +270,8 @@ fun Arena.toNativeKDoubleArrayOnArena(arr: DoubleArray): Int {
     return fillArray(module, alloc(layoutArray.size), data, size, arr.size, 0)
 }
 
-fun toNativeKDoubleArray(module: EmModule, arr: DoubleArray): Int {
+fun toNativeKDoubleArray(module: EmModule, arr: DoubleArray?): Int {
+    if(arr == null) return 0
     val size = arr.size * 8
     val data = module._malloc(size)
     val heap = Float64Array(module.HEAPF64.buffer, data, arr.size)
@@ -250,7 +279,8 @@ fun toNativeKDoubleArray(module: EmModule, arr: DoubleArray): Int {
     return fillArray(module, module._malloc(layoutArray.size), data, size, arr.size, FLAG_RELEASABLE)
 }
 
-fun toKotlinKDoubleArray(module: EmModule, mem: Int): DoubleArray {
+fun toKotlinKDoubleArray(module: EmModule, mem: Int): DoubleArray? {
+    if(mem == 0) return null
     val length = arrayLength(module, mem)
     val arr = Float64Array(module.HEAPF64.buffer, arrayData(module, mem), length)
     return DoubleArray(length) { arr[it] }
@@ -258,49 +288,65 @@ fun toKotlinKDoubleArray(module: EmModule, mem: Int): DoubleArray {
 
 // Array: enum
 
-fun <T: Enum<T>> Arena.toNativeEnumArrayOnArena(arr: Array<T>): Int =
-    toNativeKIntArrayOnArena(IntArray(arr.size) { arr[it].ordinal })
+fun <T: Enum<T>> Arena.toNativeEnumArrayOnArena(arr: Array<T>?): Int {
+    if(arr == null) return 0
+    return toNativeKIntArrayOnArena(IntArray(arr.size) { arr[it].ordinal })
+}
 
-fun <T: Enum<T>> toNativeEnumArray(module: EmModule, arr: Array<T>): Int =
-    toNativeKIntArray(module, IntArray(arr.size) { arr[it].ordinal })
+fun <T: Enum<T>> toNativeEnumArray(module: EmModule, arr: Array<T>?): Int {
+    if(arr == null) return 0
+    return toNativeKIntArray(module, IntArray(arr.size) { arr[it].ordinal })
+}
 
-inline fun <reified T: Enum<T>> toKotlinEnumArray(module: EmModule, mem: Int): Array<T> {
+inline fun <reified T: Enum<T>> toKotlinEnumArray(module: EmModule, mem: Int): Array<T>? {
+    if(mem == 0) return null
     val entries = enumValues<T>()
-    val ints = toKotlinKIntArray(module, mem)
+    val ints = toKotlinKIntArray(module, mem)!!
     return Array(ints.size) { entries[ints[it]] }
 }
 
 // Array: objects
 
 fun <T> Arena.toNativeKArrayOnArena(
-    arr: Array<T>,
+    arr: Array<T>?,
     converter: (T) -> Int
-) = toNativeKIntArrayOnArena(IntArray(arr.size) { converter(arr[it]) })
+): Int {
+    if(arr == null) return 0
+    return toNativeKIntArrayOnArena(IntArray(arr.size) { converter(arr[it]) })
+}
 
 fun <T, A: EmModule> toNativeKArray(
     module: A,
-    arr: Array<T>,
+    arr: Array<T>?,
     converter: (A, T) -> Int
-) = toNativeKIntArray(module, IntArray(arr.size) { converter(module, arr[it]) })
+): Int {
+    if(arr == null) return 0
+    return toNativeKIntArray(module, IntArray(arr.size) { converter(module, arr[it]) })
+}
 
 @Suppress("unchecked_cast")
-fun <T: Any, A: EmModule> toKotlinKArray(
+fun <T, A: EmModule> toKotlinKArray(
     module: A,
     struct: Int,
-    converter: (A, Int) -> T
-) = toKotlinKIntArray(module, struct).run { Array<Any>(size) { converter(module, this[it]) } as Array<T> }
+    converter: (A, Int) -> T?
+): Array<T>? {
+    if(struct == 0) return null
+    val ints = toKotlinKIntArray(module, struct)!!
+    return Array<Any?>(ints.size) { converter(module, ints[it]) } as Array<T>
+}
 
 
 // Callbacks
 
 fun Arena.toNativeCallbackOnArena(
-    callback: Any,
+    callback: Any?,
     invoke: Int,
     clone: Int,
     equals: Int,
     hashCode: Int,
     free: Int
 ): Int {
+    if(callback == null) return 0
     val module = module
     val mem = alloc(layoutCallback.size)
     module.HEAP8[mem + layoutCallback[0]] = 0
@@ -318,13 +364,14 @@ fun Arena.toNativeCallbackOnArena(
 
 fun toNativeCallback(
     module: EmModule,
-    callback: Any,
+    callback: Any?,
     invoke: Int,
     clone: Int,
     equals: Int,
     hashCode: Int,
     free: Int
 ): Int {
+    if(callback == null) return 0
     val mem = module._malloc(layoutCallback.size)
     module.HEAP8[mem + layoutCallback[0]] = FLAG_RELEASABLE
     module.HEAP32[(mem + layoutCallback[1]) shr 2] = invoke
@@ -340,13 +387,16 @@ fun toNativeCallback(
 fun <T> toKotlinCallback(
     module: EmModule,
     mem: Int,
-): T = callbacks[Pair(module, mem)] as T
+): T? {
+    if(mem == 0) return null
+    return callbacks[Pair(module, mem)] as T
+}
 
 fun callbackFree(
     module: EmModule,
     self: Int
 ) {
-    if(module.HEAP8[self + layoutCallback[0]] and FLAG_RELEASABLE != FLAG_RELEASABLE)
+    if(self == 0 || module.HEAP8[self + layoutCallback[0]] and FLAG_RELEASABLE != FLAG_RELEASABLE)
         return
 
     callbacks.remove(Pair(module, self))
@@ -357,6 +407,8 @@ private fun callbackClone(
     module: EmModule,
     self: Int
 ): Int {
+    if(self == 0)
+        return 0
     val mem = module._malloc(layoutCallback.size)
     module.HEAP8[mem + layoutCallback[0]] = FLAG_RELEASABLE
     module.HEAP32[(mem + layoutCallback[1]) shr 2] = module.HEAP32[(self + layoutCallback[1]) shr 2]
@@ -364,7 +416,7 @@ private fun callbackClone(
     module.HEAP32[(mem + layoutCallback[3]) shr 2] = module.HEAP32[(self + layoutCallback[3]) shr 2]
     module.HEAP32[(mem + layoutCallback[4]) shr 2] = module.HEAP32[(self + layoutCallback[4]) shr 2]
     module.HEAP32[(mem + layoutCallback[5]) shr 2] = module.HEAP32[(self + layoutCallback[5]) shr 2]
-    callbacks[Pair(module, mem)] = toKotlinCallback(module, self)
+    callbacks[Pair(module, mem)] = toKotlinCallback(module, self)!!
     return mem
 }
 

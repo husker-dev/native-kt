@@ -1,5 +1,4 @@
 #include <api.h>
-#include <stdlib.h>
 #include <string.h>
 
 void returnVoid() {
@@ -41,10 +40,18 @@ KString* returnString() {
     return KString_new(strdup("test string"), 11, 11);
 }
 
+KString* returnStringN() {
+    return NULL;
+}
+
 MyEnum returnEnum() {
     return MyEnum_CASE2;
 }
 
 MyDictionary* returnDictionary() {
     return MyDictionary_new(1, 2, 3 ,4);
+}
+
+MyDictionary* returnDictionaryN() {
+    return NULL;
 }

@@ -56,9 +56,19 @@ class CallbackReturnPrimitive {
     }
 
     @Test
+    fun callbackReturnStringN() = withLib {
+        assertTrue(natives.test.callbackReturnStringN { null })
+    }
+
+    @Test
     fun callbackReturnCallback() = withLib {
         val toPass = VoidCallback {}
         assertEquals(toPass, natives.test.callbackReturnCallback { toPass })
+    }
+
+    @Test
+    fun callbackReturnCallbackN() = withLib {
+        assertTrue(natives.test.callbackReturnCallbackN { null })
     }
 
     @Test
@@ -69,5 +79,10 @@ class CallbackReturnPrimitive {
     @Test
     fun callbackReturnDictionary() = withLib {
         assertTrue(natives.test.callbackReturnDictionary { MyDictionary(1, 2, 3, 4) })
+    }
+
+    @Test
+    fun callbackReturnDictionaryN() = withLib {
+        assertTrue(natives.test.callbackReturnDictionaryN { null })
     }
 }

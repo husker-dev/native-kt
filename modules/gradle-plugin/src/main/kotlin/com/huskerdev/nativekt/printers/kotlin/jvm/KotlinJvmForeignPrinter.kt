@@ -88,8 +88,8 @@ class KotlinJvmForeignPrinter(
         val fields = dictionary.allFields()
 
         // to native (heap)
-        append("\n\t\tprivate fun toNativeDictionary${name.capitalized()}(of: $name) = ")
-        append("malloc($layout.size).apply {")
+        append("\n\t\tprivate fun toNativeDictionary${name.capitalized()}(of: $name?) = ")
+        append("of?.run { malloc($layout.size).apply {")
 
         fields.forEachIndexed { i, it ->
             val value = castToNative(it.type, "of.${it.name}", useArena = false)
@@ -98,11 +98,11 @@ class KotlinJvmForeignPrinter(
         }
         append("\n\t\t\tset(ValueLayout.JAVA_BYTE, $layout[${fields.size}], FLAG_RELEASABLE)")
 
-        append("\n\t\t}\n")
+        append("\n\t\t} } ?: MemorySegment.NULL\n")
 
         // to native (arena)
-        append("\n\t\tprivate fun toNativeDictionary${name.capitalized()}OnArena(arena: Arena, of: $name) = ")
-        append("arena.allocate($layout.size).apply {")
+        append("\n\t\tprivate fun toNativeDictionary${name.capitalized()}OnArena(arena: Arena, of: $name?) = ")
+        append("of?.run { arena.allocate($layout.size).apply {")
 
         fields.forEachIndexed { i, it ->
             val value = castToNative(it.type, "of.${it.name}", useArena = true)
@@ -111,18 +111,19 @@ class KotlinJvmForeignPrinter(
         }
         append("\n\t\t\tset(ValueLayout.JAVA_BYTE, $layout[${fields.size}], FLAG_ON_STACK)")
 
-        append("\n\t\t}\n")
+        append("\n\t\t} } ?: MemorySegment.NULL\n")
 
         // to jvm
         append("\n\t\tprivate fun toJvmDictionary${dictionary.name.capitalized()}(of: MemorySegment)")
-        append(" = of.reinterpret($layout.size).run { ${dictionary.name}(")
+        append(" = if(of.address() != 0L)")
+        append("\n\t\t\tof.reinterpret($layout.size).run { ${dictionary.name}(")
 
         fields.forEachIndexed { i, it ->
             val get = "get(${it.type.toForeignType()}, $layout[$i])"
             val value = castFromNative(it.type, get)
-            append("\n\t\t\t$value,")
+            append("\n\t\t\t\t$value,")
         }
-        append("\n\t\t) }\n")
+        append("\n\t\t\t) } else null\n")
     }
 
 
@@ -161,29 +162,32 @@ class KotlinJvmForeignPrinter(
         }
 
         val transforms = function.args.mapNotNull {
+            val nullable = if(it.type.isNullable) "?" else ""
             when {
                 function.isCritical() && it.type.isString() ->
-                    "\n${indent}\t\tval _bytes_${it.name} = ${it.name}.toByteArray()"
-                function.isCritical() && it.type.isBooleanArray() ->
-                    "\n${indent}\t\tval _bytes_${it.name} = ByteArray(${it.name}.size) { if(${it.name}[it]) 1 else 0 }"
-                function.isCritical() && it.type.isEnumArray() ->
-                    "\n${indent}\t\tval _ints_${it.name} = IntArray(${it.name}.size) { ${it.name}[it].ordinal }"
+                    "\n${indent}\t\tval _bytes_${it.name} = ${it.name}$nullable.toByteArray()"
                 else -> null
             }
         }
 
         val args = function.args.flatMap {
+            val nullable = if(it.type.isNullable) "?" else ""
+            val elseNum = if(it.type.isNullable) " ?: -1" else ""
             when {
-                function.isCritical() && it.type.isString() ->
-                    listOf("MemorySegment.ofArray(_bytes_${it.name})", "${it.name}.length", "_bytes_${it.name}.size")
-                function.isCritical() && it.type.isBooleanArray() ->
-                    listOf("MemorySegment.ofArray(_bytes_${it.name})", "${it.name}.size")
-                function.isCritical() && it.type.isEnumArray() ->
-                    listOf("MemorySegment.ofArray(_ints_${it.name})", "${it.name}.size")
-                function.isCritical() && it.type.isArray() ->
-                    listOf("MemorySegment.ofArray(${it.name})", "${it.name}.size")
-                else ->
-                    listOf(castToNative(it.type, it.name, useArena = useArena))
+                function.isCritical() && it.type.isString() -> listOf(
+                    "toNativeKByteArrayDirect(_bytes_${it.name})",
+                    "${it.name}$nullable.length$elseNum",
+                    "_bytes_${it.name}$nullable.size$elseNum"
+                )
+                function.isCritical() && it.type.isEnumArray() -> listOf(
+                    "toNativeEnumArrayDirect(${it.name})",
+                    "${it.name}$nullable.size$elseNum"
+                )
+                function.isCritical() && it.type.isArray() -> listOf(
+                    "toNative${it.type.toCType(ptr = false)}Direct(${it.name})",
+                    "${it.name}$nullable.size$elseNum"
+                )
+                else -> listOf(castToNative(it.type, it.name, useArena = useArena))
             }
         }.joinToString()
 
@@ -301,22 +305,25 @@ class KotlinJvmForeignPrinter(
         else -> null
     }
 
-    private fun castFromNative(type: ResolvedIdlType, content: String): String = when {
-        type.isString() -> "toJvmKString($content)"
-        type.isCallback() -> "toJvmCallback($content)"
-        type.isEnum() -> "${type.declaration.name}.entries[$content]"
-        type.isDictionary() -> "toJvmDictionary${type.declaration.name}(${content})"
-        type.isArray() -> type.arrayType { type ->
-            when {
-                type.isPrimitive() -> "toJvm${type.toCType()}Array($content)"
-                type.isEnum() -> "toJvmEnumArray($content, ${type.declaration.name}::class.java)"
-                else -> {
-                    val fn = castFromNative(type, "").split("(")[0]
-                    "toJvmKArray($content, ::$fn, ${type.toKotlinType()}::class.java)"
+    private fun castFromNative(type: ResolvedIdlType, content: String): String {
+        val nullAssert = if(type.isNullable) "" else "!!"
+        return when {
+            type.isString() -> "toJvmKString($content)$nullAssert"
+            type.isCallback() -> "toJvmCallback($content)$nullAssert"
+            type.isEnum() -> "${type.declaration.name}.entries[$content]"
+            type.isDictionary() -> "toJvmDictionary${type.declaration.name}($content)$nullAssert"
+            type.isArray() -> type.arrayType { type ->
+                when {
+                    type.isPrimitive() -> "toJvm${type.toCType()}Array($content)$nullAssert"
+                    type.isEnum() -> "toJvmEnumArray($content, ${type.toKotlinType(printNullable = false)}::class.java)$nullAssert"
+                    else -> {
+                        val fn = castFromNative(type, "").split("(")[0]
+                        "toJvmKArray($content, ::$fn, ${type.toKotlinType(printNullable = false)}::class.java)$nullAssert"
+                    }
                 }
             }
+            else -> content
         }
-        else -> content
     }
 
     private fun castToNative(

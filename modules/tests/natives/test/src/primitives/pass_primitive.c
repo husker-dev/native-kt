@@ -43,6 +43,10 @@ KBoolean passString(KString* arg) {
     return !(arg->__flags & 1) && arg->length == 11 && strncmp(arg->data, "test string", arg->length) == 0;
 }
 
+KBoolean passStringN(KString* arg) {
+    return arg == NULL;
+}
+
 KBoolean passEnum(const MyEnum arg) {
     return arg == MyEnum_CASE2;
 }
@@ -52,4 +56,8 @@ KBoolean passDictionary(MyDictionary* arg) {
         arg->b == 2 &&
         arg->c == 3 &&
         arg->d == 4;
+}
+
+KBoolean passDictionaryN(MyDictionary* arg) {
+    return arg == NULL;
 }

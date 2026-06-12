@@ -66,13 +66,13 @@ class CApiHeaderPrinter(
 
     private fun printFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
         append("\n")
-        append(function.type.toCType())
+        append(function.type.toCType(printNullable = true))
         append(" ")
         append(function.name)
         append("(")
 
         function.args.joinTo(builder) {
-            "${it.type.toCType()} ${it.name}"
+            "${it.type.toCType(printNullable = true)} ${it.name}"
         }
 
         append(");")
@@ -98,7 +98,7 @@ class CApiHeaderPrinter(
 
         buildList {
             dictionary.allFields().mapTo(this) { field ->
-                "${field.type.toCType()} ${field.name};"
+                "${field.type.toCType(printNullable = true)} ${field.name};"
             }
             add("char __flags;")
         }.joinTo(builder, separator = "\n\t")
@@ -109,17 +109,17 @@ class CApiHeaderPrinter(
     private fun printStructFunctions(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
         val name = dictionary.name
 
-        append("\n$name* ${name}_new(")
+        append("\n$name* _Nonnull ${name}_new(")
 
         dictionary.allFields().joinTo(builder) { field ->
-            "${field.type.toCType()} ${field.name}"
+            "${field.type.toCType(printNullable = true)} ${field.name}"
         }
         append(");")
 
-        append("\n$name* ${name}_clone(const $name* self);")
-        append("\nvoid ${name}_free($name* self);")
+        append("\n$name* _Nullable ${name}_clone(const $name* _Nullable self);")
+        append("\nvoid ${name}_free($name* _Nullable self);")
         if(isInternal) {
-            append("\nvoid _${name}_forceFree($name* self);")
+            append("\nvoid _${name}_forceFree($name* _Nullable self);")
         }
         append("\n")
     }
@@ -135,8 +135,8 @@ class CApiHeaderPrinter(
 
         callbacks.forEach { callback ->
             names += callback.name + ","
-            types += callback.type.toCType() + if(callback.args.isNotEmpty()) "," else ""
-            args += callback.args.joinToString { "${it.type.toCType()} ${it.name}" }
+            types += callback.type.toCType(printNullable = true) + if(callback.args.isNotEmpty()) "," else ""
+            args += callback.args.joinToString { "${it.type.toCType(printNullable = true)} ${it.name}" }
         }
 
         val width1 = max(column1.length, names.maxOf { it.length })
@@ -185,8 +185,8 @@ class CApiHeaderPrinter(
         append("#undef KCallbackDef\n")
 
         if(isInternal) {
-            append("\nvoid _AbstractCallback_free(_AbstractCallback* self);")
-            append("\nvoid __AbstractCallback_forceFree(_AbstractCallback* self);\n")
+            append("\nvoid _AbstractCallback_free(_AbstractCallback* _Nullable self);")
+            append("\nvoid __AbstractCallback_forceFree(_AbstractCallback* _Nullable self);\n")
         }
     }
 
@@ -271,36 +271,36 @@ class CApiHeaderPrinter(
             typedef uint16_t KChar;
 
             typedef struct KString {
-                const char* data;
+                const char* _Nonnull data;
                 size_t size;
                 KInt length;
                 char __flags;
             } KString;
             
-            KString* KString_new(const char* data, KInt length, KInt size);
-            KString* KString_clone(const KString* self);
-            void KString_free(KString* self);
+            KString* _Nonnull KString_new(const char* _Nonnull data, KInt length, KInt size);
+            KString* _Nullable KString_clone(const KString* _Nullable self);
+            void KString_free(KString* _Nullable self);
             
-            #define KArrayDef(Name, Type)                              \
-            typedef struct Name {                                      \
-                const Type* elements;                                  \
-                size_t size;				                           \
-                KInt length;				                           \
-                char __flags;                                          \
-            } Name;                                                    \
-                                                                       \
-            Name* Name##_new(const Type* elements, const KInt length); \
-            Name* _##Name##_of(const int n, ...);
+            #define KArrayDef(Name, Type)                                                \
+            typedef struct Name {                                                        \
+                const Type* _Nonnull elements;                                           \
+                size_t size;				                                             \
+                KInt length;				                                             \
+                char __flags;                                                            \
+            } Name;                                                                      \
+                                                                                         \
+            Name* _Nonnull Name##_new(const Type* _Nonnull elements, const KInt length); \
+            Name* _Nonnull _##Name##_of(const int n, ...);
             
-            KArrayDef(KCharArray,	 KChar   )
-            KArrayDef(KBooleanArray, KBoolean)
-            KArrayDef(KByteArray,	 KByte   )
-            KArrayDef(KShortArray,	 KShort  )
-            KArrayDef(KIntArray,	 KInt    )
-            KArrayDef(KLongArray,	 KLong   )
-            KArrayDef(KFloatArray,	 KFloat  )
-            KArrayDef(KDoubleArray,  KDouble )
-            KArrayDef(KArray,        void*   )
+            KArrayDef(KCharArray,	 KChar          )
+            KArrayDef(KBooleanArray, KBoolean       )
+            KArrayDef(KByteArray,	 KByte          )
+            KArrayDef(KShortArray,	 KShort         )
+            KArrayDef(KIntArray,	 KInt           )
+            KArrayDef(KLongArray,	 KLong          )
+            KArrayDef(KFloatArray,	 KFloat         )
+            KArrayDef(KDoubleArray,  KDouble        )
+            KArrayDef(KArray,        void* _Nullable)
             #undef KArrayDef
             
             #define KCharArray_of(...)    _KCharArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
@@ -312,9 +312,9 @@ class CApiHeaderPrinter(
             #define KDoubleArray_of(...)  _KDoubleArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
             #define KArray_of(...)        _KArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
             
-            #define KArrayCloneFreeDef(Name, Type) \
-            Name* Name##_clone(const Name* self);  \
-            void Name##_free(Name* self);
+            #define KArrayCloneFreeDef(Name, Type)                    \
+            Name* _Nullable Name##_clone(const Name* _Nullable self); \
+            void Name##_free(Name* _Nullable self);
             
             KArrayCloneFreeDef(KCharArray,    KChar)
             KArrayCloneFreeDef(KBooleanArray, KBoolean)
@@ -326,17 +326,17 @@ class CApiHeaderPrinter(
             KArrayCloneFreeDef(KDoubleArray,  KDouble)
             #undef KArrayCloneFreeDef
             
-            KArray* KArray_clone(const KArray* self, void* (*cloneOp)(void*));
-            void KArray_free(const KArray* self, void (*freeOp)(void*));
+            KArray* _Nullable KArray_clone(const KArray* _Nullable self, void* _Nullable (* _Nullable cloneOp)(void* _Nullable));
+            void KArray_free(const KArray* _Nullable self, void (* _Nonnull freeOp)(void* _Nonnull));
 
-            #define KCallbackDef(Name, Type, ...)          \
-            struct Name {                                  \
-                char __flags;                              \
-                Type (*invoke)(Name* self, ##__VA_ARGS__); \
-                Name* (*clone)(Name* self);                \
-                KBoolean (*equals)(Name* self, Name* obj); \
-                KInt (*hashCode)(Name* self);              \
-                void (*free)(Name* self);                  \
+            #define KCallbackDef(Name, Type, ...)                   \
+            struct Name {                                           \
+                char __flags;                                       \
+                Type (* _Nonnull invoke)(Name* _Nonnull self, ##__VA_ARGS__); \
+                Name* _Nonnull (* _Nonnull clone)(Name* _Nonnull self);       \
+                KBoolean (* _Nonnull equals)(Name* _Nonnull self, Name* _Nullable obj); \
+                KInt (* _Nonnull hashCode)(Name* _Nonnull self);              \
+                void (* _Nonnull free)(Name* _Nullable self);                 \
             };
             
         """.trimIndent())
@@ -353,9 +353,9 @@ class CApiHeaderPrinter(
                 "KFloatArray",
                 "KDoubleArray"
             ).joinTo(builder, separator = "") {
-                "\nvoid _${it}_forceFree($it* self);"
+                "\nvoid _${it}_forceFree($it* _Nullable self);"
             }
-            append("\nvoid _KArray_forceFree(KArray* self, void (*freeOp)(void*));")
+            append("\nvoid _KArray_forceFree(KArray* _Nullable self, void (* _Nonnull freeOp)(void* _Nullable));")
             append("\n")
         }
     }
