@@ -23,12 +23,11 @@ internal fun locateEMCC(execOps: ExecOperations): File {
     return locate(execOps, "emcc")
         ?: run {
             if("EMSDK" in System.getenv())
-                File(System.getenv()["EMSDK"], "upstream/emscripten")
+                return@run File(System.getenv()["EMSDK"], "upstream/emscripten/emcc")
             if (Os.isFamily(Os.FAMILY_WINDOWS)) {
                 File.listRoots()!!.forEach {
-                    val file = File(it, "emsdk/upstream/emscripten/emcc.bat")
-                    if (file.exists())
-                        return@run file
+                    if (File(it, "emsdk/upstream/emscripten/emcc.bat").exists())
+                        return@run File(it, "emsdk/upstream/emscripten/emcc")
                 }
             }
             throw UnsupportedOperationException("Could not locate 'emcc'")
