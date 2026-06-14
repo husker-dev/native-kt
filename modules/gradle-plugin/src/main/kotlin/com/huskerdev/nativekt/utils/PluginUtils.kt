@@ -15,6 +15,33 @@ import org.gradle.process.ExecOperations
 import java.io.File
 import java.io.OutputStream
 
+enum class Arch {
+    X86,
+    X64,
+    ARM32,
+    ARM64,
+    RISCV32,
+    RISCV64,
+    UNKNOWN
+    ;
+    companion object {
+        @JvmStatic fun current() = System.getProperty("os.arch").lowercase().run {
+            when {
+                matches("^(x8632|x86|i[3-6]86|ia32|x32)$".toRegex()) -> X86
+                matches("^(x8664|amd64|ia32e|em64t|x64)$".toRegex()) -> X64
+                matches("^(arm|arm32)$".toRegex()) -> ARM32
+                equals("aarch64") -> ARM64
+                matches("^(riscv|riscv32)$".toRegex()) -> RISCV32
+                equals("riscv64") -> RISCV64
+                else -> UNKNOWN
+            }
+        }
+    }
+}
+
+val File.posixPath: String
+    get() = absolutePath.replace("\\", "/")
+
 fun NativeProject.dir(project: Project): File =
     projectDir?.get()?.asFile
         ?: project.file("natives/$name")
@@ -45,7 +72,37 @@ fun TaskProvider<*>.dependsOnReload() {
         }
 }
 
-fun ExecOperations.exec(command: String, workingDir: File? = null, silent: Boolean = false): String {
+internal fun locate(execOps: ExecOperations, binary: String): File? =
+    File(execOps.exec(
+        when {
+            Os.isFamily(Os.FAMILY_WINDOWS) -> "where $binary"
+            else -> "which $binary"
+        },
+        silent = true
+    )).run { if(exists()) this else null }
+
+
+fun ExecOperations.execWithArgsFile(
+    command: String,
+    args: File,
+    workingDir: File? = null,
+    silent: Boolean = false,
+    errAsStd: Boolean = false
+): String {
+    val filePath = args.posixPath
+    val toExec = when {
+        Os.isFamily(Os.FAMILY_WINDOWS) -> "$command @$filePath"
+        else -> "$command $(cat $filePath)"
+    }
+    return exec(toExec, workingDir, silent, errAsStd)
+}
+
+fun ExecOperations.exec(
+    command: String,
+    workingDir: File? = null,
+    silent: Boolean = false,
+    errAsStd: Boolean = false
+): String {
     class StringOutputStream(
         private val delegate: OutputStream,
         private val string: StringBuilder = StringBuilder()
@@ -71,7 +128,7 @@ fun ExecOperations.exec(command: String, workingDir: File? = null, silent: Boole
             commandLine("cmd.exe", "/c", command)
 
         standardOutput = stdOut
-        errorOutput = errOut
+        errorOutput = if(errAsStd) stdOut else errOut
     }.run {
         if(exitValue != 0)
             throw Exception("Failed to execute command (code=${exitValue}): \n$command\nError:\n${errOut}")

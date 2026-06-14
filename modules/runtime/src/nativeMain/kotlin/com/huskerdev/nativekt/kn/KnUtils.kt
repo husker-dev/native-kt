@@ -31,7 +31,7 @@ fun MemScope.toNativeKStringOnArena(str: String?, pin: Boolean = false): CPointe
     if(str == null) return null
     val bytes = str.cstr
     val mem = alloc<KString>()
-    mem.size = bytes.size.convert()
+    mem.size = (bytes.size - 1).convert()
     mem.data = if(pin) {
         val pinObj = bytes.pin()
         defer { pinObj.unpin() }
@@ -49,7 +49,7 @@ fun toNativeKString(str: String?): CPointer<KString>? {
     if(str == null) return null
     val bytes = str.cstr
     val mem = malloc(sizeOf<KString>().convert())!!.reinterpret<KString>().pointed
-    mem.size = bytes.size.convert()
+    mem.size = (bytes.size - 1).convert()
     mem.data = malloc(mem.size.convert())!!.reinterpret()
     mem.length = str.length
     mem.__flags = FLAG_RELEASABLE

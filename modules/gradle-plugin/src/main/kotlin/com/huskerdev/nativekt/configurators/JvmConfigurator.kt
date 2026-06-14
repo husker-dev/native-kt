@@ -140,8 +140,12 @@ internal fun configureJvm(
         it.inputs.dir(module.dir(project))
         it.outputs.dir(nativesBuildDir)
 
+        it.useJNI               = extension.useJNI
         it.useUniversalMacOSLib = extension.useUniversalMacOSLib
 
+        it.moduleName           = module.name
+
+        it.projectDir           = module.dir(project).absolutePath
         it.nativesBuildDir      = nativesBuildDir.absolutePath
         it.libOutFileName       = libOutFileName
         it.targetLibFile        = targetLibFile.absolutePath
@@ -302,7 +306,7 @@ private abstract class PrepareNativesJvm: DefaultTask() {
                     project("$$moduleName")
             
                     add_subdirectory("$${projectDir.replace("\\", "/")}" 
-                        "$${File(platformBuildDir, "sub").absolutePath.replace("\\", "/")}")
+                        "$${File(platformBuildDir, "sub").posixPath}")
             
                     add_library(lib_$$moduleName SHARED $${srcList.joinToString(" ")})
                     
@@ -311,9 +315,7 @@ private abstract class PrepareNativesJvm: DefaultTask() {
                     target_include_directories(lib_$$moduleName PRIVATE $${includeList.joinToString(" ") { "\"$it\"" }})
                 """.trimIndent())
             }
-            is BuildSystem.Cargo -> {
-
-            }
+            is BuildSystem.Cargo -> Unit
         }
     }
 }
@@ -321,8 +323,12 @@ private abstract class PrepareNativesJvm: DefaultTask() {
 private abstract class CompileNativesJvm @Inject constructor(
     private val execOps: ExecOperations,
 ): DefaultTask() {
+    @get:Input abstract var useJNI: Boolean
     @get:Input abstract var useUniversalMacOSLib: Boolean
 
+    @get:Input abstract var moduleName: String
+
+    @get:Input abstract var projectDir: String
     @get:Input abstract var nativesBuildDir: String
     @get:Input abstract var libOutFileName: String
     @get:Input abstract var targetLibFile: String
@@ -337,9 +343,10 @@ private abstract class CompileNativesJvm @Inject constructor(
 
     @TaskAction
     fun action() {
+        val platformBuildDir = File(nativesBuildDir, "${platformName()}${libArch.capitalized()}")
+
         when(val buildSystem = buildSystem) {
             is BuildSystem.CMake -> {
-                val platformBuildDir = File(nativesBuildDir, "${platformName()}${libArch.capitalized()}")
 
                 // Generate CMake build
                 val args = LinkedHashSet(buildSystem.args)
@@ -367,8 +374,38 @@ private abstract class CompileNativesJvm @Inject constructor(
                     it.name == libOutFileName
                 }.copyTo(File(targetLibFile), overwrite = true)
             }
-            is BuildSystem.Cargo -> {
 
+            is BuildSystem.Cargo -> {
+                val sources = File(nativesBuildDir)
+                    .listFiles { it.extension == "c" }
+                    .map { it.name }.toList()
+
+                val includeDirs = if(useJNI)
+                    listOf("include", "include/${jdkPlatformName()}")
+                else emptyList()
+
+                val rustBuildDir = cargoBuild(execOps,
+                    project = File(projectDir),
+                    buildType = buildSystem.buildType,
+                    buildDir = platformBuildDir
+                )
+                val rustLinkerFlags = cargoLinkerFlags(execOps,
+                    project = File(projectDir),
+                    buildType = buildSystem.buildType,
+                    buildDir = platformBuildDir
+                )
+
+                clangCompile(execOps,
+                    sources = sources,
+                    includeDirs = includeDirs,
+                    linkerArgs = listOf(
+                        *rustLinkerFlags.toTypedArray(),
+                        "-L$rustBuildDir",
+                        "-l$moduleName"
+                    ),
+                    dynamicLib = true,
+                    workingDir = File(nativesBuildDir)
+                ).copyTo(File(targetLibFile))
             }
         }
     }

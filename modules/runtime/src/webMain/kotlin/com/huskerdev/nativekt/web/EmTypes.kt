@@ -61,7 +61,7 @@ private fun setTypedArrayAt(array: TypedArray, index: Int, value: Double): Unit 
 private fun getTypedArray(array: TypedArray, index: Int): Double =
     js("array[index]")
 
-private fun setBigIntArray(array: BigInt64Array, index: Int, value: Long): Unit =
+private fun setBigIntArray(array: BigInt64Array, index: Int, value: JsBigInt): Unit =
     js("array[index] = value")
 
 private fun getBigIntArray(array: BigInt64Array, index: Int): Long =
@@ -157,7 +157,7 @@ external class BigInt64Array(
 }
 
 operator fun BigInt64Array.set(index: Int, value: Long) =
-    setBigIntArray(this, index, value)
+    setBigIntArray(this, index, value.toJsBigInt())
 
 operator fun BigInt64Array.get(index: Int): Long =
     getBigIntArray(this, index)

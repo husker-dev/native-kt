@@ -1,5 +1,6 @@
 package com.huskerdev.nativekt.printers
 
+import com.huskerdev.nativekt.utils.posixPath
 import java.io.File
 
 class DefPrinter(
@@ -12,10 +13,11 @@ class DefPrinter(
     init {
         target.parentFile.mkdirs()
 
-        target.writeText("""
-            headers = ${headerFile.absolutePath.replace("\\", "/")}
-            package = cinterop.$classPath
-            linkerOpts = ${linkerOpts.joinToString(" ")}
-        """.trimIndent())
+        target.writeText(buildString {
+            append("headers = ${headerFile.posixPath}\n")
+            append("package = cinterop.$classPath\n")
+            if(linkerOpts.isNotEmpty())
+                append("linkerOpts = ${linkerOpts.joinToString(" ")}")
+        })
     }
 }

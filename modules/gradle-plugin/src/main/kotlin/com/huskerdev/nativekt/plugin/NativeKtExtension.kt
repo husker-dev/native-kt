@@ -160,6 +160,8 @@ sealed interface BuildSystem: Serializable {
 
     open class Cargo: BuildSystem {
         var apiRsFile: File? = null
+
+        var buildType: CargoBuildType = CargoBuildType.RELEASE
     }
 }
 
@@ -280,4 +282,12 @@ enum class CMakeBuildType(
     REL_WITH_DEB_INFO("RelWithDebInfo"),
     RELEASE("Release"),
     MIN_SIZE_REL("MinSizeRel")
+}
+
+@Suppress("unused")
+enum class CargoBuildType(
+    val cargoName: String
+) {
+    RELEASE("release"),
+    DEBUG("debug")
 }

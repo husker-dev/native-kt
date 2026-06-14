@@ -124,6 +124,7 @@ internal fun configureAndroidSourceSet(
         it.compileSdk       = androidExtension.compileSdk!!
         it.ndkDir           = ndkDir.absolutePath
 
+        it.projectDir        = module.dir(project).absolutePath
         it.nativesBuildDir  = nativesBuildDir.absolutePath
 
         it.buildSystem      = module.buildSystem
@@ -223,9 +224,7 @@ private abstract class PrepareNativesAndroid: DefaultTask() {
                     add_library(lib$$moduleName SHARED $<TARGET_OBJECTS:$$moduleName> $${srcList.joinToString(" ")})
                 """.trimIndent())
             }
-            is BuildSystem.Cargo -> {
-
-            }
+            is BuildSystem.Cargo -> Unit
         }
     }
 }
@@ -241,6 +240,7 @@ private abstract class CompileNativesAndroid @Inject constructor(
     @get:Input abstract var compileSdk: Int
     @get:Input abstract var ndkDir: String
 
+    @get:Input abstract var projectDir: String
     @get:Input abstract var nativesBuildDir: String
 
     @get:Input abstract var buildSystem: BuildSystem
@@ -281,8 +281,51 @@ private abstract class CompileNativesAndroid @Inject constructor(
                 }
             }
             is BuildSystem.Cargo -> {
+                val toolchainDir = File(ndkDir, "toolchains/llvm/prebuilt")
+                    .listFiles().first { it.name != ".DS_Store" }
 
+                val toolchainBinDir = File(toolchainDir, "bin")
+                val toolchainIncludeDir = File(toolchainDir, "sysroot/usr/include")
+
+                androidTargets.forEach { target ->
+                    val rustBuildDir = cargoBuild(execOps,
+                        project = File(projectDir),
+                        buildDir = File(nativesBuildDir, "rust"),
+                        buildType = buildSystem.buildType,
+                        target = toLlvmTarget(target, rustc = true)
+                    )
+
+                    val targetBuildDir = File(nativesBuildDir, target)
+                    targetBuildDir.mkdirs()
+
+                    clangCompile(execOps,
+                        clang = File(toolchainBinDir, "clang").posixPath,
+                        sources = listOf("../api.c", "../jni_bindings.c"),
+                        includeDirs = listOf(
+                            toolchainIncludeDir.posixPath,
+                            File(toolchainIncludeDir, toLlvmTarget(target)).posixPath
+                        ),
+                        linkerArgs = listOf(
+                            "--target=${toLlvmTarget(target)}$compileSdk",
+                            "$rustBuildDir/lib$moduleName.a"
+                        ),
+                        dynamicLib = true,
+                        workingDir = targetBuildDir,
+                        extension = "so"
+                    ).copyTo(
+                        File(outputFolder.get().asFile, "$target/lib$moduleName.so"),
+                        overwrite = true
+                    )
+                }
             }
         }
+    }
+
+    private fun toLlvmTarget(target: String, rustc: Boolean = false) = when(target) {
+        "x86_64"      -> "x86_64-linux-android"
+        "x86"         -> "i686-linux-android"
+        "armeabi-v7a" ->  if(rustc) "armv7-linux-androideabi" else "armv7a-linux-androideabi"
+        "arm64-v8a"   -> "aarch64-linux-android"
+        else -> throw UnsupportedOperationException("Unsupported Android target: $target")
     }
 }

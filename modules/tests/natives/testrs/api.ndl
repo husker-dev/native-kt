@@ -1,0 +1,5 @@
+
+namespace global {
+
+    void test_func(string? arg);
+};

@@ -33,7 +33,7 @@ kotlin {
         nodejs()
 
         compilerOptions {
-            freeCompilerArgs.addAll("-Xes-long-as-bigint", "-XXLanguage:+JsAllowLongInExportedDeclarations")
+            freeCompilerArgs.addAll("-XXLanguage:+JsAllowLongInExportedDeclarations")
             target = "es2015"
             main = JsMainFunctionExecutionMode.NO_CALL
         }
@@ -99,7 +99,7 @@ natives {
     }
 
     create("test")
-    create("test-rs") {
+    create("testrs") {
         cargo()
     }
 }

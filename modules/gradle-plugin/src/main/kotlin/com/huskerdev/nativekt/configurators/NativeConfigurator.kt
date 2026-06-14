@@ -12,9 +12,9 @@ import com.huskerdev.nativekt.printers.DefPrinter
 import com.huskerdev.nativekt.printers.c.CApiImplPrinter
 import com.huskerdev.nativekt.printers.kotlin.KotlinNativePrinter
 import com.huskerdev.nativekt.utils.*
+import com.huskerdev.nativekt.utils.posixPath
 import com.huskerdev.webidl.resolver.IdlResolver
 import kotlinx.serialization.json.Json
-import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.file.RegularFileProperty
@@ -98,7 +98,7 @@ internal fun configureNative(
         it.headerFile       = headerFile.absolutePath
         it.kotlinFile       = kotlinFile.absolutePath
 
-        it.projectDir       = module.dir(project).absolutePath.replace("\\", "/")
+        it.projectDir       = module.dir(project).posixPath
         it.nativesBuildDir  = nativesBuildDir.absolutePath
 
         it.buildSystem      = module.buildSystem
@@ -121,6 +121,11 @@ internal fun configureNative(
         it.inputs.dir(module.dir(project))
         it.outputs.dirs(nativesBuildDir)
 
+        it.moduleName       = module.name
+
+        it.targetType       = targetType
+
+        it.projectDir       = module.dir(project).posixPath
         it.nativesBuildDir  = nativesBuildDir.absolutePath
         it.buildSystem      = module.buildSystem
     }
@@ -138,191 +143,6 @@ internal fun configureNative(
         if (hasTask(compilationTask.get()))
             prepareTask.get().shouldInit = true
     }
-}
-
-private fun extractLinkerOpts(
-    cmakeBuildDir: File,
-    moduleName: String
-): List<String> = buildList {
-    // Tip: arguments generates only with executable or shared libraries, so our CMakeLists.txt contains `SHARED` target
-
-    this += cmakeBuildDir.resolve("liblibstatic_$moduleName.a")
-        .absolutePath.replace("\\", "/")
-
-    val linkLibs = File(
-        cmakeBuildDir,
-        "CMakeFiles/lib_$moduleName.dir/linkLibs.rsp"
-    )
-    val link = File(
-        cmakeBuildDir,
-        "CMakeFiles/lib_$moduleName.dir/link.txt"
-    )
-    val cmakeCache = File(
-        cmakeBuildDir,
-        "CMakeCache.txt"
-    )
-
-    // Collect linker flags from 'linkLibs.rsp' or 'link.txt'
-
-    if(linkLibs.exists()) {
-        this += linkLibs.readText()
-            .splitRespectingQuotes()
-            .map {
-                if(!it.startsWith("-l") && !File(it).isAbsolute)
-                    File(cmakeBuildDir, it).absolutePath.replace("\\", "/")
-                else it
-            }
-            .filter { it !in setOf("-lpthread") }
-    } else if(link.exists()) {
-        val parts = link.readText()
-            .splitRespectingQuotes()
-
-        var i = 0
-        while(i < parts.size) {
-            val part = parts[i]
-            if(part.endsWith(".a")) {
-                val path = if(!File(part).isAbsolute)
-                    File(cmakeBuildDir, part).absolutePath
-                else part
-                this += path
-            }
-            if(part == "-framework") {
-                this += part
-                this += parts[++i]
-            }
-            i++
-        }
-    }
-
-    // Try to resolve libs from 'PkgConfig'
-
-    val cmakeCacheText = cmakeCache.readLines()
-
-    if(cmakeCacheText.any { "_STATIC_LDFLAGS:INTERNAL=" in it && !it.endsWith("=") }) {
-        this += cmakeCacheText
-            .filter { "_STATIC_LDFLAGS:INTERNAL=" in it }
-            .flatMap { it.split("_STATIC_LDFLAGS:INTERNAL=")[1].split(";") }
-            .toSet().sorted()
-        return@buildList
-    }
-
-    if(cmakeCacheText.any { "_STATIC_LIBRARY_DIRS:INTERNAL=" in it }) {
-
-        val libDirs = cmakeCacheText
-            .filter { "_STATIC_LIBRARY_DIRS:INTERNAL=" in it }
-            .flatMap { it.split("_STATIC_LIBRARY_DIRS:INTERNAL=")[1].split(";") }
-            .toSet().sorted()
-
-        val libNames = cmakeCacheText.asSequence()
-            .filter { "STATIC_LIBRARIES:INTERNAL=" in it }
-            .flatMap { it.split("STATIC_LIBRARIES:INTERNAL=")[1].split(";") }
-            .toSet().sorted()
-            .toMutableList()
-
-        if(Os.isFamily(Os.FAMILY_WINDOWS))
-            libNames += "mingwex"
-
-        libNames.forEach { lib ->
-            this.remove("-l$lib")
-
-            libDirs.forEach { dir ->
-                val file = File(dir, "lib${lib}.a")
-                if(file.exists())
-                    this += file.absolutePath.replace("\\", "/")
-            }
-        }
-    }
-}
-
-private fun configureCMake(
-    execOps: ExecOperations,
-    targetType: TargetType,
-    cmakeArgs: LinkedHashSet<String>,
-    cmakeDir: File,
-    cmakeBuildDir: File,
-    cmakeBuildType: CMakeBuildType
-) {
-    fun flags(vararg flags: String) = setOf(
-        "-DCMAKE_C_FLAGS=\"${flags.joinToString(" ")}\"",
-        "-DCMAKE_CXX_FLAGS=\"${flags.joinToString(" ")}\""
-    )
-    fun xcSdkVersion(sdk: String) =
-        execOps.exec("xcrun --sdk $sdk --show-sdk-platform-version", silent = true)
-    fun xcSdkSysroot(sdk: String) =
-        execOps.exec("xcrun --sdk $sdk --show-sdk-path", silent = true)
-
-
-    val args = LinkedHashSet(cmakeArgs)
-    args += linkedSetOf(
-        "-DCMAKE_C_COMPILER=clang",
-        "-DCMAKE_CXX_COMPILER=clang++",
-    )
-    args += when(targetType) {
-        TargetType.IOS_SIMULATOR_ARM64 -> flags(
-            "-arch arm64",
-            "-target arm64-apple-ios${xcSdkVersion("iphonesimulator")}-simulator",
-            "-isysroot ${xcSdkSysroot("iphonesimulator")}"
-        )
-        TargetType.IOS_X64 -> flags(
-            "-arch x86_64",
-            "-target x86_64-apple-ios${xcSdkVersion("iphonesimulator")}-simulator",
-            "-isysroot ${xcSdkSysroot("iphonesimulator")}"
-        )
-        TargetType.IOS_ARM64 -> flags(
-            "-arch arm64",
-            "-target arm64-apple-ios${xcSdkVersion("iphoneos")}",
-            "-isysroot ${xcSdkSysroot("iphoneos")}"
-        )
-        TargetType.TVOS_ARM64 -> flags(
-            "-arch arm64",
-            "-target arm64-apple-tvos${xcSdkVersion("appletvos")}",
-            "-isysroot ${xcSdkSysroot("appletvos")}"
-        )
-        TargetType.TVOS_SIMULATOR_ARM64 -> flags(
-            "-arch arm64",
-            "-target arm64-apple-tvos${xcSdkVersion("appletvsimulator")}-simulator",
-            "-isysroot ${xcSdkSysroot("appletvsimulator")}"
-        )
-        TargetType.TVOS_X64 -> flags(
-            "-arch x86_64",
-            "-target x86_64-apple-tvos${xcSdkVersion("appletvsimulator")}-simulator",
-            "-isysroot ${xcSdkSysroot("appletvsimulator")}"
-        )
-        TargetType.WATCHOS_ARM32 -> flags(
-            "-arch armv7k",
-            "-target armv7k-apple-watchos${xcSdkVersion("watchos")}",
-            "-isysroot ${xcSdkSysroot("watchos")}"
-        )
-        TargetType.WATCHOS_ARM64 -> flags(
-            "-arch arm64_32",
-            "-target arm64-apple-watchos${xcSdkVersion("watchos")}",
-            "-isysroot ${xcSdkSysroot("watchos")}"
-        )
-        TargetType.WATCHOS_DEVICE_ARM64 -> flags(
-            "-arch arm64",
-            "-target arm64-apple-watchos${xcSdkVersion("watchos")}",
-            "-isysroot ${xcSdkSysroot("watchos")}"
-        )
-        TargetType.WATCHOS_SIMULATOR_ARM64 -> flags(
-            "-arch arm64",
-            "-target arm64-apple-watchos${xcSdkVersion("watchsimulator")}-simulator",
-            "-isysroot ${xcSdkSysroot("watchsimulator")}"
-        )
-        TargetType.WATCHOS_X64 -> flags(
-            "-arch x86_64",
-            "-target x86_64-apple-watchos${xcSdkVersion("watchsimulator")}-simulator",
-            "-isysroot ${xcSdkSysroot("watchsimulator")}"
-        )
-        TargetType.MACOS_ARM64 -> flags("-arch arm64")
-        TargetType.MACOS_X64 -> flags("-arch x86_64")
-        else -> emptySet()
-    }
-    cmakeGen(execOps,
-        dir = cmakeDir,
-        buildDir = cmakeBuildDir,
-        buildType = cmakeBuildType,
-        args = args
-    )
 }
 
 private abstract class PrepareNativesKn @Inject constructor(
@@ -365,22 +185,23 @@ private abstract class PrepareNativesKn @Inject constructor(
             guardName = moduleName.uppercase(),
         )
 
+        // Generate api sources
+        val buildDir = File(nativesBuildDir, "build")
+
+        CApiHeaderPrinter(
+            idl = idl,
+            target = File(buildDir, "api.h"),
+            isInternal = true
+        )
+
+        CApiImplPrinter(
+            idl = idl,
+            target = File(buildDir, "api.c"),
+            classPath = moduleClasspath
+        )
+
         when(val buildSystem = buildSystem) {
             is BuildSystem.CMake -> {
-                val buildDir = File(nativesBuildDir, "build")
-
-                CApiHeaderPrinter(
-                    idl = idl,
-                    target = File(buildDir, "api.h"),
-                    isInternal = true
-                )
-
-                CApiImplPrinter(
-                    idl = idl,
-                    target = File(buildDir, "api.c"),
-                    classPath = moduleClasspath
-                )
-
                 // Create CMake file
                 File(nativesBuildDir, "CMakeLists.txt").writeText($$"""
                     cmake_minimum_required(VERSION 3.15)
@@ -388,7 +209,7 @@ private abstract class PrepareNativesKn @Inject constructor(
                     project("$$moduleName")
             
                     add_subdirectory("$$projectDir" "$${
-                        File(buildDir, "common").absolutePath.replace("\\", "/")
+                        File(buildDir, "common").posixPath
                     }")
                         
                     add_library(lib_$$moduleName SHARED api.c)
@@ -411,11 +232,31 @@ private abstract class PrepareNativesKn @Inject constructor(
 
                 // Get linker opts
                 linkerOpts += if(shouldInit)
-                    extractLinkerOpts(buildDir, moduleName)
+                    extractLinkerOpts(execOps, buildDir, moduleName)
                 else emptyList()
             }
             is BuildSystem.Cargo -> {
+                if(shouldInit) {
+                    val rustFlags = cargoLinkerFlags(execOps,
+                        project = File(projectDir),
+                        buildType = buildSystem.buildType,
+                        buildDir = buildDir,
+                        target = getCargoTarget(targetType)
+                    )
+                    val rustBuildDir = cargoTargetDir(
+                        buildDir = buildDir,
+                        buildType = buildSystem.buildType,
+                        target = getCargoTarget(targetType)
+                    )
 
+                    val buildDir = buildDir.posixPath
+
+                    linkerOpts += listOf(
+                        *rustFlags.toTypedArray(),
+                        File(rustBuildDir, "lib$moduleName.a").posixPath,
+                        File(buildDir, "libnativekt.a").posixPath,
+                    )
+                }
             }
         }
 
@@ -442,6 +283,11 @@ private abstract class PrepareNativesKn @Inject constructor(
 private abstract class CompileNativesKn @Inject constructor(
     private val execOps: ExecOperations,
 ): DefaultTask() {
+    @get:Input abstract var moduleName: String
+
+    @get:Input abstract var targetType: TargetType
+
+    @get:Input abstract var projectDir: String
     @get:Input abstract var nativesBuildDir: String
     @get:Input abstract var buildSystem: BuildSystem
 
@@ -451,19 +297,28 @@ private abstract class CompileNativesKn @Inject constructor(
 
     @TaskAction
     fun action() {
-        when(buildSystem) {
+        val buildDir = File(nativesBuildDir, "build")
+
+        when(val buildSystem = buildSystem) {
             is BuildSystem.CMake -> {
-                cmakeBuild(execOps, File(nativesBuildDir, "build"))
+                cmakeBuild(execOps, buildDir)
             }
             is BuildSystem.Cargo -> {
-
+                cargoBuild(execOps,
+                    project = File(projectDir),
+                    buildType = buildSystem.buildType,
+                    buildDir = buildDir,
+                    target = getCargoTarget(targetType)
+                )
+                clangCompile(
+                    execOps,
+                    sources = listOf("api.c"),
+                    linkerArgs = getClangTargetArgs(execOps, targetType),
+                    dynamicLib = false,
+                    workingDir = buildDir,
+                    outputBaseName = "libnativekt"
+                )
             }
         }
     }
 }
-
-private fun String.splitRespectingQuotes(): List<String> =
-    """[^\s"']+|"([^"]*)"|'([^']*)'""".toRegex()
-        .findAll(this)
-        .map { it.value.trim('"', '\'') }
-        .toList()

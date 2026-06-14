@@ -4,12 +4,7 @@ import com.android.build.api.variant.KotlinMultiplatformAndroidComponentsExtensi
 import com.huskerdev.nativekt.TargetType
 import com.huskerdev.nativekt.configurators.*
 import com.huskerdev.nativekt.printers.c.CApiHeaderPrinter
-import com.huskerdev.nativekt.printers.rust.RustPrinter
-import com.huskerdev.nativekt.utils.validateIDL
-import com.huskerdev.nativekt.utils.dir
-import com.huskerdev.nativekt.utils.getHeaderFile
-import com.huskerdev.nativekt.utils.idl
-import com.huskerdev.nativekt.utils.getNDLFile
+import com.huskerdev.nativekt.utils.*
 import com.huskerdev.webidl.resolver.IdlResolver
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.internal.extensions.stdlib.capitalized
@@ -24,7 +19,6 @@ import org.jetbrains.kotlin.gradle.plugin.KotlinTargetsContainer
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.konan.target.KonanTarget
 import java.io.File
-import kotlin.collections.set
 import kotlin.concurrent.getOrSet
 
 private const val RUNTIME_DEPENDENCY = "com.huskerdev:native-kt-runtime:${NativeKtInfo.VERSION}"
@@ -61,33 +55,37 @@ fun NativeKtPlugin.configureKotlin(
     nativesBuildDir: File,
     srcGenDir: File
 ){
-    extension.whenObjectAdded {
-        val module = this as NativeProject
+    project.afterEvaluate {
+        extension.forEach {
+            val module = it as NativeProject
 
-        val idl = validateModule(module)
-            ?: return@whenObjectAdded
+            val idl = validateModule(module)
+                ?: return@forEach
 
-        val nativesBuildDir = File(nativesBuildDir, module.name)
-        val srcGenDir = File(srcGenDir, module.name)
+            val nativesBuildDir = File(nativesBuildDir, module.name)
+            val srcGenDir = File(srcGenDir, module.name)
 
-        when(module) {
-            is Multiplatform -> configureMultiplatform(idl, nativesBuildDir, srcGenDir, module)
-            is SinglePlatform -> configureSinglePlatform(idl, nativesBuildDir, srcGenDir, module)
-        }
-
-        when(module.buildSystem) {
-            is BuildSystem.CMake -> {
-                CApiHeaderPrinter(
-                    idl = idl,
-                    target = module.getHeaderFile(project),
-                    guardName = module.name.uppercase()
-                )
+            when(module) {
+                is Multiplatform -> configureMultiplatform(idl, nativesBuildDir, srcGenDir, module)
+                is SinglePlatform -> configureSinglePlatform(idl, nativesBuildDir, srcGenDir, module)
             }
-            is BuildSystem.Cargo -> {
-                RustPrinter(
-                    idl = idl,
-                    target = module.getHeaderFile(project)
-                )
+
+            when(module.buildSystem) {
+                is BuildSystem.CMake -> {
+                    CApiHeaderPrinter(
+                        idl = idl,
+                        target = module.getHeaderFile(project),
+                        guardName = module.name.uppercase()
+                    )
+                }
+                is BuildSystem.Cargo -> {
+                    /*
+                    RustPrinter(
+                        idl = idl,
+                        target = module.getHeaderFile(project)
+                    )
+                     */
+                }
             }
         }
     }

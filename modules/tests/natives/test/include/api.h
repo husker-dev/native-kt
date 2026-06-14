@@ -43,36 +43,36 @@ typedef bool     KBoolean;
 typedef uint16_t KChar;
 
 typedef struct KString {
-    const char* data;
+    const char* _Nonnull data;
     size_t size;
     KInt length;
     char __flags;
 } KString;
 
-KString* KString_new(const char* data, KInt length, KInt size);
-KString* KString_clone(const KString* self);
-void KString_free(KString* self);
+KString* _Nonnull KString_new(const char* _Nonnull data, KInt length, KInt size);
+KString* _Nullable KString_clone(const KString* _Nullable self);
+void KString_free(KString* _Nullable self);
 
-#define KArrayDef(Name, Type)                              \
-typedef struct Name {                                      \
-    const Type* elements;                                  \
-    size_t size;				                           \
-    KInt length;				                           \
-    char __flags;                                          \
-} Name;                                                    \
-                                                           \
-Name* Name##_new(const Type* elements, const KInt length); \
-Name* _##Name##_of(const int n, ...);
+#define KArrayDef(Name, Type)                                                \
+typedef struct Name {                                                        \
+    const Type* _Nonnull elements;                                           \
+    size_t size;				                                             \
+    KInt length;				                                             \
+    char __flags;                                                            \
+} Name;                                                                      \
+                                                                             \
+Name* _Nonnull Name##_new(const Type* _Nonnull elements, const KInt length); \
+Name* _Nonnull _##Name##_of(const int n, ...);
 
-KArrayDef(KCharArray,	 KChar   )
-KArrayDef(KBooleanArray, KBoolean)
-KArrayDef(KByteArray,	 KByte   )
-KArrayDef(KShortArray,	 KShort  )
-KArrayDef(KIntArray,	 KInt    )
-KArrayDef(KLongArray,	 KLong   )
-KArrayDef(KFloatArray,	 KFloat  )
-KArrayDef(KDoubleArray,  KDouble )
-KArrayDef(KArray,        void*   )
+KArrayDef(KCharArray,	 KChar          )
+KArrayDef(KBooleanArray, KBoolean       )
+KArrayDef(KByteArray,	 KByte          )
+KArrayDef(KShortArray,	 KShort         )
+KArrayDef(KIntArray,	 KInt           )
+KArrayDef(KLongArray,	 KLong          )
+KArrayDef(KFloatArray,	 KFloat         )
+KArrayDef(KDoubleArray,  KDouble        )
+KArrayDef(KArray,        void* _Nullable)
 #undef KArrayDef
 
 #define KCharArray_of(...)    _KCharArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
@@ -84,9 +84,9 @@ KArrayDef(KArray,        void*   )
 #define KDoubleArray_of(...)  _KDoubleArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
 #define KArray_of(...)        _KArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
 
-#define KArrayCloneFreeDef(Name, Type) \
-Name* Name##_clone(const Name* self);  \
-void Name##_free(Name* self);
+#define KArrayCloneFreeDef(Name, Type)                    \
+Name* _Nullable Name##_clone(const Name* _Nullable self); \
+void Name##_free(Name* _Nullable self);
 
 KArrayCloneFreeDef(KCharArray,    KChar)
 KArrayCloneFreeDef(KBooleanArray, KBoolean)
@@ -98,17 +98,17 @@ KArrayCloneFreeDef(KFloatArray,   KFloat)
 KArrayCloneFreeDef(KDoubleArray,  KDouble)
 #undef KArrayCloneFreeDef
 
-KArray* KArray_clone(const KArray* self, void* (*cloneOp)(void*));
-void KArray_free(const KArray* self, void (*freeOp)(void*));
+KArray* _Nullable KArray_clone(const KArray* _Nullable self, void* _Nullable (* _Nullable cloneOp)(void* _Nullable));
+void KArray_free(const KArray* _Nullable self, void (* _Nonnull freeOp)(void* _Nonnull));
 
-#define KCallbackDef(Name, Type, ...)          \
-struct Name {                                  \
-    char __flags;                              \
-    Type (*invoke)(Name* self, ##__VA_ARGS__); \
-    Name* (*clone)(Name* self);                \
-    KBoolean (*equals)(Name* self, Name* obj); \
-    KInt (*hashCode)(Name* self);              \
-    void (*free)(Name* self);                  \
+#define KCallbackDef(Name, Type, ...)                   \
+struct Name {                                           \
+    char __flags;                                       \
+    Type (* _Nonnull invoke)(Name* _Nonnull self, ##__VA_ARGS__); \
+    Name* _Nonnull (* _Nonnull clone)(Name* _Nonnull self);       \
+    KBoolean (* _Nonnull equals)(Name* _Nonnull self, Name* _Nullable obj); \
+    KInt (* _Nonnull hashCode)(Name* _Nonnull self);              \
+    void (* _Nonnull free)(Name* _Nullable self);                 \
 };
 
 // ╔═══════════════════╗
@@ -128,9 +128,12 @@ typedef struct CallbackPassLong CallbackPassLong;
 typedef struct CallbackPassFloat CallbackPassFloat;
 typedef struct CallbackPassDouble CallbackPassDouble;
 typedef struct CallbackPassString CallbackPassString;
+typedef struct CallbackPassStringN CallbackPassStringN;
 typedef struct CallbackPassCallback CallbackPassCallback;
+typedef struct CallbackPassCallbackN CallbackPassCallbackN;
 typedef struct CallbackPassEnum CallbackPassEnum;
 typedef struct CallbackPassDictionary CallbackPassDictionary;
+typedef struct CallbackPassDictionaryN CallbackPassDictionaryN;
 typedef struct CallbackReturnChar CallbackReturnChar;
 typedef struct CallbackReturnBoolean CallbackReturnBoolean;
 typedef struct CallbackReturnByte CallbackReturnByte;
@@ -140,10 +143,14 @@ typedef struct CallbackReturnLong CallbackReturnLong;
 typedef struct CallbackReturnFloat CallbackReturnFloat;
 typedef struct CallbackReturnDouble CallbackReturnDouble;
 typedef struct CallbackReturnString CallbackReturnString;
+typedef struct CallbackReturnStringN CallbackReturnStringN;
 typedef struct CallbackReturnCallback CallbackReturnCallback;
+typedef struct CallbackReturnCallbackN CallbackReturnCallbackN;
 typedef struct CallbackReturnEnum CallbackReturnEnum;
 typedef struct CallbackReturnDictionary CallbackReturnDictionary;
+typedef struct CallbackReturnDictionaryN CallbackReturnDictionaryN;
 typedef struct CallbackPassCharArray CallbackPassCharArray;
+typedef struct CallbackPassCharArrayN CallbackPassCharArrayN;
 typedef struct CallbackPassBooleanArray CallbackPassBooleanArray;
 typedef struct CallbackPassByteArray CallbackPassByteArray;
 typedef struct CallbackPassShortArray CallbackPassShortArray;
@@ -151,9 +158,13 @@ typedef struct CallbackPassIntArray CallbackPassIntArray;
 typedef struct CallbackPassLongArray CallbackPassLongArray;
 typedef struct CallbackPassFloatArray CallbackPassFloatArray;
 typedef struct CallbackPassDoubleArray CallbackPassDoubleArray;
+typedef struct CallbackPassStringArray CallbackPassStringArray;
+typedef struct CallbackPassStringArrayN CallbackPassStringArrayN;
 typedef struct CallbackPassEnumArray CallbackPassEnumArray;
 typedef struct CallbackPassDictionaryArray CallbackPassDictionaryArray;
+typedef struct CallbackPassDictionaryArrayN CallbackPassDictionaryArrayN;
 typedef struct CallbackReturnCharArray CallbackReturnCharArray;
+typedef struct CallbackReturnCharArrayN CallbackReturnCharArrayN;
 typedef struct CallbackReturnBooleanArray CallbackReturnBooleanArray;
 typedef struct CallbackReturnByteArray CallbackReturnByteArray;
 typedef struct CallbackReturnShortArray CallbackReturnShortArray;
@@ -161,8 +172,11 @@ typedef struct CallbackReturnIntArray CallbackReturnIntArray;
 typedef struct CallbackReturnLongArray CallbackReturnLongArray;
 typedef struct CallbackReturnFloatArray CallbackReturnFloatArray;
 typedef struct CallbackReturnDoubleArray CallbackReturnDoubleArray;
+typedef struct CallbackReturnStringArray CallbackReturnStringArray;
+typedef struct CallbackReturnStringArrayN CallbackReturnStringArrayN;
 typedef struct CallbackReturnEnumArray CallbackReturnEnumArray;
 typedef struct CallbackReturnDictionaryArray CallbackReturnDictionaryArray;
+typedef struct CallbackReturnDictionaryArrayN CallbackReturnDictionaryArrayN;
 
 
 // ╔═══════════════╗
@@ -185,9 +199,9 @@ struct ParentDictionary {
 	char __flags;
 };
 
-ParentDictionary* ParentDictionary_new(KInt a, KInt b);
-ParentDictionary* ParentDictionary_clone(const ParentDictionary* self);
-void ParentDictionary_free(ParentDictionary* self);
+ParentDictionary* _Nonnull ParentDictionary_new(KInt a, KInt b);
+ParentDictionary* _Nullable ParentDictionary_clone(const ParentDictionary* _Nullable self);
+void ParentDictionary_free(ParentDictionary* _Nullable self);
 
 struct MyDictionary { // : ParentDictionary
 	KInt a;
@@ -197,9 +211,9 @@ struct MyDictionary { // : ParentDictionary
 	char __flags;
 };
 
-MyDictionary* MyDictionary_new(KInt a, KInt b, KInt c, KInt d);
-MyDictionary* MyDictionary_clone(const MyDictionary* self);
-void MyDictionary_free(MyDictionary* self);
+MyDictionary* _Nonnull MyDictionary_new(KInt a, KInt b, KInt c, KInt d);
+MyDictionary* _Nullable MyDictionary_clone(const MyDictionary* _Nullable self);
+void MyDictionary_free(MyDictionary* _Nullable self);
 
 struct TypeDictionary {
 	KChar a1;
@@ -210,26 +224,27 @@ struct TypeDictionary {
 	KLong a6;
 	KFloat a7;
 	KDouble a8;
-	KString* a9;
+	KString* _Nonnull a9;
 	MyEnum a10;
-	MyDictionary* a11;
-	VoidCallback* a12;
-	KCharArray* a13;
-	KBooleanArray* a14;
-	KByteArray* a15;
-	KShortArray* a16;
-	KIntArray* a17;
-	KLongArray* a18;
-	KFloatArray* a19;
-	KDoubleArray* a20;
-	KIntArray* a21;
-	KArray* a22;
+	MyDictionary* _Nonnull a11;
+	VoidCallback* _Nonnull a12;
+	KCharArray* _Nonnull a13;
+	KBooleanArray* _Nonnull a14;
+	KByteArray* _Nonnull a15;
+	KShortArray* _Nonnull a16;
+	KIntArray* _Nonnull a17;
+	KLongArray* _Nonnull a18;
+	KFloatArray* _Nonnull a19;
+	KDoubleArray* _Nonnull a20;
+	KArray* _Nonnull a21;
+	KIntArray* _Nonnull a22;
+	KArray* _Nonnull a23;
 	char __flags;
 };
 
-TypeDictionary* TypeDictionary_new(KChar a1, KBoolean a2, KByte a3, KShort a4, KInt a5, KLong a6, KFloat a7, KDouble a8, KString* a9, MyEnum a10, MyDictionary* a11, VoidCallback* a12, KCharArray* a13, KBooleanArray* a14, KByteArray* a15, KShortArray* a16, KIntArray* a17, KLongArray* a18, KFloatArray* a19, KDoubleArray* a20, KIntArray* a21, KArray* a22);
-TypeDictionary* TypeDictionary_clone(const TypeDictionary* self);
-void TypeDictionary_free(TypeDictionary* self);
+TypeDictionary* _Nonnull TypeDictionary_new(KChar a1, KBoolean a2, KByte a3, KShort a4, KInt a5, KLong a6, KFloat a7, KDouble a8, KString* _Nonnull a9, MyEnum a10, MyDictionary* _Nonnull a11, VoidCallback* _Nonnull a12, KCharArray* _Nonnull a13, KBooleanArray* _Nonnull a14, KByteArray* _Nonnull a15, KShortArray* _Nonnull a16, KIntArray* _Nonnull a17, KLongArray* _Nonnull a18, KFloatArray* _Nonnull a19, KDoubleArray* _Nonnull a20, KArray* _Nonnull a21, KIntArray* _Nonnull a22, KArray* _Nonnull a23);
+TypeDictionary* _Nullable TypeDictionary_clone(const TypeDictionary* _Nullable self);
+void TypeDictionary_free(TypeDictionary* _Nullable self);
 
 // ╔═══════════════════╗
 // ║     Functions     ║
@@ -244,9 +259,11 @@ KBoolean passInt(KInt arg);
 KBoolean passLong(KLong arg);
 KBoolean passFloat(KFloat arg);
 KBoolean passDouble(KDouble arg);
-KBoolean passString(KString* arg);
+KBoolean passString(KString* _Nonnull arg);
+KBoolean passStringN(KString* _Nullable arg);
 KBoolean passEnum(MyEnum arg);
-KBoolean passDictionary(MyDictionary* arg);
+KBoolean passDictionary(MyDictionary* _Nonnull arg);
+KBoolean passDictionaryN(MyDictionary* _Nullable arg);
 void returnVoid();
 KChar returnChar();
 KBoolean returnBoolean();
@@ -256,9 +273,11 @@ KInt returnInt();
 KLong returnLong();
 KFloat returnFloat();
 KDouble returnDouble();
-KString* returnString();
+KString* _Nonnull returnString();
+KString* _Nullable returnStringN();
 MyEnum returnEnum();
-MyDictionary* returnDictionary();
+MyDictionary* _Nonnull returnDictionary();
+MyDictionary* _Nullable returnDictionaryN();
 KChar pingChar(KChar arg);
 KBoolean pingBoolean(KBoolean arg);
 KByte pingByte(KByte arg);
@@ -267,92 +286,127 @@ KInt pingInt(KInt arg);
 KLong pingLong(KLong arg);
 KFloat pingFloat(KFloat arg);
 KDouble pingDouble(KDouble arg);
-KString* pingString(KString* arg);
+KString* _Nonnull pingString(KString* _Nonnull arg);
+KString* _Nullable pingStringN(KString* _Nullable arg);
 MyEnum pingEnum(MyEnum arg);
-MyDictionary* pingDictionary(MyDictionary* arg);
-void callbackVoid(VoidCallback* arg);
-KBoolean callbackArgChar(CallbackPassChar* arg);
-KBoolean callbackArgBoolean(CallbackPassBoolean* arg);
-KBoolean callbackArgByte(CallbackPassByte* arg);
-KBoolean callbackArgShort(CallbackPassShort* arg);
-KBoolean callbackArgInt(CallbackPassInt* arg);
-KBoolean callbackArgLong(CallbackPassLong* arg);
-KBoolean callbackArgFloat(CallbackPassFloat* arg);
-KBoolean callbackArgDouble(CallbackPassDouble* arg);
-KBoolean callbackArgString(CallbackPassString* arg);
-KBoolean callbackArgCallback(VoidCallback* pass, CallbackPassCallback* arg);
-KBoolean callbackArgEnum(CallbackPassEnum* arg);
-KBoolean callbackArgDictionary(CallbackPassDictionary* arg);
-KBoolean callbackReturnChar(CallbackReturnChar* arg);
-KBoolean callbackReturnBoolean(CallbackReturnBoolean* arg);
-KBoolean callbackReturnByte(CallbackReturnByte* arg);
-KBoolean callbackReturnShort(CallbackReturnShort* arg);
-KBoolean callbackReturnInt(CallbackReturnInt* arg);
-KBoolean callbackReturnLong(CallbackReturnLong* arg);
-KBoolean callbackReturnFloat(CallbackReturnFloat* arg);
-KBoolean callbackReturnDouble(CallbackReturnDouble* arg);
-KBoolean callbackReturnString(CallbackReturnString* arg);
-VoidCallback* callbackReturnCallback(CallbackReturnCallback* arg);
-KBoolean callbackReturnEnum(CallbackReturnEnum* arg);
-KBoolean callbackReturnDictionary(CallbackReturnDictionary* arg);
-KBoolean passCharArray(KCharArray* arg);
-KBoolean passBooleanArray(KBooleanArray* arg);
-KBoolean passByteArray(KByteArray* arg);
-KBoolean passShortArray(KShortArray* arg);
-KBoolean passIntArray(KIntArray* arg);
-KBoolean passLongArray(KLongArray* arg);
-KBoolean passFloatArray(KFloatArray* arg);
-KBoolean passDoubleArray(KDoubleArray* arg);
-KBoolean passEnumArray(KIntArray* arg);
-KBoolean passDictionaryArray(KArray* arg);
-KCharArray* returnCharArray();
-KBooleanArray* returnBooleanArray();
-KByteArray* returnByteArray();
-KShortArray* returnShortArray();
-KIntArray* returnIntArray();
-KLongArray* returnLongArray();
-KFloatArray* returnFloatArray();
-KDoubleArray* returnDoubleArray();
-KIntArray* returnEnumArray();
-KArray* returnDictionaryArray();
-KCharArray* pingCharArray(KCharArray* arg);
-KBooleanArray* pingBooleanArray(KBooleanArray* arg);
-KByteArray* pingByteArray(KByteArray* arg);
-KShortArray* pingShortArray(KShortArray* arg);
-KIntArray* pingIntArray(KIntArray* arg);
-KLongArray* pingLongArray(KLongArray* arg);
-KFloatArray* pingFloatArray(KFloatArray* arg);
-KDoubleArray* pingDoubleArray(KDoubleArray* arg);
-KIntArray* pingEnumArray(KIntArray* arg);
-KArray* pingDictionaryArray(KArray* arg);
-KBoolean callbackArgCharArray(CallbackPassCharArray* arg);
-KBoolean callbackArgBooleanArray(CallbackPassBooleanArray* arg);
-KBoolean callbackArgByteArray(CallbackPassByteArray* arg);
-KBoolean callbackArgShortArray(CallbackPassShortArray* arg);
-KBoolean callbackArgIntArray(CallbackPassIntArray* arg);
-KBoolean callbackArgLongArray(CallbackPassLongArray* arg);
-KBoolean callbackArgFloatArray(CallbackPassFloatArray* arg);
-KBoolean callbackArgDoubleArray(CallbackPassDoubleArray* arg);
-KBoolean callbackArgEnumArray(CallbackPassEnumArray* arg);
-KBoolean callbackArgDictionaryArray(CallbackPassDictionaryArray* arg);
-KBoolean callbackReturnCharArray(CallbackReturnCharArray* arg);
-KBoolean callbackReturnBooleanArray(CallbackReturnBooleanArray* arg);
-KBoolean callbackReturnByteArray(CallbackReturnByteArray* arg);
-KBoolean callbackReturnShortArray(CallbackReturnShortArray* arg);
-KBoolean callbackReturnIntArray(CallbackReturnIntArray* arg);
-KBoolean callbackReturnLongArray(CallbackReturnLongArray* arg);
-KBoolean callbackReturnFloatArray(CallbackReturnFloatArray* arg);
-KBoolean callbackReturnDoubleArray(CallbackReturnDoubleArray* arg);
-KBoolean callbackReturnEnumArray(CallbackReturnEnumArray* arg);
-KBoolean callbackReturnDictionaryArray(CallbackReturnDictionaryArray* arg);
-KBoolean passBigDictionary(TypeDictionary* arg);
-TypeDictionary* returnBigDictionary(VoidCallback* callback);
-TypeDictionary* pingBigDictionary(TypeDictionary* arg);
+MyDictionary* _Nonnull pingDictionary(MyDictionary* _Nonnull arg);
+MyDictionary* _Nullable pingDictionaryN(MyDictionary* _Nullable arg);
+void callbackVoid(VoidCallback* _Nonnull arg);
+KBoolean callbackVoidN(VoidCallback* _Nullable arg);
+KBoolean callbackArgChar(CallbackPassChar* _Nonnull arg);
+KBoolean callbackArgBoolean(CallbackPassBoolean* _Nonnull arg);
+KBoolean callbackArgByte(CallbackPassByte* _Nonnull arg);
+KBoolean callbackArgShort(CallbackPassShort* _Nonnull arg);
+KBoolean callbackArgInt(CallbackPassInt* _Nonnull arg);
+KBoolean callbackArgLong(CallbackPassLong* _Nonnull arg);
+KBoolean callbackArgFloat(CallbackPassFloat* _Nonnull arg);
+KBoolean callbackArgDouble(CallbackPassDouble* _Nonnull arg);
+KBoolean callbackArgString(CallbackPassString* _Nonnull arg);
+KBoolean callbackArgStringN(CallbackPassStringN* _Nonnull arg);
+KBoolean callbackArgCallback(VoidCallback* _Nonnull pass, CallbackPassCallback* _Nonnull arg);
+KBoolean callbackArgCallbackN(CallbackPassCallbackN* _Nonnull arg);
+KBoolean callbackArgEnum(CallbackPassEnum* _Nonnull arg);
+KBoolean callbackArgDictionary(CallbackPassDictionary* _Nonnull arg);
+KBoolean callbackArgDictionaryN(CallbackPassDictionaryN* _Nonnull arg);
+KBoolean callbackReturnChar(CallbackReturnChar* _Nonnull arg);
+KBoolean callbackReturnBoolean(CallbackReturnBoolean* _Nonnull arg);
+KBoolean callbackReturnByte(CallbackReturnByte* _Nonnull arg);
+KBoolean callbackReturnShort(CallbackReturnShort* _Nonnull arg);
+KBoolean callbackReturnInt(CallbackReturnInt* _Nonnull arg);
+KBoolean callbackReturnLong(CallbackReturnLong* _Nonnull arg);
+KBoolean callbackReturnFloat(CallbackReturnFloat* _Nonnull arg);
+KBoolean callbackReturnDouble(CallbackReturnDouble* _Nonnull arg);
+KBoolean callbackReturnString(CallbackReturnString* _Nonnull arg);
+KBoolean callbackReturnStringN(CallbackReturnStringN* _Nonnull arg);
+VoidCallback* _Nonnull callbackReturnCallback(CallbackReturnCallback* _Nonnull arg);
+KBoolean callbackReturnCallbackN(CallbackReturnCallbackN* _Nonnull arg);
+KBoolean callbackReturnEnum(CallbackReturnEnum* _Nonnull arg);
+KBoolean callbackReturnDictionary(CallbackReturnDictionary* _Nonnull arg);
+KBoolean callbackReturnDictionaryN(CallbackReturnDictionaryN* _Nonnull arg);
+KBoolean passCharArray(KCharArray* _Nonnull arg);
+KBoolean passCharArrayN(KCharArray* _Nullable arg);
+KBoolean passBooleanArray(KBooleanArray* _Nonnull arg);
+KBoolean passByteArray(KByteArray* _Nonnull arg);
+KBoolean passShortArray(KShortArray* _Nonnull arg);
+KBoolean passIntArray(KIntArray* _Nonnull arg);
+KBoolean passLongArray(KLongArray* _Nonnull arg);
+KBoolean passFloatArray(KFloatArray* _Nonnull arg);
+KBoolean passDoubleArray(KDoubleArray* _Nonnull arg);
+KBoolean passStringArray(KArray* _Nonnull arg);
+KBoolean passStringArrayN(KArray* _Nonnull arg);
+KBoolean passEnumArray(KIntArray* _Nonnull arg);
+KBoolean passDictionaryArray(KArray* _Nonnull arg);
+KBoolean passDictionaryArrayN(KArray* _Nonnull arg);
+KCharArray* _Nonnull returnCharArray();
+KCharArray* _Nullable returnCharArrayN();
+KBooleanArray* _Nonnull returnBooleanArray();
+KByteArray* _Nonnull returnByteArray();
+KShortArray* _Nonnull returnShortArray();
+KIntArray* _Nonnull returnIntArray();
+KLongArray* _Nonnull returnLongArray();
+KFloatArray* _Nonnull returnFloatArray();
+KDoubleArray* _Nonnull returnDoubleArray();
+KArray* _Nonnull returnStringArray();
+KArray* _Nonnull returnStringArrayN();
+KIntArray* _Nonnull returnEnumArray();
+KArray* _Nonnull returnDictionaryArray();
+KArray* _Nonnull returnDictionaryArrayN();
+KCharArray* _Nonnull pingCharArray(KCharArray* _Nonnull arg);
+KCharArray* _Nullable pingCharArrayN(KCharArray* _Nullable arg);
+KBooleanArray* _Nonnull pingBooleanArray(KBooleanArray* _Nonnull arg);
+KByteArray* _Nonnull pingByteArray(KByteArray* _Nonnull arg);
+KShortArray* _Nonnull pingShortArray(KShortArray* _Nonnull arg);
+KIntArray* _Nonnull pingIntArray(KIntArray* _Nonnull arg);
+KLongArray* _Nonnull pingLongArray(KLongArray* _Nonnull arg);
+KFloatArray* _Nonnull pingFloatArray(KFloatArray* _Nonnull arg);
+KDoubleArray* _Nonnull pingDoubleArray(KDoubleArray* _Nonnull arg);
+KArray* _Nonnull pingStringArray(KArray* _Nonnull arg);
+KArray* _Nonnull pingStringArrayN(KArray* _Nonnull arg);
+KIntArray* _Nonnull pingEnumArray(KIntArray* _Nonnull arg);
+KArray* _Nonnull pingDictionaryArray(KArray* _Nonnull arg);
+KArray* _Nonnull pingDictionaryArrayN(KArray* _Nonnull arg);
+KBoolean callbackArgCharArray(CallbackPassCharArray* _Nonnull arg);
+KBoolean callbackArgCharArrayN(CallbackPassCharArrayN* _Nonnull arg);
+KBoolean callbackArgBooleanArray(CallbackPassBooleanArray* _Nonnull arg);
+KBoolean callbackArgByteArray(CallbackPassByteArray* _Nonnull arg);
+KBoolean callbackArgShortArray(CallbackPassShortArray* _Nonnull arg);
+KBoolean callbackArgIntArray(CallbackPassIntArray* _Nonnull arg);
+KBoolean callbackArgLongArray(CallbackPassLongArray* _Nonnull arg);
+KBoolean callbackArgFloatArray(CallbackPassFloatArray* _Nonnull arg);
+KBoolean callbackArgDoubleArray(CallbackPassDoubleArray* _Nonnull arg);
+KBoolean callbackArgStringArray(CallbackPassStringArray* _Nonnull arg);
+KBoolean callbackArgStringArrayN(CallbackPassStringArrayN* _Nonnull arg);
+KBoolean callbackArgEnumArray(CallbackPassEnumArray* _Nonnull arg);
+KBoolean callbackArgDictionaryArray(CallbackPassDictionaryArray* _Nonnull arg);
+KBoolean callbackArgDictionaryArrayN(CallbackPassDictionaryArrayN* _Nonnull arg);
+KBoolean callbackReturnCharArray(CallbackReturnCharArray* _Nonnull arg);
+KBoolean callbackReturnCharArrayN(CallbackReturnCharArrayN* _Nonnull arg);
+KBoolean callbackReturnBooleanArray(CallbackReturnBooleanArray* _Nonnull arg);
+KBoolean callbackReturnByteArray(CallbackReturnByteArray* _Nonnull arg);
+KBoolean callbackReturnShortArray(CallbackReturnShortArray* _Nonnull arg);
+KBoolean callbackReturnIntArray(CallbackReturnIntArray* _Nonnull arg);
+KBoolean callbackReturnLongArray(CallbackReturnLongArray* _Nonnull arg);
+KBoolean callbackReturnFloatArray(CallbackReturnFloatArray* _Nonnull arg);
+KBoolean callbackReturnDoubleArray(CallbackReturnDoubleArray* _Nonnull arg);
+KBoolean callbackReturnStringArray(CallbackReturnStringArray* _Nonnull arg);
+KBoolean callbackReturnStringArrayN(CallbackReturnStringArrayN* _Nonnull arg);
+KBoolean callbackReturnEnumArray(CallbackReturnEnumArray* _Nonnull arg);
+KBoolean callbackReturnDictionaryArray(CallbackReturnDictionaryArray* _Nonnull arg);
+KBoolean callbackReturnDictionaryArrayN(CallbackReturnDictionaryArrayN* _Nonnull arg);
+KBoolean passBigDictionary(TypeDictionary* _Nonnull arg);
+TypeDictionary* _Nonnull returnBigDictionary(VoidCallback* _Nonnull callback);
+TypeDictionary* _Nonnull pingBigDictionary(TypeDictionary* _Nonnull arg);
+KBoolean passBigDictionaryN(TypeDictionary* _Nullable arg);
+TypeDictionary* _Nullable returnBigDictionaryN();
+TypeDictionary* _Nullable pingBigDictionaryN(TypeDictionary* _Nullable arg);
 KBoolean criticalPrimitives(KChar a1, KBoolean a2, KByte a3, KShort a4, KInt a5, KLong a6, KFloat a7, KDouble a8);
 KBoolean criticalEnum(MyEnum a1);
-KBoolean criticalString(KString* a1);
-KBoolean criticalPrimitivesArray(KCharArray* a1, KBooleanArray* a2, KByteArray* a3, KShortArray* a4, KIntArray* a5, KLongArray* a6, KFloatArray* a7, KDoubleArray* a8);
-KBoolean criticalEnumArray(KIntArray* a1);
+KBoolean criticalString(KString* _Nonnull a1);
+KBoolean criticalStringN(KString* _Nullable a1);
+KBoolean criticalPrimitivesArray(KCharArray* _Nonnull a1, KBooleanArray* _Nonnull a2, KByteArray* _Nonnull a3, KShortArray* _Nonnull a4, KIntArray* _Nonnull a5, KLongArray* _Nonnull a6, KFloatArray* _Nonnull a7, KDoubleArray* _Nonnull a8);
+KBoolean criticalEnumArray(KIntArray* _Nonnull a1);
+KBoolean criticalPrimitivesArrayN(KCharArray* _Nullable a1, KBooleanArray* _Nullable a2, KByteArray* _Nullable a3, KShortArray* _Nullable a4, KIntArray* _Nullable a5, KLongArray* _Nullable a6, KFloatArray* _Nullable a7, KDoubleArray* _Nullable a8);
+KBoolean criticalEnumArrayN(KIntArray* _Nullable a1);
 KChar criticalReturnChar();
 KBoolean criticalReturnBoolean();
 KByte criticalReturnByte();
@@ -371,67 +425,81 @@ KBoolean jvmci6(KFloat a1, KFloat a2, KFloat a3, KFloat a4, KFloat a5, KFloat a6
 KBoolean jvmci7(KFloat a1, KDouble a2, KFloat a3, KDouble a4, KFloat a5, KDouble a6, KFloat a7, KFloat a8, KDouble a9);
 KBoolean jvmci8(KInt a1, KDouble a2, KFloat a3, KLong a4);
 KBoolean jvmci9(KInt a1, KDouble a2, KFloat a3, KLong a4, KLong a5, KDouble a6, KFloat a7, KFloat a8, KInt a9);
-KBoolean jvmci10(KString* a1, KDouble a2, KFloat a3, KLong a4, KLong a5, KDouble a6, KString* a7, KFloat a8, KInt a9);
+KBoolean jvmci10(KString* _Nonnull a1, KDouble a2, KFloat a3, KLong a4, KLong a5, KDouble a6, KString* _Nonnull a7, KFloat a8, KInt a9);
 KBoolean jvmci11(KFloat a1, KInt a2, KFloat a3, KInt a4, KFloat a5, KInt a6, KFloat a7, KInt a8, KFloat a9, KInt a10, KFloat a11, KInt a12, KFloat a13, KInt a14, KFloat a15, KInt a16, KFloat a17);
 KInt jvmci12();
 KLong jvmci13();
 KFloat jvmci14();
 KDouble jvmci15();
-KBoolean jvmciArray(KIntArray* array);
-KBoolean jvmciSomeArrays(KIntArray* array1, KFloatArray* array2, KDoubleArray* array3);
-KBoolean jvmciEnum(MyEnum enum1, MyEnum enum2, KIntArray* enumArray);
+KBoolean jvmciArray(KIntArray* _Nonnull array);
+KBoolean jvmciSomeArrays(KIntArray* _Nonnull array1, KFloatArray* _Nonnull array2, KDoubleArray* _Nonnull array3);
+KBoolean jvmciEnum(MyEnum enum1, MyEnum enum2, KIntArray* _Nonnull enumArray);
 
 // ╔═══════════════════╗
 // ║     Callbacks     ║
 // ╚═══════════════════╝
-// ┌───────┬──────────────────────────────┬──────────────┬───────────────────┐
-// │  ...  │ Name                         │ Type         │ Args              │
-// └───────┴──────────────────────────────┴──────────────┴───────────────────┘
-KCallbackDef(VoidCallback,                  void                             )
-KCallbackDef(CallbackPassChar,              KBoolean,      KChar arg         )
-KCallbackDef(CallbackPassBoolean,           KBoolean,      KBoolean arg      )
-KCallbackDef(CallbackPassByte,              KBoolean,      KByte arg         )
-KCallbackDef(CallbackPassShort,             KBoolean,      KShort arg        )
-KCallbackDef(CallbackPassInt,               KBoolean,      KInt arg          )
-KCallbackDef(CallbackPassLong,              KBoolean,      KLong arg         )
-KCallbackDef(CallbackPassFloat,             KBoolean,      KFloat arg        )
-KCallbackDef(CallbackPassDouble,            KBoolean,      KDouble arg       )
-KCallbackDef(CallbackPassString,            KBoolean,      KString* arg      )
-KCallbackDef(CallbackPassCallback,          KBoolean,      VoidCallback* arg )
-KCallbackDef(CallbackPassEnum,              KBoolean,      MyEnum arg        )
-KCallbackDef(CallbackPassDictionary,        KBoolean,      MyDictionary* arg )
-KCallbackDef(CallbackReturnChar,            KChar                            )
-KCallbackDef(CallbackReturnBoolean,         KBoolean                         )
-KCallbackDef(CallbackReturnByte,            KByte                            )
-KCallbackDef(CallbackReturnShort,           KShort                           )
-KCallbackDef(CallbackReturnInt,             KInt                             )
-KCallbackDef(CallbackReturnLong,            KLong                            )
-KCallbackDef(CallbackReturnFloat,           KFloat                           )
-KCallbackDef(CallbackReturnDouble,          KDouble                          )
-KCallbackDef(CallbackReturnString,          KString*                         )
-KCallbackDef(CallbackReturnCallback,        VoidCallback*                    )
-KCallbackDef(CallbackReturnEnum,            MyEnum                           )
-KCallbackDef(CallbackReturnDictionary,      MyDictionary*                    )
-KCallbackDef(CallbackPassCharArray,         KBoolean,      KCharArray* arg   )
-KCallbackDef(CallbackPassBooleanArray,      KBoolean,      KBooleanArray* arg)
-KCallbackDef(CallbackPassByteArray,         KBoolean,      KByteArray* arg   )
-KCallbackDef(CallbackPassShortArray,        KBoolean,      KShortArray* arg  )
-KCallbackDef(CallbackPassIntArray,          KBoolean,      KIntArray* arg    )
-KCallbackDef(CallbackPassLongArray,         KBoolean,      KLongArray* arg   )
-KCallbackDef(CallbackPassFloatArray,        KBoolean,      KFloatArray* arg  )
-KCallbackDef(CallbackPassDoubleArray,       KBoolean,      KDoubleArray* arg )
-KCallbackDef(CallbackPassEnumArray,         KBoolean,      KIntArray* arg    )
-KCallbackDef(CallbackPassDictionaryArray,   KBoolean,      KArray* arg       )
-KCallbackDef(CallbackReturnCharArray,       KCharArray*                      )
-KCallbackDef(CallbackReturnBooleanArray,    KBooleanArray*                   )
-KCallbackDef(CallbackReturnByteArray,       KByteArray*                      )
-KCallbackDef(CallbackReturnShortArray,      KShortArray*                     )
-KCallbackDef(CallbackReturnIntArray,        KIntArray*                       )
-KCallbackDef(CallbackReturnLongArray,       KLongArray*                      )
-KCallbackDef(CallbackReturnFloatArray,      KFloatArray*                     )
-KCallbackDef(CallbackReturnDoubleArray,     KDoubleArray*                    )
-KCallbackDef(CallbackReturnEnumArray,       KIntArray*                       )
-KCallbackDef(CallbackReturnDictionaryArray, KArray*                          )
+// ┌───────┬───────────────────────────────┬───────────────────────┬────────────────────────────┐
+// │  ...  │ Name                          │ Type                  │ Args                       │
+// └───────┴───────────────────────────────┴───────────────────────┴────────────────────────────┘
+KCallbackDef(VoidCallback,                   void                                               )
+KCallbackDef(CallbackPassChar,               KBoolean,               KChar arg                  )
+KCallbackDef(CallbackPassBoolean,            KBoolean,               KBoolean arg               )
+KCallbackDef(CallbackPassByte,               KBoolean,               KByte arg                  )
+KCallbackDef(CallbackPassShort,              KBoolean,               KShort arg                 )
+KCallbackDef(CallbackPassInt,                KBoolean,               KInt arg                   )
+KCallbackDef(CallbackPassLong,               KBoolean,               KLong arg                  )
+KCallbackDef(CallbackPassFloat,              KBoolean,               KFloat arg                 )
+KCallbackDef(CallbackPassDouble,             KBoolean,               KDouble arg                )
+KCallbackDef(CallbackPassString,             KBoolean,               KString* _Nonnull arg      )
+KCallbackDef(CallbackPassStringN,            KBoolean,               KString* _Nullable arg     )
+KCallbackDef(CallbackPassCallback,           KBoolean,               VoidCallback* _Nonnull arg )
+KCallbackDef(CallbackPassCallbackN,          KBoolean,               VoidCallback* _Nullable arg)
+KCallbackDef(CallbackPassEnum,               KBoolean,               MyEnum arg                 )
+KCallbackDef(CallbackPassDictionary,         KBoolean,               MyDictionary* _Nonnull arg )
+KCallbackDef(CallbackPassDictionaryN,        KBoolean,               MyDictionary* _Nullable arg)
+KCallbackDef(CallbackReturnChar,             KChar                                              )
+KCallbackDef(CallbackReturnBoolean,          KBoolean                                           )
+KCallbackDef(CallbackReturnByte,             KByte                                              )
+KCallbackDef(CallbackReturnShort,            KShort                                             )
+KCallbackDef(CallbackReturnInt,              KInt                                               )
+KCallbackDef(CallbackReturnLong,             KLong                                              )
+KCallbackDef(CallbackReturnFloat,            KFloat                                             )
+KCallbackDef(CallbackReturnDouble,           KDouble                                            )
+KCallbackDef(CallbackReturnString,           KString* _Nonnull                                  )
+KCallbackDef(CallbackReturnStringN,          KString* _Nullable                                 )
+KCallbackDef(CallbackReturnCallback,         VoidCallback* _Nonnull                             )
+KCallbackDef(CallbackReturnCallbackN,        VoidCallback* _Nullable                            )
+KCallbackDef(CallbackReturnEnum,             MyEnum                                             )
+KCallbackDef(CallbackReturnDictionary,       MyDictionary* _Nonnull                             )
+KCallbackDef(CallbackReturnDictionaryN,      MyDictionary* _Nullable                            )
+KCallbackDef(CallbackPassCharArray,          KBoolean,               KCharArray* _Nonnull arg   )
+KCallbackDef(CallbackPassCharArrayN,         KBoolean,               KCharArray* _Nullable arg  )
+KCallbackDef(CallbackPassBooleanArray,       KBoolean,               KBooleanArray* _Nonnull arg)
+KCallbackDef(CallbackPassByteArray,          KBoolean,               KByteArray* _Nonnull arg   )
+KCallbackDef(CallbackPassShortArray,         KBoolean,               KShortArray* _Nonnull arg  )
+KCallbackDef(CallbackPassIntArray,           KBoolean,               KIntArray* _Nonnull arg    )
+KCallbackDef(CallbackPassLongArray,          KBoolean,               KLongArray* _Nonnull arg   )
+KCallbackDef(CallbackPassFloatArray,         KBoolean,               KFloatArray* _Nonnull arg  )
+KCallbackDef(CallbackPassDoubleArray,        KBoolean,               KDoubleArray* _Nonnull arg )
+KCallbackDef(CallbackPassStringArray,        KBoolean,               KArray* _Nonnull arg       )
+KCallbackDef(CallbackPassStringArrayN,       KBoolean,               KArray* _Nonnull arg       )
+KCallbackDef(CallbackPassEnumArray,          KBoolean,               KIntArray* _Nonnull arg    )
+KCallbackDef(CallbackPassDictionaryArray,    KBoolean,               KArray* _Nonnull arg       )
+KCallbackDef(CallbackPassDictionaryArrayN,   KBoolean,               KArray* _Nonnull arg       )
+KCallbackDef(CallbackReturnCharArray,        KCharArray* _Nonnull                               )
+KCallbackDef(CallbackReturnCharArrayN,       KCharArray* _Nullable                              )
+KCallbackDef(CallbackReturnBooleanArray,     KBooleanArray* _Nonnull                            )
+KCallbackDef(CallbackReturnByteArray,        KByteArray* _Nonnull                               )
+KCallbackDef(CallbackReturnShortArray,       KShortArray* _Nonnull                              )
+KCallbackDef(CallbackReturnIntArray,         KIntArray* _Nonnull                                )
+KCallbackDef(CallbackReturnLongArray,        KLongArray* _Nonnull                               )
+KCallbackDef(CallbackReturnFloatArray,       KFloatArray* _Nonnull                              )
+KCallbackDef(CallbackReturnDoubleArray,      KDoubleArray* _Nonnull                             )
+KCallbackDef(CallbackReturnStringArray,      KArray* _Nonnull                                   )
+KCallbackDef(CallbackReturnStringArrayN,     KArray* _Nonnull                                   )
+KCallbackDef(CallbackReturnEnumArray,        KIntArray* _Nonnull                                )
+KCallbackDef(CallbackReturnDictionaryArray,  KArray* _Nonnull                                   )
+KCallbackDef(CallbackReturnDictionaryArrayN, KArray* _Nonnull                                   )
 #undef KCallbackDef
 
 

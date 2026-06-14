@@ -1,6 +1,7 @@
 package com.huskerdev.nativekt.plugin
 
 import com.huskerdev.nativekt.TargetType
+import com.huskerdev.nativekt.utils.Arch
 import com.huskerdev.nativekt.utils.dir
 import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.api.ExtensiblePolymorphicDomainObjectContainer
@@ -105,20 +106,20 @@ fun KotlinMultiplatformExtension.currentNativeTargets(
         Os.isFamily(Os.FAMILY_WINDOWS) -> when {
             TargetType.MINGW_X64 in available -> mingwX64(configure)
         }
-        Os.isFamily(Os.FAMILY_MAC) -> when {
-            TargetType.MACOS_ARM64 in available -> macosArm64(configure)
-            TargetType.IOS_ARM64 in available -> iosArm64(configure)
-            TargetType.IOS_SIMULATOR_ARM64 in available -> iosSimulatorArm64(configure)
-            TargetType.WATCHOS_ARM32 in available -> watchosArm32(configure)
-            TargetType.WATCHOS_ARM64 in available -> watchosArm64(configure)
-            TargetType.WATCHOS_DEVICE_ARM64 in available -> watchosDeviceArm64(configure)
-            TargetType.WATCHOS_SIMULATOR_ARM64 in available -> watchosSimulatorArm64(configure)
-            TargetType.TVOS_ARM64 in available -> tvosArm64(configure)
-            TargetType.TVOS_SIMULATOR_ARM64 in available -> tvosSimulatorArm64(configure)
+        Os.isFamily(Os.FAMILY_MAC) -> {
+            if(TargetType.MACOS_ARM64 in available)             macosArm64(configure)
+            if(TargetType.IOS_ARM64 in available)               iosArm64(configure)
+            if(TargetType.IOS_SIMULATOR_ARM64 in available)     iosSimulatorArm64(configure)
+            if(TargetType.WATCHOS_ARM32 in available)           watchosArm32(configure)
+            if(TargetType.WATCHOS_ARM64 in available)           watchosArm64(configure)
+            if(TargetType.WATCHOS_DEVICE_ARM64 in available)    watchosDeviceArm64(configure)
+            if(TargetType.WATCHOS_SIMULATOR_ARM64 in available) watchosSimulatorArm64(configure)
+            if(TargetType.TVOS_ARM64 in available)              tvosArm64(configure)
+            if(TargetType.TVOS_SIMULATOR_ARM64 in available)    tvosSimulatorArm64(configure)
         }
         Os.isFamily(Os.FAMILY_UNIX) -> when {
-            Os.isArch("amd64") && TargetType.LINUX_X64 in available -> linuxX64(configure)
-            !Os.isArch("amd64") && TargetType.LINUX_ARM64 in available -> linuxArm64(configure)
+            Arch.current() == Arch.X64 && TargetType.LINUX_X64 in available     -> linuxX64(configure)
+            Arch.current() == Arch.ARM64 && TargetType.LINUX_ARM64 in available -> linuxArm64(configure)
         }
     }
 }
