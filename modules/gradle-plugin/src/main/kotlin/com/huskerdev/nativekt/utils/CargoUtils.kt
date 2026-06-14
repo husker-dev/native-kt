@@ -26,6 +26,22 @@ private val rustcCurrentTaget: String
         return "$arch-$os"
     }
 
+internal fun ensureTargetInstalled(
+    execOps: ExecOperations,
+    target: String
+) {
+    execOps.exec("rustup target list", silent = true)
+        .split("\n")
+        .firstOrNull {
+            it.startsWith(target)
+        }?.run {
+            if(!endsWith("(installed)")) {
+                println("Installing rust target: $target...")
+                execOps.exec("rustup target add $target")
+            }
+        } ?: throw Exception("The $target is not supported on the current system (maybe try the nightly build?).")
+}
+
 internal fun cargoTargetDir(
     buildDir: File,
     buildType: CargoBuildType,
@@ -40,6 +56,8 @@ internal fun cargoLinkerFlags(
     target: String = rustcCurrentTaget
 ): List<String> {
     val buildDirClean = buildDir.posixPath
+
+    ensureTargetInstalled(execOps, target)
     val flags = execOps.exec(
         command =  "cargo rustc --target=$target --target-dir=$buildDirClean --lib --${buildType.cargoName} -- --print=native-static-libs",
         workingDir = project,
@@ -61,6 +79,8 @@ internal fun cargoBuild(
     target: String = rustcCurrentTaget,
 ): String {
     val buildDirClean = buildDir.posixPath
+
+    ensureTargetInstalled(execOps, target)
     execOps.exec(
         command = "cargo build --target=$target --target-dir=$buildDirClean --lib --${buildType.cargoName}",
         workingDir = project,

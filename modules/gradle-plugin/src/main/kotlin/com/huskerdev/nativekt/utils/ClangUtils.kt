@@ -8,7 +8,16 @@ import java.io.File
 
 internal fun locateClang(execOps: ExecOperations) =
     locate(execOps, "clang")
-        ?: throw UnsupportedOperationException("Could not locate 'clang'")
+        ?: run {
+            if(Os.isFamily(Os.FAMILY_WINDOWS)){
+                File.listRoots()!!.forEach {
+                    val file = File(it, "msys64/clang64/bin/clang.exe")
+                    if(file.exists())
+                        return@run file
+                }
+            }
+            throw UnsupportedOperationException("Could not locate 'clang'")
+        }
 
 internal fun mingwLibsDir(execOps: ExecOperations) =
     File(locateClang(execOps).parentFile.parentFile, "lib")
