@@ -33,7 +33,7 @@ kotlin {
         nodejs()
 
         compilerOptions {
-            freeCompilerArgs.addAll("-XXLanguage:+JsAllowLongInExportedDeclarations")
+            freeCompilerArgs.addAll("-Xes-long-as-bigint", "-XXLanguage:+JsAllowLongInExportedDeclarations")
             target = "es2015"
             main = JsMainFunctionExecutionMode.NO_CALL
         }
