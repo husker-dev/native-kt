@@ -72,14 +72,21 @@ fun TaskProvider<*>.dependsOnReload() {
         }
 }
 
-internal fun locate(execOps: ExecOperations, binary: String): File? =
-    File(execOps.exec(
-        when {
-            Os.isFamily(Os.FAMILY_WINDOWS) -> "where $binary"
-            else -> "which $binary"
-        },
-        silent = true
-    )).run { if(exists()) this else null }
+internal fun locate(execOps: ExecOperations, binary: String): File? {
+    return try {
+        File(
+            execOps.exec(
+                when {
+                    Os.isFamily(Os.FAMILY_WINDOWS) -> "where $binary"
+                    else -> "which $binary"
+                },
+                silent = true
+            )
+        ).run { if (exists()) this else null }
+    } catch (_: Throwable) {
+        null
+    }
+}
 
 
 fun ExecOperations.execWithArgsFile(
