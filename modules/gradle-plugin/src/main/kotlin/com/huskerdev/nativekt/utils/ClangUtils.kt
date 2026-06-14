@@ -1,7 +1,6 @@
 package com.huskerdev.nativekt.utils
 
 import com.huskerdev.nativekt.TargetType
-import com.huskerdev.nativekt.plugin.CMakeBuildType
 import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.process.ExecOperations
 import java.io.File
