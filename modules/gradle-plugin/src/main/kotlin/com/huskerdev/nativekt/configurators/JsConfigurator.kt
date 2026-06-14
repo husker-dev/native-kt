@@ -276,8 +276,7 @@ private abstract class CompileNativesJs @Inject constructor(
 
     @TaskAction
     fun action() {
-        val emcc = locate(execOps, "emcc")
-            ?: throw UnsupportedOperationException("Could not locate 'emcc'")
+        val emcc = locateEMCC(execOps)
 
         // val cmakeBuildDir = File(cmakeBuildDir)
         val resourcesDir = File(resourcesDir)

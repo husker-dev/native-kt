@@ -6,18 +6,35 @@ import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.process.ExecOperations
 import java.io.File
 
-internal fun locateClang(execOps: ExecOperations) =
-    locate(execOps, "clang")
+internal fun locateClang(execOps: ExecOperations): File {
+    return locate(execOps, "clang")
         ?: run {
-            if(Os.isFamily(Os.FAMILY_WINDOWS)){
+            if (Os.isFamily(Os.FAMILY_WINDOWS)) {
                 File.listRoots()!!.forEach {
                     val file = File(it, "msys64/clang64/bin/clang.exe")
-                    if(file.exists())
+                    if (file.exists())
                         return@run file
                 }
             }
             throw UnsupportedOperationException("Could not locate 'clang'")
         }
+}
+
+internal fun locateEMCC(execOps: ExecOperations): File {
+    return locate(execOps, "emcc")
+        ?: run {
+            if("EMSDK" in System.getenv())
+                File(System.getenv()["EMSDK"], "upstream/emscripten")
+            if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+                File.listRoots()!!.forEach {
+                    val file = File(it, "emsdk/upstream/emscripten/emcc.bat")
+                    if (file.exists())
+                        return@run file
+                }
+            }
+            throw UnsupportedOperationException("Could not locate 'emcc'")
+        }
+}
 
 internal fun mingwLibsDir(execOps: ExecOperations) =
     File(locateClang(execOps).parentFile.parentFile, "lib")
