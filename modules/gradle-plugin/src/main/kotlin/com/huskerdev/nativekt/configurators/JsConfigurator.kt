@@ -350,7 +350,7 @@ private abstract class CompileNativesJs @Inject constructor(
                 )
 
                 execOps.execWithArgsFile(
-                    command = "emcc",
+                    command = emcc.posixPath,
                     args = File(nativesBuildDir, "args.txt"),
                     workingDir = File(nativesBuildDir)
                 )
