@@ -74,7 +74,7 @@ internal fun configureNative(
     // Prepare task
 
     val prepareTask = project.tasks.register(
-        "prepareNatives${module.name.capitalized()}${targetName.capitalized()}",
+        "prepareNatives${module.name.capitalized()}Kn${targetName.capitalized()}",
         PrepareNativesKn::class.java
     )
     prepareTask.get().also {
@@ -182,7 +182,7 @@ private abstract class PrepareNativesKn @Inject constructor(
         val idl = Json.decodeFromString<IdlResolver>(idl)
 
         val nativesBuildSourcesDir = File(nativesBuildSourcesDir).fresh()
-        val nativesBuildOutDir = File(nativesBuildOutDir).fresh()
+        val nativesBuildOutDir = File(nativesBuildOutDir)
 
         val headerFile = File(headerFile)
         headerFile.parentFile.mkdirs()

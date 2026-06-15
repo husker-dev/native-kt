@@ -40,7 +40,7 @@ internal fun cmakeGen(
 internal fun cmakeBuild(
     execOps: ExecOperations,
     buildDir: File,
-) = execOps.exec("cmake --build \"$buildDir\"", buildDir)
+) = execOps.exec("cmake --build \"${buildDir.posixPath}\"", buildDir)
 
 internal fun extractLinkerOpts(
     execOps: ExecOperations,
