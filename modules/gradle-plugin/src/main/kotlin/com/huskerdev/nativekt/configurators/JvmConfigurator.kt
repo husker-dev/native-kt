@@ -353,7 +353,7 @@ private abstract class CompileNativesJvm @Inject constructor(
     @TaskAction
     fun action() {
         val nativesBuildSourcesDir = File(nativesBuildSourcesDir)
-        val nativesBuildOutDir = File(nativesBuildOutDir).fresh()
+        val nativesBuildOutDir = File(nativesBuildOutDir)
 
         val platformBuildDir = File(nativesBuildOutDir, "${platformName()}${libArch.capitalized()}")
 

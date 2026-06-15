@@ -275,7 +275,7 @@ private abstract class CompileNativesJs @Inject constructor(
         val resourcesDir = File(resourcesDir)
 
         val nativesBuildSourcesDir = File(nativesBuildSourcesDir)
-        val nativesBuildOutDir = File(nativesBuildOutDir).fresh()
+        val nativesBuildOutDir = File(nativesBuildOutDir)
 
         when(val buildSystem = buildSystem) {
             is BuildSystem.CMake -> {

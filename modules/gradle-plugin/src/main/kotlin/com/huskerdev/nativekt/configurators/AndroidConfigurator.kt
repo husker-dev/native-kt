@@ -259,7 +259,7 @@ private abstract class CompileNativesAndroid @Inject constructor(
     @TaskAction
     fun action() {
         val nativesBuildSourcesDir = File(nativesBuildSourcesDir)
-        val nativesBuildOutDir = File(nativesBuildOutDir).fresh()
+        val nativesBuildOutDir = File(nativesBuildOutDir)
         val projectDir = File(projectDir)
 
         when(val buildSystem = buildSystem) {
