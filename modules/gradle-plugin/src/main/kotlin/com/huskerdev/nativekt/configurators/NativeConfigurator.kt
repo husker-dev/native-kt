@@ -211,6 +211,11 @@ private abstract class PrepareNativesKn @Inject constructor(
 
         when(val buildSystem = buildSystem) {
             is BuildSystem.CMake -> {
+                println("1: ${nativesBuildOutDir.listFiles()?.toList()}")
+                println("2: ${nativesBuildOutDir.parentFile.listFiles()?.toList()}")
+                println("3: ${nativesBuildOutDir.parentFile.parentFile.listFiles()?.toList()}")
+                println("4: ${nativesBuildOutDir.parentFile.parentFile.parentFile.listFiles()?.toList()}")
+
                 // Create CMake file
                 File(nativesBuildSourcesDir, "CMakeLists.txt").writeText($$"""
                     cmake_minimum_required(VERSION 3.15)
@@ -235,6 +240,11 @@ private abstract class PrepareNativesKn @Inject constructor(
                         cmakeBuildDir = nativesBuildOutDir,
                         cmakeBuildType = buildSystem.buildType
                     )
+
+                    println("5: ${nativesBuildOutDir.listFiles()?.toList()}")
+                    println("6: ${nativesBuildOutDir.parentFile.listFiles()?.toList()}")
+                    println("7: ${nativesBuildOutDir.parentFile.parentFile.listFiles()?.toList()}")
+                    println("8: ${nativesBuildOutDir.parentFile.parentFile.parentFile.listFiles()?.toList()}")
                 }
 
                 // Get linker opts
