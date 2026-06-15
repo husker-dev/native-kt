@@ -49,8 +49,6 @@ internal fun extractLinkerOpts(
 ): List<String> = buildList {
     // Tip: arguments generates only with executable or shared libraries, so our CMakeLists.txt contains `SHARED` target
 
-    this += cmakeBuildDir.resolve("liblibstatic_$moduleName.a").posixPath
-
     val linkLibs = File(
         cmakeBuildDir,
         "CMakeFiles/lib_$moduleName.dir/linkLibs.rsp"
