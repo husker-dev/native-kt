@@ -211,16 +211,16 @@ private abstract class PrepareNativesKn @Inject constructor(
 
         when(val buildSystem = buildSystem) {
             is BuildSystem.CMake -> {
-                println("1: ${nativesBuildOutDir.listFiles()?.toList()}")
-                println("2: ${nativesBuildOutDir.parentFile.listFiles()?.toList()}")
-                println("3: ${nativesBuildOutDir.parentFile.parentFile.listFiles()?.toList()}")
-                println("4: ${nativesBuildOutDir.parentFile.parentFile.parentFile.listFiles()?.toList()}")
 
                 // Create CMake file
                 File(nativesBuildSourcesDir, "CMakeLists.txt").writeText($$"""
                     cmake_minimum_required(VERSION 3.15)
             
                     project("$$moduleName")
+                    
+                    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY $${nativesBuildOutDir.posixPath})
+                    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY $${nativesBuildOutDir.posixPath})
+                    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY $${nativesBuildOutDir.posixPath})
             
                     add_subdirectory("$$projectDir" "$${File(nativesBuildOutDir, "common").posixPath}")
                         
@@ -237,20 +237,13 @@ private abstract class PrepareNativesKn @Inject constructor(
                         execOps, targetType,
                         cmakeArgs = LinkedHashSet(buildSystem.args),
                         cmakeDir = nativesBuildSourcesDir,
-                        cmakeBuildDir = nativesBuildOutDir,
+                        cmakeBuildDir = File(nativesBuildSourcesDir, "cmake"),
                         cmakeBuildType = buildSystem.buildType
                     )
 
-                    println("5: ${nativesBuildOutDir.listFiles()?.toList()}")
-                    println("6: ${nativesBuildOutDir.parentFile.listFiles()?.toList()}")
-                    println("7: ${nativesBuildOutDir.parentFile.parentFile.listFiles()?.toList()}")
-                    println("8: ${nativesBuildOutDir.parentFile.parentFile.parentFile.listFiles()?.toList()}")
+                    // Get linker opts
+                    linkerOpts += extractLinkerOpts(execOps, File(nativesBuildSourcesDir, "cmake"), moduleName)
                 }
-
-                // Get linker opts
-                linkerOpts += if(shouldInit)
-                    extractLinkerOpts(execOps, nativesBuildOutDir, moduleName)
-                else emptyList()
             }
             is BuildSystem.Cargo -> {
                 if(shouldInit) {
@@ -319,11 +312,7 @@ private abstract class CompileNativesKn @Inject constructor(
 
         when(val buildSystem = buildSystem) {
             is BuildSystem.CMake -> {
-                println("1: ${nativesBuildOutDir.listFiles()?.toList()}")
-                println("2: ${nativesBuildOutDir.parentFile.listFiles()?.toList()}")
-                println("3: ${nativesBuildOutDir.parentFile.parentFile.listFiles()?.toList()}")
-                println("4: ${nativesBuildOutDir.parentFile.parentFile.parentFile.listFiles()?.toList()}")
-                cmakeBuild(execOps, nativesBuildOutDir)
+                cmakeBuild(execOps, File(nativesBuildSourcesDir, "cmake"))
             }
             is BuildSystem.Cargo -> {
                 cargoBuild(execOps,
