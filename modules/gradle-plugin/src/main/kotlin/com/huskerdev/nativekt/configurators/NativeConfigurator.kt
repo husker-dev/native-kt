@@ -27,6 +27,7 @@ import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinNativeLink
 import java.io.File
 import javax.inject.Inject
+import kotlin.collections.plusAssign
 
 @OptIn(KotlinNativeCacheApi::class)
 internal fun configureNative(
@@ -243,6 +244,8 @@ private abstract class PrepareNativesKn @Inject constructor(
 
                     // Get linker opts
                     linkerOpts += extractLinkerOpts(execOps, File(nativesBuildSourcesDir, "cmake"), moduleName)
+
+                    linkerOpts += nativesBuildOutDir.resolve("liblibstatic_$moduleName.a").posixPath
                 }
             }
             is BuildSystem.Cargo -> {
