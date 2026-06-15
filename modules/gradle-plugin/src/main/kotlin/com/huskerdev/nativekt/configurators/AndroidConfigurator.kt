@@ -73,7 +73,8 @@ internal fun configureAndroidSourceSet(
         .resolve(module.classPath.replace(".", "/"))
         .resolve("${module.name}.android.kt")
 
-    val nativesBuildDir = File(nativesBuildDir, "android")
+    val nativesBuildSourcesDir = File(nativesBuildDir, "android/sources")
+    val nativesBuildOutDir = File(nativesBuildDir, "android/out")
 
     // Prepare task
 
@@ -83,7 +84,8 @@ internal fun configureAndroidSourceSet(
     )
     prepareTask.get().also {
         it.inputs.dir(module.dir(project))
-        it.outputs.dirs(nativesBuildDir, srcDir)
+        it.inputs.file(module.getNDLFile(project))
+        it.outputs.dirs(nativesBuildSourcesDir, srcDir)
 
         it.idl                      = Json.encodeToString(idl)
 
@@ -94,7 +96,8 @@ internal fun configureAndroidSourceSet(
         it.expectActual             = expectActual
         it.useAndroidCriticalNative = extension.useAndroidCriticalNative
 
-        it.nativesBuildDir          = nativesBuildDir.absolutePath
+        it.nativesBuildSourcesDir   = nativesBuildSourcesDir.absolutePath
+        it.nativesBuildOutDir       = nativesBuildOutDir.absolutePath
 
         it.kotlinFile               = kotlinFile.absolutePath
         it.projectDir               = module.dir(project).absolutePath
@@ -115,19 +118,21 @@ internal fun configureAndroidSourceSet(
     )
     compileTask.get().also {
         it.inputs.dir(module.dir(project))
-        it.outputs.dirs(nativesBuildDir)
+        it.inputs.file(module.getNDLFile(project))
+        it.outputs.dirs(nativesBuildOutDir)
 
         it.outputFolder.set(jniLibsDir)
 
-        it.androidTargets   = extension.androidTargets.toTypedArray()
-        it.moduleName       = module.name
-        it.compileSdk       = androidExtension.compileSdk!!
-        it.ndkDir           = ndkDir.absolutePath
+        it.androidTargets         = extension.androidTargets.toTypedArray()
+        it.moduleName             = module.name
+        it.compileSdk             = androidExtension.compileSdk!!
+        it.ndkDir                 = ndkDir.absolutePath
 
-        it.projectDir        = module.dir(project).absolutePath
-        it.nativesBuildDir  = nativesBuildDir.absolutePath
+        it.projectDir             = module.dir(project).absolutePath
+        it.nativesBuildSourcesDir = nativesBuildSourcesDir.absolutePath
+        it.nativesBuildOutDir     = nativesBuildOutDir.absolutePath
 
-        it.buildSystem      = module.buildSystem
+        it.buildSystem            = module.buildSystem
     }
     compileTask.dependsOn(prepareTask)
 
@@ -155,7 +160,8 @@ private abstract class PrepareNativesAndroid: DefaultTask() {
     @get:Input abstract var expectActual: Boolean
     @get:Input abstract var useAndroidCriticalNative: Boolean
 
-    @get:Input abstract var nativesBuildDir: String
+    @get:Input abstract var nativesBuildSourcesDir: String
+    @get:Input abstract var nativesBuildOutDir: String
 
     @get:Input abstract var kotlinFile: String
     @get:Input abstract var projectDir: String
@@ -165,6 +171,10 @@ private abstract class PrepareNativesAndroid: DefaultTask() {
     @TaskAction
     fun action() {
         val idl = Json.decodeFromString<IdlResolver>(idl)
+
+        val nativesBuildSourcesDir = File(nativesBuildSourcesDir).fresh()
+        val nativesBuildOutDir = File(nativesBuildOutDir)
+        val projectDir = File(projectDir)
 
         val srcList = arrayListOf("api.c", "jni_bindings.c")
 
@@ -181,7 +191,7 @@ private abstract class PrepareNativesAndroid: DefaultTask() {
 
         CJniUtilsPrinter(
             idl = idl,
-            target = File(nativesBuildDir, "jni_utils.h"),
+            target = File(nativesBuildSourcesDir, "jni_utils.h"),
             classPath = moduleClasspath,
             name = "${moduleName.capitalized()}JNI",
             isAndroid = true
@@ -189,7 +199,7 @@ private abstract class PrepareNativesAndroid: DefaultTask() {
 
         CJniPrinter(
             idl = idl,
-            target = File(nativesBuildDir, "jni_bindings.c"),
+            target = File(nativesBuildSourcesDir, "jni_bindings.c"),
             classPath = moduleClasspath,
             name = "${moduleName.capitalized()}JNI",
             isAndroid = true,
@@ -198,28 +208,24 @@ private abstract class PrepareNativesAndroid: DefaultTask() {
 
         CApiHeaderPrinter(
             idl = idl,
-            target = File(nativesBuildDir, "api.h"),
+            target = File(nativesBuildSourcesDir, "api.h"),
             isInternal = true
         )
 
         CApiImplPrinter(
             idl = idl,
-            target = File(nativesBuildDir, "api.c"),
+            target = File(nativesBuildSourcesDir, "api.c"),
             classPath = moduleClasspath
         )
 
         when(buildSystem) {
             is BuildSystem.CMake -> {
-                File(nativesBuildDir, "CMakeLists.txt").writeText($$"""
+                File(nativesBuildSourcesDir, "CMakeLists.txt").writeText($$"""
                     cmake_minimum_required(VERSION 3.15)
             
                     project("$$moduleName")
             
-                    add_subdirectory("$${
-                        projectDir.replace("\\", "/")
-                    }" "$${
-                        nativesBuildDir.replace("\\", "/")
-                    }/sub/${ANDROID_ABI}")
+                    add_subdirectory("$${projectDir.posixPath}" "$${nativesBuildOutDir.posixPath}/sub/${ANDROID_ABI}")
                 
                     add_library(lib$$moduleName SHARED $<TARGET_OBJECTS:$$moduleName> $${srcList.joinToString(" ")})
                 """.trimIndent())
@@ -241,7 +247,8 @@ private abstract class CompileNativesAndroid @Inject constructor(
     @get:Input abstract var ndkDir: String
 
     @get:Input abstract var projectDir: String
-    @get:Input abstract var nativesBuildDir: String
+    @get:Input abstract var nativesBuildSourcesDir: String
+    @get:Input abstract var nativesBuildOutDir: String
 
     @get:Input abstract var buildSystem: BuildSystem
 
@@ -251,16 +258,20 @@ private abstract class CompileNativesAndroid @Inject constructor(
 
     @TaskAction
     fun action() {
+        val nativesBuildSourcesDir = File(nativesBuildSourcesDir)
+        val nativesBuildOutDir = File(nativesBuildOutDir).fresh()
+        val projectDir = File(projectDir)
+
         when(val buildSystem = buildSystem) {
             is BuildSystem.CMake -> {
                 val toolchain = File(ndkDir, "build/cmake/android.toolchain.cmake")
 
                 androidTargets.forEach { abi ->
-                    val targetBuildDir = File(nativesBuildDir, abi)
+                    val targetBuildDir = File(nativesBuildOutDir, abi)
 
                     // Generate CMake build
                     cmakeGen(execOps,
-                        dir = File(nativesBuildDir),
+                        dir = nativesBuildSourcesDir,
                         buildDir = targetBuildDir,
                         buildType = buildSystem.buildType,
                         args = LinkedHashSet(buildSystem.args).apply {
@@ -289,18 +300,20 @@ private abstract class CompileNativesAndroid @Inject constructor(
 
                 androidTargets.forEach { target ->
                     val rustBuildDir = cargoBuild(execOps,
-                        project = File(projectDir),
-                        buildDir = File(nativesBuildDir, "rust"),
+                        project = projectDir,
+                        buildDir = File(nativesBuildOutDir, "rust"),
                         buildType = buildSystem.buildType,
                         target = toLlvmTarget(target, rustc = true)
                     )
 
-                    val targetBuildDir = File(nativesBuildDir, target)
+                    val targetBuildDir = File(nativesBuildOutDir, target)
                     targetBuildDir.mkdirs()
 
                     clangCompile(execOps,
                         clang = File(toolchainBinDir, "clang").posixPath,
-                        sources = listOf("../api.c", "../jni_bindings.c"),
+                        sources = listOf(
+                            "api.c", "jni_bindings.c"
+                        ).map { File(nativesBuildSourcesDir, it).posixPath },
                         includeDirs = listOf(
                             toolchainIncludeDir.posixPath,
                             File(toolchainIncludeDir, toLlvmTarget(target)).posixPath

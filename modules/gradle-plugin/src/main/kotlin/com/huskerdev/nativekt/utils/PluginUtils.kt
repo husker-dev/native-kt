@@ -56,7 +56,7 @@ fun NativeProject.getHeaderFile(project: Project): File =
 
 fun NativeProject.getApiRsFile(project: Project): File =
     (buildSystem as BuildSystem.Cargo).apiRsFile
-        ?: File(dir(project), "src/api.rs")
+        ?: File(dir(project), "src/nativekt.rs")
 
 fun NativeProject.idl(project: Project) = WebIDL.resolve(
     iterable = getNDLFile(project).reader().iterator(),
@@ -138,7 +138,7 @@ fun ExecOperations.exec(
         errorOutput = if(errAsStd) stdOut else errOut
     }.run {
         if(exitValue != 0)
-            throw Exception("Failed to execute command (code=${exitValue}): \n$command\nError:\n${errOut}")
+            throw Exception("Failed to execute command (code=${exitValue}): \n$command\nError:\n${if(errAsStd) stdOut else errOut}")
         stdOut.toString().trim()
     }
 }
@@ -156,9 +156,10 @@ fun currentTargetType(): TargetType = when {
     else -> throw UnsupportedOperationException()
 }
 
-fun File.fresh(){
+fun File.fresh(): File {
     deleteRecursively()
     mkdirs()
+    return this
 }
 
 fun validateIDL(idl: IdlResolver) {

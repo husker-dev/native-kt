@@ -1,8 +1,11 @@
-@file:OptIn(ExperimentalWasmDsl::class)
+@file:OptIn(ExperimentalWasmDsl::class, KotlinNativeCacheApi::class)
 
-import com.huskerdev.nativekt.plugin.*
+import com.huskerdev.nativekt.plugin.currentNativeTargets
+import com.huskerdev.nativekt.plugin.webTargets
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
-import org.jetbrains.kotlin.gradle.dsl.*
+import org.jetbrains.kotlin.gradle.dsl.JsMainFunctionExecutionMode
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeCacheApi
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)

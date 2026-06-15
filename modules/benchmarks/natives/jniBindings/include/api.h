@@ -49,7 +49,7 @@ typedef struct KString {
     char __flags;
 } KString;
 
-KString* _Nonnull KString_new(const char* _Nonnull data, KInt length, KInt size);
+KString* _Nonnull KString_new(const char* _Nonnull data, KInt length, size_t size);
 KString* _Nullable KString_clone(const KString* _Nullable self);
 void KString_free(KString* _Nullable self);
 

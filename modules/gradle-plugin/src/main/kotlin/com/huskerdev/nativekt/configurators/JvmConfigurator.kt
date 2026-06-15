@@ -90,7 +90,8 @@ internal fun configureJvm(
     val libsDir = File(srcGenDir, "jvm/libs")
     val targetLibFile = File(libsDir, libFullFileName)
 
-    val nativesBuildDir = File(nativesBuildDir, "jvm")
+    val nativesBuildSourcesDir = File(nativesBuildDir, "jvm/sources")
+    val nativesBuildOutDir = File(nativesBuildDir, "jvm/out")
 
     val kotlinFile = srcDir
         .resolve(module.classPath.replace(".", "/"))
@@ -104,29 +105,31 @@ internal fun configureJvm(
     )
     prepareTask.get().also {
         it.inputs.dir(module.dir(project))
-        it.outputs.dirs(nativesBuildDir, srcDir)
+        it.inputs.file(module.getNDLFile(project))
+        it.outputs.dirs(nativesBuildSourcesDir, srcDir)
 
-        it.idl                  = Json.encodeToString(idl)
+        it.idl                    = Json.encodeToString(idl)
 
-        it.moduleName           = module.name
-        it.moduleClasspath      = module.classPath
+        it.moduleName             = module.name
+        it.moduleClasspath        = module.classPath
 
-        it.useJNI               = extension.useJNI
-        it.useForeignApi        = extension.useForeignApi
-        it.useJVMCI             = extension.useJVMCI
-        it.useUniversalMacOSLib = extension.useUniversalMacOSLib
-        it.useCoroutines        = extension.useCoroutines
-        it.expectActual         = expectActual
+        it.useJNI                 = extension.useJNI
+        it.useForeignApi          = extension.useForeignApi
+        it.useJVMCI               = extension.useJVMCI
+        it.useUniversalMacOSLib   = extension.useUniversalMacOSLib
+        it.useCoroutines          = extension.useCoroutines
+        it.expectActual           = expectActual
 
-        it.libArch              = libArch
+        it.libArch                = libArch
 
-        it.projectDir           = module.dir(project).absolutePath
-        it.nativesBuildDir      = nativesBuildDir.absolutePath
+        it.projectDir             = module.dir(project).absolutePath
+        it.nativesBuildSourcesDir = nativesBuildSourcesDir.absolutePath
+        it.nativesBuildOutDir     = nativesBuildOutDir.absolutePath
 
-        it.kotlinFile           = kotlinFile.absolutePath
-        it.libsDir              = libsDir.absolutePath
+        it.kotlinFile             = kotlinFile.absolutePath
+        it.libsDir                = libsDir.absolutePath
 
-        it.buildSystem          = module.buildSystem
+        it.buildSystem            = module.buildSystem
     }
     if(commonTask != null)
         prepareTask.get().dependsOn(commonTask)
@@ -138,21 +141,24 @@ internal fun configureJvm(
 
     val compileTask = project.tasks.register("compileNatives${module.name.capitalized()}Jvm", CompileNativesJvm::class.java).get().also {
         it.inputs.dir(module.dir(project))
-        it.outputs.dir(nativesBuildDir)
+        it.inputs.file(module.getNDLFile(project))
+        it.outputs.dir(nativesBuildOutDir)
 
-        it.useJNI               = extension.useJNI
-        it.useUniversalMacOSLib = extension.useUniversalMacOSLib
+        it.useJNI                 = extension.useJNI
+        it.useUniversalMacOSLib   = extension.useUniversalMacOSLib
 
-        it.moduleName           = module.name
+        it.moduleName             = module.name
 
-        it.projectDir           = module.dir(project).absolutePath
-        it.nativesBuildDir      = nativesBuildDir.absolutePath
-        it.libOutFileName       = libOutFileName
-        it.targetLibFile        = targetLibFile.absolutePath
+        it.projectDir             = module.dir(project).absolutePath
+        it.nativesBuildSourcesDir = nativesBuildSourcesDir.absolutePath
+        it.nativesBuildOutDir     = nativesBuildOutDir.absolutePath
 
-        it.libArch              = libArch
+        it.libOutFileName         = libOutFileName
+        it.targetLibFile          = targetLibFile.absolutePath
 
-        it.buildSystem          = module.buildSystem
+        it.libArch                = libArch
+
+        it.buildSystem            = module.buildSystem
     }
     compileTask.dependsOn(prepareTask)
 
@@ -188,7 +194,8 @@ private abstract class PrepareNativesJvm: DefaultTask() {
     @get:Input abstract var libArch: String
 
     @get:Input abstract var projectDir: String
-    @get:Input abstract var nativesBuildDir: String
+    @get:Input abstract var nativesBuildSourcesDir: String
+    @get:Input abstract var nativesBuildOutDir: String
 
     @get:Input abstract var kotlinFile: String
     @get:Input abstract var libsDir: String
@@ -201,8 +208,9 @@ private abstract class PrepareNativesJvm: DefaultTask() {
 
         val idl = Json.decodeFromString<IdlResolver>(idl)
 
-        val nativesBuildDir = File(nativesBuildDir)
-        nativesBuildDir.fresh()
+        val nativesBuildSourcesDir = File(nativesBuildSourcesDir).fresh()
+        val nativesBuildOutDir = File(nativesBuildOutDir)
+        val projectDir = File(projectDir)
 
         val srcList = arrayListOf("api.c")
         val includeList = arrayListOf<String>()
@@ -228,7 +236,7 @@ private abstract class PrepareNativesJvm: DefaultTask() {
 
             CJniUtilsPrinter(
                 idl = idl,
-                target = File(nativesBuildDir, "jni_utils.h"),
+                target = File(nativesBuildSourcesDir, "jni_utils.h"),
                 classPath = moduleClasspath,
                 name = "${moduleName.capitalized()}JNI",
                 isAndroid = false
@@ -236,7 +244,7 @@ private abstract class PrepareNativesJvm: DefaultTask() {
 
             CJniPrinter(
                 idl = idl,
-                target = File(nativesBuildDir, "jni_bindings.c"),
+                target = File(nativesBuildSourcesDir, "jni_bindings.c"),
                 classPath = moduleClasspath,
                 name = "${moduleName.capitalized()}JNI",
                 isAndroid = false,
@@ -244,7 +252,7 @@ private abstract class PrepareNativesJvm: DefaultTask() {
             )
 
             // unpack jni headers
-            val includeDir = File(nativesBuildDir, "include")
+            val includeDir = File(nativesBuildSourcesDir, "include")
             if(!includeDir.exists()) {
                 arrayOf(
                     "darwin/jawt_md.h",
@@ -279,34 +287,33 @@ private abstract class PrepareNativesJvm: DefaultTask() {
 
             CExportedPrinter(
                 idl = idl,
-                target = File(nativesBuildDir, "externals.c"),
+                target = File(nativesBuildSourcesDir, "externals.c"),
                 classPath = moduleClasspath
             )
         }
 
         CApiHeaderPrinter(
             idl = idl,
-            target = File(nativesBuildDir, "api.h"),
+            target = File(nativesBuildSourcesDir, "api.h"),
             isInternal = true
         )
 
         CApiImplPrinter(
             idl = idl,
-            target = File(nativesBuildDir, "api.c"),
+            target = File(nativesBuildSourcesDir, "api.c"),
             classPath = moduleClasspath
         )
 
         when(buildSystem) {
             is BuildSystem.CMake -> {
-                val platformBuildDir = File(nativesBuildDir, "${platformName()}${libArch.capitalized()}")
+                val platformBuildDir = File(nativesBuildOutDir, "${platformName()}${libArch.capitalized()}")
 
-                File(nativesBuildDir, "CMakeLists.txt").writeText($$"""
+                File(nativesBuildSourcesDir, "CMakeLists.txt").writeText($$"""
                     cmake_minimum_required(VERSION 3.15)
             
                     project("$$moduleName")
             
-                    add_subdirectory("$${projectDir.replace("\\", "/")}" 
-                        "$${File(platformBuildDir, "sub").posixPath}")
+                    add_subdirectory("$${projectDir.posixPath}" "$${File(platformBuildDir, "sub").posixPath}")
             
                     add_library(lib_$$moduleName SHARED $${srcList.joinToString(" ")})
                     
@@ -329,7 +336,9 @@ private abstract class CompileNativesJvm @Inject constructor(
     @get:Input abstract var moduleName: String
 
     @get:Input abstract var projectDir: String
-    @get:Input abstract var nativesBuildDir: String
+    @get:Input abstract var nativesBuildSourcesDir: String
+    @get:Input abstract var nativesBuildOutDir: String
+
     @get:Input abstract var libOutFileName: String
     @get:Input abstract var targetLibFile: String
 
@@ -343,7 +352,10 @@ private abstract class CompileNativesJvm @Inject constructor(
 
     @TaskAction
     fun action() {
-        val platformBuildDir = File(nativesBuildDir, "${platformName()}${libArch.capitalized()}")
+        val nativesBuildSourcesDir = File(nativesBuildSourcesDir)
+        val nativesBuildOutDir = File(nativesBuildOutDir).fresh()
+
+        val platformBuildDir = File(nativesBuildOutDir, "${platformName()}${libArch.capitalized()}")
 
         when(val buildSystem = buildSystem) {
             is BuildSystem.CMake -> {
@@ -361,7 +373,7 @@ private abstract class CompileNativesJvm @Inject constructor(
                     )
                 }
                 cmakeGen(execOps,
-                    dir = File(nativesBuildDir),
+                    dir = nativesBuildSourcesDir,
                     buildDir = platformBuildDir,
                     buildType = buildSystem.buildType,
                     args = args
@@ -376,12 +388,12 @@ private abstract class CompileNativesJvm @Inject constructor(
             }
 
             is BuildSystem.Cargo -> {
-                val sources = File(nativesBuildDir)
+                val sources = nativesBuildSourcesDir
                     .listFiles { it.extension == "c" }
-                    .map { it.name }.toList()
+                    .map { it.posixPath }.toList()
 
                 val includeDirs = if(useJNI)
-                    listOf("include", "include/${jdkPlatformName()}")
+                    listOf("include", "include/${jdkPlatformName()}").map { File(nativesBuildSourcesDir, it).posixPath }
                 else emptyList()
 
                 val rustBuildDir = cargoBuild(execOps,
@@ -404,7 +416,7 @@ private abstract class CompileNativesJvm @Inject constructor(
                         "-l$moduleName"
                     ),
                     dynamicLib = true,
-                    workingDir = File(nativesBuildDir)
+                    workingDir = nativesBuildOutDir
                 ).copyTo(File(targetLibFile))
             }
         }

@@ -4,6 +4,7 @@ import com.android.build.api.variant.KotlinMultiplatformAndroidComponentsExtensi
 import com.huskerdev.nativekt.TargetType
 import com.huskerdev.nativekt.configurators.*
 import com.huskerdev.nativekt.printers.c.CApiHeaderPrinter
+import com.huskerdev.nativekt.printers.rust.RustPrinter
 import com.huskerdev.nativekt.utils.*
 import com.huskerdev.webidl.resolver.IdlResolver
 import org.gradle.api.tasks.TaskProvider
@@ -79,12 +80,10 @@ fun NativeKtPlugin.configureKotlin(
                     )
                 }
                 is BuildSystem.Cargo -> {
-                    /*
                     RustPrinter(
                         idl = idl,
-                        target = module.getHeaderFile(project)
+                        target = module.getApiRsFile(project)
                     )
-                     */
                 }
             }
         }

@@ -118,7 +118,7 @@ public class ForeignUtils {
         struct.set(ADDRESS, layoutString.get(0), stringMem);
         struct.set(JAVA_LONG, layoutString.get(1), stringMem.byteSize() - 1);
         struct.set(JAVA_INT, layoutString.get(2), of.length());
-        struct.set(JAVA_INT, layoutString.get(3), FLAG_ON_STACK);
+        struct.set(JAVA_BYTE, layoutString.get(3), FLAG_ON_STACK);
         return struct;
     }
 
@@ -134,7 +134,7 @@ public class ForeignUtils {
         struct.set(ADDRESS, layoutString.get(0), stringMem);
         struct.set(JAVA_LONG, layoutString.get(1), bytes.length);
         struct.set(JAVA_INT, layoutString.get(2), of.length());
-        struct.set(JAVA_INT, layoutString.get(3), FLAG_RELEASABLE);
+        struct.set(JAVA_BYTE, layoutString.get(3), FLAG_RELEASABLE);
         return struct;
     }
 
@@ -154,11 +154,11 @@ public class ForeignUtils {
 
     // Arrays
 
-    private static MemorySegment fillArray(MemorySegment mem, MemorySegment data, int length, int flag) {
+    private static MemorySegment fillArray(MemorySegment mem, MemorySegment data, int length, byte flag) {
         mem.set(ADDRESS, layoutArray.get(0), data);
         mem.set(JAVA_LONG, layoutArray.get(1), data.byteSize());
         mem.set(JAVA_INT, layoutArray.get(2), length);
-        mem.set(JAVA_INT, layoutArray.get(3), flag);
+        mem.set(JAVA_BYTE, layoutArray.get(3), flag);
         return mem;
     }
 

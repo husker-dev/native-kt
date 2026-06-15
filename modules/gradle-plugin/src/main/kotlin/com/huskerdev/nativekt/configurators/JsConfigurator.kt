@@ -67,8 +67,8 @@ internal fun configureJs(
         .resolve(module.classPath.replace(".", "/"))
         .resolve("${module.name}.${targetName}.kt").absolutePath
 
-    val nativesBuildDir = File(nativesBuildDir, "emscripten")
-    nativesBuildDir.mkdirs()
+    val nativesBuildSourcesDir = File(nativesBuildDir, "$targetName/sources")
+    val nativesBuildOutDir = File(nativesBuildDir, "$targetName/out")
 
     // Prepare task
 
@@ -78,21 +78,23 @@ internal fun configureJs(
     )
     prepareTask.get().also {
         it.inputs.dir(module.dir(project))
-        it.outputs.dirs(nativesBuildDir, srcDir)
+        it.inputs.file(module.getNDLFile(project))
+        it.outputs.dirs(nativesBuildSourcesDir, srcDir)
 
-        it.expectActual     = expectActual
-        it.useCoroutines    = extension.useCoroutines
-        it.useJsBigInt      = extension.useJsBigInt
+        it.expectActual            = expectActual
+        it.useCoroutines           = extension.useCoroutines
+        it.useJsBigInt             = extension.useJsBigInt
 
-        it.idl              = Json.encodeToString(idl)
-        it.moduleName       = module.name
-        it.moduleClasspath  = module.classPath
+        it.idl                     = Json.encodeToString(idl)
+        it.moduleName              = module.name
+        it.moduleClasspath         = module.classPath
 
-        it.projectDir       = module.dir(project).absolutePath
-        it.nativesBuildDir  = nativesBuildDir.absolutePath
-        it.kotlinFile       = kotlinFile
+        it.projectDir              = module.dir(project).absolutePath
+        it.nativesBuildSourcesDir  = nativesBuildSourcesDir.absolutePath
+        it.nativesBuildOutDir      = nativesBuildOutDir.absolutePath
+        it.kotlinFile              = kotlinFile
 
-        it.buildSystem      = module.buildSystem
+        it.buildSystem             = module.buildSystem
     }
     if(commonTask != null)
         prepareTask.dependsOn(commonTask)
@@ -106,14 +108,19 @@ internal fun configureJs(
     )
     compileTask.get().also {
         it.inputs.dir(module.dir(project))
-        it.outputs.dirs(nativesBuildDir, resourcesDir)
+        it.inputs.file(module.getNDLFile(project))
+        it.outputs.dirs(nativesBuildOutDir, resourcesDir)
 
-        it.resourcesDir     = resourcesDir.absolutePath
-        it.moduleName       = module.name
+        it.useJsBigInt             = extension.useJsBigInt
 
-        it.projectDir       = module.dir(project).absolutePath
-        it.nativesBuildDir  = nativesBuildDir.absolutePath
-        it.buildSystem      = module.buildSystem
+        it.resourcesDir            = resourcesDir.absolutePath
+        it.idl                     = Json.encodeToString(idl)
+        it.moduleName              = module.name
+
+        it.projectDir              = module.dir(project).absolutePath
+        it.nativesBuildSourcesDir  = nativesBuildSourcesDir.absolutePath
+        it.nativesBuildOutDir      = nativesBuildOutDir.absolutePath
+        it.buildSystem             = module.buildSystem
     }
     compileTask.dependsOn(prepareTask)
 
@@ -133,7 +140,8 @@ private abstract class PrepareNativesJs @Inject constructor(
     @get:Input abstract var moduleClasspath: String
 
     @get:Input abstract var projectDir: String
-    @get:Input abstract var nativesBuildDir: String
+    @get:Input abstract var nativesBuildSourcesDir: String
+    @get:Input abstract var nativesBuildOutDir: String
     @get:Input abstract var kotlinFile: String
 
     @get:Input abstract var buildSystem: BuildSystem
@@ -141,6 +149,10 @@ private abstract class PrepareNativesJs @Inject constructor(
     @TaskAction
     fun action() {
         val idl = Json.decodeFromString<IdlResolver>(idl)
+
+        val nativesBuildSourcesDir = File(nativesBuildSourcesDir).fresh()
+        val nativesBuildOutDir = File(nativesBuildOutDir)
+        val projectDir = File(projectDir)
 
         // Create Kotlin/JS bindings
         KotlinJsPrinter(
@@ -154,17 +166,17 @@ private abstract class PrepareNativesJs @Inject constructor(
 
         CApiHeaderPrinter(
             idl = idl,
-            target = File(nativesBuildDir, "api.h"),
+            target = File(nativesBuildSourcesDir, "api.h"),
             isInternal = true
         )
         CApiImplPrinter(
             idl = idl,
-            target = File(nativesBuildDir, "api.c"),
+            target = File(nativesBuildSourcesDir, "api.c"),
             classPath = moduleClasspath
         )
         CEmscriptenPrinter(
             idl = idl,
-            target = File(nativesBuildDir, "emscripten_bindings.c")
+            target = File(nativesBuildSourcesDir, "emscripten_bindings.c")
         )
 
         val exportedFunctions = buildList {
@@ -209,22 +221,17 @@ private abstract class PrepareNativesJs @Inject constructor(
             "EXPORTED_FUNCTIONS=$exportedFunctions",
         ).joinToString(separator = " ") { "-s $it" }
 
-        when(val buildSystem = buildSystem) {
+        when(buildSystem) {
             is BuildSystem.CMake -> {
-
                 // Create CMakeLists.txt with Emscripten linker flags
-                File(nativesBuildDir, "CMakeLists.txt").writeText($$"""
+                File(nativesBuildSourcesDir, "CMakeLists.txt").writeText($$"""
                     cmake_minimum_required(VERSION 3.15)
             
                     project("$$moduleName")
                     
                     set(EXTRA_LINK_FLAGS "" CACHE STRING "Extra linker flags")
             
-                    add_subdirectory("$${
-                        projectDir.replace("\\", "/")
-                    }" "$${
-                        File(nativesBuildDir, "sub").posixPath
-                    }")
+                    add_subdirectory("$${projectDir.posixPath}" "$${File(nativesBuildOutDir, "sub").posixPath}")
                 
                     add_executable(lib$$moduleName $<TARGET_OBJECTS:$$moduleName> emscripten_bindings.c api.c)
                     
@@ -232,28 +239,14 @@ private abstract class PrepareNativesJs @Inject constructor(
                 """.trimIndent())
             }
             is BuildSystem.Cargo -> {
-                val buildDir = File(nativesBuildDir)
+                val sources = listOf("emscripten_bindings.c", "api.c")
+                    .joinToString(" ") { File(nativesBuildSourcesDir, it).posixPath }
 
-                val rustBuildDir = cargoTargetDir(
-                    buildDir = buildDir,
-                    buildType = buildSystem.buildType,
-                    target = "wasm32-unknown-emscripten"
-                )
-                val rustLinkedFlags = cargoLinkerFlags(execOps,
-                    project = File(projectDir),
-                    buildDir = buildDir,
-                    buildType = buildSystem.buildType,
-                    target = "wasm32-unknown-emscripten"
-                )
-
-                val args = listOf(
+                File(nativesBuildSourcesDir, "args.txt").writeText(listOf(
                     args,
-                    rustLinkedFlags.joinToString(" "),
-                    "emscripten_bindings.c", "api.c", "-o lib$moduleName.js", "-Oz",
-                    File(rustBuildDir, "lib$moduleName.a").posixPath
-                ).joinToString(" ")
-
-                File(nativesBuildDir, "args.txt").writeText(args)
+                    sources,
+                    "-o lib$moduleName.js", "-Oz",
+                ).joinToString(" "))
             }
         }
     }
@@ -262,11 +255,15 @@ private abstract class PrepareNativesJs @Inject constructor(
 private abstract class CompileNativesJs @Inject constructor(
     private val execOps: ExecOperations,
 ): DefaultTask() {
+    @get:Input abstract var useJsBigInt: Boolean
+
     @get:Input abstract var resourcesDir: String
+    @get:Input abstract var idl: String
     @get:Input abstract var moduleName: String
 
     @get:Input abstract var projectDir: String
-    @get:Input abstract var nativesBuildDir: String
+    @get:Input abstract var nativesBuildSourcesDir: String
+    @get:Input abstract var nativesBuildOutDir: String
 
     @get:Input abstract var buildSystem: BuildSystem
 
@@ -277,28 +274,21 @@ private abstract class CompileNativesJs @Inject constructor(
     @TaskAction
     fun action() {
         val emcc = locateEMCC(execOps)
-
-        // val cmakeBuildDir = File(cmakeBuildDir)
         val resourcesDir = File(resourcesDir)
 
-        fun copyFiles(js: File, wasm: File) {
-            // Copy .js file
-            js.copyTo(File(resourcesDir, "lib$moduleName.js"), overwrite = true)
-
-            // Cope .wasm file
-            wasm.copyTo(File(resourcesDir, "lib$moduleName.wasm"), overwrite = true)
-        }
+        val nativesBuildSourcesDir = File(nativesBuildSourcesDir)
+        val nativesBuildOutDir = File(nativesBuildOutDir).fresh()
 
         when(val buildSystem = buildSystem) {
             is BuildSystem.CMake -> {
+
                 // Generate CMake build
                 val toolchain = File(emcc.parentFile, "cmake/Modules/Platform/Emscripten.cmake")
-                val buildDir = File(nativesBuildDir, "build")
 
                 cmakeGen(
                     execOps,
-                    dir = File(nativesBuildDir),
-                    buildDir = buildDir,
+                    dir = nativesBuildSourcesDir,
+                    buildDir = nativesBuildOutDir,
                     buildType = buildSystem.buildType,
                     args = LinkedHashSet(buildSystem.args).apply {
                         this += "-DCMAKE_TOOLCHAIN_FILE=\"$toolchain\""
@@ -306,7 +296,7 @@ private abstract class CompileNativesJs @Inject constructor(
                 )
 
                 // Reload with extra flags
-                val extraFlags = File(nativesBuildDir, "sub/CMakeFiles/${moduleName}.dir/flags.make")
+                val extraFlags = File(nativesBuildOutDir, "sub/CMakeFiles/${moduleName}.dir/flags.make")
                     .readLines()
                     .firstOrNull { it.startsWith("C_FLAGS =") }
                     ?.replace("C_FLAGS =", "")
@@ -317,8 +307,8 @@ private abstract class CompileNativesJs @Inject constructor(
                 if(extraFlags.isNotEmpty()) {
                     cmakeGen(
                         execOps,
-                        dir = File(nativesBuildDir),
-                        buildDir = buildDir,
+                        dir = nativesBuildSourcesDir,
+                        buildDir = nativesBuildOutDir,
                         buildType = buildSystem.buildType,
                         args = LinkedHashSet(buildSystem.args).apply {
                             this += "-DCMAKE_TOOLCHAIN_FILE=\"$toolchain\""
@@ -328,37 +318,44 @@ private abstract class CompileNativesJs @Inject constructor(
                 }
 
                 // Build
-                cmakeBuild(execOps, buildDir)
-
-                // Copy files
-                copyFiles(
-                    js = buildDir.listFiles()!!.first {
-                        it.name == "lib$moduleName.js"
-                    },
-                    wasm = buildDir.listFiles()!!.first {
-                        it.name == "lib$moduleName.wasm"
-                    }
-                )
+                cmakeBuild(execOps, nativesBuildOutDir)
             }
 
             is BuildSystem.Cargo -> {
-                cargoBuild(execOps,
+                val rustBuildDir = cargoTargetDir(
+                    buildDir = nativesBuildOutDir,
+                    buildType = buildSystem.buildType,
+                    target = "wasm32-unknown-emscripten"
+                )
+                val rustLinkedFlags = cargoLinkerFlags(execOps,
                     project = File(projectDir),
-                    buildDir = File(nativesBuildDir),
+                    buildDir = nativesBuildOutDir,
                     buildType = buildSystem.buildType,
                     target = "wasm32-unknown-emscripten"
                 )
 
-                execOps.execWithArgsFile(
-                    command = emcc.posixPath,
-                    args = File(nativesBuildDir, "args.txt"),
-                    workingDir = File(nativesBuildDir)
+                cargoBuild(execOps,
+                    project = File(projectDir),
+                    buildDir = nativesBuildOutDir,
+                    buildType = buildSystem.buildType,
+                    target = "wasm32-unknown-emscripten"
                 )
-                copyFiles(
-                    js = File(nativesBuildDir, "lib$moduleName.js"),
-                    wasm = File(nativesBuildDir, "lib$moduleName.wasm")
+
+                // Build using emcc
+                execOps.execWithArgsFile(
+                    command = "${emcc.posixPath} ${rustLinkedFlags.joinToString(" ")} ${File(rustBuildDir, "lib$moduleName.a").posixPath}",
+                    args = File(nativesBuildSourcesDir, "args.txt"),
+                    workingDir = nativesBuildOutDir
                 )
             }
         }
+
+        // Copy .js file
+        File(nativesBuildOutDir, "lib$moduleName.js")
+            .copyTo(File(resourcesDir, "lib$moduleName.js"), overwrite = true)
+
+        // Cope .wasm file
+        File(nativesBuildOutDir, "lib$moduleName.wasm")
+            .copyTo(File(resourcesDir, "lib$moduleName.wasm"), overwrite = true)
     }
 }

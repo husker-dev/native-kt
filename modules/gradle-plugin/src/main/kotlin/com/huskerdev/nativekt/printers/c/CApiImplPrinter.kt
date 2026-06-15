@@ -153,7 +153,7 @@ class CApiImplPrinter(
             
             // String
             
-            KString* KString_new(const char* data, const KInt length, const KInt size) {
+            KString* KString_new(const char* data, const KInt length, const size_t size) {
                 KString* result = (KString*) malloc(sizeof(KString));
                 *result = (KString) { data, size, length, K_FLAG_RELEASABLE };
                 return result;
@@ -165,7 +165,7 @@ class CApiImplPrinter(
                 void* data = malloc(size);
                 memcpy(data, of->data, size);
                 KString* result = (KString*) malloc(sizeof(KString));
-                *result = (KString) { (const char*) data, size,of->length,  K_FLAG_RELEASABLE };
+                *result = (KString) { (const char*) data, size, of->length, K_FLAG_RELEASABLE };
                 return result;
             }
 

@@ -1,5 +1,5 @@
 
 namespace global {
 
-    void test_func(string? arg);
+    string test_func(string? arg, int arg2);
 };

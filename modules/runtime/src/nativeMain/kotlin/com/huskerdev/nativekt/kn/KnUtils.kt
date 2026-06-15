@@ -29,14 +29,18 @@ fun MemScope.toNativeKStringOnArena(str: String?, pin: Boolean = false): CPointe
         (str != null).implies(returnsNotNull())
     }
     if(str == null) return null
-    val bytes = str.cstr
+    val bytes = str.encodeToByteArray()
     val mem = alloc<KString>()
-    mem.size = (bytes.size - 1).convert()
+    mem.size = bytes.size.convert()
     mem.data = if(pin) {
         val pinObj = bytes.pin()
         defer { pinObj.unpin() }
-        bytes.ptr
-    } else bytes.getPointer(this)
+        pinObj.addressOf(0)
+    } else {
+        val allocated = interpretCPointer<ByteVar>(alloc(bytes.size, 1).rawPtr)
+        bytes.usePinned { memcpy(allocated, it.addressOf(0), mem.size) }
+        allocated
+    }
     mem.length = str.length
     mem.__flags = 0
     return mem.ptr
@@ -47,13 +51,13 @@ fun toNativeKString(str: String?): CPointer<KString>? {
         (str != null).implies(returnsNotNull())
     }
     if(str == null) return null
-    val bytes = str.cstr
+    val bytes = str.encodeToByteArray()
     val mem = malloc(sizeOf<KString>().convert())!!.reinterpret<KString>().pointed
-    mem.size = (bytes.size - 1).convert()
+    mem.size = bytes.size.convert()
     mem.data = malloc(mem.size.convert())!!.reinterpret()
     mem.length = str.length
     mem.__flags = FLAG_RELEASABLE
-    memcpy(mem.data, bytes, mem.size)
+    bytes.usePinned { memcpy(mem.data, it.addressOf(0), mem.size) }
     return mem.ptr
 }
 
@@ -62,7 +66,8 @@ fun toKotlinKString(struct: CPointer<KString>?): String? {
         (struct != null).implies(returnsNotNull())
     }
     if(struct == null) return null
-    return struct.pointed.data!!.toKString()
+    val mem = struct.pointed
+    return mem.data!!.readBytes(mem.size.toInt()).decodeToString()
 }
 
 // ╔════════════════╗
@@ -82,10 +87,13 @@ fun MemScope.toNativeKCharArrayOnArena(arr: CharArray?, pin: Boolean): CPointer<
         val pinObj = arr.pin()
         defer { pinObj.unpin() }
         pinObj.addressOf(0).reinterpret()
-    } else allocArray<UShortVar>(arr.size)
+    } else {
+        val allocated = allocArray<UShortVar>(arr.size)
+        arr.usePinned { memcpy(allocated, it.addressOf(0), mem.size) }
+        allocated
+    }
     mem.length = arr.size
     mem.__flags = 0
-    arr.usePinned { memcpy(mem.elements, it.addressOf(0), mem.size) }
     return mem.ptr
 }
 
@@ -150,10 +158,13 @@ fun MemScope.toNativeKByteArrayOnArena(arr: ByteArray?, pin: Boolean): CPointer<
         val pinObj = arr.pin()
         defer { pinObj.unpin() }
         pinObj.addressOf(0).reinterpret()
-    } else allocArray<ByteVar>(arr.size)
+    } else {
+        val allocated = allocArray<ByteVar>(arr.size)
+        arr.usePinned { memcpy(allocated, it.addressOf(0), mem.size) }
+        allocated
+    }
     mem.length = arr.size
     mem.__flags = 0
-    arr.usePinned { memcpy(mem.elements, it.addressOf(0), mem.size) }
     return mem.ptr
 }
 
@@ -192,10 +203,13 @@ fun MemScope.toNativeKShortArrayOnArena(arr: ShortArray?, pin: Boolean): CPointe
         val pinObj = arr.pin()
         defer { pinObj.unpin() }
         pinObj.addressOf(0).reinterpret()
-    } else allocArray<ShortVar>(arr.size)
+    } else {
+        val allocated = allocArray<ShortVar>(arr.size)
+        arr.usePinned { memcpy(allocated, it.addressOf(0), mem.size) }
+        allocated
+    }
     mem.length = arr.size
     mem.__flags = 0
-    arr.usePinned { memcpy(mem.elements, it.addressOf(0), mem.size) }
     return mem.ptr
 }
 
@@ -234,10 +248,13 @@ fun MemScope.toNativeKIntArrayOnArena(arr: IntArray?, pin: Boolean): CPointer<KI
         val pinObj = arr.pin()
         defer { pinObj.unpin() }
         pinObj.addressOf(0).reinterpret()
-    } else allocArray<IntVar>(arr.size)
+    } else {
+        val allocated = allocArray<IntVar>(arr.size)
+        arr.usePinned { memcpy(allocated, it.addressOf(0), mem.size) }
+        allocated
+    }
     mem.length = arr.size
     mem.__flags = 0
-    arr.usePinned { memcpy(mem.elements, it.addressOf(0), mem.size) }
     return mem.ptr
 }
 
@@ -276,10 +293,13 @@ fun MemScope.toNativeKLongArrayOnArena(arr: LongArray?, pin: Boolean): CPointer<
         val pinObj = arr.pin()
         defer { pinObj.unpin() }
         pinObj.addressOf(0).reinterpret()
-    } else allocArray<LongVar>(arr.size)
+    } else {
+        val allocated = allocArray<LongVar>(arr.size)
+        arr.usePinned { memcpy(allocated, it.addressOf(0), mem.size) }
+        allocated
+    }
     mem.length = arr.size
     mem.__flags = 0
-    arr.usePinned { memcpy(mem.elements, it.addressOf(0), mem.size) }
     return mem.ptr
 }
 
@@ -318,10 +338,13 @@ fun MemScope.toNativeKFloatArrayOnArena(arr: FloatArray?, pin: Boolean): CPointe
         val pinObj = arr.pin()
         defer { pinObj.unpin() }
         pinObj.addressOf(0).reinterpret()
-    } else allocArray<FloatVar>(arr.size)
+    } else {
+        val allocated = allocArray<FloatVar>(arr.size)
+        arr.usePinned { memcpy(allocated, it.addressOf(0), mem.size) }
+        allocated
+    }
     mem.length = arr.size
     mem.__flags = 0
-    arr.usePinned { memcpy(mem.elements, it.addressOf(0), mem.size) }
     return mem.ptr
 }
 
@@ -360,10 +383,13 @@ fun MemScope.toNativeKDoubleArrayOnArena(arr: DoubleArray?, pin: Boolean): CPoin
         val pinObj = arr.pin()
         defer { pinObj.unpin() }
         pinObj.addressOf(0).reinterpret()
-    } else allocArray<DoubleVar>(arr.size)
+    } else {
+        val allocated = allocArray<DoubleVar>(arr.size)
+        arr.usePinned { memcpy(allocated, it.addressOf(0), mem.size) }
+        allocated
+    }
     mem.length = arr.size
     mem.__flags = 0
-    arr.usePinned { memcpy(mem.elements, it.addressOf(0), mem.size) }
     return mem.ptr
 }
 
