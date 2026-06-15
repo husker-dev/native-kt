@@ -309,6 +309,10 @@ private abstract class CompileNativesKn @Inject constructor(
 
         when(val buildSystem = buildSystem) {
             is BuildSystem.CMake -> {
+                println("1: ${nativesBuildOutDir.listFiles()?.toList()}")
+                println("2: ${nativesBuildOutDir.parentFile.listFiles()?.toList()}")
+                println("3: ${nativesBuildOutDir.parentFile.parentFile.listFiles()?.toList()}")
+                println("4: ${nativesBuildOutDir.parentFile.parentFile.parentFile.listFiles()?.toList()}")
                 cmakeBuild(execOps, nativesBuildOutDir)
             }
             is BuildSystem.Cargo -> {
