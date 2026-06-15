@@ -128,9 +128,7 @@ internal fun configureJs(
     sourceSet.resources.srcDir(compileTask.map { resourcesDir })
 }
 
-private abstract class PrepareNativesJs @Inject constructor(
-    private val execOps: ExecOperations,
-): DefaultTask() {
+private abstract class PrepareNativesJs: DefaultTask() {
     @get:Input abstract var expectActual: Boolean
     @get:Input abstract var useCoroutines: Boolean
     @get:Input abstract var useJsBigInt: Boolean
