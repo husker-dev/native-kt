@@ -101,14 +101,14 @@ KArrayCloneFreeDef(KDoubleArray,  KDouble)
 KArray* _Nullable KArray_clone(const KArray* _Nullable self, void* _Nullable (* _Nullable cloneOp)(void* _Nullable));
 void KArray_free(const KArray* _Nullable self, void (* _Nonnull freeOp)(void* _Nonnull));
 
-#define KCallbackDef(Name, Type, ...)                   \
-struct Name {                                           \
-    char __flags;                                       \
-    Type (* _Nonnull invoke)(Name* _Nonnull self, ##__VA_ARGS__); \
-    Name* _Nonnull (* _Nonnull clone)(Name* _Nonnull self);       \
+#define KCallbackDef(Name, Type, ...)                                       \
+struct Name {                                                               \
+    char __flags;                                                           \
+    Type (* _Nonnull invoke)(Name* _Nonnull self, ##__VA_ARGS__);           \
+    Name* _Nonnull (* _Nonnull clone)(Name* _Nonnull self);                 \
     KBoolean (* _Nonnull equals)(Name* _Nonnull self, Name* _Nullable obj); \
-    KInt (* _Nonnull hashCode)(Name* _Nonnull self);              \
-    void (* _Nonnull free)(Name* _Nullable self);                 \
+    KInt (* _Nonnull hashCode)(Name* _Nonnull self);                        \
+    void (* _Nonnull free)(Name* _Nullable self);                           \
 };
 
 // ╔═══════════════════╗
