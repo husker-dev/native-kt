@@ -9,8 +9,8 @@
 </div>
 <br>
 
-<a href="LICENSE"><img src="https://img.shields.io/github/license/husker-dev/native-kt?style=flat-square"></a>
-<a href="https://github.com/husker-dev/native-kt/releases/latest"><img src="https://img.shields.io/github/v/release/husker-dev/native-kt?style=flat-square"></a>
+<a href="LICENSE"><img src="https://flat.badgen.net/github/license/husker-dev/native-kt?color=grey"></a>
+<a href="https://github.com/husker-dev/native-kt/releases/latest"><img src="https://flat.badgen.net/github/release/husker-dev/native-kt"></a>
 
 ## Docs
 https://native-kt.com/
