@@ -15,7 +15,7 @@ class JVMCI {
     }
 
     fun withJVMCI(block: () -> Unit) {
-        if(!NativeKtUtils.isJvmciAvailable())
+        if(!NativeKtUtils.isJVMCIAvailable())
             fail("JVMCI is unavailable")
 
         return withLib(block)

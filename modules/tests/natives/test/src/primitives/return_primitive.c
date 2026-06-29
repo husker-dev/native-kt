@@ -37,7 +37,7 @@ KDouble returnDouble() {
 }
 
 KString* returnString() {
-    return KString_new(strdup("test string"), 11, 11);
+    return KString_new("test string", 11, 11, false);
 }
 
 KString* returnStringN() {

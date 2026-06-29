@@ -169,8 +169,7 @@ private abstract class PrepareNativesJs: DefaultTask() {
         )
         CApiImplPrinter(
             idl = idl,
-            target = File(nativesBuildSourcesDir, "api.c"),
-            classPath = moduleClasspath
+            target = File(nativesBuildSourcesDir, "api.c")
         )
         CEmscriptenPrinter(
             idl = idl,

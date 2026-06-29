@@ -54,7 +54,7 @@ public class NativeKtUtils {
     /***
      * @return true if JVMCI is supported in JVM
      */
-    public static boolean isJvmciAvailable(){
+    public static boolean isJVMCIAvailable(){
         if(Objects.equals(System.getProperty("nativekt.jvm.disableJVMCI", "false"), "true"))
             return false;
         try {

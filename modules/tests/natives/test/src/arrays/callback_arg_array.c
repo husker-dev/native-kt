@@ -29,7 +29,7 @@ KBoolean callbackArgLongArray(CallbackPassLongArray* arg) {
     KLong* elements = malloc(2 * sizeof(KLong));
     elements[0] = 1;
     elements[1] = 2;
-    return arg->invoke(arg, KLongArray_new(elements, 2));
+    return arg->invoke(arg, KLongArray_new(elements, 2, true));
 }
 
 KBoolean callbackArgFloatArray(CallbackPassFloatArray* arg) {
@@ -42,8 +42,8 @@ KBoolean callbackArgDoubleArray(CallbackPassDoubleArray* arg) {
 
 KBoolean callbackArgStringArray(CallbackPassStringArray* arg) {
     return arg->invoke(arg, KArray_of(
-        KString_new(strdup("string1"), 7, 7),
-        KString_new(strdup("string2"), 7, 7)
+        KString_new("string1", 7, 7, false),
+        KString_new("string2", 7, 7, false)
     ));
 }
 

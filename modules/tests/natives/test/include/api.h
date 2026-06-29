@@ -49,7 +49,12 @@ typedef struct KString {
     char __flags;
 } KString;
 
-KString* _Nonnull KString_new(const char* _Nonnull data, KInt length, size_t size);
+KString* _Nonnull KString_new(
+    const char* _Nonnull data, 
+    KInt length, 
+    size_t size, 
+    bool is_data_owner
+);
 KString* _Nullable KString_clone(const KString* _Nullable self);
 void KString_free(KString* _Nullable self);
 
@@ -61,7 +66,11 @@ typedef struct Name {                                                        \
     char __flags;                                                            \
 } Name;                                                                      \
                                                                              \
-Name* _Nonnull Name##_new(const Type* _Nonnull elements, const KInt length); \
+Name* _Nonnull Name##_new(                     \
+    const Type* _Nonnull elements,             \
+    const KInt length,                         \
+    bool is_data_owner                         \
+);                                             \
 Name* _Nonnull _##Name##_of(const int n, ...);
 
 KArrayDef(KCharArray,	 KChar          )
@@ -98,8 +107,8 @@ KArrayCloneFreeDef(KFloatArray,   KFloat)
 KArrayCloneFreeDef(KDoubleArray,  KDouble)
 #undef KArrayCloneFreeDef
 
-KArray* _Nullable KArray_clone(const KArray* _Nullable self, void* _Nullable (* _Nullable cloneOp)(void* _Nullable));
-void KArray_free(const KArray* _Nullable self, void (* _Nonnull freeOp)(void* _Nonnull));
+KArray* _Nullable KArray_clone(const KArray* _Nullable self, void* _Nullable (* _Nullable clone_op)(void* _Nullable));
+void KArray_free(const KArray* _Nullable self, void (* _Nonnull free_op)(void* _Nonnull));
 
 #define KCallbackDef(Name, Type, ...)                                       \
 struct Name {                                                               \
@@ -107,7 +116,7 @@ struct Name {                                                               \
     Type (* _Nonnull invoke)(Name* _Nonnull self, ##__VA_ARGS__);           \
     Name* _Nonnull (* _Nonnull clone)(Name* _Nonnull self);                 \
     KBoolean (* _Nonnull equals)(Name* _Nonnull self, Name* _Nullable obj); \
-    KInt (* _Nonnull hashCode)(Name* _Nonnull self);                        \
+    KInt (* _Nonnull hash_code)(Name* _Nonnull self);                       \
     void (* _Nonnull free)(Name* _Nullable self);                           \
 };
 

@@ -27,8 +27,8 @@ namespace global {
     long returnLong();
     float returnFloat();
     double returnDouble();
-    [Dealloc] string returnString();
-    [Dealloc] string? returnStringN();
+    string returnString();
+    string? returnStringN();
     MyEnum returnEnum();
     MyDictionary returnDictionary();
     MyDictionary? returnDictionaryN();
@@ -42,8 +42,8 @@ namespace global {
     long pingLong(long arg);
     float pingFloat(float arg);
     double pingDouble(double arg);
-    [Dealloc] string pingString(string arg);
-    [Dealloc] string? pingStringN(string? arg);
+    string pingString(string arg);
+    string? pingStringN(string? arg);
     MyEnum pingEnum(MyEnum arg);
     MyDictionary pingDictionary(MyDictionary arg);
     MyDictionary? pingDictionaryN(MyDictionary? arg);
@@ -101,20 +101,20 @@ namespace global {
     boolean passDictionaryArrayN(Array<MyDictionary?> arg);
 
     // Arrays: return
-    [Dealloc] Array<char> returnCharArray();
-    [Dealloc] Array<char>? returnCharArrayN();
-    [Dealloc] Array<boolean> returnBooleanArray();
-    [Dealloc] Array<byte> returnByteArray();
-    [Dealloc] Array<short> returnShortArray();
-    [Dealloc] Array<int> returnIntArray();
-    [Dealloc] Array<long> returnLongArray();
-    [Dealloc] Array<float> returnFloatArray();
-    [Dealloc] Array<double> returnDoubleArray();
-    [Dealloc] Array<string> returnStringArray();
-    [Dealloc] Array<string?> returnStringArrayN();
-    [Dealloc] Array<MyEnum> returnEnumArray();
-    [Dealloc] Array<MyDictionary> returnDictionaryArray();
-    [Dealloc] Array<MyDictionary?> returnDictionaryArrayN();
+    Array<char> returnCharArray();
+    Array<char>? returnCharArrayN();
+    Array<boolean> returnBooleanArray();
+    Array<byte> returnByteArray();
+    Array<short> returnShortArray();
+    Array<int> returnIntArray();
+    Array<long> returnLongArray();
+    Array<float> returnFloatArray();
+    Array<double> returnDoubleArray();
+    Array<string> returnStringArray();
+    Array<string?> returnStringArrayN();
+    Array<MyEnum> returnEnumArray();
+    Array<MyDictionary> returnDictionaryArray();
+    Array<MyDictionary?> returnDictionaryArrayN();
 
     // Arrays: ping
     Array<char> pingCharArray(Array<char> arg);
@@ -166,11 +166,11 @@ namespace global {
 
     // Dictionary
     boolean passBigDictionary(TypeDictionary arg);
-    [Dealloc] TypeDictionary returnBigDictionary(VoidCallback callback);
+    TypeDictionary returnBigDictionary(VoidCallback callback);
     TypeDictionary pingBigDictionary(TypeDictionary arg);
 
     boolean passBigDictionaryN(TypeDictionary? arg);
-    [Dealloc] TypeDictionary? returnBigDictionaryN();
+    TypeDictionary? returnBigDictionaryN();
     TypeDictionary? pingBigDictionaryN(TypeDictionary? arg);
 
     // Critical

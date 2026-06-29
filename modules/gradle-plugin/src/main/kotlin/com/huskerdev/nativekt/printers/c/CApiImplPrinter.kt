@@ -10,8 +10,7 @@ import java.io.File
 
 class CApiImplPrinter(
     idl: IdlResolver,
-    target: File,
-    val classPath: String
+    target: File
 ) {
     init {
         target.parentFile.mkdirs()
@@ -49,7 +48,7 @@ class CApiImplPrinter(
                     self->free(self);
                 }
                 
-                void __AbstractCallback_forceFree(_AbstractCallback* self) {
+                void __AbstractCallback_free_forced(_AbstractCallback* self) {
                     if(self == NULL) return;
                     self->__flags |= K_FLAG_RELEASABLE;
                     self->free(self);
@@ -90,21 +89,12 @@ class CApiImplPrinter(
         append("\n${dictionary.name}* ${dictionary.name}_clone(const ${dictionary.name}* self) {\n\t")
         append("if(self == NULL) return NULL;\n\t")
 
-        // malloc
-        append("${dictionary.name}* result = (${dictionary.name}*) malloc(sizeof(${dictionary.name}));\n\t")
-
-        // fill
-        append("*result = (${dictionary.name}) {\n\t\t")
-        buildList {
-            dictionary.allFields().mapTo(this) { field ->
-                cloneFuncFor(field.type, "self->${field.name}")
-            }
-            add("K_FLAG_RELEASABLE")
-        }.joinTo(builder, separator = ",\n\t\t")
-        append("\n\t};\n\t")
-
-        // return
-        append("return result;\n}\n")
+        // new
+        append("return ${dictionary.name}_new(\n\t\t")
+        dictionary.allFields().joinTo(builder, separator = ",\n\t\t") { field ->
+            cloneFuncFor(field.type, "self->${field.name}")
+        }
+        append("\n\t);\n}\n")
     }
 
     private fun printStructFree(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
@@ -112,9 +102,8 @@ class CApiImplPrinter(
         append("""
             
             void ${dictionary.name}_free(${dictionary.name}* self) {
-                if(self == NULL || !K_OBJECT_IS_RELEASABLE(self->__flags))
+                if (self == NULL)
                     return;
-            
         """.trimIndent())
         dictionary.allFields().forEach { field ->
             freeFuncFor(
@@ -124,13 +113,13 @@ class CApiImplPrinter(
         }
         append("""
             
-            if(!K_OBJECT_IS_ON_STACK(self->__flags))
+            if(K_OBJECT_IS_RELEASABLE(self->__flags))
                 free((void*) self);
         """.replaceIndent("\t"))
         append("\n}\n")
 
         // forceFree
-        append("\nvoid _${dictionary.name}_forceFree(${dictionary.name}* self) {")
+        append("\nvoid _${dictionary.name}_free_forced(${dictionary.name}* self) {")
         append("\n\tif(self == NULL) return;")
         dictionary.allFields().forEach { field ->
             forceFreeFuncFor(
@@ -140,7 +129,7 @@ class CApiImplPrinter(
         }
         append("""
             
-            if(!K_OBJECT_IS_ON_STACK(self->__flags))
+            if(K_OBJECT_IS_RELEASABLE(self->__flags))
                 free((void*) self);
         """.replaceIndent("\t"))
         append("\n}\n")
@@ -153,65 +142,61 @@ class CApiImplPrinter(
             
             // String
             
-            KString* KString_new(const char* data, const KInt length, const size_t size) {
+            KString* KString_new(const char* data, const KInt length, const size_t size, const bool is_data_owner) {
                 KString* result = (KString*) malloc(sizeof(KString));
-                *result = (KString) { data, size, length, K_FLAG_RELEASABLE };
+                *result = (KString) { data, size, length, K_FLAG_RELEASABLE | (is_data_owner ? K_FLAG_DATA_OWNER : 0) };
                 return result;
             }
-
+            
             KString* KString_clone(const KString* of) {
-                if(of == NULL) return NULL;
+                if (of == NULL) return NULL;
                 const KInt size = of->size;
                 void* data = malloc(size);
                 memcpy(data, of->data, size);
-                KString* result = (KString*) malloc(sizeof(KString));
-                *result = (KString) { (const char*) data, size, of->length, K_FLAG_RELEASABLE };
-                return result;
+                return KString_new((const char*) data, size, of->length, true);
             }
-
+            
             void KString_free(KString* self) {
-                if(self == NULL || !K_OBJECT_IS_RELEASABLE(self->__flags))
+                if (self == NULL)
                     return;
-                free((void*) self->data);
-                if(!K_OBJECT_IS_ON_STACK(self->__flags))
+                if (K_OBJECT_IS_DATA_OWNER(self->__flags))
+                    free((void*) self->data);
+                if (K_OBJECT_IS_RELEASABLE(self->__flags))
                     free((void*) self);
             }
             
-            void _KString_forceFree(KString* self) {
-                if(self == NULL) return;
+            void _KString_free_forced(KString* self) {
+                if (self == NULL) return;
                 self->__flags |= K_FLAG_RELEASABLE;
                 KString_free(self);
             }
             
             // Arrays
             
-            #define KArrayDef(Name, Type, VarargType)                          \
-            Name* Name##_new(const Type* elements, const KInt length) {        \
-                Name* result = (Name*) malloc(sizeof(Name));                   \
-                *result = (Name){                                              \
-                    elements,                                                  \
-                    length * sizeof(Name),                                     \
-                    length,                                                    \
-                    K_FLAG_RELEASABLE                                          \
-                };                                                             \
-                return result;                                                 \
-            }                                                                  \
-                                                                               \
-            Name* _##Name##_of(const int n, ...) {                             \
-                va_list args;                                                  \
-                va_start(args, n);                                             \
-                Type* elements = (Type*)malloc(n * sizeof(Type));              \
-                for (int i = 0; i < n; i++)                                    \
-                    elements[i] = (Type)va_arg(args, VarargType);              \
-                va_end(args);                                                  \
-                Name* result = (Name*) malloc(sizeof(Name));                   \
-                *result = (Name){                                              \
-                    (const Type*) elements,                                    \
-                    n * sizeof(Name),                                          \
-                    n,                                                         \
-                    K_FLAG_RELEASABLE                                          \
-                };                                                             \
-                return result;                                                 \
+            #define KArrayDef(Name, Type, VarargType)                           \
+            Name* Name##_new(                                                   \
+            	const Type* elements,                                           \
+            	const KInt length,                                              \
+            	const bool is_data_owner                                        \
+            ) {                                                                 \
+                Name* result = (Name*) malloc(sizeof(Name));                    \
+                *result = (Name){                                               \
+                    elements,                                                   \
+                    length * sizeof(Name),                                      \
+                    length,                                                     \
+                    K_FLAG_RELEASABLE | (is_data_owner ? K_FLAG_DATA_OWNER : 0) \
+                };                                                              \
+                return result;                                                  \
+            }                                                                   \
+                                                                                \
+            Name* _##Name##_of(const int n, ...) {                              \
+                va_list args;                                                   \
+                va_start(args, n);                                              \
+                Type* elements = (Type*) malloc(n * sizeof(Type));              \
+                for (int i = 0; i < n; i++)                                     \
+                    elements[i] = (Type) va_arg(args, VarargType);              \
+                va_end(args);                                                   \
+                return Name##_new((const Type*) elements, (KInt) n, true);      \
             }
 
             #define KArrayCloneDef(Name, Type)                                     \
@@ -220,68 +205,55 @@ class CApiImplPrinter(
                 const KInt size = of->size;                                        \
                 void** elements = malloc(size);                                    \
                 memcpy(elements, (void*) of->elements, size);                      \
-                Name* result = (Name*) malloc(sizeof(Name));                       \
-                *result = (Name) {                                                 \
-                    (Type*) elements,                                              \
-                    of->size,                                                      \
-                    of->length,                                                    \
-                    K_FLAG_RELEASABLE                                              \
-                };                                                                 \
-                return result;                                                     \
+                return Name##_new((Type*) elements, of->length, true);             \
             }                                                                      \
                                                                                    \
-            void Name##_free(Name* arr) {                                          \
-                if(arr == NULL || !K_OBJECT_IS_RELEASABLE(arr->__flags))           \
-                    return;                                                        \
-                free((void*) arr->elements);                                       \
-                if(!K_OBJECT_IS_ON_STACK(arr->__flags))                            \
-                    free((void*) arr);                                             \
+            void Name##_free(Name* self) {                                         \
+            	if (self == NULL)			                                       \
+            		return;                                                        \
+            	if (K_OBJECT_IS_DATA_OWNER(self->__flags))                         \
+            		free((void*) self->elements);                                  \
+            	if (K_OBJECT_IS_RELEASABLE(self->__flags))                         \
+            		free((void*) self);                                            \
             }                                                                      \
                                                                                    \
-            void _##Name##_forceFree(Name* self) {                                 \
-                if(self == NULL) return;                                           \
+            void _##Name##_free_forced(Name* self) {                               \
+                if (self == NULL) return;                                          \
                 self->__flags |= K_FLAG_RELEASABLE;                                \
                 Name##_free(self);                                                 \
             }
-            
-            KArray* KArray_clone(const KArray* of, void* (*cloneOp)(void*)) {
+
+            KArray* KArray_clone(const KArray* of, void* (*clone_op)(void*)) {
                 if(of == NULL) return NULL;
             	const KInt size = of->size;
             	void** elements = malloc(size);
             	for (int i = 0; i < of->length; i++) {
                     void* element = (void*) of->elements[i];
-                    if(element != NULL) 
-                        elements[i] = cloneOp(element);
-            		else elements[i] = NULL;
+                    elements[i] = element == NULL ? NULL : clone_op(element);
                 }
-            	KArray* result = (KArray*) malloc(sizeof(KArray));
-            	*result = (KArray) { 
-                    (const void**) elements, 
-                    of->size,
-                    of->length, 
-                    K_FLAG_RELEASABLE
-                }; 
-            	return result;
+            	return KArray_new((const void**) elements, of->length, true);
             }
-            
-            void KArray_free(const KArray* self, void (*freeOp)(void*)) {
-                if(self == NULL || !K_OBJECT_IS_RELEASABLE(self->__flags))
+
+            void KArray_free(const KArray* self, void (*free_op)(void*)) {
+                if (self == NULL)
                     return;
-                const void** elements = self->elements;
-                for (int i = 0; i < self->length; i++) {
-                    void* element = (void*) elements[i];
-                    if(element == NULL) continue;
-                    freeOp(element);
-                }
-                free((void*) elements);
-                if(!K_OBJECT_IS_ON_STACK(self->__flags))
+            	if (K_OBJECT_IS_DATA_OWNER(self->__flags)) {
+            		const void** elements = self->elements;
+            		for (int i = 0; i < self->length; i++) {
+            			void* element = (void*) elements[i];
+            			if(element == NULL) continue;
+            			free_op(element);
+            		}
+            		free((void*) elements);
+            	}
+                if (K_OBJECT_IS_RELEASABLE(self->__flags))
                     free((void*) self);
             }
 
-            void _KArray_forceFree(KArray* self, void (*freeOp)(void*)) {
+            void _KArray_free_forced(KArray* self, void (*free_op)(void*)) {
                 if(self == NULL) return;
                 self->__flags |= K_FLAG_RELEASABLE;
-                KArray_free(self, freeOp);
+                KArray_free(self, free_op);
             }
             
             KArrayDef(KCharArray,	 KChar,    int32_t)

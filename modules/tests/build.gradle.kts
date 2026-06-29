@@ -1,4 +1,5 @@
 @file:OptIn(ExperimentalWasmDsl::class, KotlinNativeCacheApi::class)
+@file:Suppress("UnstableApiUsage")
 
 import com.huskerdev.nativekt.plugin.currentNativeTargets
 import com.huskerdev.nativekt.plugin.webTargets
@@ -115,4 +116,9 @@ tasks.withType<Test>().configureEach {
     testLogging {
         showStandardStreams = true
     }
+}
+
+tasks.withType<AbstractTestTask>().configureEach {
+    outputs.cacheIf { false }
+    outputs.upToDateWhen { false }
 }

@@ -112,7 +112,7 @@ class KotlinNativePrinter(
         }
         append("""
             
-                mem.__flags = FLAG_RELEASABLE
+                mem.__flags = FLAG_RELEASABLE.toByte()
                 return mem.ptr
             }
             
@@ -188,7 +188,7 @@ class KotlinNativePrinter(
             castToNative(it.type, it.name, useArena = useArena, pin = function.isCritical())
         }
 
-        val deallocFunc = if(function.isDealloc())
+        val deallocFunc = if(function.type.isReleasable())
             freeFuncFor(function.type, "_result_native")
         else null
 
@@ -249,7 +249,7 @@ class KotlinNativePrinter(
         return when {
             type.isChar() -> "$content.toInt().toChar()"
             type.isString() -> "toKotlinKString($content$nullable.reinterpret())"
-            type.isCallback() -> "toKotlinCallback($content$nullable1)"
+            type.isCallback() -> "toKotlinCallback<${type.toKotlinType()}>($content$nullable1)"
             type.isEnum() -> "${type.declaration.name}.entries[${content}.ordinal]"
             type.isDictionary() -> "toKotlin${type.declaration.name}($content$nullable1)"
             type.isArray() -> type.arrayType { type ->

@@ -51,20 +51,17 @@ kotlin {
     linuxArm64()
 
     if(Os.isFamily(Os.FAMILY_MAC)) {
-        //macosX64()
         macosArm64()
 
         iosX64()
         iosArm64()
         iosSimulatorArm64()
 
-        //watchosX64()
         watchosArm32()
         watchosArm64()
         watchosDeviceArm64()
         watchosSimulatorArm64()
 
-        //tvosX64()
         tvosArm64()
         tvosSimulatorArm64()
     }

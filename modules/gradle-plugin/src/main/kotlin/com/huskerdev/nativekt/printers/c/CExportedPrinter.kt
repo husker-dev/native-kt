@@ -122,10 +122,10 @@ internal fun printCriticalNativeFunctionContent(builder: StringBuilder, name: St
     function.args.forEach {
         val name = it.name
         when {
-            it.type.isString() -> append("\n\tKString _arg_$name = (KString) { _arr_$name, _size_$name,_length_$name,  K_FLAG_ON_STACK };")
+            it.type.isString() -> append("\n\tKString _arg_$name = (KString) { _arr_$name, _size_$name,_length_$name, 0 };")
             it.type.isArray() -> {
                 val type = it.type.toCType(enumAsInt = true, ptr = false)
-                append("\n\t$type _arg_$name = ($type) { _arr_$name, sizeof(_arr_$name[0]) * _length_$name, _length_$name, K_FLAG_ON_STACK };")
+                append("\n\t$type _arg_$name = ($type) { _arr_$name, sizeof(_arr_$name[0]) * _length_$name, _length_$name, 0 };")
             }
         }
     }

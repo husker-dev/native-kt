@@ -5,12 +5,11 @@ package com.huskerdev.nativekt.web
 
 
 import kotlin.collections.set
-import kotlin.experimental.and
 import kotlin.js.*
 import kotlin.math.truncate
 
-const val FLAG_RELEASABLE = 1.toByte()
-const val FLAG_ON_STACK = 2.toByte()
+const val FLAG_RELEASABLE = 1
+const val FLAG_DATA_OWNER = 2
 
 private val callbacks = hashMapOf<Pair<EmModule, Int>, Any>()
 
@@ -41,7 +40,7 @@ fun Arena.toNativeKStringOnArena(str: String?): Int {
 
     val mem = alloc(layoutString.size)
     module.HEAP32[(mem + layoutString[0]) shr 2] = strMem
-    module.HEAP32[(mem + layoutString[1]) shr 2] = size
+    module.HEAP32[(mem + layoutString[1]) shr 2] = size - 1
     module.HEAP32[(mem + layoutString[2]) shr 2] = str.length
     module.HEAP8[mem + layoutString[3]] = 0
     return mem
@@ -55,9 +54,9 @@ fun toNativeKString(module: EmModule, str: String?): Int {
 
     val mem = module._malloc(layoutString.size)
     module.HEAP32[(mem + layoutString[0]) shr 2] = strMem
-    module.HEAP32[(mem + layoutString[1]) shr 2] = size
+    module.HEAP32[(mem + layoutString[1]) shr 2] = size - 1
     module.HEAP32[(mem + layoutString[2]) shr 2] = str.length
-    module.HEAP8[mem + layoutString[3]] = FLAG_RELEASABLE
+    module.HEAP8[mem + layoutString[3]] = (FLAG_RELEASABLE or FLAG_DATA_OWNER).toByte()
     return mem
 }
 
@@ -99,7 +98,7 @@ fun toNativeKCharArray(module: EmModule, arr: CharArray?): Int {
     val data = module._malloc(size)
     val heap = Uint16Array(module.HEAP8.buffer, data, arr.size)
     arr.forEachIndexed { i, it -> heap[i] = it }
-    return fillArray(module, module._malloc(layoutArray.size), data, size, arr.size, FLAG_RELEASABLE)
+    return fillArray(module, module._malloc(layoutArray.size), data, size, arr.size, (FLAG_RELEASABLE or FLAG_DATA_OWNER).toByte())
 }
 
 fun toKotlinKCharArray(module: EmModule, mem: Int): CharArray? {
@@ -141,7 +140,7 @@ fun toNativeKByteArray(module: EmModule, arr: ByteArray?): Int {
     val data = module._malloc(arr.size)
     val heap = Int8Array(module.HEAP8.buffer, data, arr.size)
     arr.forEachIndexed { i, it -> heap[i] = it }
-    return fillArray(module, module._malloc(layoutArray.size), data, arr.size, arr.size, FLAG_RELEASABLE)
+    return fillArray(module, module._malloc(layoutArray.size), data, arr.size, arr.size, (FLAG_RELEASABLE or FLAG_DATA_OWNER).toByte())
 }
 
 fun toKotlinKByteArray(module: EmModule, mem: Int): ByteArray? {
@@ -168,7 +167,7 @@ fun toNativeKShortArray(module: EmModule, arr: ShortArray?): Int {
     val data = module._malloc(size)
     val heap = Int16Array(module.HEAP8.buffer, data, arr.size)
     arr.forEachIndexed { i, it -> heap[i] = it }
-    return fillArray(module, module._malloc(layoutArray.size), data, size, arr.size, FLAG_RELEASABLE)
+    return fillArray(module, module._malloc(layoutArray.size), data, size, arr.size, (FLAG_RELEASABLE or FLAG_DATA_OWNER).toByte())
 }
 
 fun toKotlinKShortArray(module: EmModule, mem: Int): ShortArray? {
@@ -195,7 +194,7 @@ fun toNativeKIntArray(module: EmModule, arr: IntArray?): Int {
     val data = module._malloc(size)
     val heap = Int32Array(module.HEAP8.buffer, data, arr.size)
     arr.forEachIndexed { i, it -> heap[i] = it }
-    return fillArray(module, module._malloc(layoutArray.size), data, size, arr.size, FLAG_RELEASABLE)
+    return fillArray(module, module._malloc(layoutArray.size), data, size, arr.size, (FLAG_RELEASABLE or FLAG_DATA_OWNER).toByte())
 }
 
 fun toKotlinKIntArray(module: EmModule, mem: Int): IntArray? {
@@ -222,7 +221,7 @@ fun toNativeKLongArray(module: EmModule, arr: LongArray?): Int {
     val data = module._malloc(size)
     val heap = BigInt64Array(module.HEAP8.buffer, data, arr.size)
     arr.forEachIndexed { i, it -> heap[i] = it }
-    return fillArray(module, module._malloc(layoutArray.size), data, size, arr.size, FLAG_RELEASABLE)
+    return fillArray(module, module._malloc(layoutArray.size), data, size, arr.size, (FLAG_RELEASABLE or FLAG_DATA_OWNER).toByte())
 }
 
 fun toKotlinKLongArray(module: EmModule, mem: Int): LongArray? {
@@ -249,7 +248,7 @@ fun toNativeKFloatArray(module: EmModule, arr: FloatArray?): Int {
     val data = module._malloc(size)
     val heap = Float32Array(module.HEAPF32.buffer, data, arr.size)
     arr.forEachIndexed { i, it -> heap[i] = it }
-    return fillArray(module, module._malloc(layoutArray.size), data, size, arr.size, FLAG_RELEASABLE)
+    return fillArray(module, module._malloc(layoutArray.size), data, size, arr.size, (FLAG_RELEASABLE or FLAG_DATA_OWNER).toByte())
 }
 
 fun toKotlinKFloatArray(module: EmModule, mem: Int): FloatArray? {
@@ -276,7 +275,7 @@ fun toNativeKDoubleArray(module: EmModule, arr: DoubleArray?): Int {
     val data = module._malloc(size)
     val heap = Float64Array(module.HEAPF64.buffer, data, arr.size)
     arr.forEachIndexed { i, it -> heap[i] = it }
-    return fillArray(module, module._malloc(layoutArray.size), data, size, arr.size, FLAG_RELEASABLE)
+    return fillArray(module, module._malloc(layoutArray.size), data, size, arr.size, (FLAG_RELEASABLE or FLAG_DATA_OWNER).toByte())
 }
 
 fun toKotlinKDoubleArray(module: EmModule, mem: Int): DoubleArray? {
@@ -373,7 +372,7 @@ fun toNativeCallback(
 ): Int {
     if(callback == null) return 0
     val mem = module._malloc(layoutCallback.size)
-    module.HEAP8[mem + layoutCallback[0]] = FLAG_RELEASABLE
+    module.HEAP8[mem + layoutCallback[0]] = FLAG_RELEASABLE.toByte()
     module.HEAP32[(mem + layoutCallback[1]) shr 2] = invoke
     module.HEAP32[(mem + layoutCallback[2]) shr 2] = clone
     module.HEAP32[(mem + layoutCallback[3]) shr 2] = equals
@@ -396,7 +395,7 @@ fun callbackFree(
     module: EmModule,
     self: Int
 ) {
-    if(self == 0 || module.HEAP8[self + layoutCallback[0]] and FLAG_RELEASABLE != FLAG_RELEASABLE)
+    if(self == 0 || module.HEAP8[self + layoutCallback[0]].toInt() and FLAG_RELEASABLE != FLAG_RELEASABLE)
         return
 
     callbacks.remove(Pair(module, self))
@@ -410,7 +409,7 @@ private fun callbackClone(
     if(self == 0)
         return 0
     val mem = module._malloc(layoutCallback.size)
-    module.HEAP8[mem + layoutCallback[0]] = FLAG_RELEASABLE
+    module.HEAP8[mem + layoutCallback[0]] = FLAG_RELEASABLE.toByte()
     module.HEAP32[(mem + layoutCallback[1]) shr 2] = module.HEAP32[(self + layoutCallback[1]) shr 2]
     module.HEAP32[(mem + layoutCallback[2]) shr 2] = module.HEAP32[(self + layoutCallback[2]) shr 2]
     module.HEAP32[(mem + layoutCallback[3]) shr 2] = module.HEAP32[(self + layoutCallback[3]) shr 2]

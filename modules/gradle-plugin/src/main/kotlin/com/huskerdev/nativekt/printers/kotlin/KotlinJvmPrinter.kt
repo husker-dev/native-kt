@@ -84,12 +84,12 @@ class KotlinJvmPrinter(
 
         """.trimIndent())
 
-        builder.append(invokerChooser("\t"))
+        builder.append(invokerChooser("    "))
         if(useJVMCI) {
             if(useJNI || useForeignApi) {
                 builder.append("""
                 
-                    if(NativeKtUtils.isJvmciAvailable()) 
+                    if(NativeKtUtils.isJVMCIAvailable()) 
                         $implName = ${moduleName.capitalized()}JVMCI(libraryPath, $implName!!)
                 """.replaceIndent("\t"))
             } else {

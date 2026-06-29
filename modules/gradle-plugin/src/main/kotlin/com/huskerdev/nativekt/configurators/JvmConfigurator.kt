@@ -127,7 +127,6 @@ internal fun configureJvm(
         it.nativesBuildOutDir     = nativesBuildOutDir.absolutePath
 
         it.kotlinFile             = kotlinFile.absolutePath
-        it.libsDir                = libsDir.absolutePath
 
         it.buildSystem            = module.buildSystem
     }
@@ -198,14 +197,11 @@ private abstract class PrepareNativesJvm: DefaultTask() {
     @get:Input abstract var nativesBuildOutDir: String
 
     @get:Input abstract var kotlinFile: String
-    @get:Input abstract var libsDir: String
 
     @get:Input abstract var buildSystem: BuildSystem
 
     @TaskAction
     fun action() {
-        File(libsDir).fresh()
-
         val idl = Json.decodeFromString<IdlResolver>(idl)
 
         val nativesBuildSourcesDir = File(nativesBuildSourcesDir).fresh()
@@ -300,8 +296,7 @@ private abstract class PrepareNativesJvm: DefaultTask() {
 
         CApiImplPrinter(
             idl = idl,
-            target = File(nativesBuildSourcesDir, "api.c"),
-            classPath = moduleClasspath
+            target = File(nativesBuildSourcesDir, "api.c")
         )
 
         when(buildSystem) {
@@ -417,7 +412,7 @@ private abstract class CompileNativesJvm @Inject constructor(
                     ),
                     dynamicLib = true,
                     workingDir = nativesBuildOutDir
-                ).copyTo(File(targetLibFile))
+                ).copyTo(File(targetLibFile), overwrite = true)
             }
         }
     }

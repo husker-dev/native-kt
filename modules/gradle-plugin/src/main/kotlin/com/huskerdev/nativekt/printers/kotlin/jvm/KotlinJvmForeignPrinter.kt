@@ -109,7 +109,7 @@ class KotlinJvmForeignPrinter(
             val set = "set(${it.type.toForeignType()}, $layout[$i], ${value})"
             append("\n\t\t\t$set")
         }
-        append("\n\t\t\tset(ValueLayout.JAVA_BYTE, $layout[${fields.size}], FLAG_ON_STACK)")
+        append("\n\t\t\tset(ValueLayout.JAVA_BYTE, $layout[${fields.size}], 0)")
 
         append("\n\t\t} } ?: MemorySegment.NULL\n")
 
@@ -191,7 +191,7 @@ class KotlinJvmForeignPrinter(
             }
         }.joinToString()
 
-        val deallocFunc = if(function.isDealloc())
+        val deallocFunc = if(function.type.isReleasable())
             freeFuncFor(function.type, "_result_native")
         else null
 
@@ -204,7 +204,7 @@ class KotlinJvmForeignPrinter(
 
         when {
             useArena -> append(" = Arena.ofConfined().use { arena ->")
-            function.isDealloc() || transforms.isNotEmpty() -> append(" {")
+            deallocFunc != null || transforms.isNotEmpty() -> append(" {")
             else -> append(" = ")
         }
 
@@ -309,7 +309,7 @@ class KotlinJvmForeignPrinter(
         val nullAssert = if(type.isNullable) "" else "!!"
         return when {
             type.isString() -> "toJvmKString($content)$nullAssert"
-            type.isCallback() -> "toJvmCallback($content)$nullAssert"
+            type.isCallback() -> "toJvmCallback<${type.toKotlinType()}>($content)$nullAssert"
             type.isEnum() -> "${type.declaration.name}.entries[$content]"
             type.isDictionary() -> "toJvmDictionary${type.declaration.name}($content)$nullAssert"
             type.isArray() -> type.arrayType { type ->

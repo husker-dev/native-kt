@@ -30,7 +30,7 @@ class KotlinJvmJniPrinter(
         if(isAndroid) {
             // Static functions
             builder.append("$indent\tcompanion object {\n")
-            builder.append("$indent\t\t@JvmStatic external fun JNILoad(${if(isAndroidCriticalEnabled) "critical: Boolean" else ""})")
+            builder.append("$indent\t\t@JvmStatic external fun nJNILoad(${if(isAndroidCriticalEnabled) "critical: Boolean" else ""})")
             builder.append("\n")
 
             idl.globalOperators().forEach { function ->
@@ -62,7 +62,7 @@ class KotlinJvmJniPrinter(
             builder.append("""
                 init {
                     System.load(libraryPath);
-                    JNILoad(${if (isAndroidCriticalEnabled) "supportsCritical" else ""})
+                    nJNILoad(${if (isAndroidCriticalEnabled) "supportsCritical" else ""})
                 }
             """.replaceIndent("$indent\t"))
             builder.append("\n")
@@ -70,11 +70,11 @@ class KotlinJvmJniPrinter(
             // Instance methods
             builder.append("""
                 companion object {
-                    @JvmStatic external fun JNILoad()
+                    @JvmStatic external fun nJNILoad()
                 }
                 init {
                     System.load(libraryPath)
-                    JNILoad()
+                    nJNILoad()
                 }
                 
                 override fun _address(name: String): Long =

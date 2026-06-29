@@ -40,7 +40,7 @@ class CJniPrinter(
 
         append("""
             
-            JNIEXPORT void JNICALL Java_${classPath.replace(".", "_")}_${name}_JNILoad(JNIEnv *env, jclass clazz$isCritical) {
+            JNIEXPORT void JNICALL Java_${classPath.replace(".", "_")}_${name}_nJNILoad(JNIEnv *env, jclass clazz$isCritical) {
                 JNINativeMethod methods[] = {
                     
         """.trimIndent())
@@ -91,7 +91,7 @@ class CJniPrinter(
         }.joinTo(builder, prefix = "(", postfix = ") {")
 
         val returns = function.type !is ResolvedIdlType.Void
-        val needReleases = function.args.any { !it.type.isPrimitive() } || function.isDealloc()
+        val needReleases = function.args.any { it.type.isReleasable() } || function.type.isReleasable()
 
         // ===========
         //    Cast
@@ -142,7 +142,7 @@ class CJniPrinter(
         //   Dealloc result
         // ==================
 
-        if(function.isDealloc()) {
+        if(function.type.isReleasable()) {
             freeFuncFor(
                 function.type,
                 "result_native"
@@ -161,7 +161,8 @@ class CJniPrinter(
                 type.isArray() -> type.arrayType { type ->
                     when {
                         type.isPrimitive() -> "JNI_release${type.toCType()}ArrayOnStack(env, $name)"
-                        else -> forceFreeFuncFor(arg.type, name)
+                        type.isEnum() -> "JNI_releaseKIntArrayOnStack(env, $name)"
+                        else -> "JNI_releaseKArrayOnStack($name, (void*) ${freeFuncFor(type, "")!!.dropLast(2)})"
                     }
                 }
                 type.isDictionary() -> forceFreeFuncFor(type, name)

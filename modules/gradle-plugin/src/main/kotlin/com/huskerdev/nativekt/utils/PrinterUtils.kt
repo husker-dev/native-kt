@@ -2,7 +2,6 @@
 
 package com.huskerdev.nativekt.utils
 
-import com.huskerdev.webidl.parser.IdlAttributedHolder
 import com.huskerdev.webidl.parser.IdlExtendedAttribute
 import com.huskerdev.webidl.resolver.*
 import org.gradle.internal.extensions.stdlib.capitalized
@@ -267,6 +266,9 @@ fun ResolvedIdlType.isDictionary(): Boolean {
     return this is ResolvedIdlType.Default && declaration is ResolvedIdlDictionary
 }
 
+fun ResolvedIdlType.isReleasable(): Boolean =
+    isArray() || isString() || isDictionary() || isCallback()
+
 // ==== Arrays =====
 
 fun ResolvedIdlType.isStringArray(): Boolean {
@@ -288,13 +290,6 @@ fun ResolvedIdlType.isDictionaryArray(): Boolean {
         returns(true) implies(this@isDictionaryArray is ResolvedIdlType.Default)
     }
     return arrayTypeOrNull()?.isDictionary() ?: false
-}
-
-fun ResolvedIdlType.isBooleanArray(): Boolean {
-    contract {
-        returns(true) implies(this@isBooleanArray is ResolvedIdlType.Default)
-    }
-    return arrayTypeOrNull()?.isBoolean() ?: false
 }
 
 fun ResolvedIdlType.isLongArray(): Boolean {
@@ -322,17 +317,17 @@ internal fun IdlResolver.isUsingLong(): Boolean {
         cb.type.isAnyLongType() || cb.args.any { it.type.isAnyLongType() }
     }) return true
 
+    // dictionaries
+    if(dictionaries.values.any { cb ->
+        cb.fields.any { it.type.isAnyLongType() }
+    }) return true
+
     return false
 }
 
 fun ResolvedIdlOperation.isCritical(): Boolean =
     this.attributes.any {
-        it is IdlExtendedAttribute.NoArgs && it.name == "Critical"
-    }
-
-fun IdlAttributedHolder.isDealloc(): Boolean =
-    this.attributes.any {
-        it is IdlExtendedAttribute.NoArgs && it.name == "Dealloc"
+        it is IdlExtendedAttribute.NoArgs && it.name.lowercase() == "critical"
     }
 
 fun ResolvedIdlOperation.isCriticalCapable(): Boolean =

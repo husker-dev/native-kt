@@ -10,7 +10,7 @@ class Rust {
     fun test() = runTest {
         loadLibTestrs()
 
-        println(test_func("Hello World! Привет!", 1))
+        println(test_func("Hello world! Привет!", 1))
         test_func(null, 2)
     }
 }

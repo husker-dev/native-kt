@@ -26,6 +26,10 @@ class CJniUtilsPrinter(
             #include <string.h>
             #include "api.h"
             
+            #define K_FLAG_ON_STACK 8
+            
+            #define K_OBJECT_IS_ON_STACK(flags) ((flags) & K_FLAG_ON_STACK)
+            
             JavaVM *jvm;
             jclass jniClass;
             
@@ -231,6 +235,16 @@ class CJniUtilsPrinter(
                 return result;
             }
             
+            void JNI_releaseKArrayOnStack(
+            	KArray* self,
+                void (*free_op)(void*)
+            ) {
+                if(self == NULL)
+                    return;
+                self->__flags |= K_FLAG_DATA_OWNER;
+            	KArray_free(self, free_op);
+            }
+            
             jobjectArray JNI_toKotlinKArray(
                 JNIEnv *env, 
                 KArray* src, 
@@ -391,7 +405,7 @@ class CJniUtilsPrinter(
                 }
                 
                 static void JNI_CALLBACK_free(_AbstractCallback* callback) {
-                    if (callback == NULL || !K_OBJECT_IS_RELEASABLE(callback->__flags) || K_OBJECT_IS_ON_STACK(callback->__flags))
+                    if (callback == NULL || !K_OBJECT_IS_RELEASABLE(callback->__flags))
                         return;
                 
                     JNIEnv *env;
@@ -425,7 +439,8 @@ class CJniUtilsPrinter(
                 jobject JNI_toKotlinCallback(JNIEnv *env, _AbstractCallback* callback) {
                     if(callback == NULL)
                         return NULL;
-                    return (jobject)((size_t*)((char*)callback + sizeof(_AbstractCallback)))[0];
+                    jobject ref = (jobject)((size_t*)((char*)callback + sizeof(_AbstractCallback)))[0];
+                    return (*env)->NewLocalRef(env, ref);
                 }
                 
                 _AbstractCallback* JNI_toNativeCallbackOnStack(JNIEnv *env, jobject obj, void (*invoke)(), void* mem) {
@@ -433,7 +448,7 @@ class CJniUtilsPrinter(
                     ((size_t*)((char*)mem + sizeof(_AbstractCallback)))[1] = (size_t) env;
                     _AbstractCallback* callback = (_AbstractCallback*) mem;
                     *callback = (_AbstractCallback) {
-                        K_FLAG_ON_STACK,
+                        0,
                         invoke,
                         JNI_CALLBACK_clone,
                         JNI_CALLBACK_equals,
@@ -602,7 +617,7 @@ class CJniUtilsPrinter(
         printLabel(builder, "Init function")
         append("""
             
-            void JNI_Init(JNIEnv *env, JNINativeMethod *methods, jint count) {
+            static void JNI_Init(JNIEnv *env, JNINativeMethod *methods, jint count) {
                 (*env)->GetJavaVM(env, &jvm);
                 
                 jniClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "${(classPath.split(".") + name).joinToString(separator = "/")}"));

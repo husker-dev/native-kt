@@ -1,3 +1,4 @@
+@file:Suppress("UnstableApiUsage")
 
 rootProject.name = "native-kt"
 

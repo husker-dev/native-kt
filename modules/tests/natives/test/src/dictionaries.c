@@ -69,7 +69,7 @@ TypeDictionary* returnBigDictionary(VoidCallback* callback) {
         9223372036854775807L,
         123.0f,
         123.4,
-        KString_new(strdup("test string"), 11, 11),
+        KString_new("test string", 11, 11, false),
         MyEnum_CASE2,
         MyDictionary_new(1, 2, 3, 4),
         callback,
@@ -78,10 +78,10 @@ TypeDictionary* returnBigDictionary(VoidCallback* callback) {
         KByteArray_of(1, 2),
         KShortArray_of(1, 2),
         KIntArray_of(1, 2),
-        KLongArray_new(longElements, 2),
+        KLongArray_new(longElements, 2, true),
         KFloatArray_of(1.2f, 3.4f),
         KDoubleArray_of(1.2, 3.4),
-        KArray_of(KString_new(strdup("string1"), 7, 7), KString_new(strdup("string2"), 7, 7)),
+        KArray_of(KString_new("string1", 7, 7, false), KString_new("string2", 7, 7, false)),
         KIntArray_of(MyEnum_CASE1, MyEnum_CASE2),
         KArray_of(MyDictionary_new(1, 2, 3, 4), MyDictionary_new(5, 6, 7, 8))
     );

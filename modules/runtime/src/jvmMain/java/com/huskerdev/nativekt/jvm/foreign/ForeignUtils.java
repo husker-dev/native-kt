@@ -36,7 +36,7 @@ public class ForeignUtils {
     // Flags
 
     public static final byte FLAG_RELEASABLE = 1;
-    public static final byte FLAG_ON_STACK = 2;
+    public static final byte FLAG_DATA_OWNER = 2;
 
     // Layouts
 
@@ -118,7 +118,7 @@ public class ForeignUtils {
         struct.set(ADDRESS, layoutString.get(0), stringMem);
         struct.set(JAVA_LONG, layoutString.get(1), stringMem.byteSize() - 1);
         struct.set(JAVA_INT, layoutString.get(2), of.length());
-        struct.set(JAVA_BYTE, layoutString.get(3), FLAG_ON_STACK);
+        struct.set(JAVA_BYTE, layoutString.get(3), (byte) 0);
         return struct;
     }
 
@@ -191,7 +191,7 @@ public class ForeignUtils {
     public static MemorySegment toNativeKCharArrayOnArena(@NotNull Arena arena, @Nullable char[] arr) {
         if(arr == null) return MemorySegment.NULL;
         MemorySegment dataMem = arena.allocateFrom(JAVA_CHAR, arr);
-        return fillArray(arena.allocate(layoutArray.getSize()), dataMem, arr.length, FLAG_ON_STACK);
+        return fillArray(arena.allocate(layoutArray.getSize()), dataMem, arr.length, (byte) 0);
     }
 
     @NotNull
@@ -262,7 +262,7 @@ public class ForeignUtils {
     public static MemorySegment toNativeKByteArrayOnArena(@NotNull Arena arena, @Nullable byte[] arr) {
         if(arr == null) return MemorySegment.NULL;
         MemorySegment dataMem = arena.allocateFrom(JAVA_BYTE, arr);
-        return fillArray(arena.allocate(layoutArray.getSize()), dataMem, arr.length, FLAG_ON_STACK);
+        return fillArray(arena.allocate(layoutArray.getSize()), dataMem, arr.length, (byte) 0);
     }
 
     @NotNull
@@ -294,7 +294,7 @@ public class ForeignUtils {
     public static MemorySegment toNativeKShortArrayOnArena(@NotNull Arena arena, @Nullable short[] arr) {
         if(arr == null) return MemorySegment.NULL;
         MemorySegment dataMem = arena.allocateFrom(JAVA_SHORT, arr);
-        return fillArray(arena.allocate(layoutArray.getSize()), dataMem, arr.length, FLAG_ON_STACK);
+        return fillArray(arena.allocate(layoutArray.getSize()), dataMem, arr.length, (byte) 0);
     }
 
     @NotNull
@@ -326,7 +326,7 @@ public class ForeignUtils {
     public static MemorySegment toNativeKIntArrayOnArena(@NotNull Arena arena, @Nullable int[] arr) {
         if(arr == null) return MemorySegment.NULL;
         MemorySegment dataMem = arena.allocateFrom(JAVA_INT, arr);
-        return fillArray(arena.allocate(layoutArray.getSize()), dataMem, arr.length, FLAG_ON_STACK);
+        return fillArray(arena.allocate(layoutArray.getSize()), dataMem, arr.length, (byte) 0);
     }
 
     @NotNull
@@ -358,7 +358,7 @@ public class ForeignUtils {
     public static MemorySegment toNativeKLongArrayOnArena(@NotNull Arena arena, @Nullable long[] arr) {
         if(arr == null) return MemorySegment.NULL;
         MemorySegment dataMem = arena.allocateFrom(JAVA_LONG, arr);
-        return fillArray(arena.allocate(layoutArray.getSize()), dataMem, arr.length, FLAG_ON_STACK);
+        return fillArray(arena.allocate(layoutArray.getSize()), dataMem, arr.length, (byte) 0);
     }
 
     @NotNull
@@ -390,7 +390,7 @@ public class ForeignUtils {
     public static MemorySegment toNativeKFloatArrayOnArena(@NotNull Arena arena, @Nullable float[] arr) {
         if(arr == null) return MemorySegment.NULL;
         MemorySegment dataMem = arena.allocateFrom(JAVA_FLOAT, arr);
-        return fillArray(arena.allocate(layoutArray.getSize()), dataMem, arr.length, FLAG_ON_STACK);
+        return fillArray(arena.allocate(layoutArray.getSize()), dataMem, arr.length, (byte) 0);
     }
 
     @NotNull
@@ -422,7 +422,7 @@ public class ForeignUtils {
     public static MemorySegment toNativeKDoubleArrayOnArena(@NotNull Arena arena, @Nullable double[] arr) {
         if(arr == null) return MemorySegment.NULL;
         MemorySegment dataMem = arena.allocateFrom(JAVA_DOUBLE, arr);
-        return fillArray(arena.allocate(layoutArray.getSize()), dataMem, arr.length, FLAG_ON_STACK);
+        return fillArray(arena.allocate(layoutArray.getSize()), dataMem, arr.length, (byte) 0);
     }
 
     @NotNull
@@ -500,7 +500,7 @@ public class ForeignUtils {
         VarHandle ptrHandle = ADDRESS.arrayElementVarHandle();
         for(int i = 0; i < arr.length; i++)
             ptrHandle.set(dataMem, 0L, (long)i, cast.apply(arena, arr[i]));
-        return fillArray(arena.allocate(layoutArray.getSize()), dataMem, arr.length, FLAG_ON_STACK);
+        return fillArray(arena.allocate(layoutArray.getSize()), dataMem, arr.length, (byte) 0);
     }
 
     @NotNull
@@ -558,7 +558,7 @@ public class ForeignUtils {
     ){
         if(callback == null) return MemorySegment.NULL;
         MemorySegment struct = arena.allocate(layoutCallback.getSize());
-        struct.set(JAVA_BYTE, layoutCallback.get(0), FLAG_ON_STACK);
+        struct.set(JAVA_BYTE, layoutCallback.get(0), (byte) 0);
         struct.set(ADDRESS, layoutCallback.get(1), upcall);
         struct.set(ADDRESS, layoutCallback.get(2), callbackClone);
         struct.set(ADDRESS, layoutCallback.get(3), callbackEquals);

@@ -119,7 +119,7 @@ class CApiHeaderPrinter(
         append("\n$name* _Nullable ${name}_clone(const $name* _Nullable self);")
         append("\nvoid ${name}_free($name* _Nullable self);")
         if(isInternal) {
-            append("\nvoid _${name}_forceFree($name* _Nullable self);")
+            append("\nvoid _${name}_free_forced($name* _Nullable self);")
         }
         append("\n")
     }
@@ -186,7 +186,7 @@ class CApiHeaderPrinter(
 
         if(isInternal) {
             append("\nvoid _AbstractCallback_free(_AbstractCallback* _Nullable self);")
-            append("\nvoid __AbstractCallback_forceFree(_AbstractCallback* _Nullable self);\n")
+            append("\nvoid __AbstractCallback_free_forced(_AbstractCallback* _Nullable self);\n")
         }
     }
 
@@ -236,10 +236,10 @@ class CApiHeaderPrinter(
             builder.append("""
                 
                 #define K_FLAG_RELEASABLE 1
-                #define K_FLAG_ON_STACK 2
-    
+                #define K_FLAG_DATA_OWNER 2
+                
                 #define K_OBJECT_IS_RELEASABLE(flags) ((flags) & K_FLAG_RELEASABLE)
-                #define K_OBJECT_IS_ON_STACK(flags) ((flags) & K_FLAG_ON_STACK)
+                #define K_OBJECT_IS_DATA_OWNER(flags) ((flags) & K_FLAG_DATA_OWNER)
                 
             """.trimIndent())
         }
@@ -277,7 +277,12 @@ class CApiHeaderPrinter(
                 char __flags;
             } KString;
             
-            KString* _Nonnull KString_new(const char* _Nonnull data, KInt length, size_t size);
+            KString* _Nonnull KString_new(
+                const char* _Nonnull data, 
+                KInt length, 
+                size_t size, 
+                bool is_data_owner
+            );
             KString* _Nullable KString_clone(const KString* _Nullable self);
             void KString_free(KString* _Nullable self);
             
@@ -289,7 +294,11 @@ class CApiHeaderPrinter(
                 char __flags;                                                            \
             } Name;                                                                      \
                                                                                          \
-            Name* _Nonnull Name##_new(const Type* _Nonnull elements, const KInt length); \
+            Name* _Nonnull Name##_new(                     \
+                const Type* _Nonnull elements,             \
+                const KInt length,                         \
+                bool is_data_owner                         \
+            );                                             \
             Name* _Nonnull _##Name##_of(const int n, ...);
             
             KArrayDef(KCharArray,	 KChar          )
@@ -326,8 +335,8 @@ class CApiHeaderPrinter(
             KArrayCloneFreeDef(KDoubleArray,  KDouble)
             #undef KArrayCloneFreeDef
             
-            KArray* _Nullable KArray_clone(const KArray* _Nullable self, void* _Nullable (* _Nullable cloneOp)(void* _Nullable));
-            void KArray_free(const KArray* _Nullable self, void (* _Nonnull freeOp)(void* _Nonnull));
+            KArray* _Nullable KArray_clone(const KArray* _Nullable self, void* _Nullable (* _Nullable clone_op)(void* _Nullable));
+            void KArray_free(const KArray* _Nullable self, void (* _Nonnull free_op)(void* _Nonnull));
 
             #define KCallbackDef(Name, Type, ...)                                       \
             struct Name {                                                               \
@@ -335,7 +344,7 @@ class CApiHeaderPrinter(
                 Type (* _Nonnull invoke)(Name* _Nonnull self, ##__VA_ARGS__);           \
                 Name* _Nonnull (* _Nonnull clone)(Name* _Nonnull self);                 \
                 KBoolean (* _Nonnull equals)(Name* _Nonnull self, Name* _Nullable obj); \
-                KInt (* _Nonnull hashCode)(Name* _Nonnull self);                        \
+                KInt (* _Nonnull hash_code)(Name* _Nonnull self);                       \
                 void (* _Nonnull free)(Name* _Nullable self);                           \
             };
             
@@ -353,9 +362,9 @@ class CApiHeaderPrinter(
                 "KFloatArray",
                 "KDoubleArray"
             ).joinTo(builder, separator = "") {
-                "\nvoid _${it}_forceFree($it* _Nullable self);"
+                "\nvoid _${it}_free_forced($it* _Nullable self);"
             }
-            append("\nvoid _KArray_forceFree(KArray* _Nullable self, void (* _Nonnull freeOp)(void* _Nullable));")
+            append("\nvoid _KArray_free_forced(KArray* _Nullable self, void (* _Nonnull free_op)(void* _Nullable));")
             append("\n")
         }
     }
@@ -399,12 +408,12 @@ internal fun forceFreeFuncFor(
 ): String? = when {
     type.isArray() -> type.arrayType { type ->
         when {
-            type.isPrimitive() -> "_K${type.toKotlinType()}Array_forceFree($content)"
-            type.isEnum() -> "_KIntArray_forceFree($content)"
-            else -> "_KArray_forceFree($content, (void*) ${forceFreeFuncFor(type, "")!!.dropLast(2)})"
+            type.isPrimitive() -> "_K${type.toKotlinType()}Array_free_forced($content)"
+            type.isEnum() -> "_KIntArray_free_forced($content)"
+            else -> "_KArray_free_forced($content, (void*) ${forceFreeFuncFor(type, "")!!.dropLast(2)})"
         }
     }
-    type.isCallback() -> "__AbstractCallback_forceFree((_AbstractCallback*) $content)"
-    type.isDictionary() || type.isString() -> "_${type.toCType(ptr = false)}_forceFree($content)"
+    type.isCallback() -> "__AbstractCallback_free_forced((_AbstractCallback*) $content)"
+    type.isDictionary() || type.isString() -> "_${type.toCType(ptr = false)}_free_forced($content)"
     else -> null
 }

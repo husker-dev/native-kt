@@ -30,7 +30,7 @@ KLongArray* returnLongArray() {
     KLong* elements = malloc(2 * sizeof(int64_t));
     elements[0] = 1;
     elements[1] = 2;
-    return KLongArray_new(elements, 2);
+    return KLongArray_new(elements, 2, true);
 }
 
 KFloatArray* returnFloatArray() {
@@ -43,8 +43,8 @@ KDoubleArray* returnDoubleArray() {
 
 KArray* returnStringArray() {
     return KArray_of(
-        KString_new(strdup("string1"), 7, 7),
-        KString_new(strdup("string2"), 7, 7)
+        KString_new("string1", 7, 7, false),
+        KString_new("string2", 7, 7, false)
     );
 }
 

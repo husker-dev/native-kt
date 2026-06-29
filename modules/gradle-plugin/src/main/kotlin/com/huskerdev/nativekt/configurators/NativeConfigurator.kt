@@ -206,8 +206,7 @@ private abstract class PrepareNativesKn @Inject constructor(
 
         CApiImplPrinter(
             idl = idl,
-            target = File(nativesBuildSourcesDir, "api.c"),
-            classPath = moduleClasspath
+            target = File(nativesBuildSourcesDir, "api.c")
         )
 
         when(val buildSystem = buildSystem) {

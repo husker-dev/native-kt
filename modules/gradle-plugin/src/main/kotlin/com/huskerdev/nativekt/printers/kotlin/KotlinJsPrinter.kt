@@ -268,7 +268,7 @@ class KotlinJsPrinter(
                 }
                 add("\n\t${ref(i, "this")} = $casted")
             }
-            add("\n\tHEAP8[this + _layout$name[${fields.size}]] = FLAG_RELEASABLE")
+            add("\n\tHEAP8[this + _layout$name[${fields.size}]] = FLAG_RELEASABLE.toByte()")
         }.joinTo(builder, separator = "")
         append("\n} } ?: 0\n")
 
@@ -292,16 +292,16 @@ class KotlinJsPrinter(
     private fun printFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
         val useArena = function.args.any {
             it.type.isString() ||
-                    it.type.isArray() ||
-                    it.type.isDictionary() ||
-                    it.type.isCallback()
+            it.type.isArray() ||
+            it.type.isDictionary() ||
+            it.type.isCallback()
         }
 
         val args = function.args.joinToString {
             castToNative(it.type, it.name, useArena = useArena)
         }
 
-        val deallocFunc = if(function.isDealloc())
+        val deallocFunc = if(function.type.isReleasable())
             freeFuncFor(function.type, "_result_native")
         else null
 
@@ -386,7 +386,7 @@ class KotlinJsPrinter(
         type: ResolvedIdlType,
         content: String
     ): String = when {
-        type.isCallback() -> "callbackFree($content)"
+        type.isCallback() -> "callbackFree(_module, $content)"
         type.isArray() -> type.arrayType { type ->
             when {
                 type.isPrimitive() -> "_module._${type.toCType()}Array_free($content)"
@@ -443,7 +443,7 @@ class KotlinJsPrinter(
             type.isFloat() -> "$content.truncF32()"
             type.isEnum() -> "${type.declaration.name}.entries[$content]"
             type.isString() -> "toKotlinKString(_module, $content)$assert"
-            type.isCallback() -> "toKotlinCallback(_module, $content)$assert"
+            type.isCallback() -> "toKotlinCallback<${type.toKotlinType()}>(_module, $content)$assert"
             type.isDictionary() -> "toKotlin${type.declaration.name}(_module, $content)$assert"
             type.isArray() -> type.arrayType { type ->
                 when {

@@ -10,10 +10,9 @@ import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.ExperimentalExtendedContracts
 import kotlin.contracts.contract
 import kotlin.enums.enumEntries
-import kotlin.experimental.and
 
-const val FLAG_RELEASABLE = 1.toByte()
-const val FLAG_ON_STACK = 2.toByte()
+const val FLAG_RELEASABLE = 1
+const val K_FLAG_DATA_OWNER = 2
 
 // ╔════════════════╗
 // ║     String     ║
@@ -56,7 +55,7 @@ fun toNativeKString(str: String?): CPointer<KString>? {
     mem.size = bytes.size.convert()
     mem.data = malloc(mem.size.convert())!!.reinterpret()
     mem.length = str.length
-    mem.__flags = FLAG_RELEASABLE
+    mem.__flags = (FLAG_RELEASABLE or K_FLAG_DATA_OWNER).toByte()
     bytes.usePinned { memcpy(mem.data, it.addressOf(0), mem.size) }
     return mem.ptr
 }
@@ -106,7 +105,7 @@ fun toNativeKCharArray(arr: CharArray?): CPointer<KCharArray>? {
     mem.size = (arr.size * Char.SIZE_BYTES).convert()
     mem.elements = malloc(mem.size.convert())!!.reinterpret()
     mem.length = arr.size
-    mem.__flags = FLAG_RELEASABLE
+    mem.__flags = (FLAG_RELEASABLE or K_FLAG_DATA_OWNER).toByte()
     arr.usePinned { memcpy(mem.elements, it.addressOf(0), mem.size) }
     return mem.ptr
 }
@@ -177,7 +176,7 @@ fun toNativeKByteArray(arr: ByteArray?): CPointer<KByteArray>? {
     mem.size = (arr.size * Byte.SIZE_BYTES).convert()
     mem.elements = malloc(mem.size.convert())!!.reinterpret()
     mem.length = arr.size
-    mem.__flags = FLAG_RELEASABLE
+    mem.__flags = (FLAG_RELEASABLE or K_FLAG_DATA_OWNER).toByte()
     arr.usePinned { memcpy(mem.elements, it.addressOf(0), mem.size) }
     return mem.ptr
 }
@@ -222,7 +221,7 @@ fun toNativeKShortArray(arr: ShortArray?): CPointer<KShortArray>? {
     mem.size = (arr.size * Short.SIZE_BYTES).convert()
     mem.elements = malloc(mem.size.convert())!!.reinterpret()
     mem.length = arr.size
-    mem.__flags = FLAG_RELEASABLE
+    mem.__flags = (FLAG_RELEASABLE or K_FLAG_DATA_OWNER).toByte()
     arr.usePinned { memcpy(mem.elements, it.addressOf(0), mem.size) }
     return mem.ptr
 }
@@ -267,7 +266,7 @@ fun toNativeKIntArray(arr: IntArray?): CPointer<KIntArray>? {
     mem.size = (arr.size * Int.SIZE_BYTES).convert()
     mem.elements = malloc(mem.size.convert())!!.reinterpret()
     mem.length = arr.size
-    mem.__flags = FLAG_RELEASABLE
+    mem.__flags = (FLAG_RELEASABLE or K_FLAG_DATA_OWNER).toByte()
     arr.usePinned { memcpy(mem.elements, it.addressOf(0), mem.size) }
     return mem.ptr
 }
@@ -312,7 +311,7 @@ fun toNativeKLongArray(arr: LongArray?): CPointer<KLongArray>? {
     mem.size = (arr.size * Long.SIZE_BYTES).convert()
     mem.elements = malloc(mem.size.convert())!!.reinterpret()
     mem.length = arr.size
-    mem.__flags = FLAG_RELEASABLE
+    mem.__flags = (FLAG_RELEASABLE or K_FLAG_DATA_OWNER).toByte()
     arr.usePinned { memcpy(mem.elements, it.addressOf(0), mem.size) }
     return mem.ptr
 }
@@ -357,7 +356,7 @@ fun toNativeKFloatArray(arr: FloatArray?): CPointer<KFloatArray>? {
     mem.size = (arr.size * Float.SIZE_BYTES).convert()
     mem.elements = malloc(mem.size.convert())!!.reinterpret()
     mem.length = arr.size
-    mem.__flags = FLAG_RELEASABLE
+    mem.__flags = (FLAG_RELEASABLE or K_FLAG_DATA_OWNER).toByte()
     arr.usePinned { memcpy(mem.elements, it.addressOf(0), mem.size) }
     return mem.ptr
 }
@@ -402,7 +401,7 @@ fun toNativeKDoubleArray(arr: DoubleArray?): CPointer<KDoubleArray>? {
     mem.size = (arr.size * Double.SIZE_BYTES).convert()
     mem.elements = malloc(mem.size.convert())!!.reinterpret()
     mem.length = arr.size
-    mem.__flags = FLAG_RELEASABLE
+    mem.__flags = (FLAG_RELEASABLE or K_FLAG_DATA_OWNER).toByte()
     arr.usePinned { memcpy(mem.elements, it.addressOf(0), mem.size) }
     return mem.ptr
 }
@@ -476,7 +475,7 @@ fun <T, N: CPointed> toNativeKArray(
     mem.size = (arr.size * intptr_t.SIZE_BYTES).convert()
     mem.elements = malloc(mem.size.convert())!!.reinterpret()
     mem.length = arr.size
-    mem.__flags = FLAG_RELEASABLE
+    mem.__flags = (FLAG_RELEASABLE or K_FLAG_DATA_OWNER).toByte()
     arr.forEachIndexed { i, it ->
         mem.elements!![i] = converter(it)
     }
@@ -498,7 +497,7 @@ fun <T, N: CPointer<*>> toKotlinKArray(
     } as Array<T?>?
 }
 
-@Suppress("unchecked_cast")
+@Suppress("unchecked_cast", "RemoveExplicitTypeArguments")
 fun <T: Any, N: CPointer<*>> toKotlinKArray(
     struct: CPointer<KArray>,
     converter: (N?) -> T?
@@ -514,7 +513,7 @@ private fun callbackClone(self: CPointer<_AbstractCallback>?): CPointer<_Abstrac
     }
     if(self == null) return null
     val mem = malloc(sizeOf<_AbstractCallback>().convert())!!.reinterpret<_AbstractCallback>().pointed
-    mem.__flags = FLAG_RELEASABLE
+    mem.__flags = FLAG_RELEASABLE.toByte()
     mem.invoke = self.pointed.invoke
     mem.clone = callbackClone
     mem.equals = callbackEquals
@@ -531,9 +530,7 @@ private fun callbackHashCode(self: CPointer<_AbstractCallback>?): Int =
     toKotlinCallback<Int>(self!!.reinterpret()).hashCode()
 
 fun callbackFree(self: CPointer<_AbstractCallback>?) {
-    if(self == null) return
-
-    if(self.pointed.__flags and FLAG_RELEASABLE != FLAG_RELEASABLE)
+    if(self == null || self.pointed.__flags.toInt() and FLAG_RELEASABLE != FLAG_RELEASABLE)
         return
 
     self.pointed.__stableRef!!.asStableRef<Any>().dispose()
@@ -577,7 +574,7 @@ fun toNativeCallback(
     }
     if(of == null) return null
     val mem = malloc(sizeOf<_AbstractCallback>().convert())!!.reinterpret<_AbstractCallback>().pointed
-    mem.__flags = FLAG_RELEASABLE
+    mem.__flags = FLAG_RELEASABLE.toByte()
     mem.invoke = invoke.reinterpret()
     mem.clone = callbackClone
     mem.equals = callbackEquals
@@ -596,5 +593,6 @@ fun <T> toKotlinCallback(callback: COpaquePointer?): T? {
     return callback.reinterpret<_AbstractCallback>().pointed.__stableRef!!.asStableRef<Any>().get() as T?
 }
 
+@Suppress("RemoveExplicitTypeArguments")
 fun <T: Any> toKotlinCallback(callback: COpaquePointer): T =
     toKotlinCallback<T?>(callback)
