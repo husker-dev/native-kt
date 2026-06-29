@@ -344,6 +344,13 @@ class CJniUtilsPrinter(
                     return result;
                 }
                 
+                void JNI_releaseEnumArrayOnStack(KIntArray* self) {
+                	if(self == NULL)
+                		return;
+                	self->__flags |= K_FLAG_DATA_OWNER;
+                	KIntArray_free(self);
+                }
+                
                 jobjectArray JNI_toKotlinEnumArray(
                     JNIEnv *env,
                     KIntArray* src,

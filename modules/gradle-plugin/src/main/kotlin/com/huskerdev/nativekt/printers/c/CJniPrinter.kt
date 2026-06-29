@@ -161,7 +161,7 @@ class CJniPrinter(
                 type.isArray() -> type.arrayType { type ->
                     when {
                         type.isPrimitive() -> "JNI_release${type.toCType()}ArrayOnStack(env, $name)"
-                        type.isEnum() -> "JNI_releaseKIntArrayOnStack(env, $name)"
+                        type.isEnum() -> "JNI_releaseEnumArrayOnStack($name)"
                         else -> "JNI_releaseKArrayOnStack($name, (void*) ${freeFuncFor(type, "")!!.dropLast(2)})"
                     }
                 }

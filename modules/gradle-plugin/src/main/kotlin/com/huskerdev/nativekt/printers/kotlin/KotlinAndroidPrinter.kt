@@ -55,7 +55,7 @@ class KotlinAndroidPrinter(
                 _isLib${moduleName.capitalized()}Loaded = true
     
                 System.loadLibrary("$moduleName")
-                $jniClassName.JNILoad(supportsCritical)
+                $jniClassName.nJNILoad(supportsCritical)
             }
             
             ${actual}fun ${asyncLoadFunctionName(moduleName)}(onReady: () -> Unit) {
