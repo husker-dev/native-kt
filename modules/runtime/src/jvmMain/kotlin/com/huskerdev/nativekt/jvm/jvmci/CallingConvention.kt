@@ -1,22 +1,21 @@
 @file:Suppress("JAVA_MODULE_DOES_NOT_EXPORT_PACKAGE")
 
-package com.huskerdev.nativekt.jvm.jvmci;
+package com.huskerdev.nativekt.jvm.jvmci
 
-import com.huskerdev.nativekt.Arch;
-import com.huskerdev.nativekt.OS;
-import com.huskerdev.nativekt.jvm.jvmci.conventions.AMD64LinuxCallingConvention;
-import com.huskerdev.nativekt.jvm.jvmci.conventions.AMD64WindowsCallingConvention;
-import com.huskerdev.nativekt.jvm.jvmci.conventions.ARM64CallingConvention;
-import jdk.vm.ci.hotspot.HotSpotCompiledNmethod;
-import jdk.vm.ci.hotspot.HotSpotJVMCIRuntime;
-import jdk.vm.ci.hotspot.HotSpotResolvedJavaMethod;
-import jdk.vm.ci.hotspot.HotSpotVMConfigAccess;
-import jdk.vm.ci.meta.JavaKind;
-import jdk.vm.ci.meta.MetaAccessProvider;
-import jdk.vm.ci.runtime.JVMCI;
-import jdk.vm.ci.runtime.JVMCIBackend;
-
-import java.lang.reflect.Method;
+import com.huskerdev.nativekt.Arch
+import com.huskerdev.nativekt.OS
+import com.huskerdev.nativekt.jvm.jvmci.conventions.AMD64LinuxCallingConvention
+import com.huskerdev.nativekt.jvm.jvmci.conventions.AMD64WindowsCallingConvention
+import com.huskerdev.nativekt.jvm.jvmci.conventions.ARM64CallingConvention
+import jdk.vm.ci.hotspot.HotSpotCompiledNmethod
+import jdk.vm.ci.hotspot.HotSpotJVMCIRuntime
+import jdk.vm.ci.hotspot.HotSpotResolvedJavaMethod
+import jdk.vm.ci.hotspot.HotSpotVMConfigAccess
+import jdk.vm.ci.meta.JavaKind
+import jdk.vm.ci.meta.MetaAccessProvider
+import jdk.vm.ci.runtime.JVMCI
+import jdk.vm.ci.runtime.JVMCIBackend
+import java.lang.reflect.Method
 
 abstract class CallingConvention {
 
@@ -47,7 +46,7 @@ abstract class CallingConvention {
         protected val meta: MetaAccessProvider = jvmci.metaAccess
         protected val config = HotSpotVMConfigAccess(HotSpotJVMCIRuntime.runtime().getConfigStore())
 
-        val ENTRY_BARRIER_PATCH = config.getConstant("CodeInstaller::ENTRY_BARRIER_PATCH", Long::class.javaObjectType)
+        val ENTRY_BARRIER_PATCH: Long = config.getConstant("CodeInstaller::ENTRY_BARRIER_PATCH", Long::class.javaObjectType)
 
         val current: CallingConvention = when (Arch.current) {
             Arch.ARM64 -> ARM64CallingConvention()

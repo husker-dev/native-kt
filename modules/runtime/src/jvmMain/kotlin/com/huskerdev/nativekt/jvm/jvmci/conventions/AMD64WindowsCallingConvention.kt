@@ -1,4 +1,4 @@
-package com.huskerdev.nativekt.jvm.jvmci.conventions;
+package com.huskerdev.nativekt.jvm.jvmci.conventions
 
 
 import com.huskerdev.nativekt.jvm.jvmci.Buffer

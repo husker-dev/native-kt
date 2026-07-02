@@ -113,10 +113,10 @@ class ForeignUtils {
                     layoutCallback[1],
                     self.reinterpret(layoutCallback.size).get(ADDRESS, 8L)
                 )
-                set(ADDRESS, layoutCallback[2], ForeignUtils.Companion.callbackClone)
-                set(ADDRESS, layoutCallback[3], ForeignUtils.Companion.callbackEquals)
-                set(ADDRESS, layoutCallback[4], ForeignUtils.Companion.callbackHashCode)
-                set(ADDRESS, layoutCallback[5], ForeignUtils.Companion.callbackFree)
+                set(ADDRESS, layoutCallback[2], callbackClone)
+                set(ADDRESS, layoutCallback[3], callbackEquals)
+                set(ADDRESS, layoutCallback[4], callbackHashCode)
+                set(ADDRESS, layoutCallback[5], callbackFree)
 
                 callbacks[address()] = callbacks[self.address()]!!
             }
@@ -551,10 +551,10 @@ fun createCallbackOnArena(
     arena.allocate(layoutCallback.size).apply {
         set(JAVA_BYTE, layoutCallback[0], 0.toByte())
         set(ADDRESS, layoutCallback[1], upcall)
-        set(ADDRESS, layoutCallback[2], ForeignUtils.Companion.callbackClone)
-        set(ADDRESS, layoutCallback[3], ForeignUtils.Companion.callbackEquals)
-        set(ADDRESS, layoutCallback[4], ForeignUtils.Companion.callbackHashCode)
-        set(ADDRESS, layoutCallback[5], ForeignUtils.Companion.callbackFree)
+        set(ADDRESS, layoutCallback[2], ForeignUtils.callbackClone)
+        set(ADDRESS, layoutCallback[3], ForeignUtils.callbackEquals)
+        set(ADDRESS, layoutCallback[4], ForeignUtils.callbackHashCode)
+        set(ADDRESS, layoutCallback[5], ForeignUtils.callbackFree)
 
         callbacks[address()] = callback
 
@@ -572,10 +572,10 @@ fun createCallback(
     malloc(layoutCallback.size).apply {
         set(JAVA_BYTE, layoutCallback[0], FLAG_RELEASABLE)
         set(ADDRESS, layoutCallback[1], upcall)
-        set(ADDRESS, layoutCallback[2], ForeignUtils.Companion.callbackClone)
-        set(ADDRESS, layoutCallback[3], ForeignUtils.Companion.callbackEquals)
-        set(ADDRESS, layoutCallback[4], ForeignUtils.Companion.callbackHashCode)
-        set(ADDRESS, layoutCallback[5], ForeignUtils.Companion.callbackFree)
+        set(ADDRESS, layoutCallback[2], ForeignUtils.callbackClone)
+        set(ADDRESS, layoutCallback[3], ForeignUtils.callbackEquals)
+        set(ADDRESS, layoutCallback[4], ForeignUtils.callbackHashCode)
+        set(ADDRESS, layoutCallback[5], ForeignUtils.callbackFree)
 
         callbacks[address()] = callback
     }

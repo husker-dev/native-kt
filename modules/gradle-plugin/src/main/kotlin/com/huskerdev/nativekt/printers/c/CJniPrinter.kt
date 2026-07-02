@@ -69,7 +69,6 @@ class CJniPrinter(
 
         val operators = idl.globalOperators()
         operators.forEachIndexed { index, function ->
-            val name = function.name
             val funcName = function.jniName()
             val funcDesc = function.toJavaDesc(classPath)
             val nl = "\n\t\t"

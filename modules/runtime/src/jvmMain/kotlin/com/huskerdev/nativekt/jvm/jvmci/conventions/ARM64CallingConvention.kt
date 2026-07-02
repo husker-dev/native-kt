@@ -1,6 +1,6 @@
 @file:Suppress("JAVA_MODULE_DOES_NOT_EXPORT_PACKAGE")
 
-package com.huskerdev.nativekt.jvm.jvmci.conventions;
+package com.huskerdev.nativekt.jvm.jvmci.conventions
 
 import com.huskerdev.nativekt.jvm.jvmci.Buffer
 import com.huskerdev.nativekt.jvm.jvmci.CallingConvention
@@ -118,7 +118,7 @@ class ARM64CallingConvention: CallingConvention() {
     ) {
         // nmethod entry barrier simulation:
         // LDR W8, [PC, #0]
-        buf.emitInt(0x18000008);
+        buf.emitInt(0x18000008)
     }
 
     // ==========================================================

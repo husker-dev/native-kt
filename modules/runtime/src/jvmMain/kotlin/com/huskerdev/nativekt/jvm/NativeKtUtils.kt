@@ -1,4 +1,4 @@
-package com.huskerdev.nativekt.jvm;
+package com.huskerdev.nativekt.jvm
 
 import com.huskerdev.nativekt.Arch
 import com.huskerdev.nativekt.OS
@@ -75,7 +75,7 @@ object NativeKtUtils {
             forced != null -> {
                 Invoker.entries.firstOrNull {
                     it.name.lowercase(Locale.US) == forced
-                } ?: throw UnsupportedOperationException("Unknown forced native invoker: $forced");
+                } ?: throw UnsupportedOperationException("Unknown forced native invoker: $forced")
             }
             isForeignAvailable() -> Invoker.FOREIGN
             else -> Invoker.JNI

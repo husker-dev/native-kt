@@ -2,20 +2,18 @@
 
 package com.huskerdev.nativekt.jvm.jvmci.conventions
 
-import com.huskerdev.nativekt.jvm.jvmci.Buffer;
-import com.huskerdev.nativekt.jvm.jvmci.CallingConvention;
-import jdk.vm.ci.code.site.DataPatch;
-import jdk.vm.ci.code.site.Mark;
-import jdk.vm.ci.code.site.Site;
-import jdk.vm.ci.hotspot.HotSpotCompiledCode;
-import jdk.vm.ci.hotspot.HotSpotCompiledNmethod;
-import jdk.vm.ci.hotspot.HotSpotResolvedJavaMethod;
-import jdk.vm.ci.meta.Assumptions;
-import jdk.vm.ci.meta.ResolvedJavaMethod;
-import jdk.vm.ci.runtime.JVMCICompiler;
-
-import java.lang.reflect.Method;
-import java.util.ArrayList;
+import com.huskerdev.nativekt.jvm.jvmci.Buffer
+import com.huskerdev.nativekt.jvm.jvmci.CallingConvention
+import jdk.vm.ci.code.site.DataPatch
+import jdk.vm.ci.code.site.Mark
+import jdk.vm.ci.code.site.Site
+import jdk.vm.ci.hotspot.HotSpotCompiledCode
+import jdk.vm.ci.hotspot.HotSpotCompiledNmethod
+import jdk.vm.ci.hotspot.HotSpotResolvedJavaMethod
+import jdk.vm.ci.meta.Assumptions
+import jdk.vm.ci.meta.ResolvedJavaMethod
+import jdk.vm.ci.runtime.JVMCICompiler
+import java.lang.reflect.Method
 
 internal const val RAX = 0
 internal const val RCX = 1
@@ -92,7 +90,7 @@ abstract class AbstractAMD64CallingConvention(
 
     override fun emitConversion(buf: Buffer, method: Method) {
         if(method.parameterCount == 0)
-            return;
+            return
 
         var stackShift = 0
         if(shouldUseStack(method)) {
@@ -284,7 +282,7 @@ abstract class AbstractAMD64CallingConvention(
         imm: Int
     ) {
         // REX.W prefix for extended registers
-        var rex = 0x48;
+        var rex = 0x48
         if (dst >= 8) rex = rex or 0x04  // REX.R
         if (src >= 8) rex = rex or 0x01  // REX.B
 
@@ -305,7 +303,7 @@ abstract class AbstractAMD64CallingConvention(
         dst: Int
     ) {
         // REX.W prefix for extended registers
-        var rex = 0x48;
+        var rex = 0x48
         if (dst >= 8) rex = rex or 0x01  // REX.B
 
         buf.emitByte(rex)
