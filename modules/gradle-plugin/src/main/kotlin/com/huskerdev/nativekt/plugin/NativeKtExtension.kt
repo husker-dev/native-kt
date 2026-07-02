@@ -48,6 +48,7 @@ open class NativeKtMultiplatformExtension @Inject constructor(
 
     // JS
     override var useJsBigInt = false
+    override var emscriptenEnv: List<String>? = null
 
     // Common
     override var useCoroutines = true
@@ -99,6 +100,7 @@ open class NativeKtJsExtension @Inject constructor(
     override var applyRuntime = true
 
     override var useJsBigInt = false
+    override var emscriptenEnv: List<String>? = null
 }
 
 interface NativeKtNativeInterface: NativeKtCommonInterface
@@ -113,6 +115,7 @@ interface NativeKtAndroidInterface: NativeKtCommonInterface {
 
 interface NativeKtJsInterface: NativeKtCommonInterface {
     var useJsBigInt: Boolean
+    var emscriptenEnv: List<String>?
 }
 
 interface NativeKtJvmInterface: NativeKtCommonInterface {

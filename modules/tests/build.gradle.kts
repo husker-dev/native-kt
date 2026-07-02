@@ -68,20 +68,22 @@ kotlin {
         }
     }
 
-    sourceSets.commonMain.dependencies {
-        implementation(libs.kotlinx.coroutines)
-        implementation(project(":modules:runtime"))
-    }
-    sourceSets.commonTest.dependencies {
-        implementation(kotlin("test"))
-        implementation(libs.kotlinx.coroutines.test)
-    }
-    sourceSets.androidMain.dependencies {
-        compileOnly(project(":modules:android-critical-stub"))
-    }
-    sourceSets.getByName("androidDeviceTest").dependencies {
-        implementation(libs.androidx.test.runner)
-        implementation(libs.androidx.test.ext.junit)
+    sourceSets {
+        commonMain.dependencies {
+            implementation(libs.kotlinx.coroutines)
+            implementation(project(":modules:runtime"))
+        }
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+            implementation(libs.kotlinx.coroutines.test)
+        }
+        androidMain.dependencies {
+            compileOnly(project(":modules:android-critical-stub"))
+        }
+        getByName("androidDeviceTest").dependencies {
+            implementation(libs.androidx.test.runner)
+            implementation(libs.androidx.test.ext.junit)
+        }
     }
 }
 

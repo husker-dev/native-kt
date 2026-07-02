@@ -15,6 +15,7 @@ import kotlinx.serialization.json.Json
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.internal.extensions.stdlib.capitalized
@@ -84,6 +85,7 @@ internal fun configureJs(
         it.expectActual            = expectActual
         it.useCoroutines           = extension.useCoroutines
         it.useJsBigInt             = extension.useJsBigInt
+        it.emscriptenEnv           = extension.emscriptenEnv
 
         it.idl                     = Json.encodeToString(idl)
         it.moduleName              = module.name
@@ -108,6 +110,7 @@ internal fun configureJs(
     )
     compileTask.get().also {
         it.inputs.dir(module.dir(project))
+        it.inputs.dir(nativesBuildSourcesDir)
         it.inputs.file(module.getNDLFile(project))
         it.outputs.dirs(nativesBuildOutDir, resourcesDir)
 
@@ -132,6 +135,7 @@ private abstract class PrepareNativesJs: DefaultTask() {
     @get:Input abstract var expectActual: Boolean
     @get:Input abstract var useCoroutines: Boolean
     @get:Input abstract var useJsBigInt: Boolean
+    @get:Input @get:Optional abstract var emscriptenEnv: List<String>?
 
     @get:Input abstract var idl: String
     @get:Input abstract var moduleName: String
@@ -214,9 +218,10 @@ private abstract class PrepareNativesJs: DefaultTask() {
             "MODULARIZE=1",
             "EXPORT_ES6=1",
             "WASM_BIGINT=${if (useJsBigInt) "1" else "0"}",
+            emscriptenEnv?.joinToString(separator = ",", prefix = "ENVIRONMENT="),
             "EXPORTED_RUNTIME_METHODS=$runtimeFunctions",
             "EXPORTED_FUNCTIONS=$exportedFunctions",
-        ).joinToString(separator = " ") { "-s $it" }
+        ).filterNotNull().joinToString(separator = " ") { "-s $it" }
 
         when(buildSystem) {
             is BuildSystem.CMake -> {
