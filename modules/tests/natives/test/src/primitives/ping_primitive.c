@@ -12,7 +12,15 @@ KByte pingByte(const KByte arg) {
     return arg;
 }
 
+KUByte pingUByte(const KUByte arg) {
+    return arg;
+}
+
 KShort pingShort(const KShort arg) {
+    return arg;
+}
+
+KUShort pingUShort(const KUShort arg) {
     return arg;
 }
 
@@ -20,7 +28,15 @@ KInt pingInt(const KInt arg) {
     return arg;
 }
 
+KUInt pingUInt(const KUInt arg) {
+    return arg;
+}
+
 KLong pingLong(const KLong arg) {
+    return arg;
+}
+
+KULong pingULong(const KULong arg) {
     return arg;
 }
 

@@ -20,7 +20,7 @@ class KotlinJsPrinter(
 
         val builder = StringBuilder()
         builder.append("""
-            @file:OptIn(ExperimentalWasmJsInterop::class)
+            @file:OptIn(ExperimentalWasmJsInterop::class, ExperimentalUnsignedTypes::class)
             @file:Suppress("unused", "ACTUAL_ANNOTATIONS_NOT_MATCH_EXPECT")
             
             package $classPath
@@ -216,24 +216,24 @@ class KotlinJsPrinter(
             if (fields.any { it.type.isDouble() })
                 append("\n\tval HEAPF64 = module.HEAPF64")
             if (fields.any {
-                it.type.isInt() || it.type.isDictionary() || it.type.isString() || it.type.isString() || it.type.isDictionary() || it.type.isEnum()
+                it.type.isInt() || it.type.isUInt() || it.type.isDictionary() || it.type.isString() || it.type.isString() || it.type.isDictionary() || it.type.isEnum()
             }) append("\n\tval HEAP32 = module.HEAP32")
             if (fields.any { it.type.isFloat() })
                 append("\n\tval HEAPF32 = module.HEAPF32")
-            if (fields.any { it.type.isChar() || it.type.isShort() })
+            if (fields.any { it.type.isChar() || it.type.isShort() || it.type.isUShort() })
                 append("\n\tval HEAP16 = module.HEAP16")
-            if (toNative || fields.any { it.type.isByte() || it.type.isBoolean() })
+            if (toNative || fields.any { it.type.isByte() || it.type.isUByte() || it.type.isBoolean() })
                 append("\n\tval HEAP8 = module.HEAP8")
         }
 
         fun ref(i: Int, mem: String): String {
             val type = fields[i].type
             return when {
-                type.isByte() || type.isBoolean() -> "HEAP8[$mem + _layout$name[$i]]"
-                type.isShort() || type.isChar() -> "HEAP16[($mem + _layout$name[$i]) shr 1]"
+                type.isByte() || type.isUByte() || type.isBoolean() -> "HEAP8[$mem + _layout$name[$i]]"
+                type.isShort() || type.isUShort() || type.isChar() -> "HEAP16[($mem + _layout$name[$i]) shr 1]"
+                type.isLong() || type.isULong() -> "HEAP64[($mem + _layout$name[$i]) shr 3]"
                 type.isFloat() -> "HEAPF32[($mem + _layout$name[$i]) shr 2]"
                 type.isDouble() -> "HEAPF64[($mem + _layout$name[$i]) shr 3]"
-                type.isLong() -> "HEAP64[($mem + _layout$name[$i]) shr 3]"
                 else -> "HEAP32[($mem + _layout$name[$i]) shr 2]"
             }
         }
@@ -245,8 +245,10 @@ class KotlinJsPrinter(
             fields.forEachIndexed { i, field ->
                 val ref = field.name
                 val casted = when {
-                    field.type.isBoolean() || field.type.isByte() ||
-                    field.type.isShort() || field.type.isChar() -> ref
+                    field.type.isBoolean() || field.type.isChar() ||
+                            field.type.isByte() || field.type.isShort()-> ref
+                    field.type.isUByte() -> "$ref.toByte()"
+                    field.type.isUShort() -> "$ref.toShort()"
                     else -> castToNative(field.type, ref, useArena = true)
                 }
                 add("\n\t${ref(i, "this")} = $casted")
@@ -262,8 +264,10 @@ class KotlinJsPrinter(
             fields.forEachIndexed { i, field ->
                 val ref = field.name
                 val casted = when {
-                    field.type.isBoolean() || field.type.isByte() ||
-                    field.type.isShort() || field.type.isChar() -> ref
+                    field.type.isBoolean() || field.type.isChar() ||
+                            field.type.isByte() || field.type.isShort()-> ref
+                    field.type.isUByte() -> "$ref.toByte()"
+                    field.type.isUShort() -> "$ref.toShort()"
                     else -> castToNative(field.type, ref, useArena = false)
                 }
                 add("\n\t${ref(i, "this")} = $casted")
@@ -281,6 +285,8 @@ class KotlinJsPrinter(
             val ref = ref(i, "of")
             val casted = when {
                 field.type.isChar() -> "$ref.toInt().toChar()"
+                field.type.isUByte() -> "$ref.toUByte()"
+                field.type.isUShort() -> "$ref.toUShort()"
                 field.type.isByte() || field.type.isShort() -> ref
                 else -> castToKotlin(field.type, ref(i, "of"))
             }
@@ -389,7 +395,7 @@ class KotlinJsPrinter(
         type.isCallback() -> "callbackFree(_module, $content)"
         type.isArray() -> type.arrayType { type ->
             when {
-                type.isPrimitive() -> "_module._${type.toCType()}Array_free($content)"
+                type.isPrimitive() -> "_module._${type.toCType(ignoreUnsigned = true)}Array_free($content)"
                 type.isEnum() -> "_module._KIntArray_free($content)"
                 else -> {
                     val fn = freeFuncFor(type, "").split("(")[0]
@@ -400,11 +406,19 @@ class KotlinJsPrinter(
         else -> "_module._${type.toCType(ptr = false)}_free($content)"
     }
 
-    private fun castToNative(type: ResolvedIdlType, content: String, useArena: Boolean): String = when {
+    private fun castToNative(
+        type: ResolvedIdlType,
+        content: String,
+        useArena: Boolean
+    ): String = when {
+        type.isUByte() || type.isUShort() -> castToSigned(type, content, smallTypesAsInt = true)
+        type.isUnsigned() -> castToNative(type.toSignedType(), castToSigned(type, content), useArena)
         type.isBoolean() -> "$content.toInt()"
         type.isChar() -> "$content.code"
-        type.isByte() -> "$content.toInt()"
-        type.isShort() -> "$content.toInt()"
+        type.isBoolean() || type.isByte() ||
+                type.isUByte() || type.isShort() ||
+                type.isUShort() || type.isUInt() -> "$content.toInt()"
+        type.isULong() -> "$content.toLong()"
         type.isEnum() -> "$content.ordinal"
         type.isString() ->
             if(useArena) "toNativeKStringOnArena($content)"
@@ -433,13 +447,21 @@ class KotlinJsPrinter(
         else -> content
     }
 
-    private fun castToKotlin(type: ResolvedIdlType, content: String): String {
+    private fun castToKotlin(
+        type: ResolvedIdlType,
+        content: String
+    ): String {
         val assert = if(type.isNullable) "" else "!!"
         return when {
+            type.isUnsigned() -> castToUnsigned(type, castToKotlin(type.toSignedType(), content))
             type.isBoolean() -> "$content.toBoolean()"
             type.isChar() -> "$content.toChar()"
             type.isByte() -> "$content.toByte()"
+            type.isUByte() -> "$content.toUByte()"
             type.isShort() -> "$content.toShort()"
+            type.isUShort() -> "$content.toUShort()"
+            type.isUInt() -> "$content.toUInt()"
+            type.isULong() -> "$content.toULong()"
             type.isFloat() -> "$content.truncF32()"
             type.isEnum() -> "${type.declaration.name}.entries[$content]"
             type.isString() -> "toKotlinKString(_module, $content)$assert"
@@ -465,17 +487,17 @@ class KotlinJsPrinter(
         isVoid() -> "Unit"
         isFloat() -> "Float"
         isDouble() -> "Double"
-        isLong() -> "Long"
+        isLong() || isULong() -> "Long"
         else -> "Int"
     }
 
     private fun ResolvedIdlType.toLayoutType(): String = when {
         isBoolean() -> "Boolean::class"
         isChar() -> "Char::class"
-        isByte() -> "Byte::class"
-        isShort() -> "Short::class"
-        isInt() -> "Int::class"
-        isLong() -> "Long::class"
+        isByte() || isUByte() -> "Byte::class"
+        isShort() || isUShort() -> "Short::class"
+        isInt() || isUInt() -> "Int::class"
+        isLong() || isULong() -> "Long::class"
         isFloat() -> "Float::class"
         isDouble() -> "Double::class"
         isEnum() -> "Int::class"
@@ -493,9 +515,11 @@ class KotlinJsPrinter(
         isVoid() -> "v"
         isFloat() -> "f"
         isDouble() -> "d"
-        isLong() -> "j"
-        isChar() || isBoolean() || isByte() ||
-                isShort() || isInt() || isEnum() -> "i"
+        isLong() || isULong() -> "j"
+        isEnum() || isChar() || isBoolean() ||
+                isByte() || isUByte() ||
+                isShort() || isUShort() ||
+                isInt() || isUInt() -> "i"
         else -> "p"
     }
 }

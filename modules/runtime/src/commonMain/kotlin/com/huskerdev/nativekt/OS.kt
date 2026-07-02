@@ -44,7 +44,7 @@ enum class Arch(
     UNKNOWN(false)
     ;
     companion object {
-        @JvmStatic fun current() = currentArch()
+        @JvmStatic val current = currentArch()
     }
 }
 

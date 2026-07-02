@@ -29,8 +29,18 @@ class PassPrimitive {
     }
 
     @Test
+    fun passUByte() = withLib {
+        assertTrue(natives.test.passUByte(UByte.MAX_VALUE))
+    }
+
+    @Test
     fun passShort() = withLib {
         assertTrue(natives.test.passShort(1.toShort()))
+    }
+
+    @Test
+    fun passUShort() = withLib {
+        assertTrue(natives.test.passUShort(UShort.MAX_VALUE))
     }
 
     @Test
@@ -39,8 +49,18 @@ class PassPrimitive {
     }
 
     @Test
+    fun passUInt() = withLib {
+        assertTrue(natives.test.passUInt(UInt.MAX_VALUE))
+    }
+
+    @Test
     fun passLong() = withLib {
         assertTrue(natives.test.passLong(9223372036854775805L))
+    }
+
+    @Test
+    fun passULong() = withLib {
+        assertTrue(natives.test.passULong(ULong.MAX_VALUE))
     }
 
     @Test

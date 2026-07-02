@@ -21,16 +21,32 @@ KBoolean callbackArgByte(CallbackPassByte* arg) {
     return arg->invoke(arg, 1);
 }
 
+KBoolean callbackArgUByte(CallbackPassUByte* arg) {
+    return arg->invoke(arg, 255u);
+}
+
 KBoolean callbackArgShort(CallbackPassShort* arg) {
     return arg->invoke(arg, 1);
+}
+
+KBoolean callbackArgUShort(CallbackPassUShort* arg) {
+    return arg->invoke(arg, 65535u);
 }
 
 KBoolean callbackArgInt(CallbackPassInt* arg) {
     return arg->invoke(arg, 1);
 }
 
+KBoolean callbackArgUInt(CallbackPassUInt* arg) {
+    return arg->invoke(arg, 4294967295u);
+}
+
 KBoolean callbackArgLong(CallbackPassLong* arg) {
     return arg->invoke(arg, 1);
+}
+
+KBoolean callbackArgULong(CallbackPassULong* arg) {
+    return arg->invoke(arg, 18446744073709551615u);
 }
 
 KBoolean callbackArgFloat(CallbackPassFloat* arg) {

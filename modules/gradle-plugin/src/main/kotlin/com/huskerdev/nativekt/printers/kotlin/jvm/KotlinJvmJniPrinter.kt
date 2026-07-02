@@ -27,10 +27,36 @@ class KotlinJvmJniPrinter(
             builder.append(": $parentClass")
         builder.append(" {\n")
 
+        val unmangle = buildString {
+            append("\n$indent\t\t")
+            append("val names = listOf(\n\t\t\t")
+            idl.globalOperators().chunked(6).joinTo(this, separator = ",\n$indent\t\t\t") {
+                it.joinToString { el ->
+                    if(isAndroid && isAndroidCriticalEnabled && el.isCritical() && el.isAndroidCriticalCapable())
+                        "c(\"${el.name}\")"
+                    else "\"${el.name}\""
+                }
+            }
+            append("\n")
+
+            append("""
+                ).associateWith { it }.toMutableMap()
+                
+                // Unmangle
+                ${name}::class.java.methods.forEach { method ->
+                    val mangled = method.name
+                    val original = mangled.substringBefore("-")
+                    if(mangled != original && original in names)
+                        names[original] = mangled
+                }
+            """.replaceIndent("$indent\t\t"))
+            append("\n")
+        }
+
         if(isAndroid) {
             // Static functions
             builder.append("$indent\tcompanion object {\n")
-            builder.append("$indent\t\t@JvmStatic external fun nJNILoad(${if(isAndroidCriticalEnabled) "critical: Boolean" else ""})")
+            builder.append("$indent\t\t@JvmStatic external fun nJNILoad(mangledNames: Array<String>${if(isAndroidCriticalEnabled) ", critical: Boolean" else ""})")
             builder.append("\n")
 
             idl.globalOperators().forEach { function ->
@@ -49,7 +75,7 @@ class KotlinJvmJniPrinter(
                     builder.append("\n${indent}\t\t@JvmStatic @CriticalNative ")
                     printFunctionHeader(
                         builder, function,
-                        name = "${function.name}_",
+                        name = "_${function.name}",
                         isExternal = true,
                         enumAsInt = true,
                         arraysLen = true,
@@ -59,10 +85,15 @@ class KotlinJvmJniPrinter(
                 builder.append("\n")
             }
             builder.append("${indent}\t}\n")
-            builder.append("""
+            builder.append($$"""
                 init {
-                    System.load(libraryPath);
-                    nJNILoad(${if (isAndroidCriticalEnabled) "supportsCritical" else ""})
+                    fun c(name: String) = if(supportsCritical) "_$name" else name
+            """.replaceIndent("$indent\t"))
+            builder.append(unmangle)
+            builder.append("""
+                    
+                    System.loadLibrary(libraryPath)
+                    nJNILoad(names.values.toTypedArray()${if (isAndroidCriticalEnabled) ", supportsCritical" else ""})
                 }
             """.replaceIndent("$indent\t"))
             builder.append("\n")
@@ -70,11 +101,15 @@ class KotlinJvmJniPrinter(
             // Instance methods
             builder.append("""
                 companion object {
-                    @JvmStatic external fun nJNILoad()
+                    @JvmStatic external fun nJNILoad(mangledNames: Array<String>)
                 }
                 init {
+            """.replaceIndent("$indent\t"))
+            builder.append(unmangle)
+            builder.append("""
+                    
                     System.load(libraryPath)
-                    nJNILoad()
+                    nJNILoad(names.values.toTypedArray())
                 }
                 
                 override fun _address(name: String): Long =

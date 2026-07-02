@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalUnsignedTypes::class)
+
 package arrays
 
 import natives.test.MyDictionary
@@ -29,8 +31,18 @@ class CallbackReturnArray {
     }
 
     @Test
+    fun callbackReturnUByteArray() = withLib {
+        assertTrue(natives.test.callbackReturnUByteArray { ubyteArrayOf(1.toUByte(), UByte.MAX_VALUE) })
+    }
+
+    @Test
     fun callbackReturnShortArray() = withLib {
         assertTrue(natives.test.callbackReturnShortArray { shortArrayOf(1, 2) })
+    }
+
+    @Test
+    fun callbackReturnUShortArray() = withLib {
+        assertTrue(natives.test.callbackReturnUShortArray { ushortArrayOf(1.toUShort(), UShort.MAX_VALUE) })
     }
 
     @Test
@@ -39,8 +51,18 @@ class CallbackReturnArray {
     }
 
     @Test
+    fun callbackReturnUIntArray() = withLib {
+        assertTrue(natives.test.callbackReturnUIntArray { uintArrayOf(1.toUInt(), UInt.MAX_VALUE) })
+    }
+
+    @Test
     fun callbackReturnLongArray() = withLib {
         assertTrue(natives.test.callbackReturnLongArray { longArrayOf(1, 2) })
+    }
+
+    @Test
+    fun callbackReturnULongArray() = withLib {
+        assertTrue(natives.test.callbackReturnULongArray { ulongArrayOf(1.toULong(), ULong.MAX_VALUE) })
     }
 
     @Test

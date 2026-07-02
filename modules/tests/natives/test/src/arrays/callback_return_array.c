@@ -29,12 +29,28 @@ KBoolean callbackReturnByteArray(CallbackReturnByteArray* arg) {
         array->elements[1] == 2;
 }
 
+KBoolean callbackReturnUByteArray(CallbackReturnUByteArray* arg) {
+    const KUByteArray* array = arg->invoke(arg);
+    return (array->__flags & 1) &&
+        array->length == 2 &&
+        array->elements[0] == 1 &&
+        array->elements[1] == 255u;
+}
+
 KBoolean callbackReturnShortArray(CallbackReturnShortArray* arg) {
     const KShortArray* array = arg->invoke(arg);
     return (array->__flags & 1) &&
         array->length == 2 &&
         array->elements[0] == 1 &&
         array->elements[1] == 2;
+}
+
+KBoolean callbackReturnUShortArray(CallbackReturnUShortArray* arg) {
+    const KUShortArray* array = arg->invoke(arg);
+    return (array->__flags & 1) &&
+        array->length == 2 &&
+        array->elements[0] == 1 &&
+        array->elements[1] == 65535u;
 }
 
 KBoolean callbackReturnIntArray(CallbackReturnIntArray* arg) {
@@ -45,12 +61,28 @@ KBoolean callbackReturnIntArray(CallbackReturnIntArray* arg) {
         array->elements[1] == 2;
 }
 
+KBoolean callbackReturnUIntArray(CallbackReturnUIntArray* arg) {
+    const KUIntArray* array = arg->invoke(arg);
+    return (array->__flags & 1) &&
+        array->length == 2 &&
+        array->elements[0] == 1 &&
+        array->elements[1] == 4294967295u;
+}
+
 KBoolean callbackReturnLongArray(CallbackReturnLongArray* arg) {
     const KLongArray* array = arg->invoke(arg);
     return (array->__flags & 1) &&
         array->length == 2 &&
         array->elements[0] == 1 &&
         array->elements[1] == 2;
+}
+
+KBoolean callbackReturnULongArray(CallbackReturnULongArray* arg) {
+    const KULongArray* array = arg->invoke(arg);
+    return (array->__flags & 1) &&
+        array->length == 2 &&
+        array->elements[0] == 1 &&
+        array->elements[1] == 18446744073709551615u;
 }
 
 KBoolean callbackReturnFloatArray(CallbackReturnFloatArray* arg) {

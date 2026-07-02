@@ -16,16 +16,32 @@ KByte returnByte() {
     return 99;
 }
 
+KUByte returnUByte() {
+    return 255u;
+}
+
 KShort returnShort() {
     return 99;
+}
+
+KUShort returnUShort() {
+    return 65535u;
 }
 
 KInt returnInt() {
     return 99;
 }
 
+KUInt returnUInt() {
+    return 4294967295u;
+}
+
 KLong returnLong() {
     return 9223372036854775805;
+}
+
+KULong returnULong() {
+    return 18446744073709551615u;
 }
 
 KFloat returnFloat() {

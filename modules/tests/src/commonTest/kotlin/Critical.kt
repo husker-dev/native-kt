@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalUnsignedTypes::class)
+
 import natives.test.MyEnum
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -8,7 +10,12 @@ class Critical {
     @Test
     fun criticalPrimitives() = withLib {
         assertTrue(natives.test.criticalPrimitives(
-            'a', true, 1, 2, 3, 4, 1f, 2.0
+            'a', true,
+            1, UByte.MAX_VALUE,
+            3, UShort.MAX_VALUE,
+            5, UInt.MAX_VALUE,
+            7, ULong.MAX_VALUE,
+            1f, 2.0
         ))
     }
 
@@ -33,9 +40,13 @@ class Critical {
             charArrayOf('a', 'b'),
             booleanArrayOf(true, false),
             byteArrayOf(1, 2),
+            ubyteArrayOf(1.toUByte(), UByte.MAX_VALUE),
             shortArrayOf(1, 2),
+            ushortArrayOf(1.toUShort(), UShort.MAX_VALUE),
             intArrayOf(1, 2),
+            uintArrayOf(1.toUInt(), UInt.MAX_VALUE),
             longArrayOf(1, 2),
+            ulongArrayOf(1.toULong(), ULong.MAX_VALUE),
             floatArrayOf(1.1f, 2.2f),
             doubleArrayOf(1.1, 2.2)
         ))
@@ -44,8 +55,12 @@ class Critical {
     @Test
     fun criticalPrimitivesArrayN() = withLib {
         assertTrue(natives.test.criticalPrimitivesArrayN(
-            null, null, null, null,
-            null, null, null, null
+            null, null,
+            null, null,
+            null, null,
+            null, null,
+            null, null,
+            null, null
         ))
     }
 
@@ -77,8 +92,18 @@ class Critical {
     }
 
     @Test
+    fun criticalReturnUByte() = withLib {
+        assertEquals(UByte.MAX_VALUE, natives.test.criticalReturnUByte())
+    }
+
+    @Test
     fun criticalReturnShort() = withLib {
         assertEquals(1, natives.test.criticalReturnShort())
+    }
+
+    @Test
+    fun criticalReturnUShort() = withLib {
+        assertEquals(UShort.MAX_VALUE, natives.test.criticalReturnUShort())
     }
 
     @Test
@@ -87,9 +112,20 @@ class Critical {
     }
 
     @Test
+    fun criticalReturnUInt() = withLib {
+        assertEquals(UInt.MAX_VALUE, natives.test.criticalReturnUInt())
+    }
+
+    @Test
     fun criticalReturnLong() = withLib {
         assertEquals(1, natives.test.criticalReturnLong())
     }
+
+    @Test
+    fun criticalReturnULong() = withLib {
+        assertEquals(ULong.MAX_VALUE, natives.test.criticalReturnULong())
+    }
+
     @Test
     fun criticalReturnFloat() = withLib {
         assertEquals(1f, natives.test.criticalReturnFloat())

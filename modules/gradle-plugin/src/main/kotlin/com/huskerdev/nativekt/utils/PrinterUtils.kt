@@ -41,7 +41,9 @@ fun ResolvedIdlType.builtinOrNull(): BuiltinIdlDeclaration? {
 internal fun ResolvedIdlType.toKotlinType(
     stringAsBytes: Boolean = false,
     enumAsInt: Boolean = false,
-    printNullable: Boolean = true
+    printNullable: Boolean = true,
+    ignoreUnsigned: Boolean = false,
+    smallUnsignedTypesAsInt: Boolean = false
 ): String {
     val nullable = if(isNullable && printNullable) "?" else ""
     return when {
@@ -49,16 +51,20 @@ internal fun ResolvedIdlType.toKotlinType(
         isChar() -> "Char"
         isBoolean() -> "Boolean"
         isByte() -> "Byte"
+        isUByte() -> if(smallUnsignedTypesAsInt) "Int" else if(ignoreUnsigned) "Byte" else "UByte"
         isShort() -> "Short"
+        isUShort() -> if(smallUnsignedTypesAsInt) "Int" else if(ignoreUnsigned) "Short" else "UShort"
         isInt() -> "Int"
+        isUInt() -> if(ignoreUnsigned) "Int" else "UInt"
         isLong() -> "Long"
+        isULong() -> if(ignoreUnsigned) "Long" else "ULong"
         isFloat() -> "Float"
         isDouble() -> "Double"
         isString() -> if(stringAsBytes) "ByteArray$nullable" else "String$nullable"
         isEnum() -> if(enumAsInt) "Int" else declaration.name
         isArray() -> arrayType { type ->
             when {
-                type.isPrimitive() -> "${type.toKotlinType()}Array$nullable"
+                type.isPrimitive() -> "${type.toKotlinType(ignoreUnsigned = ignoreUnsigned)}Array$nullable"
                 type.isEnum() && enumAsInt -> "IntArray$nullable"
                 else -> "Array<${type.toKotlinType(stringAsBytes, enumAsInt)}>$nullable"
             }
@@ -70,7 +76,8 @@ internal fun ResolvedIdlType.toKotlinType(
 fun ResolvedIdlType.toCType(
     enumAsInt: Boolean = false,
     ptr: Boolean = true,
-    printNullable: Boolean = false
+    printNullable: Boolean = false,
+    ignoreUnsigned: Boolean = false,
 ): String {
     val ptr = if(ptr) "*" else ""
     val nullable = if(printNullable) {
@@ -81,16 +88,20 @@ fun ResolvedIdlType.toCType(
         isChar() -> "KChar"
         isBoolean() -> "KBoolean"
         isByte() -> "KByte"
+        isUByte() -> if(ignoreUnsigned) "KByte" else "KUByte"
         isShort() -> "KShort"
+        isUShort() -> if(ignoreUnsigned) "KShort" else "KUShort"
         isInt() -> "KInt"
+        isUInt() -> if(ignoreUnsigned) "KInt" else "KUInt"
         isLong() -> "KLong"
+        isULong() -> if(ignoreUnsigned) "KLong" else "KULong"
         isFloat() -> "KFloat"
         isDouble() -> "KDouble"
         isEnum() -> if(enumAsInt) "KInt" else declaration.name
         isString() -> "KString$ptr$nullable"
         isArray() -> arrayType { type ->
             when {
-                type.isPrimitive() -> "${type.toCType()}Array$ptr$nullable"
+                type.isPrimitive() -> "${type.toCType(ignoreUnsigned = ignoreUnsigned)}Array$ptr$nullable"
                 type.isEnum() -> "KIntArray$ptr$nullable"
                 else -> "KArray$ptr$nullable"
             }
@@ -99,56 +110,84 @@ fun ResolvedIdlType.toCType(
     }
 }
 
-fun ResolvedIdlType.toJNIType(): String = when {
-    isVoid() -> "void"
-    isChar() -> "jchar"
-    isBoolean() -> "jboolean"
-    isByte() -> "jbyte"
-    isShort() -> "jshort"
-    isInt() -> "jint"
-    isLong() -> "jlong"
-    isFloat() -> "jfloat"
-    isDouble() -> "jdouble"
-    isString() -> "jstring"
-    isArray() -> arrayType { type ->
+internal fun castToSigned(
+    type: ResolvedIdlType,
+    content: String,
+    smallTypesAsInt: Boolean = false
+): String {
+    val nullable = if(type.isNullable) "?" else ""
+    return when {
+        type.isUByte() -> if(smallTypesAsInt) "$content.toInt() and 0x000000ff" else "$content.toByte()"
+        type.isUShort() -> if(smallTypesAsInt) "$content.toInt() and 0x0000ffff" else "$content.toShort()"
+        type.isUInt() -> "$content.toInt()"
+        type.isULong() -> "$content.toLong()"
+        type.isArray() -> type.arrayType { type ->
+            when {
+                type.isUByte() -> "$content$nullable.asByteArray()"
+                type.isUShort() -> "$content$nullable.asShortArray()"
+                type.isUInt() -> "$content$nullable.asIntArray()"
+                type.isULong() -> "$content$nullable.asLongArray()"
+                else -> content
+            }
+        }
+        else -> content
+    }
+}
+
+internal fun castToUnsigned(type: ResolvedIdlType, content: String): String {
+    val nullable = if(type.isNullable) "?" else ""
+    return when {
+        type.isUByte() -> "$content$nullable.toUByte()"
+        type.isUShort() -> "$content$nullable.toUShort()"
+        type.isUInt() -> "$content$nullable.toUInt()"
+        type.isULong() -> "$content$nullable.toULong()"
+        type.isArray() -> type.arrayType { type ->
+            when {
+                type.isUByte() -> "$content$nullable.asUByteArray()"
+                type.isUShort() -> "$content$nullable.asUShortArray()"
+                type.isUInt() -> "$content$nullable.asUIntArray()"
+                type.isULong() -> "$content$nullable.asULongArray()"
+                else -> content
+            }
+        }
+        else -> content
+    }
+}
+
+internal fun castToSignedC(type: ResolvedIdlType, content: String): String = when {
+    type.isUByte() -> "(KByte) $content"
+    type.isUShort() -> "(KShort) $content"
+    type.isUInt() -> "(KInt) $content"
+    type.isULong() -> "(KLong) $content"
+    type.isArray() -> type.arrayType { type ->
         when {
-            isPrimitive() -> "${type.toJNIType()}Array"
-            else -> "jobjectArray"
+            type.isUByte() -> "(KByteArray*) $content"
+            type.isUShort() -> "(KShortArray*) $content"
+            type.isUInt() -> "(KIntArray*) $content"
+            type.isULong() -> "(KLongArray*) $content"
+            else -> content
         }
     }
-    else -> "jobject"
+    else -> content
 }
 
-fun ResolvedIdlOperation.toJavaDesc(
-    classpath: String,
-    isCritical: Boolean = false
-): String = buildString {
-    args.joinTo(this, "", prefix = "(", postfix = ")") {
-        it.type.toJavaDesc(classpath, isCritical)
+internal fun castToUnsignedC(type: ResolvedIdlType, content: String): String = when {
+    type.isUByte() -> "(KUByte) $content"
+    type.isUShort() -> "(KUShort) $content"
+    type.isUInt() -> "(KUInt) $content"
+    type.isULong() -> "(KULong) $content"
+    type.isArray() -> type.arrayType { type ->
+        when {
+            type.isUByte() -> "(KUByteArray*) $content"
+            type.isUShort() -> "(KUShortArray*) $content"
+            type.isUInt() -> "(KUIntArray*) $content"
+            type.isULong() -> "(KULongArray*) $content"
+            else -> content
+        }
     }
-    append(type.toJavaDesc(classpath, isCritical))
+    else -> content
 }
 
-fun ResolvedIdlType.toJavaDesc(
-    classpath: String,
-    isCritical: Boolean = false
-): String = when {
-    isVoid() -> "V"
-    isChar() -> "C"
-    isBoolean() -> "Z"
-    isByte() -> "B"
-    isShort() -> "S"
-    isInt() -> "I"
-    isLong() -> "J"
-    isFloat() -> "F"
-    isDouble() -> "D"
-    isString() -> if(isCritical) "[B" else "Ljava/lang/String;"
-    isEnum() && isCritical -> "I"
-    isArray() -> arrayType { type ->
-        "[${type.toJavaDesc(classpath, isCritical)}"
-    }
-    else -> "L${classpath.replace(".", "/")}/${(this as ResolvedIdlType.Default).declaration.name};"
-}
 
 // ===== Simple types ======
 
@@ -160,12 +199,69 @@ fun ResolvedIdlType.isPrimitive(): Boolean {
         WebIDLBuiltinKind.CHAR,
         WebIDLBuiltinKind.BOOLEAN,
         WebIDLBuiltinKind.BYTE,
+        WebIDLBuiltinKind.UNSIGNED_BYTE,
         WebIDLBuiltinKind.SHORT,
+        WebIDLBuiltinKind.UNSIGNED_SHORT,
         WebIDLBuiltinKind.INT,
+        WebIDLBuiltinKind.UNSIGNED_INT,
         WebIDLBuiltinKind.LONG,
+        WebIDLBuiltinKind.UNSIGNED_LONG,
         WebIDLBuiltinKind.FLOAT,
         WebIDLBuiltinKind.DOUBLE,
     )
+}
+
+fun ResolvedIdlType.isUnsigned(): Boolean {
+    contract {
+        returns(true) implies(this@isUnsigned is ResolvedIdlType.Default)
+    }
+    val set = setOf(
+        WebIDLBuiltinKind.UNSIGNED_BYTE,
+        WebIDLBuiltinKind.UNSIGNED_SHORT,
+        WebIDLBuiltinKind.UNSIGNED_INT,
+        WebIDLBuiltinKind.UNSIGNED_LONG,
+    )
+    return builtinOrNull()?.kind in set || arrayTypeOrNull()?.builtinOrNull()?.kind in set
+}
+
+fun ResolvedIdlType.toSignedType(): ResolvedIdlType {
+    contract {
+        returns(true) implies(this@toSignedType is ResolvedIdlType.Default)
+    }
+    if(!isUnsigned())
+        return this
+    if(isArray()) {
+        val arrType = arrayTypeOrNull()!!.toSignedType()
+        return ResolvedIdlType.Default(BuiltinIdlDeclaration(declaration.name, WebIDLBuiltinKind.LIST), listOf(arrType), isNullable)
+    }
+    val kind = when {
+        isUByte() -> WebIDLBuiltinKind.BYTE
+        isUShort() -> WebIDLBuiltinKind.SHORT
+        isUInt() -> WebIDLBuiltinKind.INT
+        isULong() -> WebIDLBuiltinKind.LONG
+        else -> throw UnsupportedOperationException()
+    }
+    return ResolvedIdlType.Default(BuiltinIdlDeclaration(declaration.name, kind), emptyList(), isNullable)
+}
+
+fun ResolvedIdlType.toUnsignedType(): ResolvedIdlType {
+    contract {
+        returns(true) implies(this@toUnsignedType is ResolvedIdlType.Default)
+    }
+    if(isUnsigned())
+        return this
+    if(isArray()) {
+        val arrType = arrayTypeOrNull()!!.toUnsignedType()
+        return ResolvedIdlType.Default(BuiltinIdlDeclaration(declaration.name, WebIDLBuiltinKind.LIST), listOf(arrType), isNullable)
+    }
+    val kind = when {
+        isByte() -> WebIDLBuiltinKind.UNSIGNED_BYTE
+        isShort() -> WebIDLBuiltinKind.UNSIGNED_SHORT
+        isInt() -> WebIDLBuiltinKind.UNSIGNED_INT
+        isLong() -> WebIDLBuiltinKind.UNSIGNED_LONG
+        else -> throw UnsupportedOperationException()
+    }
+    return ResolvedIdlType.Default(BuiltinIdlDeclaration(declaration.name, kind), emptyList(), isNullable)
 }
 
 fun ResolvedIdlType.isVoid(): Boolean {
@@ -189,11 +285,25 @@ fun ResolvedIdlType.isLong(): Boolean {
     return builtinOrNull()?.kind == WebIDLBuiltinKind.LONG
 }
 
+fun ResolvedIdlType.isULong(): Boolean {
+    contract {
+        returns(true) implies(this@isULong is ResolvedIdlType.Default)
+    }
+    return builtinOrNull()?.kind == WebIDLBuiltinKind.UNSIGNED_LONG
+}
+
 fun ResolvedIdlType.isInt(): Boolean {
     contract {
         returns(true) implies(this@isInt is ResolvedIdlType.Default)
     }
     return builtinOrNull()?.kind == WebIDLBuiltinKind.INT
+}
+
+fun ResolvedIdlType.isUInt(): Boolean {
+    contract {
+        returns(true) implies(this@isUInt is ResolvedIdlType.Default)
+    }
+    return builtinOrNull()?.kind == WebIDLBuiltinKind.UNSIGNED_INT
 }
 
 fun ResolvedIdlType.isDouble(): Boolean {
@@ -224,11 +334,25 @@ fun ResolvedIdlType.isShort(): Boolean {
     return builtinOrNull()?.kind == WebIDLBuiltinKind.SHORT
 }
 
+fun ResolvedIdlType.isUShort(): Boolean {
+    contract {
+        returns(true) implies(this@isUShort is ResolvedIdlType.Default)
+    }
+    return builtinOrNull()?.kind == WebIDLBuiltinKind.UNSIGNED_SHORT
+}
+
 fun ResolvedIdlType.isByte(): Boolean {
     contract {
         returns(true) implies(this@isByte is ResolvedIdlType.Default)
     }
     return builtinOrNull()?.kind == WebIDLBuiltinKind.BYTE
+}
+
+fun ResolvedIdlType.isUByte(): Boolean {
+    contract {
+        returns(true) implies(this@isUByte is ResolvedIdlType.Default)
+    }
+    return builtinOrNull()?.kind == WebIDLBuiltinKind.UNSIGNED_BYTE
 }
 
 fun ResolvedIdlType.isChar(): Boolean {
@@ -303,7 +427,7 @@ internal fun ResolvedIdlType.isAnyLongType(): Boolean {
     contract {
         returns(true) implies(this@isAnyLongType is ResolvedIdlType.Default)
     }
-    return isLong() || isLongArray()
+    return isLong() || isULong() || isLongArray()
 }
 
 internal fun IdlResolver.isUsingLong(): Boolean {
@@ -381,6 +505,7 @@ fun printFunctionHeader(
     forcePrintVoid: Boolean = false,
     stringAsBytes: Boolean = false,
     enumAsInt: Boolean = false,
+    ignoreUnsigned: Boolean = false,
     arraysLen: Boolean = false,
 ) = builder.apply {
     if(isActual) append("actual ")
@@ -389,7 +514,7 @@ fun printFunctionHeader(
     if(isOverride) append("override ")
 
     val args = function.args.flatMap { arg ->
-        val result = "${arg.name}: ${arg.type.toKotlinType(stringAsBytes, enumAsInt)}"
+        val result = "${arg.name}: ${arg.type.toKotlinType(stringAsBytes, enumAsInt, ignoreUnsigned = ignoreUnsigned)}"
         when {
             stringAsBytes && arg.type.isString() ->
                 listOf(result, "__len_${arg.name}: Int", "__size_${arg.name}: Int")
@@ -402,7 +527,7 @@ fun printFunctionHeader(
     append("fun $name($args)")
 
     if(forcePrintVoid || function.type !is ResolvedIdlType.Void)
-        append(": ${function.type.toKotlinType(stringAsBytes, enumAsInt)}")
+        append(": ${function.type.toKotlinType(stringAsBytes, enumAsInt, ignoreUnsigned = ignoreUnsigned)}")
 }
 
 fun printLabel(builder: StringBuilder, text: String, indent: Int = 5) = builder.apply {

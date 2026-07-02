@@ -31,19 +31,6 @@ class KotlinJvmCIPrinter(
                 """.trimIndent())
             }
 
-            append("""
-                private val emptyCharArray = charArrayOf()
-                private val emptyBooleanArray = booleanArrayOf()
-                private val emptyByteArray = byteArrayOf()
-                private val emptyShortArray = shortArrayOf()
-                private val emptyIntArray = intArrayOf()
-                private val emptyLongArray = longArrayOf()
-                private val emptyFloatArray = floatArrayOf()
-                private val emptyDoubleArray = doubleArrayOf()
-                
-            """.replaceIndent("\t"))
-            append("\n")
-
             if(operators.isNotEmpty()) {
                 append("\tcompanion object {")
 
@@ -55,7 +42,8 @@ class KotlinJvmCIPrinter(
                         isExternal = true,
                         stringAsBytes = true,
                         arraysLen = true,
-                        enumAsInt = true
+                        enumAsInt = true,
+                        ignoreUnsigned = true
                     )
                 }
                 append("\n\t}\n\n")
@@ -109,7 +97,12 @@ class KotlinJvmCIPrinter(
     private fun printFunctionBinding(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
         val args = listOf("\"${function.name}\"", function.hasString() || function.hasArray()) +
                 function.args.flatMap {
-                    val clazz = "${it.type.toKotlinType(stringAsBytes = true, enumAsInt = true, printNullable = false)}::class.java"
+                    val clazz = "${it.type.toKotlinType(
+                        stringAsBytes = true, 
+                        enumAsInt = true, 
+                        printNullable = false, 
+                        ignoreUnsigned = true
+                    )}::class.java"
                     when {
                         it.type.isString() -> listOf(clazz, "Int::class.java", "Int::class.java")
                         it.type.isArray() -> listOf(clazz, "Int::class.java")
@@ -125,22 +118,39 @@ class KotlinJvmCIPrinter(
         printFunctionHeader(builder, function,
             isOverride = true
         )
-        append(" {")
+
+        val casts = buildString {
+            function.args.forEach {
+                val nullable = if (it.type.isNullable) "?" else ""
+                if (it.type.isString()) {
+                    append("\n\t\tval _bytes_${it.name} = ${it.name}$nullable.toByteArray()")
+                    if (it.type.isNullable) append(" ?: JVMCIUtils.emptyByteArray")
+                }
+                if (it.type.isEnumArray()) {
+                    append("\n\t\tval _ints_${it.name} = ${it.name}$nullable.run { IntArray(size) { this[it].ordinal } }")
+                    if (it.type.isNullable) append(" ?: JVMCIUtils.emptyIntArray")
+                }
+            }
+        }
+
+        if(casts.isEmpty())
+            append(" =")
+        else append(" {")
 
         function.args.forEach {
             val nullable = if(it.type.isNullable) "?" else ""
             if(it.type.isString()) {
                 append("\n\t\tval _bytes_${it.name} = ${it.name}$nullable.toByteArray()")
-                if(it.type.isNullable) append(" ?: emptyByteArray")
+                if(it.type.isNullable) append(" ?: JVMCIUtils.emptyByteArray")
             }
             if(it.type.isEnumArray()) {
                 append("\n\t\tval _ints_${it.name} = ${it.name}$nullable.run { IntArray(size) { this[it].ordinal } }")
-                if(it.type.isNullable) append(" ?: emptyIntArray")
+                if(it.type.isNullable) append(" ?: JVMCIUtils.emptyIntArray")
             }
         }
 
         append("\n\t\t")
-        if(function.type !is ResolvedIdlType.Void)
+        if(casts.isNotEmpty() && function.type !is ResolvedIdlType.Void)
             append("return ")
 
         val args = function.args.joinToString {
@@ -148,11 +158,18 @@ class KotlinJvmCIPrinter(
         }
         val call = "_${function.name}(${args})"
         append(toKotlinCriticalType(function.type, call))
-        append("\n\t}\n")
+
+        if(casts.isNotEmpty())
+            append("\n\t}")
+        append("\n")
     }
 }
 
-internal fun toNativeCriticalType(type: ResolvedIdlType, name: String): String {
+internal fun toNativeCriticalType(
+    type: ResolvedIdlType,
+    name: String,
+    ignoreUnsigned: Boolean = false
+): String {
     val nullable = if(type.isNullable) "?" else ""
     val elseNum = if(type.isNullable) " ?: -1" else ""
     return when {
@@ -160,18 +177,25 @@ internal fun toNativeCriticalType(type: ResolvedIdlType, name: String): String {
         type.isEnum() -> "$name.ordinal"
         type.isEnumArray() -> "_ints_$name, $name$nullable.size$elseNum"
         type.isArray() -> {
+            val casted = if(!ignoreUnsigned && type.isUnsigned())
+                castToSigned(type, name)
+            else name
+
             if(type.isNullable)
-                "$name ?: empty${type.toKotlinType(printNullable = false)}, $name?.size ?: -1"
-            else "$name, $name.size"
+                "$casted ?: JVMCIUtils.empty${type.toKotlinType(printNullable = false, ignoreUnsigned = true)}, $name?.size ?: -1"
+            else "$casted, $name.size"
         }
+        !ignoreUnsigned && type.isUnsigned() -> castToSigned(type, name)
         else -> name
     }
 }
 
-internal fun toKotlinCriticalType(type: ResolvedIdlType, name: String) = when(type) {
-    is ResolvedIdlType.Default -> when (val decl = type.declaration){
-        is ResolvedIdlEnum -> "${decl.name}.entries[${name}]"
-        else -> name
-    }
+internal fun toKotlinCriticalType(
+    type: ResolvedIdlType,
+    name: String,
+    ignoreUnsigned: Boolean = false
+) = when {
+    type.isEnum() -> "${type.declaration.name}.entries[${name}]"
+    !ignoreUnsigned && type.isUnsigned() -> castToUnsigned(type, name)
     else -> name
 }

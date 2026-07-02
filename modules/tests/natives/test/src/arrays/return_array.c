@@ -18,19 +18,38 @@ KByteArray* returnByteArray() {
     return KByteArray_of(1, 2);
 }
 
+KUByteArray* returnUByteArray() {
+    return KUByteArray_of(1, 255u);
+}
+
 KShortArray* returnShortArray() {
     return KShortArray_of(1, 2);
+}
+
+KUShortArray* returnUShortArray() {
+    return KUShortArray_of(1, 65535u);
 }
 
 KIntArray* returnIntArray() {
     return KIntArray_of(1, 2);
 }
 
+KUIntArray* returnUIntArray() {
+    return KUIntArray_of(1, 4294967295u);
+}
+
 KLongArray* returnLongArray() {
-    KLong* elements = malloc(2 * sizeof(int64_t));
+    KLong* elements = malloc(2 * sizeof(KLong));
     elements[0] = 1;
     elements[1] = 2;
     return KLongArray_new(elements, 2, true);
+}
+
+KULongArray* returnULongArray() {
+    KULong* elements = malloc(2 * sizeof(KULong));
+    elements[0] = 1;
+    elements[1] = 18446744073709551615u;
+    return KULongArray_new(elements, 2, true);
 }
 
 KFloatArray* returnFloatArray() {

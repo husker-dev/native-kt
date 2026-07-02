@@ -30,8 +30,18 @@ class ReturnPrimitive {
     }
 
     @Test
+    fun returnUByte() = withLib {
+        assertEquals(UByte.MAX_VALUE, natives.test.returnUByte())
+    }
+
+    @Test
     fun returnShort() = withLib {
         assertEquals(99.toShort(), natives.test.returnShort())
+    }
+
+    @Test
+    fun returnUShort() = withLib {
+        assertEquals(UShort.MAX_VALUE, natives.test.returnUShort())
     }
 
     @Test
@@ -40,8 +50,18 @@ class ReturnPrimitive {
     }
 
     @Test
+    fun returnUInt() = withLib {
+        assertEquals(UInt.MAX_VALUE, natives.test.returnUInt())
+    }
+
+    @Test
     fun returnLong() = withLib {
         assertEquals(9223372036854775805L, natives.test.returnLong())
+    }
+
+    @Test
+    fun returnULong() = withLib {
+        assertEquals(ULong.MAX_VALUE, natives.test.returnULong())
     }
 
     @Test

@@ -1,9 +1,9 @@
 package com.huskerdev.nativekt.printers.c
 
 import com.huskerdev.nativekt.utils.allFields
+import com.huskerdev.nativekt.utils.isUnsigned
 import com.huskerdev.nativekt.utils.printLabel
 import com.huskerdev.nativekt.utils.toCType
-import com.huskerdev.nativekt.utils.toJavaDesc
 import com.huskerdev.webidl.resolver.*
 import org.gradle.internal.extensions.stdlib.capitalized
 import java.io.File
@@ -550,7 +550,7 @@ class CJniUtilsPrinter(
             append("return (*env)->CallObjectMethod(env, struct${struct.name}Companion, struct${struct.name}Constructor, \n\t\t")
 
             struct.allFields().joinTo(builder, separator = ",\n\t\t") {
-                castJniToJava(it.type, "src->${it.name}")
+                castJniToKotlin(it.type, "src->${it.name}")
             }
             append("\n\t);\n}\n")
 
@@ -564,7 +564,7 @@ class CJniUtilsPrinter(
                 struct.allFields().mapTo(this) { field ->
                     val fieldVariable = "struct${struct.name}Field${field.name.capitalized()}"
                     val getter = field.type.toMethodCall()
-                    castJavaToJNI(field.type, "(*env)->$getter(env, src, $fieldVariable)", onStack = false, flags = "flags")
+                    castKotlinToJNI(field.type, "(*env)->$getter(env, src, $fieldVariable)", onStack = false, flags = "flags")
                 }
                 add("flags")
             }.joinTo(builder, separator = ",\n\t\t")
@@ -591,7 +591,7 @@ class CJniUtilsPrinter(
         val jvmArgs = buildList {
             add("callback${callback.name}Invoke")
             callback.args.mapTo(this) {
-                castJniToJava(it.type, "__${it.name}")
+                castJniToKotlin(it.type, "__${it.name}")
             }
         }.joinToString()
 
@@ -609,7 +609,7 @@ class CJniUtilsPrinter(
         if(callback.type !is ResolvedIdlType.Void) {
             append(callback.type.toCType())
             append(" result = ")
-            append(castJavaToJNI(callback.type, call, onStack = false, flags = "K_FLAG_RELEASABLE"))
+            append(castKotlinToJNI(callback.type, call, onStack = false, flags = "K_FLAG_RELEASABLE"))
         } else
             append(call)
 
@@ -623,6 +623,49 @@ class CJniUtilsPrinter(
     private fun printRegisterFunction(builder: StringBuilder) = builder.apply {
         printLabel(builder, "Init function")
         append("""
+            
+            static jmethodID GetUnmangledMethodID(JNIEnv *env, jclass clazz, const char *name, const char *sig) {
+                jsize targetNameLength = strlen(name);
+                
+                jclass classClass = (*env)->FindClass(env, "java/lang/Class");
+                jmethodID getDeclaredMethods = (*env)->GetMethodID(
+                    env, classClass,
+                    "getDeclaredMethods",
+                    "()[Ljava/lang/reflect/Method;"
+                );
+            
+                jobjectArray methods = (*env)->CallObjectMethod(env, clazz, getDeclaredMethods);
+                jsize length = (*env)->GetArrayLength(env, methods);
+            
+                jclass classMethod = (*env)->FindClass(env, "java/lang/reflect/Method");
+                jmethodID getName = (*env)->GetMethodID(env, classMethod, "getName", "()Ljava/lang/String;");
+            
+                for (jsize i = 0; i < length; i++) {
+                    jobject method = (*env)->GetObjectArrayElement(env, methods, i);
+                    jstring methodName = (*env)->CallObjectMethod(env, method, getName);
+            
+                    jsize nameLength = (*env)->GetStringLength(env, methodName);
+                    if (nameLength >= targetNameLength) {
+                        char* str = malloc(nameLength);
+                        (*env)->GetStringUTFRegion(env, methodName, 0, nameLength, str);
+            
+                        if (strncmp(name, str, targetNameLength) == 0 &&
+                            (nameLength == targetNameLength || (nameLength > targetNameLength && str[targetNameLength] == '-'))
+                        ) {
+                            jmethodID result = (*env)->FromReflectedMethod(env, method);
+                            (*env)->DeleteLocalRef(env, method);
+                            (*env)->DeleteLocalRef(env, methodName);
+                            free(str);
+                            return result;
+                        }
+                        free(str);
+                    }
+            
+                    (*env)->DeleteLocalRef(env, method);
+                    (*env)->DeleteLocalRef(env, methodName);
+                }
+                return (*env)->GetMethodID(env, clazz, name, sig);
+            }
             
             static void JNI_Init(JNIEnv *env, JNINativeMethod *methods, jint count) {
                 (*env)->GetJavaVM(env, &jvm);
@@ -694,7 +737,12 @@ class CJniUtilsPrinter(
 
                 struct.allFields().joinTo(builder, separator = "\n\t") { field ->
                     val fieldVariableName = "struct${struct.name}Field${field.name.capitalized()}"
-                    "$fieldVariableName = (*env)->GetMethodID(env, $classFieldName, \"get${field.name.capitalized()}\", \"()${field.type.toJavaDesc(classPath)}\");"
+
+                    val getMethodId = if(field.type.isUnsigned())
+                        "GetUnmangledMethodID"
+                    else "(*env)->GetMethodID"
+
+                    "$fieldVariableName = $getMethodId(env, $classFieldName, \"get${field.name.capitalized()}\", \"()${field.type.toJavaDesc(classPath)}\");"
                 }
                 append("\n")
             }
@@ -709,7 +757,11 @@ class CJniUtilsPrinter(
                 val ret = it.type.toJavaDesc(classPath)
                 val path = classPath.replace(".", "/") + "/" + it.name
 
-                append("callback${it.name}Invoke = (*env)->GetMethodID(env, (*env)->FindClass(env, \"$path\"), \"invoke\", \"($args)$ret\");\n\t")
+                val getMethodId = if(it.type.isUnsigned() || it.args.any { arg -> arg.type.isUnsigned() })
+                    "GetUnmangledMethodID"
+                else "(*env)->GetMethodID"
+
+                append("callback${it.name}Invoke = $getMethodId(env, (*env)->FindClass(env, \"$path\"), \"invoke\", \"($args)$ret\");\n\t")
             }
         }
 
@@ -722,11 +774,11 @@ private fun ResolvedIdlType.toMethodCall() = when(this) {
     is ResolvedIdlType.Default -> when(val decl = declaration) {
         is BuiltinIdlDeclaration -> when(decl.kind) {
             WebIDLBuiltinKind.BOOLEAN -> "CallBooleanMethod"
-            WebIDLBuiltinKind.BYTE -> "CallByteMethod"
             WebIDLBuiltinKind.CHAR -> "CallCharMethod"
-            WebIDLBuiltinKind.SHORT -> "CallShortMethod"
-            WebIDLBuiltinKind.INT -> "CallIntMethod"
-            WebIDLBuiltinKind.LONG -> "CallLongMethod"
+            WebIDLBuiltinKind.BYTE, WebIDLBuiltinKind.UNSIGNED_BYTE -> "CallByteMethod"
+            WebIDLBuiltinKind.SHORT, WebIDLBuiltinKind.UNSIGNED_SHORT -> "CallShortMethod"
+            WebIDLBuiltinKind.INT, WebIDLBuiltinKind.UNSIGNED_INT -> "CallIntMethod"
+            WebIDLBuiltinKind.LONG, WebIDLBuiltinKind.UNSIGNED_LONG -> "CallLongMethod"
             WebIDLBuiltinKind.FLOAT -> "CallFloatMethod"
             WebIDLBuiltinKind.DOUBLE -> "CallDoubleMethod"
             else -> "CallObjectMethod"

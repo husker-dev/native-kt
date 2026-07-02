@@ -1,3 +1,4 @@
+@file:OptIn(ExperimentalUnsignedTypes::class)
 
 import natives.test.MyDictionary
 import natives.test.MyEnum
@@ -44,9 +45,13 @@ private fun createTestDictionary(callback: VoidCallback) = TypeDictionary(
     'a',
     true,
     123.toByte(),
+    123.toUByte(),
     123.toShort(),
+    123.toUShort(),
     123,
+    123.toUInt(),
     Long.MAX_VALUE,
+    Long.MAX_VALUE.toULong(),
     123.0f,
     123.4,
     "test string",
@@ -56,9 +61,13 @@ private fun createTestDictionary(callback: VoidCallback) = TypeDictionary(
     charArrayOf('a', 'b'),
     booleanArrayOf(true, false),
     byteArrayOf(1, 2),
+    ubyteArrayOf(1.toUByte(), 2.toUByte()),
     shortArrayOf(1, 2),
+    ushortArrayOf(1.toUShort(), 2.toUShort()),
     intArrayOf(1, 2),
+    uintArrayOf(1.toUInt(), 2.toUInt()),
     longArrayOf(1, 2),
+    ulongArrayOf(1.toULong(), 2.toULong()),
     floatArrayOf(1.2f, 3.4f),
     doubleArrayOf(1.2, 3.4),
     arrayOf("string1", "string2"),

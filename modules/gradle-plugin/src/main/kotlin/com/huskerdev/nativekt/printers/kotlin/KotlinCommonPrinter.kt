@@ -29,6 +29,8 @@ class KotlinCommonPrinter(
         val builder = StringBuilder()
 
         builder.append("""
+            @file:OptIn(ExperimentalUnsignedTypes::class)
+            
             package $classPath
             
             /**

@@ -38,9 +38,13 @@ class CExportedPrinter(
             KArrayFreeDef(KCharArray)
             KArrayFreeDef(KBooleanArray)
             KArrayFreeDef(KByteArray)
+            KArrayFreeDef(KUByteArray)
             KArrayFreeDef(KShortArray)
+            KArrayFreeDef(KUShortArray)
             KArrayFreeDef(KIntArray)
+            KArrayFreeDef(KUIntArray)
             KArrayFreeDef(KLongArray)
+            KArrayFreeDef(KULongArray)
             KArrayFreeDef(KFloatArray)
             KArrayFreeDef(KDoubleArray)
             #undef KArrayFreeDef

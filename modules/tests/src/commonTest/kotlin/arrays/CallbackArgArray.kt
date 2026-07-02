@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalUnsignedTypes::class)
+
 package arrays
 
 import natives.test.MyDictionary
@@ -29,8 +31,18 @@ class CallbackArgArray {
     }
 
     @Test
+    fun callbackArgUByteArray() = withLib {
+        assertTrue(natives.test.callbackArgUByteArray { it.contentEquals(ubyteArrayOf(1.toUByte(), UByte.MAX_VALUE)) })
+    }
+
+    @Test
     fun callbackArgShortArray() = withLib {
         assertTrue(natives.test.callbackArgShortArray { it.contentEquals(shortArrayOf(1, 2)) })
+    }
+
+    @Test
+    fun callbackArgUShortArray() = withLib {
+        assertTrue(natives.test.callbackArgUShortArray { it.contentEquals(ushortArrayOf(1.toUShort(), UShort.MAX_VALUE)) })
     }
 
     @Test
@@ -39,8 +51,18 @@ class CallbackArgArray {
     }
 
     @Test
+    fun callbackArgUIntArray() = withLib {
+        assertTrue(natives.test.callbackArgUIntArray { it.contentEquals(uintArrayOf(1.toUInt(), UInt.MAX_VALUE)) })
+    }
+
+    @Test
     fun callbackArgLongArray() = withLib {
         assertTrue(natives.test.callbackArgLongArray { it.contentEquals(longArrayOf(1, 2)) })
+    }
+
+    @Test
+    fun callbackArgULongArray() = withLib {
+        assertTrue(natives.test.callbackArgULongArray { it.contentEquals(ulongArrayOf(1.toULong(), ULong.MAX_VALUE)) })
     }
 
     @Test

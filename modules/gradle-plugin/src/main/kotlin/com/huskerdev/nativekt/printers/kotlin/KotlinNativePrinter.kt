@@ -243,10 +243,14 @@ class KotlinNativePrinter(
         else -> null
     }
 
-    private fun castFromNative(type: ResolvedIdlType, content: String): String {
+    private fun castFromNative(
+        type: ResolvedIdlType,
+        content: String
+    ): String {
         val nullable = if(type.isNullable) "?" else "!!"
         val nullable1 = if(type.isNullable) "" else "!!"
         return when {
+            type.isArray() && type.isUnsigned() -> castToUnsigned(type, castFromNative(type.toSignedType(), content))
             type.isChar() -> "$content.toInt().toChar()"
             type.isString() -> "toKotlinKString($content$nullable.reinterpret())"
             type.isCallback() -> "toKotlinCallback<${type.toKotlinType()}>($content$nullable1)"
@@ -272,9 +276,15 @@ class KotlinNativePrinter(
         }
     }
 
-    private fun castToNative(type: ResolvedIdlType, content: String, useArena: Boolean, pin: Boolean): String {
+    private fun castToNative(
+        type: ResolvedIdlType,
+        content: String,
+        useArena: Boolean,
+        pin: Boolean
+    ): String {
         val nullable = if(type.isNullable) "?" else ""
         return when {
+            type.isArray() && type.isUnsigned() -> castToNative(type.toSignedType(), castToSigned(type, content), useArena, pin)
             type.isChar() -> "$content.code.toUShort()"
             type.isEnum() -> "${cinteropPath}.${type.declaration.name}.entries[$content.ordinal]"
             type.isString() ->

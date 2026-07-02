@@ -262,11 +262,15 @@ class CApiHeaderPrinter(
         append("""
             
             typedef int32_t  KInt;
+            typedef uint32_t KUInt;
             typedef int64_t  KLong;
+            typedef uint64_t KULong;
             typedef float    KFloat;
             typedef double   KDouble;
             typedef int8_t   KByte;
+            typedef uint8_t  KUByte;
             typedef int16_t  KShort;
+            typedef uint16_t KUShort;
             typedef bool     KBoolean;
             typedef uint16_t KChar;
 
@@ -304,9 +308,13 @@ class CApiHeaderPrinter(
             KArrayDef(KCharArray,	 KChar          )
             KArrayDef(KBooleanArray, KBoolean       )
             KArrayDef(KByteArray,	 KByte          )
+            KArrayDef(KUByteArray,	 KUByte         )
             KArrayDef(KShortArray,	 KShort         )
+            KArrayDef(KUShortArray,	 KUShort        )
             KArrayDef(KIntArray,	 KInt           )
+            KArrayDef(KUIntArray,	 KUInt          )
             KArrayDef(KLongArray,	 KLong          )
+            KArrayDef(KULongArray,	 KULong         )
             KArrayDef(KFloatArray,	 KFloat         )
             KArrayDef(KDoubleArray,  KDouble        )
             KArrayDef(KArray,        void* _Nullable)
@@ -315,8 +323,11 @@ class CApiHeaderPrinter(
             #define KCharArray_of(...)    _KCharArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
             #define KBooleanArray_of(...) _KBooleanArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
             #define KByteArray_of(...)    _KByteArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
+            #define KUByteArray_of(...)   _KUByteArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
             #define KShortArray_of(...)   _KShortArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
+            #define KUShortArray_of(...)  _KUShortArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
             #define KIntArray_of(...)     _KIntArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
+            #define KUIntArray_of(...)    _KUIntArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
             #define KFloatArray_of(...)   _KFloatArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
             #define KDoubleArray_of(...)  _KDoubleArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
             #define KArray_of(...)        _KArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
@@ -328,9 +339,13 @@ class CApiHeaderPrinter(
             KArrayCloneFreeDef(KCharArray,    KChar)
             KArrayCloneFreeDef(KBooleanArray, KBoolean)
             KArrayCloneFreeDef(KByteArray,    KByte)
+            KArrayCloneFreeDef(KUByteArray,   KUByte)
             KArrayCloneFreeDef(KShortArray,   KShort)
+            KArrayCloneFreeDef(KUShortArray,  KUShort)
             KArrayCloneFreeDef(KIntArray,     KInt)
+            KArrayCloneFreeDef(KUIntArray,    KUInt)
             KArrayCloneFreeDef(KLongArray,    KLong)
+            KArrayCloneFreeDef(KULongArray,   KULong)
             KArrayCloneFreeDef(KFloatArray,   KFloat)
             KArrayCloneFreeDef(KDoubleArray,  KDouble)
             #undef KArrayCloneFreeDef
@@ -356,9 +371,13 @@ class CApiHeaderPrinter(
                 "KCharArray",
                 "KBooleanArray",
                 "KByteArray",
+                "KUByteArray",
                 "KShortArray",
+                "KUShortArray",
                 "KIntArray",
+                "KUIntArray",
                 "KLongArray",
+                "KULongArray",
                 "KFloatArray",
                 "KDoubleArray"
             ).joinTo(builder, separator = "") {
@@ -376,7 +395,7 @@ internal fun cloneFuncFor(
 ): String = when {
     type.isArray() -> type.arrayType { type ->
         when {
-            type.isPrimitive() -> "K${type.toKotlinType()}Array_clone($content)"
+            type.isPrimitive() -> "${type.toCType(ptr = false)}Array_clone($content)"
             type.isEnum() -> "KIntArray_clone($content)"
             else -> "KArray_clone($content, (void*) ${cloneFuncFor(type, "").dropLast(2)})"
         }
@@ -392,7 +411,7 @@ internal fun freeFuncFor(
 ): String? = when {
     type.isArray() -> type.arrayType { type ->
         when {
-            type.isPrimitive() -> "K${type.toKotlinType()}Array_free($content)"
+            type.isPrimitive() -> "${type.toCType(ptr = false)}Array_free($content)"
             type.isEnum() -> "KIntArray_free($content)"
             else -> "KArray_free($content, (void*) ${freeFuncFor(type, "")!!.dropLast(2)})"
         }
@@ -408,7 +427,7 @@ internal fun forceFreeFuncFor(
 ): String? = when {
     type.isArray() -> type.arrayType { type ->
         when {
-            type.isPrimitive() -> "_K${type.toKotlinType()}Array_free_forced($content)"
+            type.isPrimitive() -> "_${type.toCType()}Array_free_forced($content)"
             type.isEnum() -> "_KIntArray_free_forced($content)"
             else -> "_KArray_free_forced($content, (void*) ${forceFreeFuncFor(type, "")!!.dropLast(2)})"
         }

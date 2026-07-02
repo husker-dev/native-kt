@@ -45,9 +45,13 @@ class KotlinJvmForeignPrinter(
 
         buildList {
             addAll(listOf(
-                "KString", "KCharArray", "KBooleanArray",
-                "KByteArray", "KShortArray", "KIntArray",
-                "KLongArray", "KFloatArray", "KDoubleArray"
+                "KString",
+                "KCharArray", "KBooleanArray",
+                "KByteArray", "KUByteArray",
+                "KShortArray", "KUShortArray",
+                "KIntArray", "KUIntArray",
+                "KLongArray", "KULongArray",
+                "KFloatArray", "KDoubleArray"
             ))
             idl.dictionaries.values.mapTo(this) { it.name }
         }.forEach {
@@ -113,8 +117,8 @@ class KotlinJvmForeignPrinter(
 
         append("\n\t\t} } ?: MemorySegment.NULL\n")
 
-        // to jvm
-        append("\n\t\tprivate fun toJvmDictionary${dictionary.name.capitalized()}(of: MemorySegment)")
+        // to kotlin
+        append("\n\t\tprivate fun toKotlinDictionary${dictionary.name.capitalized()}(of: MemorySegment)")
         append(" = if(of.address() != 0L)")
         append("\n\t\t\tof.reinterpret($layout.size).run { ${dictionary.name}(")
 
@@ -145,6 +149,7 @@ class KotlinJvmForeignPrinter(
             when {
                 isCriticalAlt && it.type.isString() -> listOf("ValueLayout.ADDRESS", "ValueLayout.JAVA_INT", "ValueLayout.JAVA_INT")
                 isCriticalAlt && it.type.isArray() -> listOf("ValueLayout.ADDRESS", "ValueLayout.JAVA_INT")
+                it.type.isUByte() || it.type.isUShort() -> listOf("ValueLayout.JAVA_INT")
                 else -> listOf(it.type.toForeignType())
             }
         }
@@ -184,10 +189,10 @@ class KotlinJvmForeignPrinter(
                     "${it.name}$nullable.size$elseNum"
                 )
                 function.isCritical() && it.type.isArray() -> listOf(
-                    "toNative${it.type.toCType(ptr = false)}Direct(${it.name})",
+                    "toNative${it.type.toCType(ptr = false, ignoreUnsigned = true)}Direct(${castToSigned(it.type, it.name)})",
                     "${it.name}$nullable.size$elseNum"
                 )
-                else -> listOf(castToNative(it.type, it.name, useArena = useArena))
+                else -> listOf(castToNative(it.type, it.name, useArena = useArena, smallTypesAsInt = true))
             }
         }.joinToString()
 
@@ -241,28 +246,28 @@ class KotlinJvmForeignPrinter(
         }.joinToString()
 
         val lambdaArgs = callback.args.joinToString { castFromNative(it.type, it.name) }
-        val type = callback.type.toKotlinForeignType()
+        val type = callback.type.toKotlinForeignType(smallUnsignedTypesAsInt = true)
 
         append("\n\t\t@JvmStatic fun invoke${callback.name}($args): $type =\n\t\t\t")
 
-        val call = "(callbacks[_callback.address()] as ${callback.name})($lambdaArgs)"
+        val call = "toKotlinCallback<${callback.name}>(_callback)!!($lambdaArgs)"
 
-        append(castToNative(callback.type, call, useArena = false))
+        append(castToNative(callback.type, call, useArena = false, smallTypesAsInt = true))
         append("\n")
     }
 
     private fun printCallbackUpcall(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
         append("\n\t\tprivate val upcall")
         append(callback.name)
-        append(" = upcall(\n\t\t\t")
+        append(" = lookup.upcall(\n\t\t\t")
 
         // lookup
-        append("lookup, \"invoke${callback.name}\",\n\t\t\t")
+        append("\"invoke${callback.name}\",\n\t\t\t")
         append("MethodType.methodType(")
 
         val returnType = if(callback.type is ResolvedIdlType.Void)
             "Void::class.javaPrimitiveType"
-        else "${callback.type.toKotlinForeignType()}::class.java"
+        else "${callback.type.toKotlinForeignType(smallUnsignedTypesAsInt = true)}::class.java"
 
         val argClasses = buildList {
             add(returnType)
@@ -278,7 +283,7 @@ class KotlinJvmForeignPrinter(
         if(callback.type is ResolvedIdlType.Void)
             append("FunctionDescriptor.ofVoid(")
         else
-            append("FunctionDescriptor.of(").append(callback.type.toForeignType()).append(", ")
+            append("FunctionDescriptor.of(").append(callback.type.toForeignType(smallTypesAsInt = true)).append(", ")
 
         buildList {
             add("ValueLayout.ADDRESS")
@@ -300,7 +305,7 @@ class KotlinJvmForeignPrinter(
                 else -> "handleKArrayFree.invoke($content, address${type.toCType(ptr = false)}Free)"
             }
         }
-        type.isCallback() -> "callbackFree($content)"
+        type.isCallback() -> "ForeignUtils.callbackFree($content)"
         type.isDictionary() || type.isString() -> "handle${type.toCType(ptr = false)}Free.invoke($content)"
         else -> null
     }
@@ -308,17 +313,18 @@ class KotlinJvmForeignPrinter(
     private fun castFromNative(type: ResolvedIdlType, content: String): String {
         val nullAssert = if(type.isNullable) "" else "!!"
         return when {
-            type.isString() -> "toJvmKString($content)$nullAssert"
-            type.isCallback() -> "toJvmCallback<${type.toKotlinType()}>($content)$nullAssert"
+            type.isUnsigned() -> castToUnsigned(type, castFromNative(type.toSignedType(), content))
+            type.isString() -> "toKotlinKString($content)$nullAssert"
+            type.isCallback() -> "toKotlinCallback<${type.toKotlinType()}>($content)$nullAssert"
             type.isEnum() -> "${type.declaration.name}.entries[$content]"
-            type.isDictionary() -> "toJvmDictionary${type.declaration.name}($content)$nullAssert"
+            type.isDictionary() -> "toKotlinDictionary${type.declaration.name}($content)$nullAssert"
             type.isArray() -> type.arrayType { type ->
                 when {
-                    type.isPrimitive() -> "toJvm${type.toCType()}Array($content)$nullAssert"
-                    type.isEnum() -> "toJvmEnumArray($content, ${type.toKotlinType(printNullable = false)}::class.java)$nullAssert"
+                    type.isPrimitive() -> "toKotlin${type.toCType(ignoreUnsigned = true)}Array($content)$nullAssert"
+                    type.isEnum() -> "toKotlinEnumArray($content, ${type.toKotlinType(printNullable = false)}::class.java)$nullAssert"
                     else -> {
                         val fn = castFromNative(type, "").split("(")[0]
-                        "toJvmKArray($content, ::$fn, ${type.toKotlinType(printNullable = false)}::class.java)$nullAssert"
+                        "toKotlinKArray<${type.toKotlinType()}>($content, ::$fn, ${type.toKotlinType(printNullable = false)}::class.java)$nullAssert"
                     }
                 }
             }
@@ -330,7 +336,9 @@ class KotlinJvmForeignPrinter(
         type: ResolvedIdlType,
         content: String,
         useArena: Boolean,
+        smallTypesAsInt: Boolean = false
     ): String = when {
+        type.isUnsigned() -> castToNative(type.toSignedType(), castToSigned(type, content, smallTypesAsInt), useArena)
         type.isEnum() -> "$content.ordinal"
         type.isString() ->
             if (useArena) "toNativeKStringOnArena(arena, $content)"
@@ -344,8 +352,8 @@ class KotlinJvmForeignPrinter(
         type.isArray() -> type.arrayType { type ->
             when {
                 type.isPrimitive() ->
-                    if (useArena) "toNative${type.toCType()}ArrayOnArena(arena, $content)"
-                    else "toNative${type.toCType()}Array($content)"
+                    if (useArena) "toNative${type.toCType(ignoreUnsigned = true)}ArrayOnArena(arena, $content)"
+                    else "toNative${type.toCType(ignoreUnsigned = true)}Array($content)"
                 type.isEnum() ->
                     if (useArena) "toNativeEnumArrayOnArena(arena, $content)"
                     else "toNativeEnumArray($content)"
@@ -359,23 +367,33 @@ class KotlinJvmForeignPrinter(
         else -> content
     }
 
-    private fun ResolvedIdlType.toForeignType(): String = when {
+    private fun ResolvedIdlType.toForeignType(
+        smallTypesAsInt: Boolean = false
+    ): String = when {
         isVoid() -> "null"
         isChar() -> "ValueLayout.JAVA_CHAR"
         isBoolean() -> "ValueLayout.JAVA_BOOLEAN"
         isByte() -> "ValueLayout.JAVA_BYTE"
+        isUByte() -> if(smallTypesAsInt) "ValueLayout.JAVA_INT" else "ValueLayout.JAVA_BYTE"
         isShort() -> "ValueLayout.JAVA_SHORT"
-        isInt() -> "ValueLayout.JAVA_INT"
-        isLong() -> "ValueLayout.JAVA_LONG"
+        isUShort() -> if(smallTypesAsInt) "ValueLayout.JAVA_INT" else "ValueLayout.JAVA_SHORT"
+        isInt() || isUInt() -> "ValueLayout.JAVA_INT"
+        isLong() || isULong() -> "ValueLayout.JAVA_LONG"
         isFloat() -> "ValueLayout.JAVA_FLOAT"
         isDouble() -> "ValueLayout.JAVA_DOUBLE"
         isEnum() -> "ValueLayout.JAVA_INT"
         else -> "ValueLayout.ADDRESS"
     }
 
-    private fun ResolvedIdlType.toKotlinForeignType(): String {
+    private fun ResolvedIdlType.toKotlinForeignType(
+        smallUnsignedTypesAsInt: Boolean = false
+    ): String {
         return if(isCallback() || isString() || isArray() || isDictionary())
             "MemorySegment"
-        else toKotlinType(enumAsInt = true)
+        else toKotlinType(
+            enumAsInt = true,
+            ignoreUnsigned = true,
+            smallUnsignedTypesAsInt = smallUnsignedTypesAsInt
+        )
     }
 }

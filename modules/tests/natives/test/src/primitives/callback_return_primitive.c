@@ -13,16 +13,32 @@ KBoolean callbackReturnByte(CallbackReturnByte* arg) {
     return arg->invoke(arg) == 1;
 }
 
+KBoolean callbackReturnUByte(CallbackReturnUByte* arg) {
+    return arg->invoke(arg) == 255u;
+}
+
 KBoolean callbackReturnShort(CallbackReturnShort* arg) {
     return arg->invoke(arg) == 1;
+}
+
+KBoolean callbackReturnUShort(CallbackReturnUShort* arg) {
+    return arg->invoke(arg) == 65535u;
 }
 
 KBoolean callbackReturnInt(CallbackReturnInt* arg) {
     return arg->invoke(arg) == 1;
 }
 
+KBoolean callbackReturnUInt(CallbackReturnUInt* arg) {
+    return arg->invoke(arg) == 4294967295u;
+}
+
 KBoolean callbackReturnLong(CallbackReturnLong* arg) {
     return arg->invoke(arg) == 1;
+}
+
+KBoolean callbackReturnULong(CallbackReturnULong* arg) {
+    return arg->invoke(arg) == 18446744073709551615u;
 }
 
 KBoolean callbackReturnFloat(CallbackReturnFloat* arg) {

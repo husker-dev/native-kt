@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalUnsignedTypes::class)
+
 package arrays
 
 import natives.test.MyDictionary
@@ -29,8 +31,18 @@ class ReturnArray {
     }
 
     @Test
+    fun returnUByteArray() = withLib {
+        assertContentEquals(ubyteArrayOf(1.toUByte(), UByte.MAX_VALUE), natives.test.returnUByteArray())
+    }
+
+    @Test
     fun returnShortArray() = withLib {
         assertContentEquals(shortArrayOf(1, 2), natives.test.returnShortArray())
+    }
+
+    @Test
+    fun returnUShortArray() = withLib {
+        assertContentEquals(ushortArrayOf(1.toUShort(), UShort.MAX_VALUE), natives.test.returnUShortArray())
     }
 
     @Test
@@ -39,8 +51,18 @@ class ReturnArray {
     }
 
     @Test
+    fun returnUIntArray() = withLib {
+        assertContentEquals(uintArrayOf(1.toUInt(), UInt.MAX_VALUE), natives.test.returnUIntArray())
+    }
+
+    @Test
     fun returnLongArray() = withLib {
         assertContentEquals(longArrayOf(1, 2), natives.test.returnLongArray())
+    }
+
+    @Test
+    fun returnULongArray() = withLib {
+        assertContentEquals(ulongArrayOf(1.toULong(), ULong.MAX_VALUE), natives.test.returnULongArray())
     }
 
     @Test

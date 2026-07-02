@@ -37,8 +37,18 @@ class CallbackArgPrimitive {
     }
 
     @Test
+    fun callbackArgUByte() = withLib {
+        assertTrue(natives.test.callbackArgUByte { it == UByte.MAX_VALUE })
+    }
+
+    @Test
     fun callbackArgShort() = withLib {
         assertTrue(natives.test.callbackArgShort { it == 1.toShort() })
+    }
+
+    @Test
+    fun callbackArgUShort() = withLib {
+        assertTrue(natives.test.callbackArgUShort { it == UShort.MAX_VALUE })
     }
 
     @Test
@@ -47,8 +57,18 @@ class CallbackArgPrimitive {
     }
 
     @Test
+    fun callbackArgUInt() = withLib {
+        assertTrue(natives.test.callbackArgUInt { it == UInt.MAX_VALUE })
+    }
+
+    @Test
     fun callbackArgLong() = withLib {
         assertTrue(natives.test.callbackArgLong { it == 1.toLong() })
+    }
+
+    @Test
+    fun callbackArgULong() = withLib {
+        assertTrue(natives.test.callbackArgULong { it == ULong.MAX_VALUE })
     }
 
     @Test

@@ -19,16 +19,32 @@ KBoolean passByte(const KByte arg) {
     return arg == 1;
 }
 
+KBoolean passUByte(const KUByte arg) {
+    return arg == 255u;
+}
+
 KBoolean passShort(const KShort arg) {
     return arg == 1;
+}
+
+KBoolean passUShort(const KUShort arg) {
+    return arg == 65535u;
 }
 
 KBoolean passInt(const KInt arg) {
     return arg == 99;
 }
 
+KBoolean passUInt(const KUInt arg) {
+    return arg == 4294967295u;
+}
+
 KBoolean passLong(const KLong arg) {
     return arg == 9223372036854775805;
+}
+
+KBoolean passULong(const KULong arg) {
+    return arg == 18446744073709551615u;
 }
 
 KBoolean passFloat(const KFloat arg) {

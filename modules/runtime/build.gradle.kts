@@ -4,6 +4,7 @@ import org.apache.tools.ant.taskdefs.condition.Os
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -85,30 +86,10 @@ java {
     targetCompatibility = JavaVersion.VERSION_11
 }
 
-tasks.withType<JavaCompile>().configureEach {
-    options.compilerArgs.addAll(listOf(
-        "--add-modules", "jdk.internal.vm.ci",
-        "--add-exports", "jdk.internal.vm.ci/jdk.vm.ci.code=ALL-UNNAMED",
-        "--add-exports", "jdk.internal.vm.ci/jdk.vm.ci.code.site=ALL-UNNAMED",
-        "--add-exports", "jdk.internal.vm.ci/jdk.vm.ci.hotspot=ALL-UNNAMED",
-        "--add-exports", "jdk.internal.vm.ci/jdk.vm.ci.meta=ALL-UNNAMED",
-        "--add-exports", "jdk.internal.vm.ci/jdk.vm.ci.runtime=ALL-UNNAMED",
-        "--add-exports", "java.base/jdk.internal.foreign=ALL-UNNAMED",
+tasks.withType<KotlinJvmCompile>().configureEach {
+    this.compilerOptions.freeCompilerArgs.addAll(listOf(
+        "-Xadd-modules=jdk.internal.vm.ci"
     ))
-}
-
-tasks.withType<Javadoc>().configureEach {
-    (options as StandardJavadocDocletOptions).apply {
-        addStringOption("-add-modules", "jdk.internal.vm.ci")
-        addMultilineStringsOption("-add-exports").value = listOf(
-            "jdk.internal.vm.ci/jdk.vm.ci.code=ALL-UNNAMED",
-            "jdk.internal.vm.ci/jdk.vm.ci.code.site=ALL-UNNAMED",
-            "jdk.internal.vm.ci/jdk.vm.ci.hotspot=ALL-UNNAMED",
-            "jdk.internal.vm.ci/jdk.vm.ci.meta=ALL-UNNAMED",
-            "jdk.internal.vm.ci/jdk.vm.ci.runtime=ALL-UNNAMED",
-            "java.base/jdk.internal.foreign=ALL-UNNAMED",
-        )
-    }
 }
 
 mavenPublishing {

@@ -34,8 +34,18 @@ class PingPrimitive {
     }
 
     @Test
+    fun pingUByte() = withLib {
+        assertEquals(UByte.MAX_VALUE, natives.test.pingUByte(UByte.MAX_VALUE))
+    }
+
+    @Test
     fun pingShort() = withLib {
         assertEquals(99.toShort(), pingShort(99.toShort()))
+    }
+
+    @Test
+    fun pingUShort() = withLib {
+        assertEquals(UShort.MAX_VALUE, natives.test.pingUShort(UShort.MAX_VALUE))
     }
 
     @Test
@@ -44,8 +54,18 @@ class PingPrimitive {
     }
 
     @Test
+    fun pingUInt() = withLib {
+        assertEquals(UInt.MAX_VALUE, natives.test.pingUInt(UInt.MAX_VALUE))
+    }
+
+    @Test
     fun pingLong() = withLib {
         assertEquals(9223372036854775805L, pingLong(9223372036854775805L))
+    }
+
+    @Test
+    fun pingULong() = withLib {
+        assertEquals(ULong.MAX_VALUE, natives.test.pingULong(ULong.MAX_VALUE))
     }
 
     @Test

@@ -26,8 +26,18 @@ class CallbackReturnPrimitive {
     }
 
     @Test
+    fun callbackReturnUByte() = withLib {
+        assertTrue(natives.test.callbackReturnUByte { UByte.MAX_VALUE })
+    }
+
+    @Test
     fun callbackReturnShort() = withLib {
         assertTrue(natives.test.callbackReturnShort { 1.toShort() })
+    }
+
+    @Test
+    fun callbackReturnUShort() = withLib {
+        assertTrue(natives.test.callbackReturnUShort { UShort.MAX_VALUE })
     }
 
     @Test
@@ -36,8 +46,18 @@ class CallbackReturnPrimitive {
     }
 
     @Test
+    fun callbackReturnUInt() = withLib {
+        assertTrue(natives.test.callbackReturnUInt { UInt.MAX_VALUE })
+    }
+
+    @Test
     fun callbackReturnLong() = withLib {
         assertTrue(natives.test.callbackReturnLong { 1.toLong() })
+    }
+
+    @Test
+    fun callbackReturnULong() = withLib {
+        assertTrue(natives.test.callbackReturnULong { ULong.MAX_VALUE })
     }
 
     @Test

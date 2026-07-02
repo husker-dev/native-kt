@@ -16,7 +16,15 @@ KByteArray* pingByteArray(KByteArray* arg) {
     return arg;
 }
 
+KUByteArray* pingUByteArray(KUByteArray* arg) {
+    return arg;
+}
+
 KShortArray* pingShortArray(KShortArray* arg) {
+    return arg;
+}
+
+KUShortArray* pingUShortArray(KUShortArray* arg) {
     return arg;
 }
 
@@ -24,7 +32,15 @@ KIntArray* pingIntArray(KIntArray* arg) {
     return arg;
 }
 
+KUIntArray* pingUIntArray(KUIntArray* arg) {
+    return arg;
+}
+
 KLongArray* pingLongArray(KLongArray* arg) {
+    return arg;
+}
+
+KULongArray* pingULongArray(KULongArray* arg) {
     return arg;
 }
 

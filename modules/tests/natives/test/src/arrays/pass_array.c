@@ -27,11 +27,25 @@ KBoolean passByteArray(KByteArray* arg) {
         arg->elements[1] == 2;
 }
 
+KBoolean passUByteArray(KUByteArray* arg) {
+    return !(arg->__flags & 1) &&
+        arg->length == 2 &&
+        arg->elements[0] == 1 &&
+        arg->elements[1] == 255u;
+}
+
 KBoolean passShortArray(KShortArray* arg) {
     return !(arg->__flags & 1) &&
         arg->length == 2 &&
         arg->elements[0] == 1 &&
         arg->elements[1] == 2;
+}
+
+KBoolean passUShortArray(KUShortArray* arg) {
+    return !(arg->__flags & 1) &&
+        arg->length == 2 &&
+        arg->elements[0] == 1 &&
+        arg->elements[1] == 65535u;
 }
 
 KBoolean passIntArray(KIntArray* arg) {
@@ -40,11 +54,26 @@ KBoolean passIntArray(KIntArray* arg) {
         arg->elements[0] == 1 &&
         arg->elements[1] == 2;
 }
+
+KBoolean passUIntArray(KUIntArray* arg) {
+    return !(arg->__flags & 1) &&
+        arg->length == 2 &&
+        arg->elements[0] == 1 &&
+        arg->elements[1] == 4294967295u;
+}
+
 KBoolean passLongArray(KLongArray* arg) {
     return !(arg->__flags & 1) &&
         arg->length == 2 &&
         arg->elements[0] == 1 &&
         arg->elements[1] == 2;
+}
+
+KBoolean passULongArray(KULongArray* arg) {
+    return !(arg->__flags & 1) &&
+        arg->length == 2 &&
+        arg->elements[0] == 1 &&
+        arg->elements[1] == 18446744073709551615u;
 }
 
 KBoolean passFloatArray(KFloatArray* arg) {

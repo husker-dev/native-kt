@@ -17,12 +17,24 @@ KBoolean callbackArgByteArray(CallbackPassByteArray* arg) {
     return arg->invoke(arg, KByteArray_of(1, 2));
 }
 
+KBoolean callbackArgUByteArray(CallbackPassUByteArray* arg) {
+    return arg->invoke(arg, KUByteArray_of(1, 255u));
+}
+
 KBoolean callbackArgShortArray(CallbackPassShortArray* arg) {
     return arg->invoke(arg, KShortArray_of(1, 2));
 }
 
+KBoolean callbackArgUShortArray(CallbackPassUShortArray* arg) {
+    return arg->invoke(arg, KUShortArray_of(1, 65535u));
+}
+
 KBoolean callbackArgIntArray(CallbackPassIntArray* arg) {
     return arg->invoke(arg, KIntArray_of(1, 2));
+}
+
+KBoolean callbackArgUIntArray(CallbackPassUIntArray* arg) {
+    return arg->invoke(arg, KUIntArray_of(1, 4294967295u));
 }
 
 KBoolean callbackArgLongArray(CallbackPassLongArray* arg) {
@@ -30,6 +42,13 @@ KBoolean callbackArgLongArray(CallbackPassLongArray* arg) {
     elements[0] = 1;
     elements[1] = 2;
     return arg->invoke(arg, KLongArray_new(elements, 2, true));
+}
+
+KBoolean callbackArgULongArray(CallbackPassULongArray* arg) {
+    KULong* elements = malloc(2 * sizeof(KULong));
+    elements[0] = 1;
+    elements[1] = 18446744073709551615u;
+    return arg->invoke(arg, KULongArray_new(elements, 2, true));
 }
 
 KBoolean callbackArgFloatArray(CallbackPassFloatArray* arg) {

@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalUnsignedTypes::class)
+
 package arrays
 
 import natives.test.*
@@ -32,9 +34,21 @@ class PingArray {
     }
 
     @Test
+    fun pingUByteArray() = withLib {
+        val arr = ubyteArrayOf(1.toUByte(), UByte.MAX_VALUE)
+        assertContentEquals(arr, pingUByteArray(arr))
+    }
+
+    @Test
     fun pingShortArray() = withLib {
         val arr = shortArrayOf(1, 2)
         assertContentEquals(arr, pingShortArray(arr))
+    }
+
+    @Test
+    fun pingUShortArray() = withLib {
+        val arr = ushortArrayOf(1.toUShort(), UShort.MAX_VALUE)
+        assertContentEquals(arr, pingUShortArray(arr))
     }
 
     @Test
@@ -44,9 +58,21 @@ class PingArray {
     }
 
     @Test
+    fun pingUIntArray() = withLib {
+        val arr = uintArrayOf(1.toUInt(), UInt.MAX_VALUE)
+        assertContentEquals(arr, pingUIntArray(arr))
+    }
+
+    @Test
     fun pingLongArray() = withLib {
         val arr = longArrayOf(1, 2)
         assertContentEquals(arr, pingLongArray(arr))
+    }
+
+    @Test
+    fun pingULongArray() = withLib {
+        val arr = ulongArrayOf(1.toULong(), ULong.MAX_VALUE)
+        assertContentEquals(arr, pingULongArray(arr))
     }
 
     @Test

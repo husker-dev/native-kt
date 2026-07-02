@@ -25,6 +25,7 @@ class KotlinAndroidPrinter(
 
         val builder = StringBuilder()
         builder.append("""
+            @file:OptIn(ExperimentalUnsignedTypes::class)
             @file:Suppress("unchecked_cast")
             
             package $classPath
@@ -53,9 +54,8 @@ class KotlinAndroidPrinter(
             ${actual}fun ${syncLoadFunctionName(moduleName)}() {
                 if(_isLib${moduleName.capitalized()}Loaded) return
                 _isLib${moduleName.capitalized()}Loaded = true
-    
-                System.loadLibrary("$moduleName")
-                $jniClassName.nJNILoad(supportsCritical)
+                
+                $jniClassName("$moduleName")
             }
             
             ${actual}fun ${asyncLoadFunctionName(moduleName)}(onReady: () -> Unit) {
@@ -95,11 +95,11 @@ class KotlinAndroidPrinter(
 
         if(isAndroidCriticalEnabled && function.isCritical() && function.isAndroidCriticalCapable()) {
             val args = function.args.joinToString {
-                toNativeCriticalType(it.type, it.name)
+                toNativeCriticalType(it.type, it.name, ignoreUnsigned = true)
             }
-            val call = "$jniClassName.${function.name}_($args)"
+            val call = "$jniClassName._${function.name}($args)"
 
-            val castedCall = toKotlinCriticalType(function.type, call)
+            val castedCall = toKotlinCriticalType(function.type, call, ignoreUnsigned = true)
             append("if(supportsCritical) $castedCall\n\telse ")
         }
 

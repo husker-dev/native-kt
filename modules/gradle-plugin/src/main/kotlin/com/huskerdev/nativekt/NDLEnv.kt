@@ -15,6 +15,12 @@ class NDLEnv: WebIDLEnv {
         "float" to WebIDLBuiltinKind.FLOAT,
         "double" to WebIDLBuiltinKind.DOUBLE,
         "string" to WebIDLBuiltinKind.STRING,
-        "Array" to WebIDLBuiltinKind.LIST
+        "Array" to WebIDLBuiltinKind.LIST,
+
+        "ubyte" to WebIDLBuiltinKind.UNSIGNED_BYTE,
+        "ushort" to WebIDLBuiltinKind.UNSIGNED_SHORT,
+        "uint" to WebIDLBuiltinKind.UNSIGNED_INT,
+        "ulong" to WebIDLBuiltinKind.UNSIGNED_LONG,
     )
+    val a = 1.toULong()
 }

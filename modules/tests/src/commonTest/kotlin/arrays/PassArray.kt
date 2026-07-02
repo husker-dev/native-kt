@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalUnsignedTypes::class)
+
 package arrays
 
 import natives.test.MyDictionary
@@ -29,8 +31,18 @@ class PassArray {
     }
 
     @Test
+    fun passUByteArray() = withLib {
+        assertTrue(natives.test.passUByteArray(ubyteArrayOf(1.toUByte(), UByte.MAX_VALUE)))
+    }
+
+    @Test
     fun passShortArray() = withLib {
         assertTrue(natives.test.passShortArray(shortArrayOf(1, 2)))
+    }
+
+    @Test
+    fun passUShortArray() = withLib {
+        assertTrue(natives.test.passUShortArray(ushortArrayOf(1.toUShort(), UShort.MAX_VALUE)))
     }
 
     @Test
@@ -39,8 +51,18 @@ class PassArray {
     }
 
     @Test
+    fun passUIntArray() = withLib {
+        assertTrue(natives.test.passUIntArray(uintArrayOf(1.toUInt(), UInt.MAX_VALUE)))
+    }
+
+    @Test
     fun passLongArray() = withLib {
         assertTrue(natives.test.passLongArray(longArrayOf(1, 2)))
+    }
+
+    @Test
+    fun passULongArray() = withLib {
+        assertTrue(natives.test.passULongArray(ulongArrayOf(1.toULong(), ULong.MAX_VALUE)))
     }
 
     @Test

@@ -176,25 +176,25 @@ fun validateIDL(idl: IdlResolver) {
                     MAP,
                     PROMISE,
                     USV_STRING,
-                    UNSIGNED_INT,
                     BIG_INT,
                     UNRESTRICTED_FLOAT,
                     UNRESTRICTED_DOUBLE,
-                    UNSIGNED_BYTE,
                     BYTE_SEQUENCE,
-                    UNSIGNED_SHORT,
-                    UNSIGNED_LONG,
                     OBJECT -> throw UnsupportedOperationException("Unsupported type: ${declaration.kind}")
                     STRING,
                     VOID,
                     BOOLEAN,
                     CHAR,
                     INT,
+                    UNSIGNED_INT,
                     FLOAT,
                     DOUBLE,
                     BYTE,
+                    UNSIGNED_BYTE,
                     SHORT,
-                    LONG -> Unit // ok
+                    UNSIGNED_SHORT,
+                    LONG,
+                    UNSIGNED_LONG -> Unit // ok
                     LIST -> {
                         if(isInsideArray)
                             throw UnsupportedOperationException("Nested arrays are not supported: $type")
