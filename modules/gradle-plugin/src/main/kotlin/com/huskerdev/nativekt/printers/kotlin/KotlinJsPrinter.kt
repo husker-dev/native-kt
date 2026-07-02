@@ -13,7 +13,7 @@ class KotlinJsPrinter(
     useCoroutines: Boolean,
     val expectActual: Boolean
 ) {
-    private val fileName = "./lib${moduleName}.js"
+    private val fileName = "./lib${moduleName}.mjs"
 
     init {
         val actual = if(expectActual) "actual " else ""

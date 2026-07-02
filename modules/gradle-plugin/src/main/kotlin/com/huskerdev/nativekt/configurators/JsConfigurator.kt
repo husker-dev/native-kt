@@ -349,7 +349,7 @@ private abstract class CompileNativesJs @Inject constructor(
 
         // Copy .js file
         File(nativesBuildOutDir, "lib$moduleName.js")
-            .copyTo(File(resourcesDir, "lib$moduleName.js"), overwrite = true)
+            .copyTo(File(resourcesDir, "lib$moduleName.mjs"), overwrite = true)
 
         // Cope .wasm file
         File(nativesBuildOutDir, "lib$moduleName.wasm")

@@ -28,7 +28,7 @@ class RustPrinter(
             builder.printFunction(it)
         }
 
-        target.writeText(builder.toString())
+        target.writeText(builder.toString().replace("\n", System.lineSeparator()))
     }
 
     private fun StringBuilder.printFunction(operation: ResolvedIdlOperation) {
