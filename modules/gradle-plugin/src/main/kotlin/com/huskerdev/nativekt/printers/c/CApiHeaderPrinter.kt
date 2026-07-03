@@ -25,10 +25,10 @@ class CApiHeaderPrinter(
         if(idl.callbacks.isNotEmpty() || idl.dictionaries.isNotEmpty()) {
             printLabel(builder, "Type defs")
             idl.dictionaries.values.forEach {
-                builder.append("\ntypedef struct ${it.name} ${it.name};")
+                builder.append("\ntypedef struct ${it.name.upperCamelCase()} ${it.name.upperCamelCase()};")
             }
             idl.callbacks.values.forEach {
-                builder.append("\ntypedef struct ${it.name} ${it.name};")
+                builder.append("\ntypedef struct ${it.name.upperCamelCase()} ${it.name.upperCamelCase()};")
             }
             if(isInternal)
                 builder.append("\ntypedef struct _AbstractCallback _AbstractCallback;")
@@ -68,11 +68,11 @@ class CApiHeaderPrinter(
         append("\n")
         append(function.type.toCType(printNullable = true))
         append(" ")
-        append(function.name)
+        append(function.name.snakeCase())
         append("(")
 
         function.args.joinTo(builder) {
-            "${it.type.toCType(printNullable = true)} ${it.name}"
+            "${it.type.toCType(printNullable = true)} ${it.name.snakeCase()}"
         }
 
         append(");")
@@ -81,24 +81,24 @@ class CApiHeaderPrinter(
     private fun printEnum(builder: StringBuilder, enum: ResolvedIdlEnum) = builder.apply {
         append("\ntypedef enum {\n\t")
         enum.elements.joinTo(builder, separator = ",\n\t") {
-            "${enum.name}_${it}"
+            "${enum.name.upperCamelCase()}_${it}"
         }
         append("\n} ")
-        append(enum.name)
+        append(enum.name.upperCamelCase())
         append(";\n")
     }
 
     private fun printStruct(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
         append("\nstruct ")
-        append(dictionary.name)
+        append(dictionary.name.upperCamelCase())
         append(" {")
         if(dictionary.implements != null)
-            append(" // : ").append(dictionary.implements!!.name)
+            append(" // : ").append(dictionary.implements!!.name.upperCamelCase())
         append("\n\t")
 
         buildList {
             dictionary.allFields().mapTo(this) { field ->
-                "${field.type.toCType(printNullable = true)} ${field.name};"
+                "${field.type.toCType(printNullable = true)} ${field.name.snakeCase()};"
             }
             add("char __flags;")
         }.joinTo(builder, separator = "\n\t")
@@ -107,12 +107,12 @@ class CApiHeaderPrinter(
     }
 
     private fun printStructFunctions(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
-        val name = dictionary.name
+        val name = dictionary.name.upperCamelCase()
 
         append("\n$name* _Nonnull ${name}_new(")
 
         dictionary.allFields().joinTo(builder) { field ->
-            "${field.type.toCType(printNullable = true)} ${field.name}"
+            "${field.type.toCType(printNullable = true)} ${field.name.snakeCase()}"
         }
         append(");")
 
@@ -134,9 +134,9 @@ class CApiHeaderPrinter(
         val args = arrayListOf<String>()
 
         callbacks.forEach { callback ->
-            names += callback.name + ","
+            names += callback.name.upperCamelCase() + ","
             types += callback.type.toCType(printNullable = true) + if(callback.args.isNotEmpty()) "," else ""
-            args += callback.args.joinToString { "${it.type.toCType(printNullable = true)} ${it.name}" }
+            args += callback.args.joinToString { "${it.type.toCType(printNullable = true)} ${it.name.snakeCase()}" }
         }
 
         val width1 = max(column1.length, names.maxOf { it.length })

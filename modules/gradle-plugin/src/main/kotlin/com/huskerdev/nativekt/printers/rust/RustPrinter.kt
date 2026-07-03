@@ -4,6 +4,7 @@ import com.huskerdev.nativekt.utils.*
 import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlOperation
 import com.huskerdev.webidl.resolver.ResolvedIdlType
+import org.gradle.kotlin.dsl.support.uppercaseFirstChar
 import java.io.File
 
 class RustPrinter(
@@ -35,9 +36,9 @@ class RustPrinter(
         append("\n#[no_mangle]")
 
         // Header
-        append("\nextern \"C\" fn ${operation.name}(")
+        append("\nextern \"C\" fn ${operation.name.snakeCase()}(")
         operation.args.joinTo(this, ",") {
-            "\n\t${it.name}: ${it.type.toNativeRustType()}"
+            "\n\t${it.name.snakeCase()}: ${it.type.toNativeRustType()}"
         }
         if(operation.args.isNotEmpty())
             append("\n")
@@ -48,9 +49,9 @@ class RustPrinter(
 
         // Call
         val call = buildString {
-            append("crate::${operation.name}")
+            append("crate::${operation.name.snakeCase()}")
             operation.args.joinTo(this, prefix = "(", postfix = ")") {
-                toRustType(it.type, it.name)
+                toRustType(it.type, it.name.snakeCase())
             }
         }
         append(toNativeType(operation.type, call))
@@ -78,12 +79,16 @@ class RustPrinter(
     }
 
     private fun ResolvedIdlType.toNativeRustType(): String = when {
-        isChar() -> "i16"
+        isChar() -> "u16"
         isBoolean() -> "bool"
         isByte() -> "i8"
+        isUByte() -> "u8"
         isShort() -> "i16"
+        isUShort() -> "u16"
         isInt() -> "i32"
+        isUInt() -> "u32"
         isLong() -> "i64"
+        isULong() -> "u64"
         isFloat() -> "f32"
         isDouble() -> "f64"
         isArray() -> "*const _KArray"
@@ -93,12 +98,16 @@ class RustPrinter(
 
     private fun ResolvedIdlType.toRustType(): String {
         val result = when {
-            isChar() -> "i16"
+            isChar() -> "u16"
             isBoolean() -> "bool"
             isByte() -> "i8"
+            isUByte() -> "u8"
             isShort() -> "i16"
+            isUShort() -> "u16"
             isInt() -> "i32"
+            isUInt() -> "u32"
             isLong() -> "i64"
+            isULong() -> "u64"
             isFloat() -> "f32"
             isDouble() -> "f64"
             isArray() -> arrayType { type ->
@@ -202,9 +211,9 @@ class RustPrinter(
         printLabel(this, "API")
         append("/*\n=============================================================== *\\")
         idl.globalOperators().forEach { operation ->
-            append("\n\npub fn ${operation.name}(")
+            append("\n\npub fn ${operation.name.snakeCase()}(")
             operation.args.joinTo(this, ",") {
-                "\n\t${it.name}: ${it.type.toRustType()}"
+                "\n\t${it.name.snakeCase()}: ${it.type.toRustType()}"
             }
             if(operation.args.isNotEmpty())
                 append("\n")
@@ -353,11 +362,15 @@ class RustPrinter(
             }
             
             impl_typed_array!(KCharArray, u16, 2, KCharArray_new, KCharArray_free, KCharArray_clone);
-            impl_typed_array!(KBooleanArray, i8, 1, KBooleanArray_new, KBooleanArray_free, KBooleanArray_clone);
+            impl_typed_array!(KBooleanArray, bool, 1, KBooleanArray_new, KBooleanArray_free, KBooleanArray_clone);
             impl_typed_array!(KByteArray, i8, 1, KByteArray_new, KByteArray_free, KByteArray_clone);
+            impl_typed_array!(KUByteArray, u8, 1, KUByteArray_new, KUByteArray_free, KUByteArray_clone);
             impl_typed_array!(KShortArray, i16, 2, KShortArray_new, KShortArray_free, KShortArray_clone);
+            impl_typed_array!(KUShortArray, u16, 2, KUShortArray_new, KUShortArray_free, KUShortArray_clone);
             impl_typed_array!(KIntArray, i32, 4, KIntArray_new, KIntArray_free, KIntArray_clone);
+            impl_typed_array!(KUIntArray, u32, 4, KUIntArray_new, KUIntArray_free, KUIntArray_clone);
             impl_typed_array!(KLongArray, i64, 8, KLongArray_new, KLongArray_free, KLongArray_clone);
+            impl_typed_array!(KULongArray, u64, 8, KULongArray_new, KULongArray_free, KULongArray_clone);
             impl_typed_array!(KFloatArray, f32, 4, KFloatArray_new, KFloatArray_free, KFloatArray_clone);
             impl_typed_array!(KDoubleArray, f64, 8, KDoubleArray_new, KDoubleArray_free, KDoubleArray_clone);
             
@@ -370,14 +383,26 @@ class RustPrinter(
             #[macro_export] macro_rules! k_byte_array {
                 ($($x:expr),+ $(,)?) => (KByteArray::from(vec![$($x),+]));
             }
+            #[macro_export] macro_rules! k_ubyte_array {
+                ($($x:expr),+ $(,)?) => (KUByteArray::from(vec![$($x),+]));
+            }
             #[macro_export] macro_rules! k_short_array {
                 ($($x:expr),+ $(,)?) => (KShortArray::from(vec![$($x),+]));
+            }
+            #[macro_export] macro_rules! k_ushort_array {
+                ($($x:expr),+ $(,)?) => (KUShortArray::from(vec![$($x),+]));
             }
             #[macro_export] macro_rules! k_int_array {
                 ($($x:expr),+ $(,)?) => (KIntArray::from(vec![$($x),+]));
             }
+            #[macro_export] macro_rules! k_uint_array {
+                ($($x:expr),+ $(,)?) => (KUIntArray::from(vec![$($x),+]));
+            }
             #[macro_export] macro_rules! k_long_array {
                 ($($x:expr),+ $(,)?) => (KLongArray::from(vec![$($x),+]));
+            }
+            #[macro_export] macro_rules! k_ulong_array {
+                ($($x:expr),+ $(,)?) => (KULongArray::from(vec![$($x),+]));
             }
             #[macro_export] macro_rules! k_float_array {
                 ($($x:expr),+ $(,)?) => (KFloatArray::from(vec![$($x),+]));
@@ -559,7 +584,7 @@ class RustPrinter(
         append("\n}\n")
 
         idl.dictionaries.values.forEach { dictionary ->
-            val name = dictionary.name
+            val name = dictionary.name.upperCamelCase()
             val fields = dictionary.allFields()
 
             // Native struct
@@ -570,7 +595,7 @@ class RustPrinter(
                 struct _$name {
             """.trimIndent())
             fields.forEach {
-                append("\n\t${it.name}: ${it.type.toNativeRustType()},")
+                append("\n\t${it.name.snakeCase()}: ${it.type.toNativeRustType()},")
             }
             append("\n\t__flags: i8\n}\n\n")
 
@@ -580,7 +605,7 @@ class RustPrinter(
                     ptr: *const _$name,
             """.trimIndent())
             fields.forEach {
-                append("\n\tpub ${it.name}: ${it.type.toRustType()},")
+                append("\n\tpub ${it.name.snakeCase()}: ${it.type.toRustType()},")
             }
             append("\n}\n\n")
 
@@ -592,12 +617,12 @@ class RustPrinter(
             // new
             append("\n\tpub fn new(")
             fields.joinTo(this) {
-                "${it.name}: ${it.type.toRustType()}"
+                "${it.name.snakeCase()}: ${it.type.toRustType()}"
             }
             append(") -> Self {")
             append("\n\t\tSelf::wrap(unsafe { ${name}_new(")
             fields.joinTo(this) {
-                toNativeType(it.type, it.name)
+                toNativeType(it.type, it.name.snakeCase())
             }
             append(") })\n\t}\n")
 
@@ -609,7 +634,9 @@ class RustPrinter(
             """.replaceIndent("\t"))
             buildList {
                 add("ptr" to "ptr")
-                fields.mapTo(this) { toRustType(it.type, "r.${it.name}") to it.name }
+                fields.mapTo(this) {
+                    toRustType(it.type, "r.${it.name.snakeCase()}") to it.name.snakeCase()
+                }
             }.joinTo(this) {
                 if(it.first != it.second)
                     "${it.second}: ${it.first}"
@@ -668,7 +695,7 @@ class RustPrinter(
         """.trimIndent())
 
         idl.callbacks.values.forEach { callback ->
-            val name = callback.name
+            val name = callback.name.uppercaseFirstChar()
 
             // Struct
 
@@ -746,9 +773,14 @@ class RustPrinter(
         printLabel(this, "Enums")
 
         idl.enums.values.forEach { enum ->
-            val name = enum.name
+            val name = enum.name.upperCamelCase()
 
-            append("\npub enum $name {")
+            append("""
+                
+                #[derive(PartialEq, Eq)]
+                pub enum $name {
+            """.trimIndent())
+
             enum.elements.mapIndexed { index, value ->
                 "\n\t$value = $index"
             }.joinTo(this, ",")

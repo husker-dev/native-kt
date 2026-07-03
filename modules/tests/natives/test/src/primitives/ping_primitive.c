@@ -1,69 +1,69 @@
 #include <api.h>
 
-KChar pingChar(const KChar arg) {
+KChar ping_char(const KChar arg) {
     return arg;
 }
 
-KBoolean pingBoolean(const KBoolean arg) {
+KBoolean ping_boolean(const KBoolean arg) {
     return arg;
 }
 
-KByte pingByte(const KByte arg) {
+KByte ping_byte(const KByte arg) {
     return arg;
 }
 
-KUByte pingUByte(const KUByte arg) {
+KUByte ping_ubyte(const KUByte arg) {
     return arg;
 }
 
-KShort pingShort(const KShort arg) {
+KShort ping_short(const KShort arg) {
     return arg;
 }
 
-KUShort pingUShort(const KUShort arg) {
+KUShort ping_ushort(const KUShort arg) {
     return arg;
 }
 
-KInt pingInt(const KInt arg) {
+KInt ping_int(const KInt arg) {
     return arg;
 }
 
-KUInt pingUInt(const KUInt arg) {
+KUInt ping_uint(const KUInt arg) {
     return arg;
 }
 
-KLong pingLong(const KLong arg) {
+KLong ping_long(const KLong arg) {
     return arg;
 }
 
-KULong pingULong(const KULong arg) {
+KULong ping_ulong(const KULong arg) {
     return arg;
 }
 
-KFloat pingFloat(const KFloat arg) {
+KFloat ping_float(const KFloat arg) {
     return arg;
 }
 
-KDouble pingDouble(const KDouble arg) {
+KDouble ping_double(const KDouble arg) {
     return arg;
 }
 
-KString* pingString(KString* arg) {
+KString* ping_string(KString* arg) {
     return arg;
 }
 
-KString* pingStringN(KString* arg) {
+KString* ping_string_n(KString* arg) {
     return arg;
 }
 
-MyEnum pingEnum(const MyEnum arg) {
+MyEnum ping_enum(const MyEnum arg) {
     return arg;
 }
 
-MyDictionary* pingDictionary(MyDictionary* arg) {
+MyDictionary* ping_dictionary(MyDictionary* arg) {
     return arg;
 }
 
-MyDictionary* pingDictionaryN(MyDictionary* arg) {
+MyDictionary* ping_dictionary_n(MyDictionary* arg) {
     return arg;
 }

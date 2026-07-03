@@ -38,7 +38,7 @@ class KotlinJvmForeignPrinter(
         builder.append($$"""
             private val handle = SymbolLookup.libraryLookup(java.nio.file.Paths.get(libraryPath), Arena.global())
             
-            private val addressKArrayFree = address(handle, "${prefix}KArray_free")
+            private val addressKArrayFree = address(handle, "${prefix}karray_free")
             private val handleKArrayFree = handle(addressKArrayFree, false, null, ValueLayout.ADDRESS, ValueLayout.ADDRESS)
             
         """.replaceIndent("\t"))
@@ -55,7 +55,7 @@ class KotlinJvmForeignPrinter(
             ))
             idl.dictionaries.values.mapTo(this) { it.name }
         }.forEach {
-            builder.append("\n\tprivate val address${it.capitalized()}Free = address(handle, \"\${prefix}${it}_free\")")
+            builder.append("\n\tprivate val address${it.capitalized()}Free = address(handle, \"\${prefix}${it.snakeCase()}_free\")")
             builder.append("\n\tprivate val handle${it.capitalized()}Free = handle(address${it.capitalized()}Free, false, null, ValueLayout.ADDRESS)\n")
         }
         builder.append("\n")
@@ -78,7 +78,7 @@ class KotlinJvmForeignPrinter(
     }
 
     private fun printDictionaryLayout(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
-        append("$indent\t\tprivate val layout${dictionary.name.capitalized()} = CStructLayout(")
+        append("$indent\t\tprivate val layout${dictionary.name.upperCamelCase()} = CStructLayout(")
         buildList {
             dictionary.allFields().mapTo(this) { it.type.toForeignType() }
             add("ValueLayout.JAVA_BYTE")
@@ -87,17 +87,17 @@ class KotlinJvmForeignPrinter(
     }
 
     private fun printDictionaryCasts(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
-        val layout = "layout${dictionary.name.capitalized()}"
-        val name = dictionary.name
+        val name = dictionary.name.upperCamelCase()
+        val layout = "layout$name"
         val fields = dictionary.allFields()
 
         // to native (heap)
-        append("\n\t\tprivate fun toNativeDictionary${name.capitalized()}(of: $name?) = ")
+        append("\n\t\tprivate fun toNativeDictionary$name(of: $name?) = ")
         append("of?.run { malloc($layout.size).apply {")
 
         fields.forEachIndexed { i, it ->
-            val value = castToNative(it.type, "of.${it.name}", useArena = false)
-            val set = "set(${it.type.toForeignType()}, $layout[$i], ${value})"
+            val value = castToNative(it.type, "of.${it.name.camelCase()}", useArena = false)
+            val set = "set(${it.type.toForeignType()}, $layout[$i], $value)"
             append("\n\t\t\t$set")
         }
         append("\n\t\t\tset(ValueLayout.JAVA_BYTE, $layout[${fields.size}], FLAG_RELEASABLE)")
@@ -105,12 +105,12 @@ class KotlinJvmForeignPrinter(
         append("\n\t\t} } ?: MemorySegment.NULL\n")
 
         // to native (arena)
-        append("\n\t\tprivate fun toNativeDictionary${name.capitalized()}OnArena(arena: Arena, of: $name?) = ")
+        append("\n\t\tprivate fun toNativeDictionary${name}OnArena(arena: Arena, of: $name?) = ")
         append("of?.run { arena.allocate($layout.size).apply {")
 
         fields.forEachIndexed { i, it ->
-            val value = castToNative(it.type, "of.${it.name}", useArena = true)
-            val set = "set(${it.type.toForeignType()}, $layout[$i], ${value})"
+            val value = castToNative(it.type, "of.${it.name.camelCase()}", useArena = true)
+            val set = "set(${it.type.toForeignType()}, $layout[$i], $value)"
             append("\n\t\t\t$set")
         }
         append("\n\t\t\tset(ValueLayout.JAVA_BYTE, $layout[${fields.size}], 0)")
@@ -118,9 +118,9 @@ class KotlinJvmForeignPrinter(
         append("\n\t\t} } ?: MemorySegment.NULL\n")
 
         // to kotlin
-        append("\n\t\tprivate fun toKotlinDictionary${dictionary.name.capitalized()}(of: MemorySegment)")
+        append("\n\t\tprivate fun toKotlinDictionary$name(of: MemorySegment)")
         append(" = if(of.address() != 0L)")
-        append("\n\t\t\tof.reinterpret($layout.size).run { ${dictionary.name}(")
+        append("\n\t\t\tof.reinterpret($layout.size).run { $name(")
 
         fields.forEachIndexed { i, it ->
             val get = "get(${it.type.toForeignType()}, $layout[$i])"
@@ -130,19 +130,16 @@ class KotlinJvmForeignPrinter(
         append("\n\t\t\t) } else null\n")
     }
 
-
     private fun printFunctionHandle(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
         val isCriticalAlt = function.isCritical() && function.isCriticalCapable() && (function.hasString() || function.hasArray())
 
         append("${indent}\tprivate val handle")
-        append(function.name.capitalized())
+        append(function.name.upperCamelCase())
         append($$" = lookup(handle, \"${prefix}")
-        append(function.name)
+        append(function.name.snakeCase())
         if(isCriticalAlt)
             append("_")
-        append("\", ")
-        append(function.isCritical())
-        append(", ")
+        append("\", ${function.isCritical()}, ")
 
         val args = arrayListOf(function.type.toForeignType())
         args += function.args.flatMap {
@@ -170,29 +167,30 @@ class KotlinJvmForeignPrinter(
             val nullable = if(it.type.isNullable) "?" else ""
             when {
                 function.isCritical() && it.type.isString() ->
-                    "\n${indent}\t\tval _bytes_${it.name} = ${it.name}$nullable.toByteArray()"
+                    "\n${indent}\t\tval _bytes_${it.name.camelCase()} = ${it.name.camelCase()}$nullable.toByteArray()"
                 else -> null
             }
         }
 
         val args = function.args.flatMap {
+            val name = it.name.camelCase()
             val nullable = if(it.type.isNullable) "?" else ""
             val elseNum = if(it.type.isNullable) " ?: -1" else ""
             when {
                 function.isCritical() && it.type.isString() -> listOf(
-                    "toNativeKByteArrayDirect(_bytes_${it.name})",
-                    "${it.name}$nullable.length$elseNum",
-                    "_bytes_${it.name}$nullable.size$elseNum"
+                    "toNativeKByteArrayDirect(_bytes_$name)",
+                    "$name$nullable.length$elseNum",
+                    "_bytes_$name$nullable.size$elseNum"
                 )
                 function.isCritical() && it.type.isEnumArray() -> listOf(
-                    "toNativeEnumArrayDirect(${it.name})",
-                    "${it.name}$nullable.size$elseNum"
+                    "toNativeEnumArrayDirect($name)",
+                    "$name$nullable.size$elseNum"
                 )
                 function.isCritical() && it.type.isArray() -> listOf(
-                    "toNative${it.type.toCType(ptr = false, ignoreUnsigned = true)}Direct(${castToSigned(it.type, it.name)})",
-                    "${it.name}$nullable.size$elseNum"
+                    "toNative${it.type.toCType(ptr = false, ignoreUnsigned = true)}Direct(${castToSigned(it.type, name)})",
+                    "$name$nullable.size$elseNum"
                 )
-                else -> listOf(castToNative(it.type, it.name, useArena = useArena, smallTypesAsInt = true))
+                else -> listOf(castToNative(it.type, name, useArena = useArena, smallTypesAsInt = true))
             }
         }.joinToString()
 
@@ -200,7 +198,7 @@ class KotlinJvmForeignPrinter(
             freeFuncFor(function.type, "_result_native")
         else null
 
-        val call = "(handle${function.name.capitalized()}.invokeExact($args) as ${function.type.toKotlinForeignType()})"
+        val call = "(handle${function.name.upperCamelCase()}.invokeExact($args) as ${function.type.toKotlinForeignType()})"
 
         // === Print ===
 
@@ -242,27 +240,25 @@ class KotlinJvmForeignPrinter(
     private fun printCallbackInvoke(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
         val args = buildList {
             add("_callback: MemorySegment")
-            callback.args.mapTo(this) { "${it.name}: ${it.type.toKotlinForeignType()}" }
+            callback.args.mapTo(this) { "${it.name.camelCase()}: ${it.type.toKotlinForeignType()}" }
         }.joinToString()
 
-        val lambdaArgs = callback.args.joinToString { castFromNative(it.type, it.name) }
+        val lambdaArgs = callback.args.joinToString { castFromNative(it.type, it.name.camelCase()) }
         val type = callback.type.toKotlinForeignType(smallUnsignedTypesAsInt = true)
 
-        append("\n\t\t@JvmStatic fun invoke${callback.name}($args): $type =\n\t\t\t")
+        append("\n\t\t@JvmStatic fun invoke${callback.name.upperCamelCase()}($args): $type =\n\t\t\t")
 
-        val call = "toKotlinCallback<${callback.name}>(_callback)!!($lambdaArgs)"
+        val call = "toKotlinCallback<${callback.name.upperCamelCase()}>(_callback)!!($lambdaArgs)"
 
         append(castToNative(callback.type, call, useArena = false, smallTypesAsInt = true))
         append("\n")
     }
 
     private fun printCallbackUpcall(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
-        append("\n\t\tprivate val upcall")
-        append(callback.name)
-        append(" = lookup.upcall(\n\t\t\t")
+        append("\n\t\tprivate val upcall${callback.name.upperCamelCase()} = lookup.upcall(\n\t\t\t")
 
         // lookup
-        append("\"invoke${callback.name}\",\n\t\t\t")
+        append("\"invoke${callback.name.upperCamelCase()}\",\n\t\t\t")
         append("MethodType.methodType(")
 
         val returnType = if(callback.type is ResolvedIdlType.Void)
@@ -320,7 +316,7 @@ class KotlinJvmForeignPrinter(
             type.isDictionary() -> "toKotlinDictionary${type.declaration.name}($content)$nullAssert"
             type.isArray() -> type.arrayType { type ->
                 when {
-                    type.isPrimitive() -> "toKotlin${type.toCType(ignoreUnsigned = true)}Array($content)$nullAssert"
+                    type.isPrimitive() -> "toKotlinK${type.toKotlinType(ignoreUnsigned = true)}Array($content)$nullAssert"
                     type.isEnum() -> "toKotlinEnumArray($content, ${type.toKotlinType(printNullable = false)}::class.java)$nullAssert"
                     else -> {
                         val fn = castFromNative(type, "").split("(")[0]
@@ -352,8 +348,8 @@ class KotlinJvmForeignPrinter(
         type.isArray() -> type.arrayType { type ->
             when {
                 type.isPrimitive() ->
-                    if (useArena) "toNative${type.toCType(ignoreUnsigned = true)}ArrayOnArena(arena, $content)"
-                    else "toNative${type.toCType(ignoreUnsigned = true)}Array($content)"
+                    if (useArena) "toNativeK${type.toKotlinType(ignoreUnsigned = true)}ArrayOnArena(arena, $content)"
+                    else "toNativeK${type.toKotlinType(ignoreUnsigned = true)}Array($content)"
                 type.isEnum() ->
                     if (useArena) "toNativeEnumArrayOnArena(arena, $content)"
                     else "toNativeEnumArray($content)"

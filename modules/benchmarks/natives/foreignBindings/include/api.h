@@ -139,12 +139,12 @@ struct Name {                                                               \
 // ║     Functions     ║
 // ╚═══════════════════╝
 
-KInt callForeign();
-KInt callForeignAdd(KInt a, KInt b);
-KInt callForeignString(KString* _Nonnull arg);
-KInt callCriticalForeign();
-KInt callCriticalForeignAdd(KInt a, KInt b);
-KInt callCriticalForeignString(KString* _Nonnull arg);
+KInt call_foreign();
+KInt call_foreign_add(KInt a, KInt b);
+KInt call_foreign_string(KString* _Nonnull arg);
+KInt call_critical_foreign();
+KInt call_critical_foreign_add(KInt a, KInt b);
+KInt call_critical_foreign_string(KString* _Nonnull arg);
 
 #ifdef __cplusplus
 }

@@ -46,6 +46,7 @@ class KotlinJsPrinter(
             
         """.trimIndent())
 
+        val isLibLoadedField = "isLib${moduleName.capitalized()}Loaded"
         val initCallbacks = if(idl.callbacks.isNotEmpty())
             "_initCallbacks()" else ""
 
@@ -53,21 +54,21 @@ class KotlinJsPrinter(
             
             fun wrapCallback(block: (JsNumber) -> Unit): JsAny = js("block")
             
-            private var isLib${moduleName.capitalized()}Loaded_: Boolean = false
-            ${actual}val isLib${moduleName.capitalized()}Loaded: Boolean
-                get() = isLib${moduleName.capitalized()}Loaded_
+            private var _$isLibLoadedField: Boolean = false
+            ${actual}val $isLibLoadedField: Boolean
+                get() = _$isLibLoadedField
             
             ${actual}fun ${syncLoadFunctionName(moduleName)}(): Unit = 
                 throw UnsupportedOperationException("Synchronous library loading is not supported in JS")
                 
             ${actual}fun ${asyncLoadFunctionName(moduleName)}(onReady: () -> Unit) {
-                if(isLib${moduleName.capitalized()}Loaded) 
+                if($isLibLoadedField) 
                     return
                 
                 loadLib<Module>(_lib).then {
                     _module = it
                     $initCallbacks
-                    isLib${moduleName.capitalized()}Loaded_ = true
+                    _$isLibLoadedField = true
                     onReady()
                     _lib // does nothing, but required
                 }
@@ -170,10 +171,10 @@ class KotlinJsPrinter(
     ) = builder.apply {
         val args = buildList {
             add("_c: Int")
-            callback.args.mapTo(this) { "${it.name}: ${it.type.toKtJsType()}" }
+            callback.args.mapTo(this) { "${it.name.camelCase()}: ${it.type.toKtJsType()}" }
         }
         val castedArgs = callback.args.map {
-            castToKotlin(it.type, it.name)
+            castToKotlin(it.type, it.name.camelCase())
         }
         val desc = buildString {
             append(callback.type.toInternalDesc())
@@ -182,12 +183,12 @@ class KotlinJsPrinter(
         }
 
         // header
-        append("\n\t_invoke${callback.name} = _module.addFunction(${callback.descName()} { ")
+        append("\n\t_invoke${callback.name.upperCamelCase()} = _module.addFunction(${callback.descName()} { ")
         args.joinTo(builder)
         append(" ->\n\t\t")
 
         // body
-        val call = "toKotlinCallback<${callback.name}>(_module, _c)!!(${castedArgs.joinToString()})"
+        val call = "toKotlinCallback<${callback.name.upperCamelCase()}>(_module, _c)!!(${castedArgs.joinToString()})"
         val casted = castToNative(callback.type, call, useArena = false)
 
         append(casted)
@@ -198,7 +199,7 @@ class KotlinJsPrinter(
     }
 
     private fun printDictionaryLayout(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
-        append("\nprivate val _layout${dictionary.name} = CStructLayout(")
+        append("\nprivate val _layout${dictionary.name.upperCamelCase()} = CStructLayout(")
         buildList {
             dictionary.allFields().mapTo(this) { it.type.toLayoutType() }
             add("Byte::class")
@@ -207,7 +208,7 @@ class KotlinJsPrinter(
     }
 
     private fun printDictionaryCasts(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
-        val name = dictionary.name
+        val name = dictionary.name.upperCamelCase()
         val fields = dictionary.allFields()
 
         fun heaps(toNative: Boolean) = buildString {
@@ -243,7 +244,7 @@ class KotlinJsPrinter(
         append(heaps(true))
         buildList {
             fields.forEachIndexed { i, field ->
-                val ref = field.name
+                val ref = field.name.camelCase()
                 val casted = when {
                     field.type.isBoolean() || field.type.isChar() ||
                             field.type.isByte() || field.type.isShort()-> ref
@@ -262,7 +263,7 @@ class KotlinJsPrinter(
         append(heaps(true))
         buildList {
             fields.forEachIndexed { i, field ->
-                val ref = field.name
+                val ref = field.name.camelCase()
                 val casted = when {
                     field.type.isBoolean() || field.type.isChar() ||
                             field.type.isByte() || field.type.isShort()-> ref
@@ -304,14 +305,14 @@ class KotlinJsPrinter(
         }
 
         val args = function.args.joinToString {
-            castToNative(it.type, it.name, useArena = useArena)
+            castToNative(it.type, it.name.camelCase(), useArena = useArena)
         }
 
         val deallocFunc = if(function.type.isReleasable())
             freeFuncFor(function.type, "_result_native")
         else null
 
-        val call = "_module._${function.name}($args)"
+        val call = "_module._${function.name.snakeCase()}($args)"
 
         // === Print ===
 
@@ -369,15 +370,15 @@ class KotlinJsPrinter(
             *idl.dictionaries.values.map { it.name }.toTypedArray()
         ).forEach {
             append("\n\tfun _${it}_free(self: Int)")
-            append("\n\tfun _${it}_freeAddr(): Int")
+            append("\n\tfun _${it}_free_addr(): Int")
         }
         append("\n\tfun _KArray_free(self: Int, freeOp: Int)")
         append("\n\n")
 
         idl.globalOperators().forEach { function ->
-            append("\tfun _${function.name}")
+            append("\tfun _${function.name.snakeCase()}")
             function.args.joinTo(buffer, prefix = "(", postfix = ")") {
-                "${it.name}: ${it.type.toKtJsType()}"
+                "${it.name.camelCase()}: ${it.type.toKtJsType()}"
             }
             if(function.type !is ResolvedIdlType.Void) {
                 append(": ")
@@ -399,7 +400,7 @@ class KotlinJsPrinter(
                 type.isEnum() -> "_module._KIntArray_free($content)"
                 else -> {
                     val fn = freeFuncFor(type, "").split("(")[0]
-                    "_module._KArray_free($content, ${fn}Addr())"
+                    "_module._KArray_free($content, ${fn}_addr())"
                 }
             }
         }

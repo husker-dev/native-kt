@@ -2,12 +2,14 @@ package com.huskerdev.nativekt.printers.kotlin
 
 import com.huskerdev.nativekt.utils.allFields
 import com.huskerdev.nativekt.utils.asyncLoadFunctionName
+import com.huskerdev.nativekt.utils.camelCase
 import com.huskerdev.nativekt.utils.globalOperators
 import com.huskerdev.nativekt.utils.isArray
 import com.huskerdev.nativekt.utils.printFunctionHeader
 import com.huskerdev.nativekt.utils.printLabel
 import com.huskerdev.nativekt.utils.syncLoadFunctionName
 import com.huskerdev.nativekt.utils.toKotlinType
+import com.huskerdev.nativekt.utils.upperCamelCase
 import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlCallbackFunction
 import com.huskerdev.webidl.resolver.ResolvedIdlDictionary
@@ -96,12 +98,12 @@ class KotlinCommonPrinter(
 
     private fun printCallback(builder: StringBuilder, maxLength: Int, callbackFunction: ResolvedIdlCallbackFunction) = builder.apply {
         append("\nfun interface ")
-        append(callbackFunction.name)
-        append(" ".repeat(maxLength - callbackFunction.name.length))
+        append(callbackFunction.name.upperCamelCase())
+        append(" ".repeat(maxLength - callbackFunction.name.upperCamelCase().length))
         append(" { operator fun invoke(")
 
         callbackFunction.args.joinTo(builder) {
-            "${it.name}: ${it.type.toKotlinType()}"
+            "${it.name.camelCase()}: ${it.type.toKotlinType()}"
         }
         append(")")
         if(callbackFunction.type !is ResolvedIdlType.Void) {
@@ -111,26 +113,26 @@ class KotlinCommonPrinter(
         append(" }")
     }
 
-    private fun printEnum(builder: StringBuilder, callbackFunction: ResolvedIdlEnum) = builder.apply {
+    private fun printEnum(builder: StringBuilder, enum: ResolvedIdlEnum) = builder.apply {
         append("\nenum class ")
-        append(callbackFunction.name)
+        append(enum.name.upperCamelCase())
         append(" {\n\t")
 
-        callbackFunction.elements.joinTo(builder, separator = ",\n\t")
+        enum.elements.joinTo(builder, separator = ",\n\t")
 
         append("\n}\n")
     }
 
     private fun printDictionary(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
         append("\ninterface ")
-        append(dictionary.name)
+        append(dictionary.name.upperCamelCase())
         if(dictionary.implements != null)
-            append(": ").append(dictionary.implements!!.name)
+            append(": ").append(dictionary.implements!!.name.upperCamelCase())
         append(" {\n\t")
 
         // Interface fields
         dictionary.fields.joinTo(builder, separator = "\n\t") { field ->
-            "val ${field.name}: ${field.type.toKotlinType()}"
+            "val ${field.name.camelCase()}: ${field.type.toKotlinType()}"
         }
 
         // Companion
@@ -139,13 +141,13 @@ class KotlinCommonPrinter(
         append("@kotlin.jvm.JvmName(\"of\")\n\t\t")
         append("operator fun invoke(")
         dictionary.allFields().joinTo(builder) { field ->
-            "${field.name}: ${field.type.toKotlinType()}"
+            "${field.name.camelCase()}: ${field.type.toKotlinType()}"
         }
         append("): ")
-        append(dictionary.name)
+        append(dictionary.name.upperCamelCase())
         append(" =\n\t\t\t")
         append("Impl(")
-        dictionary.allFields().joinTo(builder) { field -> field.name }
+        dictionary.allFields().joinTo(builder) { it.name.camelCase() }
         append(")")
         append("\n\t}\n")
 
@@ -154,10 +156,10 @@ class KotlinCommonPrinter(
             append("\n\t@kotlin.jvm.JvmRecord")
         append("\n\tdata class Impl(\n\t\t")
         dictionary.allFields().joinTo(builder, separator = ",\n\t\t") { field ->
-            "override val ${field.name}: ${field.type.toKotlinType()}"
+            "override val ${field.name.camelCase()}: ${field.type.toKotlinType()}"
         }
         append("\n\t): ")
-        append(dictionary.name)
+        append(dictionary.name.upperCamelCase())
 
         if(dictionary.allFields().any { it.type.isArray() }) {
             append(" {\n")
@@ -169,16 +171,17 @@ class KotlinCommonPrinter(
                     
             """.replaceIndent("\t\t"))
             dictionary.allFields().joinTo(builder, separator = "\n\t\t\t") {
+                val name = it.name.camelCase()
                 if(it.type.isArray())
-                    "if (!${it.name}.contentEquals(other.${it.name})) return false"
-                else "if (${it.name} != other.${it.name}) return false"
+                    "if (!$name.contentEquals(other.$name)) return false"
+                else "if ($name != other.$name) return false"
             }
             append("\n\t\t\treturn true\n\t\t}\n\n")
 
             // hashCode
             fun hashFunc(field: ResolvedIdlField.Declaration) = if(field.type.isArray())
-                "${field.name}.contentHashCode()"
-            else "${field.name}.hashCode()"
+                "${field.name.camelCase()}.contentHashCode()"
+            else "${field.name.camelCase()}.hashCode()"
 
             append("""
                 override fun hashCode(): Int {

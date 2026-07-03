@@ -139,7 +139,7 @@ struct Name {                                                               \
 // ║     Functions     ║
 // ╚═══════════════════╝
 
-void helloWorld();
+void hello_world();
 
 #ifdef __cplusplus
 }

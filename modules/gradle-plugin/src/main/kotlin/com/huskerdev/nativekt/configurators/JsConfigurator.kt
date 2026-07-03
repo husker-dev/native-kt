@@ -195,8 +195,8 @@ private abstract class PrepareNativesJs: DefaultTask() {
                 "KDoubleArray_free",
                 "KArray_free"
             ))
-            idl.dictionaries.values.mapTo(this) { "${it.name}_free" }
-            idl.globalOperators().mapTo(this) { it.name }
+            idl.dictionaries.values.mapTo(this) { "${it.name.upperCamelCase()}_free" }
+            idl.globalOperators().mapTo(this) { it.name.snakeCase() }
         }.joinToString(separator = ",") { "_$it" }
 
         val runtimeFunctions = listOf(

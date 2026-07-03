@@ -63,7 +63,7 @@ KBoolean jvmci7(
 KBoolean jvmci8(const KInt a1, const KDouble a2, const KFloat a3, const KLong a4) {
     printf("jvmci8  | a1: %d, a2: %f, a3: %f, a4: %" PRId64 "\n", a1, a2, a3, a4);
     fflush(stdout);
-    return a1 == 1 && a2 == 2.0 && a3 == 3.0 && a4 == 4.0;
+    return a1 == 1 && a2 == 2.0 && a3 == 3.0 && a4 == 4;
 }
 
 KBoolean jvmci9(
@@ -111,14 +111,14 @@ KDouble jvmci15() {
     return 1.5;
 }
 
-KBoolean jvmciArray(KIntArray* array) {
+KBoolean jvmci_array(KIntArray* array) {
     return array->length == 3 &&
         array->elements[0] == 1 &&
         array->elements[1] == 2 &&
         array->elements[2] == 3;
 }
 
-KBoolean jvmciSomeArrays(KIntArray* array1, KFloatArray* array2, KDoubleArray* array3) {
+KBoolean jvmci_some_arrays(KIntArray* array1, KFloatArray* array2, KDoubleArray* array3) {
     return array1->length == 3 &&
         array1->elements[0] == 1 &&
         array1->elements[1] == 2 &&
@@ -133,7 +133,7 @@ KBoolean jvmciSomeArrays(KIntArray* array1, KFloatArray* array2, KDoubleArray* a
         array3->elements[2] == 9.0;
 }
 
-KBoolean jvmciEnum(const MyEnum enum1, const MyEnum enum2, KIntArray* enumArray){
+KBoolean jvmci_enum(const MyEnum enum1, const MyEnum enum2, KIntArray* enumArray){
     const MyEnum *elements = (MyEnum*)enumArray->elements;
 
     return enum1 == MyEnum_CASE1 && enum2 == MyEnum_CASE2 &&

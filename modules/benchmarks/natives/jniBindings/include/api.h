@@ -139,11 +139,11 @@ struct Name {                                                               \
 // ║     Functions     ║
 // ╚═══════════════════╝
 
-KInt callJni();
-KInt callJniAdd(KInt a, KInt b);
-KInt callJniString(KString* _Nonnull arg);
-KInt callCriticalJni();
-KInt callCriticalJniString(KString* _Nonnull arg);
+KInt call_jni();
+KInt call_jni_add(KInt a, KInt b);
+KInt call_jni_string(KString* _Nonnull arg);
+KInt call_critical_jni();
+KInt call_critical_jni_string(KString* _Nonnull arg);
 
 #ifdef __cplusplus
 }

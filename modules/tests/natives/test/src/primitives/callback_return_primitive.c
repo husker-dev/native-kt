@@ -1,76 +1,76 @@
 #include <api.h>
 #include <string.h>
 
-KBoolean callbackReturnChar(CallbackReturnChar* arg) {
+KBoolean callback_return_char(CallbackReturnChar* arg) {
     return arg->invoke(arg) == 'a';
 }
 
-KBoolean callbackReturnBoolean(CallbackReturnBoolean* arg) {
+KBoolean callback_return_boolean(CallbackReturnBoolean* arg) {
     return arg->invoke(arg) == true;
 }
 
-KBoolean callbackReturnByte(CallbackReturnByte* arg) {
+KBoolean callback_return_byte(CallbackReturnByte* arg) {
     return arg->invoke(arg) == 1;
 }
 
-KBoolean callbackReturnUByte(CallbackReturnUByte* arg) {
+KBoolean callback_return_ubyte(CallbackReturnUByte* arg) {
     return arg->invoke(arg) == 255u;
 }
 
-KBoolean callbackReturnShort(CallbackReturnShort* arg) {
+KBoolean callback_return_short(CallbackReturnShort* arg) {
     return arg->invoke(arg) == 1;
 }
 
-KBoolean callbackReturnUShort(CallbackReturnUShort* arg) {
+KBoolean callback_return_ushort(CallbackReturnUShort* arg) {
     return arg->invoke(arg) == 65535u;
 }
 
-KBoolean callbackReturnInt(CallbackReturnInt* arg) {
+KBoolean callback_return_int(CallbackReturnInt* arg) {
     return arg->invoke(arg) == 1;
 }
 
-KBoolean callbackReturnUInt(CallbackReturnUInt* arg) {
+KBoolean callback_return_uint(CallbackReturnUInt* arg) {
     return arg->invoke(arg) == 4294967295u;
 }
 
-KBoolean callbackReturnLong(CallbackReturnLong* arg) {
+KBoolean callback_return_long(CallbackReturnLong* arg) {
     return arg->invoke(arg) == 1;
 }
 
-KBoolean callbackReturnULong(CallbackReturnULong* arg) {
+KBoolean callback_return_ulong(CallbackReturnULong* arg) {
     return arg->invoke(arg) == 18446744073709551615u;
 }
 
-KBoolean callbackReturnFloat(CallbackReturnFloat* arg) {
+KBoolean callback_return_float(CallbackReturnFloat* arg) {
     return arg->invoke(arg) == 1.1f;
 }
 
-KBoolean callbackReturnDouble(CallbackReturnDouble* arg) {
+KBoolean callback_return_double(CallbackReturnDouble* arg) {
     return arg->invoke(arg) == 1.1;
 }
 
-KBoolean callbackReturnString(CallbackReturnString* arg) {
+KBoolean callback_return_string(CallbackReturnString* arg) {
     const KString* str = arg->invoke(arg);
     return (str->__flags & 1) && strncmp(str->data, "test string", str->length) == 0;
 }
 
-KBoolean callbackReturnStringN(CallbackReturnStringN* arg) {
+KBoolean callback_return_string_n(CallbackReturnStringN* arg) {
     return  arg->invoke(arg) == NULL;
 }
 
-VoidCallback* callbackReturnCallback(CallbackReturnCallback* arg) {
+VoidCallback* callback_return_callback(CallbackReturnCallback* arg) {
     return arg->invoke(arg);
 }
 
-KBoolean callbackReturnCallbackN(CallbackReturnCallbackN* arg) {
+KBoolean callback_return_callback_n(CallbackReturnCallbackN* arg) {
     return arg->invoke(arg) == NULL;
 }
 
-KBoolean callbackReturnEnum(CallbackReturnEnum* arg) {
+KBoolean callback_return_enum(CallbackReturnEnum* arg) {
     return arg->invoke(arg) == MyEnum_CASE2;
 }
 
-KBoolean callbackReturnDictionary(CallbackReturnDictionary* arg) {
+KBoolean callback_return_dictionary(CallbackReturnDictionary* arg) {
     const MyDictionary* result = arg->invoke(arg);
     return result->a == 1 &&
         result->b == 2 &&
@@ -78,6 +78,6 @@ KBoolean callbackReturnDictionary(CallbackReturnDictionary* arg) {
         result->d == 4;
 }
 
-KBoolean callbackReturnDictionaryN(CallbackReturnDictionaryN* arg) {
+KBoolean callback_return_dictionary_n(CallbackReturnDictionaryN* arg) {
     return arg->invoke(arg) == NULL;
 }

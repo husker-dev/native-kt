@@ -1,21 +1,21 @@
 #include "api.h"
 
-KInt callJni() {
+KInt call_jni() {
     return 10;
 }
 
-KInt callJniAdd(KInt a, KInt b) {
+KInt call_jni_add(KInt a, KInt b) {
     return a + b;
 }
 
-KInt callJniString(KString* arg) {
+KInt call_jni_string(KString* arg) {
     return 10;
 }
 
-KInt callCriticalJni() {
+KInt call_critical_jni() {
     return 10;
 }
 
-KInt callCriticalJniString(KString* arg) {
+KInt call_critical_jni_string(KString* arg) {
     return 10;
 }

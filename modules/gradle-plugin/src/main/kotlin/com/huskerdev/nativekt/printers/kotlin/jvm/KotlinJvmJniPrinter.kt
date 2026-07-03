@@ -1,5 +1,6 @@
 package com.huskerdev.nativekt.printers.kotlin.jvm
 
+import com.huskerdev.nativekt.utils.camelCase
 import com.huskerdev.nativekt.utils.globalOperators
 import com.huskerdev.nativekt.utils.isAndroidCriticalCapable
 import com.huskerdev.nativekt.utils.isCritical
@@ -33,8 +34,8 @@ class KotlinJvmJniPrinter(
             idl.globalOperators().chunked(6).joinTo(this, separator = ",\n$indent\t\t\t") {
                 it.joinToString { el ->
                     if(isAndroid && isAndroidCriticalEnabled && el.isCritical() && el.isAndroidCriticalCapable())
-                        "c(\"${el.name}\")"
-                    else "\"${el.name}\""
+                        "c(\"${el.name.camelCase()}\")"
+                    else "\"${el.name.camelCase()}\""
                 }
             }
             append("\n")

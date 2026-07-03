@@ -3,7 +3,9 @@ package com.huskerdev.nativekt.printers.c
 import com.huskerdev.nativekt.utils.allFields
 import com.huskerdev.nativekt.utils.isPrimitive
 import com.huskerdev.nativekt.utils.printLabel
+import com.huskerdev.nativekt.utils.snakeCase
 import com.huskerdev.nativekt.utils.toCType
+import com.huskerdev.nativekt.utils.upperCamelCase
 import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlDictionary
 import java.io.File
@@ -61,22 +63,24 @@ class CApiImplPrinter(
     }
 
     private fun printStructNew(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
-        append("\n${dictionary.name}* ${dictionary.name}_new(")
+        val name = dictionary.name.upperCamelCase()
+
+        append("\n$name* ${name}_new(")
 
         dictionary.allFields().joinTo(builder) { field ->
             val const = if(field.type.isPrimitive())
                 "const " else ""
-            "$const${field.type.toCType()} ${field.name}"
+            "$const${field.type.toCType()} ${field.name.snakeCase()}"
         }
         append(") {\n\t")
 
         // malloc
-        append("${dictionary.name}* result = (${dictionary.name}*) malloc(sizeof(${dictionary.name}));\n\t")
+        append("$name* result = ($name*) malloc(sizeof($name));\n\t")
 
         // fill
-        append("*result = (${dictionary.name}) { ")
+        append("*result = ($name) { ")
         buildList {
-            dictionary.allFields().mapTo(this) { it.name }
+            dictionary.allFields().mapTo(this) { it.name.snakeCase() }
             add("K_FLAG_RELEASABLE")
         }.joinTo(builder)
         append(" };\n\t")
@@ -86,29 +90,33 @@ class CApiImplPrinter(
     }
 
     private fun printStructClone(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
-        append("\n${dictionary.name}* ${dictionary.name}_clone(const ${dictionary.name}* self) {\n\t")
+        val name = dictionary.name.upperCamelCase()
+
+        append("\n$name* ${name}_clone(const $name* self) {\n\t")
         append("if(self == NULL) return NULL;\n\t")
 
         // new
-        append("return ${dictionary.name}_new(\n\t\t")
+        append("return ${name}_new(\n\t\t")
         dictionary.allFields().joinTo(builder, separator = ",\n\t\t") { field ->
-            cloneFuncFor(field.type, "self->${field.name}")
+            cloneFuncFor(field.type, "self->${field.name.snakeCase()}")
         }
         append("\n\t);\n}\n")
     }
 
     private fun printStructFree(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
+        val name = dictionary.name.upperCamelCase()
+
         // free
         append("""
             
-            void ${dictionary.name}_free(${dictionary.name}* self) {
+            void ${name}_free($name* self) {
                 if (self == NULL)
                     return;
         """.trimIndent())
         dictionary.allFields().forEach { field ->
             freeFuncFor(
                 field.type,
-                "self->${field.name}"
+                "self->${field.name.snakeCase()}"
             )?.apply { append("\n\t$this;") }
         }
         append("""
@@ -119,12 +127,12 @@ class CApiImplPrinter(
         append("\n}\n")
 
         // forceFree
-        append("\nvoid _${dictionary.name}_free_forced(${dictionary.name}* self) {")
+        append("\nvoid _${name}_free_forced($name* self) {")
         append("\n\tif(self == NULL) return;")
         dictionary.allFields().forEach { field ->
             forceFreeFuncFor(
                 field.type,
-                "self->${field.name}"
+                "self->${field.name.snakeCase()}"
             )?.apply { append("\n\t$this;") }
         }
         append("""

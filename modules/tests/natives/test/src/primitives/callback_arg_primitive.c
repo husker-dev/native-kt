@@ -1,86 +1,85 @@
 #include <api.h>
-#include <string.h>
 
-void callbackVoid(VoidCallback* arg) {
+void callback_void(VoidCallback* arg) {
     arg->invoke(arg);
 }
 
-KBoolean callbackVoidN(VoidCallback* arg) {
+KBoolean callback_void_n(VoidCallback* arg) {
     return arg == NULL;
 }
 
-KBoolean callbackArgChar(CallbackPassChar* arg) {
+KBoolean callback_arg_char(CallbackPassChar* arg) {
     return arg->invoke(arg, 'a');
 }
 
-KBoolean callbackArgBoolean(CallbackPassBoolean* arg) {
+KBoolean callback_arg_boolean(CallbackPassBoolean* arg) {
     return arg->invoke(arg, true);
 }
 
-KBoolean callbackArgByte(CallbackPassByte* arg) {
+KBoolean callback_arg_byte(CallbackPassByte* arg) {
     return arg->invoke(arg, 1);
 }
 
-KBoolean callbackArgUByte(CallbackPassUByte* arg) {
+KBoolean callback_arg_ubyte(CallbackPassUByte* arg) {
     return arg->invoke(arg, 255u);
 }
 
-KBoolean callbackArgShort(CallbackPassShort* arg) {
+KBoolean callback_arg_short(CallbackPassShort* arg) {
     return arg->invoke(arg, 1);
 }
 
-KBoolean callbackArgUShort(CallbackPassUShort* arg) {
+KBoolean callback_arg_ushort(CallbackPassUShort* arg) {
     return arg->invoke(arg, 65535u);
 }
 
-KBoolean callbackArgInt(CallbackPassInt* arg) {
+KBoolean callback_arg_int(CallbackPassInt* arg) {
     return arg->invoke(arg, 1);
 }
 
-KBoolean callbackArgUInt(CallbackPassUInt* arg) {
+KBoolean callback_arg_uint(CallbackPassUInt* arg) {
     return arg->invoke(arg, 4294967295u);
 }
 
-KBoolean callbackArgLong(CallbackPassLong* arg) {
+KBoolean callback_arg_long(CallbackPassLong* arg) {
     return arg->invoke(arg, 1);
 }
 
-KBoolean callbackArgULong(CallbackPassULong* arg) {
+KBoolean callback_arg_ulong(CallbackPassULong* arg) {
     return arg->invoke(arg, 18446744073709551615u);
 }
 
-KBoolean callbackArgFloat(CallbackPassFloat* arg) {
+KBoolean callback_arg_float(CallbackPassFloat* arg) {
     return arg->invoke(arg, 1.1f);
 }
 
-KBoolean callbackArgDouble(CallbackPassDouble* arg) {
+KBoolean callback_arg_double(CallbackPassDouble* arg) {
     return arg->invoke(arg, 1.1);
 }
 
-KBoolean callbackArgString(CallbackPassString* arg) {
+KBoolean callback_arg_string(CallbackPassString* arg) {
     return arg->invoke(arg, KString_new("test string", 11, 11, false));
 }
 
-KBoolean callbackArgStringN(CallbackPassStringN* arg) {
+KBoolean callback_arg_string_n(CallbackPassStringN* arg) {
     return arg->invoke(arg, NULL);
 }
 
-KBoolean callbackArgCallback(VoidCallback* pass, CallbackPassCallback* arg) {
+KBoolean callback_arg_callback(VoidCallback* pass, CallbackPassCallback* arg) {
     return arg->invoke(arg, pass);
 }
 
-KBoolean callbackArgCallbackN(CallbackPassCallbackN* arg) {
+KBoolean callback_arg_callback_n(CallbackPassCallbackN* arg) {
     return arg->invoke(arg, NULL);
 }
 
-KBoolean callbackArgEnum(CallbackPassEnum* arg) {
+KBoolean callback_arg_enum(CallbackPassEnum* arg) {
     return arg->invoke(arg, MyEnum_CASE2);
 }
 
-KBoolean callbackArgDictionary(CallbackPassDictionary* arg) {
+KBoolean callback_arg_dictionary(CallbackPassDictionary* arg) {
     return arg->invoke(arg, MyDictionary_new(1, 2, 3, 4));
 }
 
-KBoolean callbackArgDictionaryN(CallbackPassDictionaryN* arg) {
+KBoolean callback_arg_dictionary_n(CallbackPassDictionaryN* arg) {
     return arg->invoke(arg, NULL);
 }

@@ -1,73 +1,73 @@
 #include <api.h>
 
-KCharArray* pingCharArray(KCharArray* arg) {
+KCharArray* ping_char_array(KCharArray* arg) {
     return arg;
 }
 
-KCharArray* pingCharArrayN(KCharArray* arg) {
+KCharArray* ping_char_array_n(KCharArray* arg) {
     return arg;
 }
 
-KBooleanArray* pingBooleanArray(KBooleanArray* arg) {
+KBooleanArray* ping_boolean_array(KBooleanArray* arg) {
     return arg;
 }
 
-KByteArray* pingByteArray(KByteArray* arg) {
+KByteArray* ping_byte_array(KByteArray* arg) {
     return arg;
 }
 
-KUByteArray* pingUByteArray(KUByteArray* arg) {
+KUByteArray* ping_ubyte_array(KUByteArray* arg) {
     return arg;
 }
 
-KShortArray* pingShortArray(KShortArray* arg) {
+KShortArray* ping_short_array(KShortArray* arg) {
     return arg;
 }
 
-KUShortArray* pingUShortArray(KUShortArray* arg) {
+KUShortArray* ping_ushort_array(KUShortArray* arg) {
     return arg;
 }
 
-KIntArray* pingIntArray(KIntArray* arg) {
+KIntArray* ping_int_array(KIntArray* arg) {
     return arg;
 }
 
-KUIntArray* pingUIntArray(KUIntArray* arg) {
+KUIntArray* ping_uint_array(KUIntArray* arg) {
     return arg;
 }
 
-KLongArray* pingLongArray(KLongArray* arg) {
+KLongArray* ping_long_array(KLongArray* arg) {
     return arg;
 }
 
-KULongArray* pingULongArray(KULongArray* arg) {
+KULongArray* ping_ulong_array(KULongArray* arg) {
     return arg;
 }
 
-KFloatArray* pingFloatArray(KFloatArray* arg) {
+KFloatArray* ping_float_array(KFloatArray* arg) {
     return arg;
 }
 
-KDoubleArray* pingDoubleArray(KDoubleArray* arg) {
+KDoubleArray* ping_double_array(KDoubleArray* arg) {
     return arg;
 }
 
-KArray* pingStringArray(KArray* arg) {
+KArray* ping_string_array(KArray* arg) {
     return arg;
 }
 
-KArray* pingStringArrayN(KArray* arg) {
+KArray* ping_string_array_n(KArray* arg) {
     return arg;
 }
 
-KIntArray* pingEnumArray(KIntArray* arg) {
+KIntArray* ping_enum_array(KIntArray* arg) {
     return arg;
 }
 
-KArray* pingDictionaryArray(KArray* arg) {
+KArray* ping_dictionary_array(KArray* arg) {
     return arg;
 }
 
-KArray* pingDictionaryArrayN(KArray* arg) {
+KArray* ping_dictionary_array_n(KArray* arg) {
     return arg;
 }

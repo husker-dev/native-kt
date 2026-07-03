@@ -1,5 +1,0 @@
-
-namespace global {
-
-    string test_func(string? arg, int arg2);
-};

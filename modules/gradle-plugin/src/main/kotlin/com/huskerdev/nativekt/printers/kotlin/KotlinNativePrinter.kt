@@ -60,7 +60,7 @@ class KotlinNativePrinter(
     }
 
     private fun printDictionaryCasts(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
-        val name = dictionary.name
+        val name = dictionary.name.upperCamelCase()
 
         // free handle
         append($$"""
@@ -85,7 +85,13 @@ class KotlinNativePrinter(
         """.trimIndent())
 
         dictionary.allFields().forEach {
-            append("\n\tmem.${it.name} = ${castToNative(it.type, "of.${it.name}", useArena = true, pin = false)}")
+            val value = castToNative(
+                type = it.type,
+                content = "of.${it.name.camelCase()}",
+                useArena = true,
+                pin = false
+            )
+            append("\n\tmem.${it.name} = $value")
         }
         append("""
             
@@ -108,7 +114,13 @@ class KotlinNativePrinter(
         """.trimIndent())
 
         dictionary.allFields().forEach {
-            append("\n\tmem.${it.name} = ${castToNative(it.type, "of.${it.name}", useArena = false, pin = false)}")
+            val value = castToNative(
+                type = it.type,
+                content = "of.${it.name.camelCase()}",
+                useArena = false,
+                pin = false
+            )
+            append("\n\tmem.${it.name} = $value")
         }
         append("""
             
@@ -132,7 +144,7 @@ class KotlinNativePrinter(
         """.trimIndent())
 
         dictionary.allFields().forEach {
-            append("\n\t\t${it.name} = ${castFromNative(it.type, "mem.${it.name}")},")
+            append("\n\t\t${it.name} = ${castFromNative(it.type, "mem.${it.name.camelCase()}")},")
         }
         append("\n\t)\n}\n")
 
@@ -147,11 +159,12 @@ class KotlinNativePrinter(
     }
 
     private fun printCallbackWrap(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
+        val name = callback.name.upperCamelCase()
 
         // Header
-        append("\nprivate val _invoke${callback.name.capitalized()}: CPointer<CFunction<(")
+        append("\nprivate val _invoke$name: CPointer<CFunction<(")
         buildList {
-            add("CPointer<$cinteropPath.${callback.name}>")
+            add("CPointer<$cinteropPath.$name>")
             callback.args.mapTo(this) { it.type.toKnType() }
         }.joinTo(builder)
         append(") -> ${callback.type.toKnType()}>> =")
@@ -160,15 +173,15 @@ class KotlinNativePrinter(
         append("\n\tstaticCFunction { ")
         buildList {
             add("_callback")
-            callback.args.mapTo(this) { it.name }
+            callback.args.mapTo(this) { it.name.camelCase() }
         }.joinTo(builder)
         append(" ->")
 
         // Call
         val args = callback.args.joinToString {
-            castFromNative(it.type, it.name)
+            castFromNative(it.type, it.name.camelCase())
         }
-        val call = "toKotlinCallback<${callback.name}>(_callback)($args)"
+        val call = "toKotlinCallback<$name>(_callback)($args)"
         append("\n\t\t${castToNative(callback.type, call, useArena = false, pin = false)}")
 
         // End
@@ -185,14 +198,19 @@ class KotlinNativePrinter(
         }
 
         val args = function.args.joinToString {
-            castToNative(it.type, it.name, useArena = useArena, pin = function.isCritical())
+            castToNative(
+                it.type,
+                it.name.camelCase(),
+                useArena = useArena,
+                pin = function.isCritical()
+            )
         }
 
         val deallocFunc = if(function.type.isReleasable())
             freeFuncFor(function.type, "_result_native")
         else null
 
-        val call = "$cinteropPath.${function.name}($args)"
+        val call = "$cinteropPath.${function.name.snakeCase()}($args)"
 
         // === Print ===
 

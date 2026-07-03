@@ -139,9 +139,9 @@ struct Name {                                                               \
 // ║     Functions     ║
 // ╚═══════════════════╝
 
-KInt callCriticalJVMCI();
-KInt callCriticalJVMCIAdd(KInt a, KInt b);
-KInt callCriticalJVMCIString(KString* _Nonnull arg);
+KInt call_critical_jvmci();
+KInt call_critical_jvmci_add(KInt a, KInt b);
+KInt call_critical_jvmci_string(KString* _Nonnull arg);
 
 #ifdef __cplusplus
 }

@@ -43,12 +43,10 @@ val File.posixPath: String
     get() = absolutePath.replace("\\", "/")
 
 fun NativeProject.dir(project: Project): File =
-    projectDir?.get()?.asFile
-        ?: project.file("natives/$name")
+    projectDir ?: project.file("natives/$name")
 
 fun NativeProject.getNDLFile(project: Project): File =
-    ndlFile?.get()?.asFile
-        ?: File(dir(project), "api.ndl")
+    ndlFile ?: File(dir(project), "api.ndl")
 
 fun NativeProject.getHeaderFile(project: Project): File =
     (buildSystem as BuildSystem.CMake).headerFile

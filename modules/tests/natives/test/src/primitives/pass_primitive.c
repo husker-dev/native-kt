@@ -3,77 +3,77 @@
 
 // Consume
 
-KBoolean passVoid() {
+KBoolean pass_void() {
     return true;
 }
 
-KBoolean passChar(const KChar arg) {
+KBoolean pass_char(const KChar arg) {
     return arg == 'a';
 }
 
-KBoolean passBoolean(const KBoolean arg) {
+KBoolean pass_boolean(const KBoolean arg) {
     return arg == true;
 }
 
-KBoolean passByte(const KByte arg) {
+KBoolean pass_byte(const KByte arg) {
     return arg == 1;
 }
 
-KBoolean passUByte(const KUByte arg) {
+KBoolean pass_ubyte(const KUByte arg) {
     return arg == 255u;
 }
 
-KBoolean passShort(const KShort arg) {
+KBoolean pass_short(const KShort arg) {
     return arg == 1;
 }
 
-KBoolean passUShort(const KUShort arg) {
+KBoolean pass_ushort(const KUShort arg) {
     return arg == 65535u;
 }
 
-KBoolean passInt(const KInt arg) {
+KBoolean pass_int(const KInt arg) {
     return arg == 99;
 }
 
-KBoolean passUInt(const KUInt arg) {
+KBoolean pass_uint(const KUInt arg) {
     return arg == 4294967295u;
 }
 
-KBoolean passLong(const KLong arg) {
+KBoolean pass_long(const KLong arg) {
     return arg == 9223372036854775805;
 }
 
-KBoolean passULong(const KULong arg) {
+KBoolean pass_ulong(const KULong arg) {
     return arg == 18446744073709551615u;
 }
 
-KBoolean passFloat(const KFloat arg) {
+KBoolean pass_float(const KFloat arg) {
     return arg == 99.9f;
 }
 
-KBoolean passDouble(const KDouble arg) {
+KBoolean pass_double(const KDouble arg) {
     return arg == 1.1;
 }
 
-KBoolean passString(KString* arg) {
+KBoolean pass_string(KString* arg) {
     return !(arg->__flags & 1) && arg->length == 11 && strncmp(arg->data, "test string", arg->length) == 0;
 }
 
-KBoolean passStringN(KString* arg) {
+KBoolean pass_string_n(KString* arg) {
     return arg == NULL;
 }
 
-KBoolean passEnum(const MyEnum arg) {
+KBoolean pass_enum(const MyEnum arg) {
     return arg == MyEnum_CASE2;
 }
 
-KBoolean passDictionary(MyDictionary* arg) {
+KBoolean pass_dictionary(MyDictionary* arg) {
     return arg->a == 1 &&
         arg->b == 2 &&
         arg->c == 3 &&
         arg->d == 4;
 }
 
-KBoolean passDictionaryN(MyDictionary* arg) {
+KBoolean pass_dictionary_n(MyDictionary* arg) {
     return arg == NULL;
 }

@@ -4,6 +4,7 @@ import com.huskerdev.nativekt.printers.kotlin.jvm.KotlinJvmCIPrinter
 import com.huskerdev.nativekt.printers.kotlin.jvm.KotlinJvmForeignPrinter
 import com.huskerdev.nativekt.printers.kotlin.jvm.KotlinJvmJniPrinter
 import com.huskerdev.nativekt.utils.asyncLoadFunctionName
+import com.huskerdev.nativekt.utils.camelCase
 import com.huskerdev.nativekt.utils.functionHeader
 import com.huskerdev.nativekt.utils.globalOperators
 import com.huskerdev.nativekt.utils.printFunctionHeader
@@ -66,19 +67,21 @@ class KotlinJvmPrinter(
                 
             """.trimIndent())
 
+        val isLibLoadedField = "isLib${moduleName.capitalized()}Loaded"
+
         builder.append($$"""
             import com.huskerdev.nativekt.jvm.*
             
             
-            private var isLib$${moduleName.capitalized()}Loaded_ = false
+            private var _$$isLibLoadedField = false
             
-            $${actual}val isLib$${moduleName.capitalized()}Loaded: Boolean
-                get() = isLib$${moduleName.capitalized()}Loaded_
+            $${actual}val $$isLibLoadedField: Boolean
+                get() = _$$isLibLoadedField
             
             @Throws(UnsupportedOperationException::class)
             $${actual}fun $${syncLoadFunctionName(moduleName)}() {
-                if(isLib$${moduleName.capitalized()}Loaded_) return
-                isLib$${moduleName.capitalized()}Loaded_ = true
+                if(_$$isLibLoadedField) return
+                _$$isLibLoadedField = true
                 
                 val libraryPath = NativeKtUtils.resolveLibraryFile("$$moduleName", $$useUniversalMacOSLib)
 
@@ -178,7 +181,7 @@ class KotlinJvmPrinter(
         append('\n')
         printFunctionHeader(builder, function, isActual = expectActual, forcePrintVoid = true)
         append(" = \n\t$implName!!.")
-        append(function.name)
-        function.args.joinTo(this, prefix = "(", postfix = ")\n") { it.name }
+        append(function.name.camelCase())
+        function.args.joinTo(this, prefix = "(", postfix = ")\n") { it.name.camelCase() }
     }
 }

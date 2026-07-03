@@ -1,14 +1,14 @@
 #include "api.h"
 
 
-KInt callCriticalJVMCI() {
+KInt call_critical_jvmci() {
     return 10;
 }
 
-KInt callCriticalJVMCIAdd(KInt a, KInt b) {
+KInt call_critical_jvmci_add(KInt a, KInt b) {
     return a + b;
 }
 
-KInt callCriticalJVMCIString(KString* arg) {
+KInt call_critical_jvmci_string(KString* arg) {
     return 10;
 }

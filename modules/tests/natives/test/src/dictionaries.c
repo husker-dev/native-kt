@@ -1,7 +1,7 @@
 #include <api.h>
 #include <string.h>
 
-KBoolean passBigDictionary(TypeDictionary* arg) {
+KBoolean pass_big_dictionary(TypeDictionary* arg) {
     return arg->a1 == 'a' &&
         arg->a2 == true &&
         arg->a3 == 123 &&
@@ -71,7 +71,7 @@ KBoolean passBigDictionary(TypeDictionary* arg) {
             ((MyDictionary**)arg->a31->elements)[1]->d == 8;
 }
 
-TypeDictionary* returnBigDictionary(VoidCallback* callback) {
+TypeDictionary* return_big_dictionary(VoidCallback* callback) {
     KLong* longElements = malloc(2 * sizeof(KLong));
     longElements[0] = 1;
     longElements[1] = 2;
@@ -115,18 +115,18 @@ TypeDictionary* returnBigDictionary(VoidCallback* callback) {
     );
 }
 
-TypeDictionary* pingBigDictionary(TypeDictionary* arg) {
+TypeDictionary* ping_big_dictionary(TypeDictionary* arg) {
     return arg;
 }
 
-KBoolean passBigDictionaryN(TypeDictionary* arg) {
+KBoolean pass_big_dictionary_n(TypeDictionary* arg) {
     return arg == NULL;
 }
 
-TypeDictionary* returnBigDictionaryN() {
+TypeDictionary* return_big_dictionary_n() {
     return NULL;
 }
 
-TypeDictionary* pingBigDictionaryN(TypeDictionary* arg) {
+TypeDictionary* ping_big_dictionary_n(TypeDictionary* arg) {
     return arg;
 }

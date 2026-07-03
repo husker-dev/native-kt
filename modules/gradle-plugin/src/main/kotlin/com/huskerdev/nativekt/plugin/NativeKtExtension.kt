@@ -2,7 +2,6 @@ package com.huskerdev.nativekt.plugin
 
 import org.gradle.api.ExtensiblePolymorphicDomainObjectContainer
 import org.gradle.api.Named
-import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.jvm.tasks.Jar
 import java.io.File
@@ -186,14 +185,14 @@ sealed class NativeProject @Inject constructor(
      *
      * Default value: `natives/[name]`
      */
-    var projectDir: RegularFileProperty? = null
+    abstract var projectDir: File?
 
     /**
      * NDL file
      *
      * Default value: `natives/[name]/api.ndl`
      */
-    var ndlFile: RegularFileProperty? = null
+    abstract var ndlFile: File?
 
     /**
      * Classpath where bindings will be generated.
@@ -215,7 +214,7 @@ sealed class NativeProject @Inject constructor(
     }
 }
 
-open class Multiplatform @Inject constructor(
+abstract class Multiplatform @Inject constructor(
     name: String
 ): NativeProject(name) {
 
@@ -267,7 +266,7 @@ open class Multiplatform @Inject constructor(
     )
 }
 
-open class SinglePlatform @Inject constructor(
+abstract class SinglePlatform @Inject constructor(
     name: String
 ): NativeProject(name) {
 

@@ -2,95 +2,95 @@
 #include <stdio.h>
 #include <string.h>
 
-KBoolean passCharArray(KCharArray* arg) {
+KBoolean pass_char_array(KCharArray* arg) {
     return !(arg->__flags & 1) &&
         arg->length == 2 &&
         arg->elements[0] == 'a' &&
         arg->elements[1] == 'b';
 }
 
-KBoolean passCharArrayN(KCharArray* arg) {
+KBoolean pass_char_array_n(KCharArray* arg) {
     return arg == NULL;
 }
 
-KBoolean passBooleanArray(KBooleanArray* arg) {
+KBoolean pass_boolean_array(KBooleanArray* arg) {
     return !(arg->__flags & 1) &&
         arg->length == 2 &&
         arg->elements[0] == true &&
         arg->elements[1] == false;
 }
 
-KBoolean passByteArray(KByteArray* arg) {
+KBoolean pass_byte_array(KByteArray* arg) {
     return !(arg->__flags & 1) &&
         arg->length == 2 &&
         arg->elements[0] == 1 &&
         arg->elements[1] == 2;
 }
 
-KBoolean passUByteArray(KUByteArray* arg) {
+KBoolean pass_ubyte_array(KUByteArray* arg) {
     return !(arg->__flags & 1) &&
         arg->length == 2 &&
         arg->elements[0] == 1 &&
         arg->elements[1] == 255u;
 }
 
-KBoolean passShortArray(KShortArray* arg) {
+KBoolean pass_short_array(KShortArray* arg) {
     return !(arg->__flags & 1) &&
         arg->length == 2 &&
         arg->elements[0] == 1 &&
         arg->elements[1] == 2;
 }
 
-KBoolean passUShortArray(KUShortArray* arg) {
+KBoolean pass_ushort_array(KUShortArray* arg) {
     return !(arg->__flags & 1) &&
         arg->length == 2 &&
         arg->elements[0] == 1 &&
         arg->elements[1] == 65535u;
 }
 
-KBoolean passIntArray(KIntArray* arg) {
+KBoolean pass_int_array(KIntArray* arg) {
     return !(arg->__flags & 1) &&
         arg->length == 2 &&
         arg->elements[0] == 1 &&
         arg->elements[1] == 2;
 }
 
-KBoolean passUIntArray(KUIntArray* arg) {
+KBoolean pass_uint_array(KUIntArray* arg) {
     return !(arg->__flags & 1) &&
         arg->length == 2 &&
         arg->elements[0] == 1 &&
         arg->elements[1] == 4294967295u;
 }
 
-KBoolean passLongArray(KLongArray* arg) {
+KBoolean pass_long_array(KLongArray* arg) {
     return !(arg->__flags & 1) &&
         arg->length == 2 &&
         arg->elements[0] == 1 &&
         arg->elements[1] == 2;
 }
 
-KBoolean passULongArray(KULongArray* arg) {
+KBoolean pass_ulong_array(KULongArray* arg) {
     return !(arg->__flags & 1) &&
         arg->length == 2 &&
         arg->elements[0] == 1 &&
         arg->elements[1] == 18446744073709551615u;
 }
 
-KBoolean passFloatArray(KFloatArray* arg) {
+KBoolean pass_float_array(KFloatArray* arg) {
     return !(arg->__flags & 1) &&
         arg->length == 2 &&
         arg->elements[0] == 1.1f &&
         arg->elements[1] == 2.2f;
 }
 
-KBoolean passDoubleArray(KDoubleArray* arg) {
+KBoolean pass_double_array(KDoubleArray* arg) {
     return !(arg->__flags & 1) &&
         arg->length == 2 &&
         arg->elements[0] == 1.1 &&
         arg->elements[1] == 2.2;
 }
 
-KBoolean passStringArray(KArray* arg) {
+KBoolean pass_string_array(KArray* arg) {
     const KString* el1 = (KString*) arg->elements[0];
     const KString* el2 = (KString*) arg->elements[1];
 
@@ -100,11 +100,11 @@ KBoolean passStringArray(KArray* arg) {
         strncmp(el2->data, "string2", el2->length) == 0;
 }
 
-KBoolean passStringArrayN(KArray* arg) {
+KBoolean pass_string_array_n(KArray* arg) {
     return arg->elements[0] == NULL && arg->elements[1] == NULL;
 }
 
-KBoolean passEnumArray(KIntArray* arg) {
+KBoolean pass_enum_array(KIntArray* arg) {
     const MyEnum* elements = (MyEnum*)arg->elements;
 
     return !(arg->__flags & 1) &&
@@ -113,7 +113,7 @@ KBoolean passEnumArray(KIntArray* arg) {
         elements[1] == MyEnum_CASE2;
 }
 
-KBoolean passDictionaryArray(KArray* arg) {
+KBoolean pass_dictionary_array(KArray* arg) {
     MyDictionary** elements = (MyDictionary**)arg->elements;
 
     return !(arg->__flags & 1) &&
@@ -128,6 +128,6 @@ KBoolean passDictionaryArray(KArray* arg) {
         elements[1]->d == 8;
 }
 
-KBoolean passDictionaryArrayN(KArray* arg) {
+KBoolean pass_dictionary_array_n(KArray* arg) {
     return arg->elements[0] == NULL && arg->elements[1] == NULL;
 }

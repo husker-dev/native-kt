@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-KBoolean criticalPrimitives(
+KBoolean critical_primitives(
     KChar a1, KBoolean a2,
     KByte a3, KUByte a4,
     KShort a5, KUShort a6,
@@ -24,19 +24,19 @@ KBoolean criticalPrimitives(
         a12 == 2.0;
 }
 
-KBoolean criticalEnum(MyEnum a1) {
+KBoolean critical_enum(MyEnum a1) {
     return a1 == MyEnum_CASE1;
 }
 
-KBoolean criticalString(KString* a1) {
+KBoolean critical_string(KString* a1) {
     return a1->length == 11 && strncmp(a1->data, "test string", a1->length) == 0;
 }
 
-KBoolean criticalStringN(KString* a1) {
+KBoolean critical_string_n(KString* a1) {
     return a1 == NULL;
 }
 
-KBoolean criticalPrimitivesArray(
+KBoolean critical_primitives_array(
     KCharArray* a1, KBooleanArray* a2,
     KByteArray* a3, KUByteArray* a4,
     KShortArray* a5, KUShortArray* a6,
@@ -82,7 +82,7 @@ KBoolean criticalPrimitivesArray(
             a12->elements[1] == 2.2;
 }
 
-KBoolean criticalPrimitivesArrayN(
+KBoolean critical_primitives_array_n(
     KCharArray* a1, KBooleanArray* a2,
     KByteArray* a3, KUByteArray* a4,
     KShortArray* a5, KUShortArray* a6,
@@ -98,7 +98,7 @@ KBoolean criticalPrimitivesArrayN(
         a11 == NULL && a12 == NULL;
 }
 
-KBoolean criticalEnumArray(KIntArray* a1) {
+KBoolean critical_enum_array(KIntArray* a1) {
     const MyEnum* elements = (MyEnum*)a1->elements;
 
     return a1->length == 2 &&
@@ -106,58 +106,58 @@ KBoolean criticalEnumArray(KIntArray* a1) {
            elements[1] == MyEnum_CASE2;
 }
 
-KBoolean criticalEnumArrayN(KIntArray* a1) {
+KBoolean critical_enum_array_n(KIntArray* a1) {
     return a1 == NULL;
 }
 
-KChar criticalReturnChar() {
+KChar critical_return_char() {
     return 'a';
 }
 
-KBoolean criticalReturnBoolean() {
+KBoolean critical_return_boolean() {
     return true;
 }
 
-KByte criticalReturnByte() {
+KByte critical_return_byte() {
     return 1;
 }
 
-KUByte criticalReturnUByte() {
+KUByte critical_return_ubyte() {
     return 255u;
 }
 
-KShort criticalReturnShort() {
+KShort critical_return_short() {
     return 1;
 }
 
-KUShort criticalReturnUShort() {
+KUShort critical_return_ushort() {
     return 65535u;
 }
 
-KInt criticalReturnInt() {
+KInt critical_return_int() {
     return 1;
 }
 
-KUInt criticalReturnUInt() {
+KUInt critical_return_uint() {
     return 4294967295u;
 }
 
-KLong criticalReturnLong() {
+KLong critical_return_long() {
     return 1;
 }
 
-KULong criticalReturnULong() {
+KULong critical_return_ulong() {
     return 18446744073709551615u;
 }
 
-KFloat criticalReturnFloat() {
+KFloat critical_return_float() {
     return 1.0f;
 }
 
-KDouble criticalReturnDouble() {
+KDouble critical_return_double() {
     return 1.0;
 }
 
-MyEnum criticalReturnEnum() {
+MyEnum critical_return_enum() {
     return MyEnum_CASE1;
 }

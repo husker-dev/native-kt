@@ -14,16 +14,11 @@ import natives.jniBindings.callJni
 import natives.jniBindings.callJniAdd
 import natives.jniBindings.callJniString
 import natives.jniBindings.loadLibJniBindingsSync
-import natives.jvmciBindings.callCriticalJVMCI
-import natives.jvmciBindings.callCriticalJVMCIAdd
-import natives.jvmciBindings.callCriticalJVMCIString
+import natives.jvmciBindings.callCriticalJvmci
+import natives.jvmciBindings.callCriticalJvmciAdd
+import natives.jvmciBindings.callCriticalJvmciString
 import natives.jvmciBindings.loadLibJvmciBindingsSync
 import java.util.concurrent.ThreadLocalRandom
-
-fun main() {
-    loadLibJvmciBindingsSync()
-    callCriticalJVMCIAdd(2, 6)
-}
 
 @State(Scope.Benchmark)
 @Suppress("unused")
@@ -100,14 +95,14 @@ open class NativeKtBenchmark {
 
     @Benchmark
     open fun criticalJVMCI() =
-        callCriticalJVMCI()
+        callCriticalJvmci()
 
     @Benchmark
     open fun criticalJVMCIAdd() =
-        callCriticalJVMCIAdd(a, b)
+        callCriticalJvmciAdd(a, b)
 
     @Benchmark
     open fun criticalJVMCIString() =
-        callCriticalJVMCIString("test")
+        callCriticalJvmciString("test")
 
 }

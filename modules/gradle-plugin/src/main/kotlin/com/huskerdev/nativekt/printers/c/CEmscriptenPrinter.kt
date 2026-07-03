@@ -28,7 +28,7 @@ class CEmscriptenPrinter(
         }.joinTo(builder, separator = "") {
             """
                 
-                EMSCRIPTEN_KEEPALIVE void* ${it}_freeAddr() {
+                EMSCRIPTEN_KEEPALIVE void* ${it}_free_addr() {
                     return (void*) &${it}_free;
                 }
                 

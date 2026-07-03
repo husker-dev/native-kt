@@ -43,17 +43,19 @@ class KotlinAndroidPrinter(
                 
             """.trimIndent())
 
+        val isLibLoadedField = "isLib${moduleName.capitalized()}Loaded"
+
         builder.append("""
             
-            private var _isLib${moduleName.capitalized()}Loaded = false
+            private var _$isLibLoadedField = false
 
-            ${actual}val isLib${moduleName.capitalized()}Loaded: Boolean
-                get() = _isLib${moduleName.capitalized()}Loaded
+            ${actual}val $isLibLoadedField: Boolean
+                get() = _$isLibLoadedField
             
             @Throws(UnsupportedOperationException::class)
             ${actual}fun ${syncLoadFunctionName(moduleName)}() {
-                if(_isLib${moduleName.capitalized()}Loaded) return
-                _isLib${moduleName.capitalized()}Loaded = true
+                if(_$isLibLoadedField) return
+                _$isLibLoadedField = true
                 
                 $jniClassName("$moduleName")
             }
@@ -95,9 +97,9 @@ class KotlinAndroidPrinter(
 
         if(isAndroidCriticalEnabled && function.isCritical() && function.isAndroidCriticalCapable()) {
             val args = function.args.joinToString {
-                toNativeCriticalType(it.type, it.name, ignoreUnsigned = true)
+                toNativeCriticalType(it.type, it.name.camelCase(), ignoreUnsigned = true)
             }
-            val call = "$jniClassName._${function.name}($args)"
+            val call = "$jniClassName._${function.name.camelCase()}($args)"
 
             val castedCall = toKotlinCriticalType(function.type, call, ignoreUnsigned = true)
             append("if(supportsCritical) $castedCall\n\telse ")
@@ -105,7 +107,7 @@ class KotlinAndroidPrinter(
 
         val args = function.args.joinToString { it.name }
 
-        append("$jniClassName.${function.name}($args)")
+        append("$jniClassName.${function.name.camelCase()}($args)")
         append("\n")
     }
 }

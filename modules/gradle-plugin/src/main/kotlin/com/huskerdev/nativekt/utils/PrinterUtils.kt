@@ -5,6 +5,7 @@ package com.huskerdev.nativekt.utils
 import com.huskerdev.webidl.parser.IdlExtendedAttribute
 import com.huskerdev.webidl.resolver.*
 import org.gradle.internal.extensions.stdlib.capitalized
+import org.gradle.kotlin.dsl.support.uppercaseFirstChar
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
@@ -13,6 +14,34 @@ fun asyncLoadFunctionName(moduleName: String) =
 
 fun syncLoadFunctionName(moduleName: String) =
     "loadLib${moduleName.capitalized()}Sync"
+
+// Names
+
+fun String.snakeCase(): String = buildString {
+    this@snakeCase.forEachIndexed { index, c ->
+
+        // for: aaAAAaaA -> aa_aaa_aa_a
+        if(c.isUpperCase() &&
+            index > 1 &&
+            index < this@snakeCase.length &&
+            c.isLowerCase() != this@snakeCase[index-1].isLowerCase()
+        ) append('_')
+
+        append(c.lowercase())
+    }
+}
+
+fun String.camelCase(): String {
+    return split("_")
+        .joinToString { it.uppercaseFirstChar() }
+        .replaceFirstChar { it.lowercase() }
+}
+
+fun String.upperCamelCase(): String =
+    camelCase().uppercaseFirstChar()
+
+
+// Types
 
 fun <T> ResolvedIdlType.Default.arrayType(block: (type: ResolvedIdlType.Default) -> T): T {
     val param = parameters.firstOrNull()
@@ -69,7 +98,7 @@ internal fun ResolvedIdlType.toKotlinType(
                 else -> "Array<${type.toKotlinType(stringAsBytes, enumAsInt)}>$nullable"
             }
         }
-        else -> "${(this as ResolvedIdlType.Default).declaration.name}$nullable"
+        else -> "${(this as ResolvedIdlType.Default).declaration.name.upperCamelCase()}$nullable"
     }
 }
 
@@ -106,7 +135,7 @@ fun ResolvedIdlType.toCType(
                 else -> "KArray$ptr$nullable"
             }
         }
-        else -> "${(this as ResolvedIdlType.Default).declaration.name}$ptr$nullable"
+        else -> "${(this as ResolvedIdlType.Default).declaration.name.upperCamelCase()}$ptr$nullable"
     }
 }
 
@@ -501,7 +530,7 @@ fun printFunctionHeader(
     isActual: Boolean = false,
     isExternal: Boolean = false,
     isExpect: Boolean = false,
-    name: String = function.name,
+    name: String = function.name.camelCase(),
     forcePrintVoid: Boolean = false,
     stringAsBytes: Boolean = false,
     enumAsInt: Boolean = false,
@@ -514,12 +543,13 @@ fun printFunctionHeader(
     if(isOverride) append("override ")
 
     val args = function.args.flatMap { arg ->
-        val result = "${arg.name}: ${arg.type.toKotlinType(stringAsBytes, enumAsInt, ignoreUnsigned = ignoreUnsigned)}"
+        val name = arg.name.camelCase()
+        val result = "$name: ${arg.type.toKotlinType(stringAsBytes, enumAsInt, ignoreUnsigned = ignoreUnsigned)}"
         when {
             stringAsBytes && arg.type.isString() ->
-                listOf(result, "__len_${arg.name}: Int", "__size_${arg.name}: Int")
+                listOf(result, "__len_$name: Int", "__size_$name: Int")
             arraysLen && arg.type.isArray() ->
-                listOf(result, "__len_${arg.name}: Int")
+                listOf(result, "__len_$name: Int")
             else -> listOf(result)
         }
     }.joinToString()

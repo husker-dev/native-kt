@@ -40,12 +40,12 @@ class CJniPrinter(
 
         append("""
             
-            static char** readMangledMethods(JNIEnv *env, jobject mangledMethods) {
-                jsize length = (*env)->GetArrayLength(env, mangledMethods);
+            static char** JNI_read_mangled_methods(JNIEnv *env, jobject mangled_methods) {
+                jsize length = (*env)->GetArrayLength(env, mangled_methods);
             
                 char** result = malloc(sizeof(void*) * length);
                 for (jsize i = 0; i < length; i++) {
-                    jstring str = (jstring) (*env)->GetObjectArrayElement(env, mangledMethods, i);
+                    jstring str = (jstring) (*env)->GetObjectArrayElement(env, mangled_methods, i);
                     jsize size = (*env)->GetStringLength(env, str);
             
                     char* strData = malloc(size + 1);
@@ -56,14 +56,14 @@ class CJniPrinter(
                 return result;
             }
             
-            static void freeMangledMethods(JNIEnv *env, jobject mangledMethods, char** mangledNames) {
-                for (jsize i = 0; i < (*env)->GetArrayLength(env, mangledMethods); i++)
-                    free(mangledNames[i]);
-                free(mangledNames);
+            static void JNI_free_mangled_methods(JNIEnv *env, jobject mangled_methods, char** mangled_names) {
+                for (jsize i = 0; i < (*env)->GetArrayLength(env, mangled_methods); i++)
+                    free(mangled_names[i]);
+                free(mangled_names);
             }
             
-            JNIEXPORT void JNICALL Java_${classPath.replace(".", "_")}_${name}_nJNILoad(JNIEnv *env, jclass clazz, jobject mangledMethods$isCritical) {
-                char** mangledNames = readMangledMethods(env, mangledMethods);
+            JNIEXPORT void JNICALL Java_${classPath.replace(".", "_")}_${name}_nJNILoad(JNIEnv *env, jclass clazz, jobject mangled_methods$isCritical) {
+                char** mangled_names = JNI_read_mangled_methods(env, mangled_methods);
                 JNINativeMethod* methods = malloc(sizeof(JNINativeMethod) * ${idl.globalOperators().size});
         """.trimIndent())
 
@@ -78,11 +78,11 @@ class CJniPrinter(
                 val criticalFuncName = funcName + "_"
                 val criticalFuncDesc = function.toJavaDesc(classPath, isCritical = true)
 
-                append("mangledNames[$index],$nl")
+                append("mangled_names[$index],$nl")
                 append("critical ? \"$criticalFuncDesc\" : \"!${funcDesc}\",$nl")
                 append("critical ? (void*)&$criticalFuncName : (void*)&$funcName")
             } else
-                append("mangledNames[$index],$nl\"$funcDesc\",$nl(void*)&$funcName")
+                append("mangled_names[$index],$nl\"$funcDesc\",$nl(void*)&$funcName")
 
             append("\n\t};")
         }
@@ -91,7 +91,7 @@ class CJniPrinter(
             
                 JNI_Init(env, methods, ${idl.globalOperators().size});
                 free(methods);
-                freeMangledMethods(env, mangledMethods, mangledNames);
+                JNI_free_mangled_methods(env, mangled_methods, mangled_names);
             }
         """.trimIndent())
     }
@@ -106,7 +106,7 @@ class CJniPrinter(
             add("JNIEnv *env")
             add("jclass cls")
             addAll(function.args.map {
-                "${it.type.toJNIType()} __jvm_${it.name}"
+                "${it.type.toJNIType()} __jvm_${it.name.snakeCase()}"
             })
         }.joinTo(builder, prefix = "(", postfix = ") {")
 
@@ -123,12 +123,12 @@ class CJniPrinter(
         // write args
         argsToCast.joinTo(this, separator = "") {
             buildString {
-                append("\n\t${it.type.toCType().padEnd(typeMaxLength)} __native_${it.name} = ")
+                append("\n\t${it.type.toCType().padEnd(typeMaxLength)} __native_${it.name.snakeCase()} = ")
                 if(it.type.isNullable && !it.type.isPrimitive() && !it.type.isEnum())
-                    append("__jvm_${it.name} == 0 ? NULL : ")
+                    append("__jvm_${it.name.snakeCase()} == 0 ? NULL : ")
                 append(castKotlinToJNI(
                     it.type,
-                    "__jvm_${it.name}",
+                    "__jvm_${it.name.snakeCase()}",
                     onStack = true,
                     flags = "0"
                 ))
@@ -142,10 +142,10 @@ class CJniPrinter(
 
         val args = function.args.joinToString {
             if(it.type.isPrimitive())
-                "__jvm_${it.name}"
-            else "__native_${it.name}"
+                "__jvm_${it.name.snakeCase()}"
+            else "__native_${it.name.snakeCase()}"
         }
-        val call = "${function.name}($args)"
+        val call = "${function.name.snakeCase()}($args)"
 
         if(returns) {
             if(needReleases) {
@@ -175,14 +175,14 @@ class CJniPrinter(
 
         function.args.forEach { arg ->
             val type = arg.type
-            val name = "__native_${arg.name}"
+            val name = "__native_${arg.name.snakeCase()}"
             when {
-                type.isString() -> "JNI_releaseKStringOnStack(env, $name)"
+                type.isString() -> "JNI_release_kstring_on_stack(env, $name)"
                 type.isArray() -> type.arrayType { type ->
                     when {
-                        type.isPrimitive() -> "JNI_release${type.toCType(ignoreUnsigned = true)}ArrayOnStack(env, ${castToSignedC(arg.type, name)})"
-                        type.isEnum() -> "JNI_releaseEnumArrayOnStack($name)"
-                        else -> "JNI_releaseKArrayOnStack($name, (void*) ${freeFuncFor(type, "")!!.dropLast(2)})"
+                        type.isPrimitive() -> "JNI_release_${type.toCType(ignoreUnsigned = true).lowercase()}array_on_stack(env, ${castToSignedC(arg.type, name)})"
+                        type.isEnum() -> "JNI_release_enum_array_on_stack($name)"
+                        else -> "JNI_release_karray_on_stack($name, (void*) ${freeFuncFor(type, "")!!.dropLast(2)})"
                     }
                 }
                 type.isDictionary() -> forceFreeFuncFor(type, name)
@@ -209,7 +209,7 @@ class CJniPrinter(
     }
 
     private fun ResolvedIdlOperation.jniName() =
-        "Java_${classPath.replace(".", "_")}_${this@CJniPrinter.name}_$name"
+        "Java_${classPath.replace(".", "_")}_${this@CJniPrinter.name}_${name.snakeCase()}"
 }
 
 internal fun castJniToKotlin(
@@ -217,17 +217,17 @@ internal fun castJniToKotlin(
     content: String
 ): String = when {
     type.isUnsigned() -> castJniToKotlin(type.toSignedType(), castToSignedC(type, content))
-    type.isEnum() -> "JNI_toKotlinEnum(env, $content, class${type.toCType()}, values${type.toCType()})"
-    type.isDictionary() -> "JNI_toKotlin${type.toCType(ptr = false)}(env, $content)"
-    type.isString() -> "JNI_toKotlinKString(env, $content)"
-    type.isCallback() -> "JNI_toKotlinCallback(env, (_AbstractCallback*) $content)"
+    type.isEnum() -> "JNI_to_kotlin_enum(env, $content, class_${type.toCType().lowercase()}, values_${type.toCType().lowercase()})"
+    type.isDictionary() -> "JNI_to_kotlin_${type.toCType(ptr = false).lowercase()}(env, $content)"
+    type.isString() -> "JNI_to_kotlin_kstring(env, $content)"
+    type.isCallback() -> "JNI_to_kotlin_callback(env, (_AbstractCallback*) $content)"
     type.isArray() -> type.arrayType { type ->
         when {
-            type.isPrimitive() -> "JNI_toKotlin${type.toCType(ptr = false)}Array(env, $content)"
-            type.isEnum() -> "JNI_toKotlinEnumArray(env, $content, class${type.toCType()}, values${type.toCType()})"
+            type.isPrimitive() -> "JNI_to_kotlin_${type.toCType(ptr = false).lowercase()}array(env, $content)"
+            type.isEnum() -> "JNI_to_kotlin_enum_array(env, $content, class_${type.toCType().lowercase()}, values_${type.toCType().lowercase()})"
             else -> {
                 val cast = castJniToKotlin(type, "").split("(")[0]
-                "JNI_toKotlinKArray(env, $content, (jobject(*)(JNIEnv*, void*)) $cast, class${type.toKotlinType(printNullable = false)})"
+                "JNI_to_kotlin_karray(env, $content, (jobject(*)(JNIEnv*, void*)) $cast, class_${type.toKotlinType(printNullable = false).lowercase()})"
             }
         }
     }
@@ -241,28 +241,28 @@ internal fun castKotlinToJNI(
     flags: String
 ): String = when {
     type.isUnsigned() -> castToUnsignedC(type, castKotlinToJNI(type.toSignedType(), content, onStack, flags))
-    type.isEnum() -> "JNI_toNativeEnum(env, $content)"
-    type.isDictionary() -> "JNI_toNative${type.toCType(ptr = false)}(env, $content, $flags)"
+    type.isEnum() -> "JNI_to_native_enum(env, $content)"
+    type.isDictionary() -> "JNI_to_native_${type.toCType(ptr = false).lowercase()}(env, $content, $flags)"
     type.isString() ->
-        if(onStack) "JNI_toNativeKStringOnStack(env, $content, alloca(JNI_StringStackSize))"
-        else "JNI_toNativeKString(env, $content, $flags)"
+        if(onStack) "JNI_to_native_kstring_on_stack(env, $content, alloca(JNI_STRING_STACK_SIZE))"
+        else "JNI_to_native_kstring(env, $content, $flags)"
     type.isCallback() -> {
         val name = type.toCType(ptr = false)
-        if (onStack) "($name*) JNI_toNativeCallbackOnStack(env, $content, (void(*)())JNI_CALLBACK_INVOKE_$name, alloca(_AbstractCallbackSize))"
-        else "($name*) JNI_toNativeCallback(env, $content, (void(*)())JNI_CALLBACK_INVOKE_$name, $flags)"
+        if (onStack) "($name*) JNI_to_native_callback_on_stack(env, $content, (void(*)()) JNI_CALLBACK_INVOKE_${name.lowercase()}, alloca(JNI_ABSTRACT_CALLBACK_SIZE))"
+        else "($name*) JNI_to_native_callback(env, $content, (void(*)()) JNI_CALLBACK_INVOKE_${name.lowercase()}, $flags)"
     }
     type.isArray() -> type.arrayType { type ->
         when {
             type.isPrimitive() ->
-                if(onStack) "JNI_toNative${type.toCType(ptr = false)}ArrayOnStack(env, $content, alloca(JNI_ArrayStackSize))"
-                else "JNI_toNative${type.toCType(ptr = false)}Array(env, $content, $flags)"
+                if(onStack) "JNI_to_native_${type.toCType(ptr = false).lowercase()}array_on_stack(env, $content, alloca(JNI_ARRAY_STACK_SIZE))"
+                else "JNI_to_native_${type.toCType(ptr = false).lowercase()}array(env, $content, $flags)"
             type.isEnum() ->
-                if (onStack) "JNI_toNativeEnumArrayOnStack(env, $content, alloca(JNI_ArrayStackSize))"
-                else "JNI_toNativeEnumArray(env, $content, $flags)"
+                if (onStack) "JNI_to_native_enum_array_on_stack(env, $content, alloca(JNI_ARRAY_STACK_SIZE))"
+                else "JNI_to_native_enum_array(env, $content, $flags)"
             else -> {
                 val castFunc = castKotlinToJNI(type, "", false, "").split("(")[0]
-                if(onStack) "JNI_toNativeKArrayOnStack(env, $content, (void*(*)(JNIEnv*, jobject, char)) $castFunc, alloca(JNI_ArrayStackSize))"
-                else "JNI_toNativeKArray(env, $content, (void*(*)(JNIEnv*, jobject, char)) $castFunc, $flags)"
+                if(onStack) "JNI_to_native_karray_on_stack(env, $content, (void*(*)(JNIEnv*, jobject, char)) $castFunc, alloca(JNI_ARRAY_STACK_SIZE))"
+                else "JNI_to_native_karray(env, $content, (void*(*)(JNIEnv*, jobject, char)) $castFunc, $flags)"
             }
         }
     }

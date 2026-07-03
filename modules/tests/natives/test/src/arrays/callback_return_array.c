@@ -1,7 +1,7 @@
 #include <api.h>
 #include <string.h>
 
-KBoolean callbackReturnCharArray(CallbackReturnCharArray* arg) {
+KBoolean callback_return_char_array(CallbackReturnCharArray* arg) {
     const KCharArray* array = arg->invoke(arg);
     return (array->__flags & 1) &&
         array->length == 2 &&
@@ -9,11 +9,11 @@ KBoolean callbackReturnCharArray(CallbackReturnCharArray* arg) {
         array->elements[1] == 'b';
 }
 
-KBoolean callbackReturnCharArrayN(CallbackReturnCharArrayN* arg) {
+KBoolean callback_return_char_array_n(CallbackReturnCharArrayN* arg) {
     return arg->invoke(arg) == NULL;
 }
 
-KBoolean callbackReturnBooleanArray(CallbackReturnBooleanArray* arg) {
+KBoolean callback_return_boolean_array(CallbackReturnBooleanArray* arg) {
     const KBooleanArray* array = arg->invoke(arg);
     return (array->__flags & 1) &&
         array->length == 2 &&
@@ -21,7 +21,7 @@ KBoolean callbackReturnBooleanArray(CallbackReturnBooleanArray* arg) {
         array->elements[1] == false;
 }
 
-KBoolean callbackReturnByteArray(CallbackReturnByteArray* arg) {
+KBoolean callback_return_byte_array(CallbackReturnByteArray* arg) {
     const KByteArray* array = arg->invoke(arg);
     return (array->__flags & 1) &&
         array->length == 2 &&
@@ -29,7 +29,7 @@ KBoolean callbackReturnByteArray(CallbackReturnByteArray* arg) {
         array->elements[1] == 2;
 }
 
-KBoolean callbackReturnUByteArray(CallbackReturnUByteArray* arg) {
+KBoolean callback_return_ubyte_array(CallbackReturnUByteArray* arg) {
     const KUByteArray* array = arg->invoke(arg);
     return (array->__flags & 1) &&
         array->length == 2 &&
@@ -37,7 +37,7 @@ KBoolean callbackReturnUByteArray(CallbackReturnUByteArray* arg) {
         array->elements[1] == 255u;
 }
 
-KBoolean callbackReturnShortArray(CallbackReturnShortArray* arg) {
+KBoolean callback_return_short_array(CallbackReturnShortArray* arg) {
     const KShortArray* array = arg->invoke(arg);
     return (array->__flags & 1) &&
         array->length == 2 &&
@@ -45,7 +45,7 @@ KBoolean callbackReturnShortArray(CallbackReturnShortArray* arg) {
         array->elements[1] == 2;
 }
 
-KBoolean callbackReturnUShortArray(CallbackReturnUShortArray* arg) {
+KBoolean callback_return_ushort_array(CallbackReturnUShortArray* arg) {
     const KUShortArray* array = arg->invoke(arg);
     return (array->__flags & 1) &&
         array->length == 2 &&
@@ -53,7 +53,7 @@ KBoolean callbackReturnUShortArray(CallbackReturnUShortArray* arg) {
         array->elements[1] == 65535u;
 }
 
-KBoolean callbackReturnIntArray(CallbackReturnIntArray* arg) {
+KBoolean callback_return_int_array(CallbackReturnIntArray* arg) {
     const KIntArray* array = arg->invoke(arg);
     return (array->__flags & 1) &&
         array->length == 2 &&
@@ -61,7 +61,7 @@ KBoolean callbackReturnIntArray(CallbackReturnIntArray* arg) {
         array->elements[1] == 2;
 }
 
-KBoolean callbackReturnUIntArray(CallbackReturnUIntArray* arg) {
+KBoolean callback_return_uint_array(CallbackReturnUIntArray* arg) {
     const KUIntArray* array = arg->invoke(arg);
     return (array->__flags & 1) &&
         array->length == 2 &&
@@ -69,7 +69,7 @@ KBoolean callbackReturnUIntArray(CallbackReturnUIntArray* arg) {
         array->elements[1] == 4294967295u;
 }
 
-KBoolean callbackReturnLongArray(CallbackReturnLongArray* arg) {
+KBoolean callback_return_long_array(CallbackReturnLongArray* arg) {
     const KLongArray* array = arg->invoke(arg);
     return (array->__flags & 1) &&
         array->length == 2 &&
@@ -77,7 +77,7 @@ KBoolean callbackReturnLongArray(CallbackReturnLongArray* arg) {
         array->elements[1] == 2;
 }
 
-KBoolean callbackReturnULongArray(CallbackReturnULongArray* arg) {
+KBoolean callback_return_ulong_array(CallbackReturnULongArray* arg) {
     const KULongArray* array = arg->invoke(arg);
     return (array->__flags & 1) &&
         array->length == 2 &&
@@ -85,7 +85,7 @@ KBoolean callbackReturnULongArray(CallbackReturnULongArray* arg) {
         array->elements[1] == 18446744073709551615u;
 }
 
-KBoolean callbackReturnFloatArray(CallbackReturnFloatArray* arg) {
+KBoolean callback_return_float_array(CallbackReturnFloatArray* arg) {
     const KFloatArray* array = arg->invoke(arg);
     return (array->__flags & 1) &&
         array->length == 2 &&
@@ -93,7 +93,7 @@ KBoolean callbackReturnFloatArray(CallbackReturnFloatArray* arg) {
         array->elements[1] == 2.2f;
 }
 
-KBoolean callbackReturnDoubleArray(CallbackReturnDoubleArray* arg) {
+KBoolean callback_return_double_array(CallbackReturnDoubleArray* arg) {
     const KDoubleArray* array = arg->invoke(arg);
     return (array->__flags & 1) &&
         array->length == 2 &&
@@ -101,7 +101,7 @@ KBoolean callbackReturnDoubleArray(CallbackReturnDoubleArray* arg) {
         array->elements[1] == 2.2;
 }
 
-KBoolean callbackReturnStringArray(CallbackReturnStringArray* arg) {
+KBoolean callback_return_string_array(CallbackReturnStringArray* arg) {
     const KArray* array = arg->invoke(arg);
     const KString* el1 = (KString*) array->elements[0];
     const KString* el2 = (KString*) array->elements[1];
@@ -112,12 +112,12 @@ KBoolean callbackReturnStringArray(CallbackReturnStringArray* arg) {
         strncmp(el2->data, "string2", el2->length) == 0;
 }
 
-KBoolean callbackReturnStringArrayN(CallbackReturnStringArrayN* arg) {
+KBoolean callback_return_string_array_n(CallbackReturnStringArrayN* arg) {
     const KArray* array = arg->invoke(arg);
     return array->elements[0] == NULL && array->elements[1] == NULL;
 }
 
-KBoolean callbackReturnEnumArray(CallbackReturnEnumArray* arg) {
+KBoolean callback_return_enum_array(CallbackReturnEnumArray* arg) {
     const KIntArray* array = arg->invoke(arg);
     const MyEnum* elements = (MyEnum*)array->elements;
 
@@ -127,7 +127,7 @@ KBoolean callbackReturnEnumArray(CallbackReturnEnumArray* arg) {
         elements[1] == MyEnum_CASE2;
 }
 
-KBoolean callbackReturnDictionaryArray(CallbackReturnDictionaryArray* arg) {
+KBoolean callback_return_dictionary_array(CallbackReturnDictionaryArray* arg) {
     const KArray* array = arg->invoke(arg);
     MyDictionary** elements = (MyDictionary**)array->elements;
 
@@ -143,7 +143,7 @@ KBoolean callbackReturnDictionaryArray(CallbackReturnDictionaryArray* arg) {
         elements[1]->d == 8;
 }
 
-KBoolean callbackReturnDictionaryArrayN(CallbackReturnDictionaryArrayN* arg) {
+KBoolean callback_return_dictionary_array_n(CallbackReturnDictionaryArrayN* arg) {
     const KArray* array = arg->invoke(arg);
     return array->elements[0] == NULL && array->elements[1] == NULL;
 }

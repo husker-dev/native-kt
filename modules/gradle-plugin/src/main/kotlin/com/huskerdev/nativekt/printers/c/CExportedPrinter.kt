@@ -31,22 +31,22 @@ class CExportedPrinter(
                 KArray_free(self, freeOp);
             }
             
-            #define KArrayFreeDef(Name)                                         \
-            NATIVEKT_EXPORT void ${exportedName("##Name##_free")}(Name* self) { \
-                Name##_free(self);                                              \
+            #define KArrayFreeDef(name, dname)                                   \
+            NATIVEKT_EXPORT void ${exportedName("##dname##_free")}(name* self) { \
+                name##_free(self);                                               \
             }
-            KArrayFreeDef(KCharArray)
-            KArrayFreeDef(KBooleanArray)
-            KArrayFreeDef(KByteArray)
-            KArrayFreeDef(KUByteArray)
-            KArrayFreeDef(KShortArray)
-            KArrayFreeDef(KUShortArray)
-            KArrayFreeDef(KIntArray)
-            KArrayFreeDef(KUIntArray)
-            KArrayFreeDef(KLongArray)
-            KArrayFreeDef(KULongArray)
-            KArrayFreeDef(KFloatArray)
-            KArrayFreeDef(KDoubleArray)
+            KArrayFreeDef(KCharArray, ${"KCharArray".snakeCase()})
+            KArrayFreeDef(KBooleanArray, ${"KBooleanArray".snakeCase()})
+            KArrayFreeDef(KByteArray, ${"KByteArray".snakeCase()})
+            KArrayFreeDef(KUByteArray, ${"KUByteArray".snakeCase()})
+            KArrayFreeDef(KShortArray, ${"KShortArray".snakeCase()})
+            KArrayFreeDef(KUShortArray, ${"KUShortArray".snakeCase()})
+            KArrayFreeDef(KIntArray, ${"KIntArray".snakeCase()})
+            KArrayFreeDef(KUIntArray, ${"KUIntArray".snakeCase()})
+            KArrayFreeDef(KLongArray, ${"KLongArray".snakeCase()})
+            KArrayFreeDef(KULongArray, ${"KULongArray".snakeCase()})
+            KArrayFreeDef(KFloatArray, ${"KFloatArray".snakeCase()})
+            KArrayFreeDef(KDoubleArray, ${"KDoubleArray".snakeCase()})
             #undef KArrayFreeDef
             
         """.trimIndent())
@@ -76,7 +76,7 @@ class CExportedPrinter(
 
         // == Function args ==
         function.args.joinTo(this, prefix = "(", postfix = ") {\n") {
-            "${it.type.toCType()} _arg_${it.name}"
+            "${it.type.toCType()} _arg_${it.name.snakeCase()}"
         }
 
         // == Function call ==
@@ -84,8 +84,8 @@ class CExportedPrinter(
         if(function.type !is ResolvedIdlType.Void)
             append("return ")
 
-        val args = function.args.joinToString { "_arg_${it.name}" }
-        append("${function.name}($args);\n}\n")
+        val args = function.args.joinToString { "_arg_${it.name.snakeCase()}" }
+        append("${function.name.snakeCase()}($args);\n}\n")
     }
 
     private fun printFunctionCritical(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
@@ -101,7 +101,7 @@ class CExportedPrinter(
         exportedName(name)
 
     private fun exportedName(name: String) =
-        "EXPORTED_${classPath.replace(".", "_")}_${name}"
+        "EXPORTED_${classPath.replace(".", "_")}_${name.snakeCase()}"
 }
 
 internal fun printCriticalNativeFunctionContent(builder: StringBuilder, name: String, function: ResolvedIdlOperation) = builder.apply {
@@ -112,19 +112,20 @@ internal fun printCriticalNativeFunctionContent(builder: StringBuilder, name: St
 
     // == Function args ==
     function.args.flatMap {
+        val name = it.name.snakeCase()
         when {
-            it.type.isString() -> listOf("const char* _arr_${it.name}", "int32_t _length_${it.name}, size_t _size_${it.name}")
+            it.type.isString() -> listOf("const char* _arr_$name", "int32_t _length_$name, size_t _size_$name")
             it.type.isArray() -> {
                 val type = (it.type as ResolvedIdlType.Default).arrayType { type -> type.toCType(enumAsInt = true) }
-                listOf("$type* _arr_${it.name}", "int32_t _length_${it.name}")
+                listOf("$type* _arr_$name", "int32_t _length_$name")
             }
-            else -> listOf("${it.type.toCType(enumAsInt = true)} _arg_${it.name}")
+            else -> listOf("${it.type.toCType(enumAsInt = true)} _arg_$name")
         }
     }.joinTo(this, prefix = "(", postfix = ") {")
 
     // == Casts ==
     function.args.forEach {
-        val name = it.name
+        val name = it.name.snakeCase()
         when {
             it.type.isString() -> append("\n\tKString _arg_$name = (KString) { _arr_$name, _size_$name,_length_$name, 0 };")
             it.type.isArray() -> {
@@ -136,11 +137,12 @@ internal fun printCriticalNativeFunctionContent(builder: StringBuilder, name: St
 
     // == Call args ==
     val args = function.args.joinToString {
+        val name = it.name.snakeCase()
         if(it.type.isString() || it.type.isArray()) {
             if(it.type.isNullable)
-                "_length_${it.name} == -1 ? 0 : &_arg_${it.name}"
-            else "&_arg_${it.name}"
-        } else "_arg_${it.name}"
+                "_length_$name == -1 ? 0 : &_arg_$name"
+            else "&_arg_$name"
+        } else "_arg_$name"
     }
 
     // == Function call ==
@@ -148,7 +150,7 @@ internal fun printCriticalNativeFunctionContent(builder: StringBuilder, name: St
     if(function.type !is ResolvedIdlType.Void)
         append("return ")
 
-    val call = "${function.name}($args)"
+    val call = "${function.name.snakeCase()}($args)"
     append(call)
     append(";\n}\n")
 }

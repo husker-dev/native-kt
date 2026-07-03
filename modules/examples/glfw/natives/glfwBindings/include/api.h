@@ -140,7 +140,7 @@ struct Name {                                                               \
 // ╚═══════════════════╝
 
 void run();
-void glfwInit();
+void glfw_init();
 
 #ifdef __cplusplus
 }
