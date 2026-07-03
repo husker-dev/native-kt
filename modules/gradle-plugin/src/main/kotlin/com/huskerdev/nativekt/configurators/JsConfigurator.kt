@@ -217,6 +217,7 @@ private abstract class PrepareNativesJs: DefaultTask() {
             "ALLOW_TABLE_GROWTH=1",
             "MODULARIZE=1",
             "EXPORT_ES6=1",
+            "GROWABLE_ARRAYBUFFERS=0",
             "WASM_BIGINT=${if (useJsBigInt) "1" else "0"}",
             emscriptenEnv?.joinToString(separator = ",", prefix = "ENVIRONMENT="),
             "EXPORTED_RUNTIME_METHODS=$runtimeFunctions",
