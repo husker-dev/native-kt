@@ -27,6 +27,12 @@ private const val RUNTIME_DEPENDENCY = "com.huskerdev:native-kt-runtime:${Native
 private val tmpCommonTasks = ThreadLocal<MutableMap<NativeProject, TaskProvider<*>>>()
 
 private fun NativeKtPlugin.validateModule(module: NativeProject): IdlResolver? {
+    if(!module.name.matches("^[a-zA-Z_]+$".toRegex()))
+        throw Exception("Native module '${module.name}' name contains an unsupported characters.\nAvailable: a-z, A-Z, underscore")
+
+    if(module.name.startsWith("_") || module.name.endsWith("_"))
+        throw Exception("native module '${module.name}' The name must not begin or end with an underscore..")
+
     val initTask = project.tasks.register("cmakeInit${module.name.capitalized()}", InitTask::class.java)
     initTask.get().apply {
         this.dir = module.dir(project).absolutePath
