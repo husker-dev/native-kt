@@ -1,43 +1,46 @@
 @file:OptIn(ExperimentalUnsignedTypes::class)
 
-import natives.test.MyDictionary
-import natives.test.MyEnum
-import natives.test.TypeDictionary
-import natives.test.VoidCallback
+package rust
+
+import natives.testrs.MyDictionary
+import natives.testrs.MyEnum
+import natives.testrs.TypeDictionary
+import natives.testrs.VoidCallback
+import withRustLib
 import kotlin.test.*
 
-class Dictionaries {
+class Rust_BigDictionaries {
 
     @Test
-    fun passBigDictionary() = withLib {
-        assertTrue(natives.test.passBigDictionary(createTestDictionary {}))
+    fun passBigDictionary() = withRustLib {
+        assertTrue(natives.testrs.passBigDictionary(createTestDictionary {}))
     }
 
     @Test
-    fun returnBigDictionary() = withLib {
+    fun returnBigDictionary() = withRustLib {
         val callback = VoidCallback {}
-        assertEquals(createTestDictionary(callback), natives.test.returnBigDictionary(callback))
+        assertEquals(createTestDictionary(callback), natives.testrs.returnBigDictionary(callback))
     }
 
     @Test
-    fun pingBigDictionary() = withLib {
+    fun pingBigDictionary() = withRustLib {
         val callback = VoidCallback {}
-        assertEquals(createTestDictionary(callback), natives.test.pingBigDictionary(createTestDictionary(callback)))
+        assertEquals(createTestDictionary(callback), natives.testrs.pingBigDictionary(createTestDictionary(callback)))
     }
 
     @Test
-    fun passBigDictionaryN() = withLib {
-        assertTrue(natives.test.passBigDictionaryN(null))
+    fun passBigDictionaryN() = withRustLib {
+        assertTrue(natives.testrs.passBigDictionaryN(null))
     }
 
     @Test
-    fun returnBigDictionaryN() = withLib {
-        assertEquals(null, natives.test.returnBigDictionaryN())
+    fun returnBigDictionaryN() = withRustLib {
+        assertEquals(null, natives.testrs.returnBigDictionaryN())
     }
 
     @Test
-    fun pingBigDictionaryN() = withLib {
-        assertEquals(null, natives.test.pingBigDictionaryN(null))
+    fun pingBigDictionaryN() = withRustLib {
+        assertEquals(null, natives.testrs.pingBigDictionaryN(null))
     }
 }
 

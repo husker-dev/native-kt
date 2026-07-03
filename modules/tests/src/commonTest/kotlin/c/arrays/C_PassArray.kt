@@ -1,105 +1,109 @@
 @file:OptIn(ExperimentalUnsignedTypes::class)
 
-package arrays
+package c.arrays
 
+import withCLib
 import natives.test.MyDictionary
 import natives.test.MyEnum
-import withLib
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
-class PassArray {
+class C_PassArray {
 
     @Test
-    fun passCharArray() = withLib {
+    fun passCharArray() = withCLib {
         assertTrue(natives.test.passCharArray(charArrayOf('a', 'b')))
     }
 
     @Test
-    fun passCharArrayN() = withLib {
+    fun passCharArrayN() = withCLib {
         assertTrue(natives.test.passCharArrayN(null))
     }
 
     @Test
-    fun passBooleanArray() = withLib {
+    fun passBooleanArray() = withCLib {
         assertTrue(natives.test.passBooleanArray(booleanArrayOf(true, false)))
     }
 
     @Test
-    fun passByteArray() = withLib {
+    fun passByteArray() = withCLib {
         assertTrue(natives.test.passByteArray(byteArrayOf(1, 2)))
     }
 
     @Test
-    fun passUByteArray() = withLib {
+    fun passUByteArray() = withCLib {
         assertTrue(natives.test.passUByteArray(ubyteArrayOf(1.toUByte(), UByte.MAX_VALUE)))
     }
 
     @Test
-    fun passShortArray() = withLib {
+    fun passShortArray() = withCLib {
         assertTrue(natives.test.passShortArray(shortArrayOf(1, 2)))
     }
 
     @Test
-    fun passUShortArray() = withLib {
+    fun passUShortArray() = withCLib {
         assertTrue(natives.test.passUShortArray(ushortArrayOf(1.toUShort(), UShort.MAX_VALUE)))
     }
 
     @Test
-    fun passIntArray() = withLib {
+    fun passIntArray() = withCLib {
         assertTrue(natives.test.passIntArray(intArrayOf(1, 2)))
     }
 
     @Test
-    fun passUIntArray() = withLib {
+    fun passUIntArray() = withCLib {
         assertTrue(natives.test.passUIntArray(uintArrayOf(1.toUInt(), UInt.MAX_VALUE)))
     }
 
     @Test
-    fun passLongArray() = withLib {
+    fun passLongArray() = withCLib {
         assertTrue(natives.test.passLongArray(longArrayOf(1, 2)))
     }
 
     @Test
-    fun passULongArray() = withLib {
+    fun passULongArray() = withCLib {
         assertTrue(natives.test.passULongArray(ulongArrayOf(1.toULong(), ULong.MAX_VALUE)))
     }
 
     @Test
-    fun passFloatArray() = withLib {
+    fun passFloatArray() = withCLib {
         assertTrue(natives.test.passFloatArray(floatArrayOf(1.1f, 2.2f)))
     }
 
     @Test
-    fun passDoubleArray() = withLib {
+    fun passDoubleArray() = withCLib {
         assertTrue(natives.test.passDoubleArray(doubleArrayOf(1.1, 2.2)))
     }
 
     @Test
-    fun passStringArray() = withLib {
+    fun passStringArray() = withCLib {
         assertTrue(natives.test.passStringArray(arrayOf("string1", "string2")))
     }
 
     @Test
-    fun passStringArrayN() = withLib {
+    fun passStringArrayN() = withCLib {
         assertTrue(natives.test.passStringArrayN(arrayOf(null, null)))
     }
 
     @Test
-    fun passEnumArray() = withLib {
+    fun passEnumArray() = withCLib {
         assertTrue(natives.test.passEnumArray(arrayOf(MyEnum.CASE1, MyEnum.CASE2)))
     }
 
     @Test
-    fun passDictionaryArray() = withLib {
-        assertTrue(natives.test.passDictionaryArray(arrayOf(
-            MyDictionary(1, 2, 3, 4),
-            MyDictionary(5, 6, 7, 8)
-        )))
+    fun passDictionaryArray() = withCLib {
+        assertTrue(
+            natives.test.passDictionaryArray(
+                arrayOf(
+                    MyDictionary(1, 2, 3, 4),
+                    MyDictionary(5, 6, 7, 8)
+                )
+            )
+        )
     }
 
     @Test
-    fun passDictionaryArrayN() = withLib {
+    fun passDictionaryArrayN() = withCLib {
         assertTrue(natives.test.passDictionaryArrayN(arrayOf(null, null)))
     }
 }

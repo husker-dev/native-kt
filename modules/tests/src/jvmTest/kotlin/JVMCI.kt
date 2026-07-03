@@ -18,7 +18,7 @@ class JVMCI {
         if(!NativeKtUtils.isJVMCIAvailable())
             fail("JVMCI is unavailable")
 
-        return withLib(block)
+        return withCLib(block)
     }
 
     @Test

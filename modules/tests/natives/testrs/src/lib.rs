@@ -643,13 +643,13 @@ pub fn pass_dictionary_array(
 ) -> bool {
     let elements = arg.as_slice();
     elements[0].a == 1 &&
-    elements[0].a == 2 &&
-    elements[0].a == 3 &&
-    elements[0].a == 4 &&
+    elements[0].b == 2 &&
+    elements[0].c == 3 &&
+    elements[0].d == 4 &&
     elements[1].a == 5 &&
-    elements[1].a == 6 &&
-    elements[1].a == 7 &&
-    elements[1].a == 8
+    elements[1].b == 6 &&
+    elements[1].c == 7 &&
+    elements[1].d == 8
 }
 
 pub fn pass_dictionary_array_n(

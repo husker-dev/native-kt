@@ -1,100 +1,100 @@
-package primitives
+package c.primitives
 
+import withCLib
 import natives.test.MyDictionary
 import natives.test.MyEnum
-import withLib
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
-class PassPrimitive {
+class C_PassPrimitive {
 
     @Test
-    fun passVoid() = withLib {
+    fun passVoid() = withCLib {
         assertTrue(natives.test.passVoid())
     }
 
     @Test
-    fun passChar() = withLib {
+    fun passChar() = withCLib {
         assertTrue(natives.test.passChar('a'))
     }
 
     @Test
-    fun passBoolean() = withLib {
+    fun passBoolean() = withCLib {
         assertTrue(natives.test.passBoolean(true))
     }
 
     @Test
-    fun passByte() = withLib {
+    fun passByte() = withCLib {
         assertTrue(natives.test.passByte(1.toByte()))
     }
 
     @Test
-    fun passUByte() = withLib {
+    fun passUByte() = withCLib {
         assertTrue(natives.test.passUByte(UByte.MAX_VALUE))
     }
 
     @Test
-    fun passShort() = withLib {
+    fun passShort() = withCLib {
         assertTrue(natives.test.passShort(1.toShort()))
     }
 
     @Test
-    fun passUShort() = withLib {
+    fun passUShort() = withCLib {
         assertTrue(natives.test.passUShort(UShort.MAX_VALUE))
     }
 
     @Test
-    fun passInt() = withLib {
+    fun passInt() = withCLib {
         assertTrue(natives.test.passInt(99))
     }
 
     @Test
-    fun passUInt() = withLib {
+    fun passUInt() = withCLib {
         assertTrue(natives.test.passUInt(UInt.MAX_VALUE))
     }
 
     @Test
-    fun passLong() = withLib {
+    fun passLong() = withCLib {
         assertTrue(natives.test.passLong(9223372036854775805L))
     }
 
     @Test
-    fun passULong() = withLib {
+    fun passULong() = withCLib {
         assertTrue(natives.test.passULong(ULong.MAX_VALUE))
     }
 
     @Test
-    fun passFloat() = withLib {
+    fun passFloat() = withCLib {
         assertTrue(natives.test.passFloat(99.9f))
     }
 
     @Test
-    fun passDouble() = withLib {
+    fun passDouble() = withCLib {
         assertTrue(natives.test.passDouble(1.1))
     }
 
     @Test
-    fun passString() = withLib {
+    fun passString() = withCLib {
         assertTrue(natives.test.passString("test string"))
     }
 
     @Test
-    fun passStringN() = withLib {
+    fun passStringN() = withCLib {
         assertTrue(natives.test.passStringN(null))
     }
 
     @Test
-    fun passEnum() = withLib {
+    fun passEnum() = withCLib {
         assertTrue(natives.test.passEnum(MyEnum.CASE2))
     }
 
     @Test
-    fun passDictionary() = withLib {
+    fun passDictionary() = withCLib {
         assertTrue(natives.test.passDictionary(MyDictionary(1, 2, 3, 4)))
     }
 
     @Test
-    fun passDictionaryN() = withLib {
+    fun passDictionaryN() = withCLib {
         assertTrue(natives.test.passDictionaryN(null))
     }
 }

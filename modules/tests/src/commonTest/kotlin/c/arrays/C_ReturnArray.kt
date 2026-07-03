@@ -1,105 +1,107 @@
 @file:OptIn(ExperimentalUnsignedTypes::class)
 
-package arrays
+package c.arrays
 
+import withCLib
 import natives.test.MyDictionary
 import natives.test.MyEnum
-import withLib
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 
-class ReturnArray {
+class C_ReturnArray {
 
     @Test
-    fun returnCharArray() = withLib {
+    fun returnCharArray() = withCLib {
         assertContentEquals(charArrayOf('a', 'b'), natives.test.returnCharArray())
     }
 
     @Test
-    fun returnCharArrayN() = withLib {
+    fun returnCharArrayN() = withCLib {
         assertContentEquals(null, natives.test.returnCharArrayN())
     }
 
     @Test
-    fun returnBooleanArray() = withLib {
+    fun returnBooleanArray() = withCLib {
         assertContentEquals(booleanArrayOf(true, false), natives.test.returnBooleanArray())
     }
 
     @Test
-    fun returnByteArray() = withLib {
+    fun returnByteArray() = withCLib {
         assertContentEquals(byteArrayOf(1, 2), natives.test.returnByteArray())
     }
 
     @Test
-    fun returnUByteArray() = withLib {
+    fun returnUByteArray() = withCLib {
         assertContentEquals(ubyteArrayOf(1.toUByte(), UByte.MAX_VALUE), natives.test.returnUByteArray())
     }
 
     @Test
-    fun returnShortArray() = withLib {
+    fun returnShortArray() = withCLib {
         assertContentEquals(shortArrayOf(1, 2), natives.test.returnShortArray())
     }
 
     @Test
-    fun returnUShortArray() = withLib {
+    fun returnUShortArray() = withCLib {
         assertContentEquals(ushortArrayOf(1.toUShort(), UShort.MAX_VALUE), natives.test.returnUShortArray())
     }
 
     @Test
-    fun returnIntArray() = withLib {
+    fun returnIntArray() = withCLib {
         assertContentEquals(intArrayOf(1, 2), natives.test.returnIntArray())
     }
 
     @Test
-    fun returnUIntArray() = withLib {
+    fun returnUIntArray() = withCLib {
         assertContentEquals(uintArrayOf(1.toUInt(), UInt.MAX_VALUE), natives.test.returnUIntArray())
     }
 
     @Test
-    fun returnLongArray() = withLib {
+    fun returnLongArray() = withCLib {
         assertContentEquals(longArrayOf(1, 2), natives.test.returnLongArray())
     }
 
     @Test
-    fun returnULongArray() = withLib {
+    fun returnULongArray() = withCLib {
         assertContentEquals(ulongArrayOf(1.toULong(), ULong.MAX_VALUE), natives.test.returnULongArray())
     }
 
     @Test
-    fun returnFloatArray() = withLib {
+    fun returnFloatArray() = withCLib {
         assertContentEquals(floatArrayOf(1.1f, 2.2f), natives.test.returnFloatArray())
     }
 
     @Test
-    fun returnDoubleArray() = withLib {
+    fun returnDoubleArray() = withCLib {
         assertContentEquals(doubleArrayOf(1.1, 2.2), natives.test.returnDoubleArray())
     }
 
     @Test
-    fun returnStringArray() = withLib {
+    fun returnStringArray() = withCLib {
         assertContentEquals(arrayOf("string1", "string2"), natives.test.returnStringArray())
     }
 
     @Test
-    fun returnStringArrayN() = withLib {
+    fun returnStringArrayN() = withCLib {
         assertContentEquals(arrayOf(null, null), natives.test.returnStringArrayN())
     }
 
     @Test
-    fun returnEnumArray() = withLib {
+    fun returnEnumArray() = withCLib {
         assertContentEquals(arrayOf(MyEnum.CASE1, MyEnum.CASE2), natives.test.returnEnumArray())
     }
 
     @Test
-    fun returnDictionaryArray() = withLib {
-        assertContentEquals(arrayOf(
-            MyDictionary(1, 2, 3, 4),
-            MyDictionary(5, 6, 7, 8)
-        ), natives.test.returnDictionaryArray())
+    fun returnDictionaryArray() = withCLib {
+        assertContentEquals(
+            arrayOf(
+                MyDictionary(1, 2, 3, 4),
+                MyDictionary(5, 6, 7, 8)
+            ), natives.test.returnDictionaryArray()
+        )
     }
 
     @Test
-    fun returnDictionaryArrayN() = withLib {
+    fun returnDictionaryArrayN() = withCLib {
         assertContentEquals(arrayOf(null, null), natives.test.returnDictionaryArrayN())
     }
 }

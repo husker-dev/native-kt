@@ -1,119 +1,119 @@
-package primitives
+package c.primitives
 
+import withCLib
 import natives.test.MyDictionary
 import natives.test.MyEnum
 import natives.test.VoidCallback
-import withLib
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
-class CallbackArgPrimitive {
+class C_CallbackArgPrimitive {
 
     @Test
-    fun callbackVoid() = withLib {
+    fun callbackVoid() = withCLib {
         var pass = false
         natives.test.callbackVoid { pass = true }
         assertTrue(pass)
     }
 
     @Test
-    fun callbackVoidN() = withLib {
+    fun callbackVoidN() = withCLib {
         assertTrue(natives.test.callbackVoidN(null))
     }
 
     @Test
-    fun callbackArgChar() = withLib {
+    fun callbackArgChar() = withCLib {
         assertTrue(natives.test.callbackArgChar { it == 'a' })
     }
 
     @Test
-    fun callbackArgBoolean() = withLib {
+    fun callbackArgBoolean() = withCLib {
         assertTrue(natives.test.callbackArgBoolean { it })
     }
 
     @Test
-    fun callbackArgByte() = withLib {
+    fun callbackArgByte() = withCLib {
         assertTrue(natives.test.callbackArgByte { it == 1.toByte() })
     }
 
     @Test
-    fun callbackArgUByte() = withLib {
+    fun callbackArgUByte() = withCLib {
         assertTrue(natives.test.callbackArgUByte { it == UByte.MAX_VALUE })
     }
 
     @Test
-    fun callbackArgShort() = withLib {
+    fun callbackArgShort() = withCLib {
         assertTrue(natives.test.callbackArgShort { it == 1.toShort() })
     }
 
     @Test
-    fun callbackArgUShort() = withLib {
+    fun callbackArgUShort() = withCLib {
         assertTrue(natives.test.callbackArgUShort { it == UShort.MAX_VALUE })
     }
 
     @Test
-    fun callbackArgInt() = withLib {
+    fun callbackArgInt() = withCLib {
         assertTrue(natives.test.callbackArgInt { it == 1 })
     }
 
     @Test
-    fun callbackArgUInt() = withLib {
+    fun callbackArgUInt() = withCLib {
         assertTrue(natives.test.callbackArgUInt { it == UInt.MAX_VALUE })
     }
 
     @Test
-    fun callbackArgLong() = withLib {
+    fun callbackArgLong() = withCLib {
         assertTrue(natives.test.callbackArgLong { it == 1.toLong() })
     }
 
     @Test
-    fun callbackArgULong() = withLib {
+    fun callbackArgULong() = withCLib {
         assertTrue(natives.test.callbackArgULong { it == ULong.MAX_VALUE })
     }
 
     @Test
-    fun callbackArgFloat() = withLib {
+    fun callbackArgFloat() = withCLib {
         assertTrue(natives.test.callbackArgFloat { it == 1.1f })
     }
 
     @Test
-    fun callbackArgDouble() = withLib {
+    fun callbackArgDouble() = withCLib {
         assertTrue(natives.test.callbackArgDouble { it == 1.1 })
     }
 
     @Test
-    fun callbackArgString() = withLib {
+    fun callbackArgString() = withCLib {
         assertTrue(natives.test.callbackArgString { it == "test string" })
     }
 
     @Test
-    fun callbackArgStringN() = withLib {
+    fun callbackArgStringN() = withCLib {
         assertTrue(natives.test.callbackArgStringN { it == null })
     }
 
     @Test
-    fun callbackArgCallback() = withLib {
+    fun callbackArgCallback() = withCLib {
         val toPass = VoidCallback {}
         assertTrue(natives.test.callbackArgCallback(toPass) { it == toPass })
     }
 
     @Test
-    fun callbackArgCallbackN() = withLib {
+    fun callbackArgCallbackN() = withCLib {
         assertTrue(natives.test.callbackArgCallbackN { it == null })
     }
 
     @Test
-    fun callbackArgEnum() = withLib {
+    fun callbackArgEnum() = withCLib {
         assertTrue(natives.test.callbackArgEnum { it == MyEnum.CASE2 })
     }
 
     @Test
-    fun callbackArgDictionary() = withLib {
+    fun callbackArgDictionary() = withCLib {
         assertTrue(natives.test.callbackArgDictionary { it == MyDictionary(1, 2, 3, 4) })
     }
 
     @Test
-    fun callbackArgDictionaryN() = withLib {
+    fun callbackArgDictionaryN() = withCLib {
         assertTrue(natives.test.callbackArgDictionaryN { it == null })
     }
 }

@@ -1,14 +1,17 @@
 @file:OptIn(ExperimentalUnsignedTypes::class)
 
+package c
+
 import natives.test.MyEnum
+import withCLib
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class Critical {
+class C_Critical {
 
     @Test
-    fun criticalPrimitives() = withLib {
+    fun criticalPrimitives() = withCLib {
         assertTrue(natives.test.criticalPrimitives(
             'a', true,
             1, UByte.MAX_VALUE,
@@ -20,22 +23,22 @@ class Critical {
     }
 
     @Test
-    fun criticalEnum() = withLib {
+    fun criticalEnum() = withCLib {
         assertTrue(natives.test.criticalEnum(MyEnum.CASE1))
     }
 
     @Test
-    fun criticalString() = withLib {
+    fun criticalString() = withCLib {
         assertTrue(natives.test.criticalString("test string"))
     }
 
     @Test
-    fun criticalStringN() = withLib {
+    fun criticalStringN() = withCLib {
         assertTrue(natives.test.criticalStringN(null))
     }
 
     @Test
-    fun criticalPrimitivesArray() = withLib {
+    fun criticalPrimitivesArray() = withCLib {
         assertTrue(natives.test.criticalPrimitivesArray(
             charArrayOf('a', 'b'),
             booleanArrayOf(true, false),
@@ -53,7 +56,7 @@ class Critical {
     }
 
     @Test
-    fun criticalPrimitivesArrayN() = withLib {
+    fun criticalPrimitivesArrayN() = withCLib {
         assertTrue(natives.test.criticalPrimitivesArrayN(
             null, null,
             null, null,
@@ -65,79 +68,79 @@ class Critical {
     }
 
     @Test
-    fun criticalEnumArray() = withLib {
+    fun criticalEnumArray() = withCLib {
         assertTrue(natives.test.criticalEnumArray(
             arrayOf(MyEnum.CASE1, MyEnum.CASE2)
         ))
     }
 
     @Test
-    fun criticalEnumArrayN() = withLib {
+    fun criticalEnumArrayN() = withCLib {
         assertTrue(natives.test.criticalEnumArrayN(null))
     }
 
     @Test
-    fun criticalReturnChar() = withLib {
+    fun criticalReturnChar() = withCLib {
         assertEquals('a', natives.test.criticalReturnChar())
     }
 
     @Test
-    fun criticalReturnBoolean() = withLib {
+    fun criticalReturnBoolean() = withCLib {
         assertEquals(true, natives.test.criticalReturnBoolean())
     }
 
     @Test
-    fun criticalReturnByte() = withLib {
+    fun criticalReturnByte() = withCLib {
         assertEquals(1, natives.test.criticalReturnByte())
     }
 
     @Test
-    fun criticalReturnUByte() = withLib {
+    fun criticalReturnUByte() = withCLib {
         assertEquals(UByte.MAX_VALUE, natives.test.criticalReturnUByte())
     }
 
     @Test
-    fun criticalReturnShort() = withLib {
+    fun criticalReturnShort() = withCLib {
         assertEquals(1, natives.test.criticalReturnShort())
     }
 
     @Test
-    fun criticalReturnUShort() = withLib {
+    fun criticalReturnUShort() = withCLib {
         assertEquals(UShort.MAX_VALUE, natives.test.criticalReturnUShort())
     }
 
     @Test
-    fun criticalReturnInt() = withLib {
+    fun criticalReturnInt() = withCLib {
         assertEquals(1, natives.test.criticalReturnInt())
     }
 
     @Test
-    fun criticalReturnUInt() = withLib {
+    fun criticalReturnUInt() = withCLib {
         assertEquals(UInt.MAX_VALUE, natives.test.criticalReturnUInt())
     }
 
     @Test
-    fun criticalReturnLong() = withLib {
+    fun criticalReturnLong() = withCLib {
         assertEquals(1, natives.test.criticalReturnLong())
     }
 
     @Test
-    fun criticalReturnULong() = withLib {
+    fun criticalReturnULong() = withCLib {
         assertEquals(ULong.MAX_VALUE, natives.test.criticalReturnULong())
     }
 
     @Test
-    fun criticalReturnFloat() = withLib {
+    fun criticalReturnFloat() = withCLib {
         assertEquals(1f, natives.test.criticalReturnFloat())
     }
 
     @Test
-    fun criticalReturnDouble() = withLib {
+    fun criticalReturnDouble() = withCLib {
         assertEquals(1.0, natives.test.criticalReturnDouble())
     }
 
     @Test
-    fun criticalReturnEnum() = withLib {
+    fun criticalReturnEnum() = withCLib {
         assertEquals(MyEnum.CASE1, natives.test.criticalReturnEnum())
     }
 }

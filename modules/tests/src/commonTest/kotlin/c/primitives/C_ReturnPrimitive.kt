@@ -1,101 +1,101 @@
-package primitives
+package c.primitives
 
+import withCLib
 import natives.test.MyDictionary
 import natives.test.MyEnum
-import withLib
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
-class ReturnPrimitive {
+class C_ReturnPrimitive {
 
     @Test
-    fun returnVoid() = withLib {
+    fun returnVoid() = withCLib {
         assertEquals(Unit, natives.test.returnVoid())
     }
 
     @Test
-    fun returnChar() = withLib {
+    fun returnChar() = withCLib {
         assertEquals('a', natives.test.returnChar())
     }
 
     @Test
-    fun returnBoolean() = withLib {
+    fun returnBoolean() = withCLib {
         assertEquals(true, natives.test.returnBoolean())
     }
 
     @Test
-    fun returnByte() = withLib {
+    fun returnByte() = withCLib {
         assertEquals(99.toByte(), natives.test.returnByte())
     }
 
     @Test
-    fun returnUByte() = withLib {
+    fun returnUByte() = withCLib {
         assertEquals(UByte.MAX_VALUE, natives.test.returnUByte())
     }
 
     @Test
-    fun returnShort() = withLib {
+    fun returnShort() = withCLib {
         assertEquals(99.toShort(), natives.test.returnShort())
     }
 
     @Test
-    fun returnUShort() = withLib {
+    fun returnUShort() = withCLib {
         assertEquals(UShort.MAX_VALUE, natives.test.returnUShort())
     }
 
     @Test
-    fun returnInt() = withLib {
+    fun returnInt() = withCLib {
         assertEquals(99, natives.test.returnInt())
     }
 
     @Test
-    fun returnUInt() = withLib {
+    fun returnUInt() = withCLib {
         assertEquals(UInt.MAX_VALUE, natives.test.returnUInt())
     }
 
     @Test
-    fun returnLong() = withLib {
+    fun returnLong() = withCLib {
         assertEquals(9223372036854775805L, natives.test.returnLong())
     }
 
     @Test
-    fun returnULong() = withLib {
+    fun returnULong() = withCLib {
         assertEquals(ULong.MAX_VALUE, natives.test.returnULong())
     }
 
     @Test
-    fun returnFloat() = withLib {
+    fun returnFloat() = withCLib {
         assertEquals(99f, natives.test.returnFloat())
     }
 
     @Test
-    fun returnDouble() = withLib {
+    fun returnDouble() = withCLib {
         assertEquals(99.0, natives.test.returnDouble())
     }
 
     @Test
-    fun returnString() = withLib {
+    fun returnString() = withCLib {
         assertEquals("test string", natives.test.returnString())
     }
 
     @Test
-    fun returnStringN() = withLib {
+    fun returnStringN() = withCLib {
         assertNull(natives.test.returnStringN())
     }
 
     @Test
-    fun returnEnum() = withLib {
+    fun returnEnum() = withCLib {
         assertEquals(MyEnum.CASE2, natives.test.returnEnum())
     }
 
     @Test
-    fun returnDictionary() = withLib {
+    fun returnDictionary() = withCLib {
         assertEquals(MyDictionary(1, 2, 3, 4), natives.test.returnDictionary())
     }
 
     @Test
-    fun returnDictionaryN() = withLib {
+    fun returnDictionaryN() = withCLib {
         assertNull(natives.test.returnDictionaryN())
     }
 }
