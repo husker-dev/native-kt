@@ -6,7 +6,7 @@ jobs:
     runs-on: macOS-latest
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: "Prepare"
         run: |
           chmod +x ./gradlew
