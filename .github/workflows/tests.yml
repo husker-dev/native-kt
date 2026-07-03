@@ -107,11 +107,11 @@ jobs:
         run: ./gradlew :modules:tests:mingwX64Test --continue
 
       - name: Kotlin/JS tests
-        if: runner.os == 'Windows'
+        if: runner.os == 'Linux'
         run: ./gradlew :modules:tests:jsTest --continue
 
       - name: Kotlin/Wasm tests
-        if: runner.os == 'Windows'
+        if: runner.os == 'Linux'
         run: ./gradlew :modules:tests:wasmJsTest --continue
 
       - name: Kotlin/JVM tests (Linux x64)
