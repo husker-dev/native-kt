@@ -64,7 +64,8 @@ fun toKotlinKString(module: EmModule, mem: Int): String? {
     if(mem == 0) return null
     return module.UTF8ToString(
         module.HEAP32[(mem + layoutString[0]) shr 2],
-        module.HEAP32[(mem + layoutString[1]) shr 2]
+        module.HEAP32[(mem + layoutString[1]) shr 2],
+        true
     )
 }
 

@@ -12,8 +12,8 @@ fun <T: JsAny> createJsObject(block: T.() -> Unit): T =
 
 external interface EmModule: JsAny {
     fun lengthBytesUTF8(str: String): Int
-    fun stringToUTF8(str: String, mem: Int, length: Int)
-    fun UTF8ToString(data: Int, length: Int): String
+    fun stringToUTF8(str: String, outPtr: Int, maxBytesToWrite: Int)
+    fun UTF8ToString(ptr: Int, maxBytesToRead: Int, ignoreNul: Boolean): String
     fun addFunction(func: JsAny, s: String): Int
 
     val HEAP8: Int8Array
