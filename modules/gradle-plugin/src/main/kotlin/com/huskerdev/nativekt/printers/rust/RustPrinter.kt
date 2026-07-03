@@ -468,7 +468,10 @@ class RustPrinter(
             
             impl<T: PtrHolder> Drop for KArray<T> {
                 fn drop(&mut self) {
-                    unsafe { KArray_free(self.ptr, T::free_ptr()); }
+                    unsafe { 
+                        self.elements.set_len(0);
+                        KArray_free(self.ptr, T::free_ptr()); 
+                    }
                 }
             }
             
@@ -545,7 +548,10 @@ class RustPrinter(
 
             impl<T: PtrHolder> Drop for KArrayOpt<T> {
                 fn drop(&mut self) {
-                    unsafe { KArray_free(self.ptr, T::free_ptr()); }
+                    unsafe {
+                        self.elements.set_len(0);
+                        KArray_free(self.ptr, T::free_ptr()); 
+                    }
                 }
             }
 
