@@ -27,7 +27,7 @@ class AMD64LinuxCallingConvention: AbstractAMD64CallingConvention(
         if(intOps.size == 6) {
             RegToReg(RDI, RAX, intOps[5].type).emit(buf)
 
-            for(i in intOps.size-1 downTo 0)
+            for(i in intOps.indices)
                 intOps[i].emit(buf)
 
             RegToReg(RAX, R9, Int::class.java).emit(buf)

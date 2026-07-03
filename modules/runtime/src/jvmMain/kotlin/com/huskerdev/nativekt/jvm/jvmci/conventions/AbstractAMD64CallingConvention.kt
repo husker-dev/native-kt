@@ -71,7 +71,7 @@ abstract class AbstractAMD64CallingConvention(
         name,
         code,
         code.size,
-        arrayOf<Site>( Mark(code.size - 8, ENTRY_BARRIER_PATCH) ),
+        arrayOf<Site>( Mark(code.size - 8, ENTRY_BARRIER_PATCH.toInt()) ),
         emptyArray<Assumptions.Assumption>(),
         emptyArray<ResolvedJavaMethod>(),
         emptyArray<HotSpotCompiledCode.Comment>(),
@@ -298,7 +298,7 @@ abstract class AbstractAMD64CallingConvention(
     }
 
     private fun emitStackToReg(
-        buf: Buffer ,
+        buf: Buffer,
         src: Int,
         dst: Int
     ) {
@@ -342,7 +342,7 @@ abstract class AbstractAMD64CallingConvention(
     }
 
     private fun emitStackToXmm(
-        buf: Buffer ,
+        buf: Buffer,
         src: Int,
         dst: Int,
         type: Class<*>
