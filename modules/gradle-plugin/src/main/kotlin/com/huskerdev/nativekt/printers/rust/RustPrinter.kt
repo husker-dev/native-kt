@@ -266,7 +266,7 @@ class RustPrinter(
                 }
                 pub fn as_str(&self) -> &str {
                     unsafe {
-                        let str = self.ptr.read();
+                        let str = &*self.ptr;
                         std::str::from_utf8_unchecked(
                             std::slice::from_raw_parts(str.data, str.size)
                         )
@@ -335,7 +335,7 @@ class RustPrinter(
                         }
                         pub fn as_slice(&self) -> &[$rsType] {
                             unsafe {
-                                let arr = self.ptr.read();
+                                let arr = &*self.ptr;
                                 std::slice::from_raw_parts(arr.elements as *const $rsType, arr.length as usize)
                             }
                         }
@@ -424,12 +424,12 @@ class RustPrinter(
             impl<T: PtrHolder> KArray<T> {
                 fn wrap(of: *const _KArray) -> KArray<T> {
                     unsafe {
-                        let _of = of.read();
+                        let _of = &*of;
                         let _elements = _of.elements as *const *const c_void;
                         let mut elements: Vec<T> = Vec::with_capacity(_of.length as usize);
             
                         for i in 0.._of.length {
-                            let el = T::wrap(_elements.offset(i as isize).read());
+                            let el = T::wrap(*_elements.offset(i as isize));
                             elements.push(el)
                         }
                         KArray { ptr: of, elements }
@@ -495,16 +495,16 @@ class RustPrinter(
             impl<T: PtrHolder> KArrayOpt<T> {
                 fn wrap(of: *const _KArray) -> KArrayOpt<T> {
                     unsafe {
-                        let _of = of.read();
+                        let _of = &*of;
                         let _elements = _of.elements as *const *const c_void;
                         let mut elements: Vec<Option<T>> = Vec::with_capacity(_of.length as usize);
 
                         for i in 0.._of.length {
-                            let p = _elements.offset(i as isize).read();
+                            let p = *_elements.offset(i as isize);
                             if(p == null()) {
                                 elements.push(None)
                             } else {
-                                let el = T::wrap(_elements.offset(i as isize).read());
+                                let el = T::wrap(p);
                                 elements.push(Some(el))
                             }
                         }
@@ -635,7 +635,7 @@ class RustPrinter(
             // wraps
             append("""
                 fn wrap(ptr: *const _$name) -> Self {
-                    let r = unsafe { ptr.read() };
+                    let r = unsafe { &*ptr };
                     Self { 
             """.replaceIndent("\t"))
             buildList {
@@ -675,10 +675,10 @@ class RustPrinter(
                             $name { ptr }
                         }
                         pub fn equals(&self, other: Self) -> bool {
-                            unsafe { (self.ptr.read().equals)(self.ptr, other.ptr) }
+                            unsafe { ((&*self.ptr).equals)(self.ptr, other.ptr) }
                         }
                         pub fn hash_code(&self) -> i32 {
-                            unsafe { (self.ptr.read().hash_code)(self.ptr) }
+                            unsafe { ((&*self.ptr).hash_code)(self.ptr) }
                         }
                     }
                     
@@ -686,13 +686,13 @@ class RustPrinter(
                     
                     impl Drop for $name {
                         fn drop(&mut self) {
-                            unsafe { (self.ptr.read().free)(self.ptr) }
+                            unsafe { ((&*self.ptr).free)(self.ptr) }
                         }
                     }
                     
                     impl Clone for $name {
                         fn clone(&self) -> Self {
-                            unsafe { $name::wrap((self.ptr.read().clone)(self.ptr)) }
+                            unsafe { $name::wrap(((&*self.ptr).clone)(self.ptr)) }
                         }
                     }
                 };
@@ -751,7 +751,7 @@ class RustPrinter(
                 append(" -> ${callback.type.toRustType()}")
 
             val call = buildString {
-                append("(self.ptr.read().invoke)")
+                append("((&*self.ptr).invoke)")
                 buildList {
                     add("self.ptr")
                     callback.args.mapTo(this) {

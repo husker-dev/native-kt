@@ -56,8 +56,13 @@ ANNOTATION=\[[^\]]*\]
   {STRING}                    { return NdlTokenType.STRING; }
 
   // Types - same behavior in all states
-  "void"|"boolean"|"byte"|"char"|"short"|"long"|"int"|
-  "float"|"double"|"string"  { return NdlTokenType.TYPE; }
+  "void"|"boolean"|"char"|
+  "byte"|"ubyte"|
+  "short"|"ushort"|
+  "int"|"uint"|
+  "long"|"ulong"|
+  "float"|"double"|
+  "string"  { return NdlTokenType.TYPE; }
 }
 
 <YYINITIAL, AFTER_EQUALS> {

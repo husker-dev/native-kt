@@ -206,7 +206,7 @@ private abstract class PrepareNativesJs: DefaultTask() {
         ).joinToString(separator = ",")
 
         // ASSERTIONS=2 -s SAFE_HEAP=1 -s STACK_OVERFLOW_CHECK=1
-        val args = listOf(
+        val args = listOfNotNull(
             "--no-entry",
             "ALLOW_MEMORY_GROWTH=1",
             "ALLOW_TABLE_GROWTH=1",
@@ -219,7 +219,7 @@ private abstract class PrepareNativesJs: DefaultTask() {
 
             "EXPORTED_RUNTIME_METHODS=$runtimeFunctions",
             "EXPORTED_FUNCTIONS=$exportedFunctions",
-        ).filterNotNull().joinToString(separator = " ") { "-s $it" }
+        ).joinToString(separator = " ") { "-s $it" }
 
         when(buildSystem) {
             is BuildSystem.CMake -> {

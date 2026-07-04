@@ -1034,7 +1034,7 @@ impl KString {
     }
     pub fn as_str(&self) -> &str {
         unsafe {
-            let str = self.ptr.read();
+            let str = &*self.ptr;
             std::str::from_utf8_unchecked(
                 std::slice::from_raw_parts(str.data, str.size)
             )
@@ -1099,7 +1099,7 @@ macro_rules! impl_typed_array {
             }
             pub fn as_slice(&self) -> &[$rsType] {
                 unsafe {
-                    let arr = self.ptr.read();
+                    let arr = &*self.ptr;
                     std::slice::from_raw_parts(arr.elements as *const $rsType, arr.length as usize)
                 }
             }
@@ -1185,12 +1185,12 @@ pub struct KArray<T: PtrHolder> {
 impl<T: PtrHolder> KArray<T> {
     fn wrap(of: *const _KArray) -> KArray<T> {
         unsafe {
-            let _of = of.read();
+            let _of = &*of;
             let _elements = _of.elements as *const *const c_void;
             let mut elements: Vec<T> = Vec::with_capacity(_of.length as usize);
 
             for i in 0.._of.length {
-                let el = T::wrap(_elements.offset(i as isize).read());
+                let el = T::wrap(*_elements.offset(i as isize));
                 elements.push(el)
             }
             KArray { ptr: of, elements }
@@ -1256,16 +1256,16 @@ pub struct KArrayOpt<T: PtrHolder> {
 impl<T: PtrHolder> KArrayOpt<T> {
     fn wrap(of: *const _KArray) -> KArrayOpt<T> {
         unsafe {
-            let _of = of.read();
+            let _of = &*of;
             let _elements = _of.elements as *const *const c_void;
             let mut elements: Vec<Option<T>> = Vec::with_capacity(_of.length as usize);
 
             for i in 0.._of.length {
-                let p = _elements.offset(i as isize).read();
+                let p = *_elements.offset(i as isize);
                 if(p == null()) {
                     elements.push(None)
                 } else {
-                    let el = T::wrap(_elements.offset(i as isize).read());
+                    let el = T::wrap(p);
                     elements.push(Some(el))
                 }
             }
@@ -1361,7 +1361,7 @@ impl ParentDictionary {
 		Self::wrap(unsafe { ParentDictionary_new(a, b) })
 	}
 	fn wrap(ptr: *const _ParentDictionary) -> Self {
-	    let r = unsafe { ptr.read() };
+	    let r = unsafe { &*ptr };
 	    Self { ptr, a: r.a, b: r.b }
 	}
 }
@@ -1393,7 +1393,7 @@ impl MyDictionary {
 		Self::wrap(unsafe { MyDictionary_new(a, b, c, d) })
 	}
 	fn wrap(ptr: *const _MyDictionary) -> Self {
-	    let r = unsafe { ptr.read() };
+	    let r = unsafe { &*ptr };
 	    Self { ptr, a: r.a, b: r.b, c: r.c, d: r.d }
 	}
 }
@@ -1479,7 +1479,7 @@ impl TypeDictionary {
 		Self::wrap(unsafe { TypeDictionary_new(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, KString::unwrap(a13), MyEnum::to_int(a14), MyDictionary::unwrap(a15), VoidCallback::unwrap(a16), KCharArray::unwrap(a17), KBooleanArray::unwrap(a18), KByteArray::unwrap(a19), KUByteArray::unwrap(a20), KShortArray::unwrap(a21), KUShortArray::unwrap(a22), KIntArray::unwrap(a23), KUIntArray::unwrap(a24), KLongArray::unwrap(a25), KULongArray::unwrap(a26), KFloatArray::unwrap(a27), KDoubleArray::unwrap(a28), KArray::unwrap(a29), KIntArray::unwrap(a30), KArray::unwrap(a31)) })
 	}
 	fn wrap(ptr: *const _TypeDictionary) -> Self {
-	    let r = unsafe { ptr.read() };
+	    let r = unsafe { &*ptr };
 	    Self { ptr, a1: r.a1, a2: r.a2, a3: r.a3, a4: r.a4, a5: r.a5, a6: r.a6, a7: r.a7, a8: r.a8, a9: r.a9, a10: r.a10, a11: r.a11, a12: r.a12, a13: KString::wrap(r.a13), a14: MyEnum::from_int(r.a14), a15: MyDictionary::wrap(r.a15), a16: VoidCallback::wrap(r.a16), a17: KCharArray::wrap(r.a17), a18: KBooleanArray::wrap(r.a18), a19: KByteArray::wrap(r.a19), a20: KUByteArray::wrap(r.a20), a21: KShortArray::wrap(r.a21), a22: KUShortArray::wrap(r.a22), a23: KIntArray::wrap(r.a23), a24: KUIntArray::wrap(r.a24), a25: KLongArray::wrap(r.a25), a26: KULongArray::wrap(r.a26), a27: KFloatArray::wrap(r.a27), a28: KDoubleArray::wrap(r.a28), a29: KArray::wrap(r.a29), a30: KIntArray::wrap(r.a30), a31: KArray::wrap(r.a31) }
 	}
 }
@@ -1499,10 +1499,10 @@ macro_rules! impl_callback_base {
                 $name { ptr }
             }
             pub fn equals(&self, other: Self) -> bool {
-                unsafe { (self.ptr.read().equals)(self.ptr, other.ptr) }
+                unsafe { ((&*self.ptr).equals)(self.ptr, other.ptr) }
             }
             pub fn hash_code(&self) -> i32 {
-                unsafe { (self.ptr.read().hash_code)(self.ptr) }
+                unsafe { ((&*self.ptr).hash_code)(self.ptr) }
             }
         }
         
@@ -1510,13 +1510,13 @@ macro_rules! impl_callback_base {
         
         impl Drop for $name {
             fn drop(&mut self) {
-                unsafe { (self.ptr.read().free)(self.ptr) }
+                unsafe { ((&*self.ptr).free)(self.ptr) }
             }
         }
         
         impl Clone for $name {
             fn clone(&self) -> Self {
-                unsafe { $name::wrap((self.ptr.read().clone)(self.ptr)) }
+                unsafe { $name::wrap(((&*self.ptr).clone)(self.ptr)) }
             }
         }
     };
@@ -1539,7 +1539,7 @@ pub struct VoidCallback {
 
 impl VoidCallback {
 	pub fn invoke(&self) {
-		unsafe { (self.ptr.read().invoke)(self.ptr) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr) }
 	}
 }
 
@@ -1562,7 +1562,7 @@ pub struct CallbackPassChar {
 
 impl CallbackPassChar {
 	pub fn invoke(&self, arg: u16) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, arg) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, arg) }
 	}
 }
 
@@ -1585,7 +1585,7 @@ pub struct CallbackPassBoolean {
 
 impl CallbackPassBoolean {
 	pub fn invoke(&self, arg: bool) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, arg) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, arg) }
 	}
 }
 
@@ -1608,7 +1608,7 @@ pub struct CallbackPassByte {
 
 impl CallbackPassByte {
 	pub fn invoke(&self, arg: i8) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, arg) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, arg) }
 	}
 }
 
@@ -1631,7 +1631,7 @@ pub struct CallbackPassUByte {
 
 impl CallbackPassUByte {
 	pub fn invoke(&self, arg: u8) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, arg) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, arg) }
 	}
 }
 
@@ -1654,7 +1654,7 @@ pub struct CallbackPassShort {
 
 impl CallbackPassShort {
 	pub fn invoke(&self, arg: i16) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, arg) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, arg) }
 	}
 }
 
@@ -1677,7 +1677,7 @@ pub struct CallbackPassUShort {
 
 impl CallbackPassUShort {
 	pub fn invoke(&self, arg: u16) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, arg) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, arg) }
 	}
 }
 
@@ -1700,7 +1700,7 @@ pub struct CallbackPassInt {
 
 impl CallbackPassInt {
 	pub fn invoke(&self, arg: i32) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, arg) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, arg) }
 	}
 }
 
@@ -1723,7 +1723,7 @@ pub struct CallbackPassUInt {
 
 impl CallbackPassUInt {
 	pub fn invoke(&self, arg: u32) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, arg) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, arg) }
 	}
 }
 
@@ -1746,7 +1746,7 @@ pub struct CallbackPassLong {
 
 impl CallbackPassLong {
 	pub fn invoke(&self, arg: i64) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, arg) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, arg) }
 	}
 }
 
@@ -1769,7 +1769,7 @@ pub struct CallbackPassULong {
 
 impl CallbackPassULong {
 	pub fn invoke(&self, arg: u64) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, arg) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, arg) }
 	}
 }
 
@@ -1792,7 +1792,7 @@ pub struct CallbackPassFloat {
 
 impl CallbackPassFloat {
 	pub fn invoke(&self, arg: f32) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, arg) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, arg) }
 	}
 }
 
@@ -1815,7 +1815,7 @@ pub struct CallbackPassDouble {
 
 impl CallbackPassDouble {
 	pub fn invoke(&self, arg: f64) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, arg) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, arg) }
 	}
 }
 
@@ -1838,7 +1838,7 @@ pub struct CallbackPassString {
 
 impl CallbackPassString {
 	pub fn invoke(&self, arg: KString) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, KString::unwrap(arg)) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, KString::unwrap(arg)) }
 	}
 }
 
@@ -1861,7 +1861,7 @@ pub struct CallbackPassStringN {
 
 impl CallbackPassStringN {
 	pub fn invoke(&self, arg: Option<KString>) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, KString::unwrap_nullable(arg)) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, KString::unwrap_nullable(arg)) }
 	}
 }
 
@@ -1884,7 +1884,7 @@ pub struct CallbackPassCallback {
 
 impl CallbackPassCallback {
 	pub fn invoke(&self, arg: VoidCallback) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, VoidCallback::unwrap(arg)) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, VoidCallback::unwrap(arg)) }
 	}
 }
 
@@ -1907,7 +1907,7 @@ pub struct CallbackPassCallbackN {
 
 impl CallbackPassCallbackN {
 	pub fn invoke(&self, arg: Option<VoidCallback>) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, VoidCallback::unwrap_nullable(arg)) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, VoidCallback::unwrap_nullable(arg)) }
 	}
 }
 
@@ -1930,7 +1930,7 @@ pub struct CallbackPassEnum {
 
 impl CallbackPassEnum {
 	pub fn invoke(&self, arg: MyEnum) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, MyEnum::to_int(arg)) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, MyEnum::to_int(arg)) }
 	}
 }
 
@@ -1953,7 +1953,7 @@ pub struct CallbackPassDictionary {
 
 impl CallbackPassDictionary {
 	pub fn invoke(&self, arg: MyDictionary) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, MyDictionary::unwrap(arg)) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, MyDictionary::unwrap(arg)) }
 	}
 }
 
@@ -1976,7 +1976,7 @@ pub struct CallbackPassDictionaryN {
 
 impl CallbackPassDictionaryN {
 	pub fn invoke(&self, arg: Option<MyDictionary>) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, MyDictionary::unwrap_nullable(arg)) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, MyDictionary::unwrap_nullable(arg)) }
 	}
 }
 
@@ -1999,7 +1999,7 @@ pub struct CallbackReturnChar {
 
 impl CallbackReturnChar {
 	pub fn invoke(&self) -> u16 {
-		unsafe { (self.ptr.read().invoke)(self.ptr) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr) }
 	}
 }
 
@@ -2022,7 +2022,7 @@ pub struct CallbackReturnBoolean {
 
 impl CallbackReturnBoolean {
 	pub fn invoke(&self) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr) }
 	}
 }
 
@@ -2045,7 +2045,7 @@ pub struct CallbackReturnByte {
 
 impl CallbackReturnByte {
 	pub fn invoke(&self) -> i8 {
-		unsafe { (self.ptr.read().invoke)(self.ptr) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr) }
 	}
 }
 
@@ -2068,7 +2068,7 @@ pub struct CallbackReturnUByte {
 
 impl CallbackReturnUByte {
 	pub fn invoke(&self) -> u8 {
-		unsafe { (self.ptr.read().invoke)(self.ptr) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr) }
 	}
 }
 
@@ -2091,7 +2091,7 @@ pub struct CallbackReturnShort {
 
 impl CallbackReturnShort {
 	pub fn invoke(&self) -> i16 {
-		unsafe { (self.ptr.read().invoke)(self.ptr) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr) }
 	}
 }
 
@@ -2114,7 +2114,7 @@ pub struct CallbackReturnUShort {
 
 impl CallbackReturnUShort {
 	pub fn invoke(&self) -> u16 {
-		unsafe { (self.ptr.read().invoke)(self.ptr) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr) }
 	}
 }
 
@@ -2137,7 +2137,7 @@ pub struct CallbackReturnInt {
 
 impl CallbackReturnInt {
 	pub fn invoke(&self) -> i32 {
-		unsafe { (self.ptr.read().invoke)(self.ptr) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr) }
 	}
 }
 
@@ -2160,7 +2160,7 @@ pub struct CallbackReturnUInt {
 
 impl CallbackReturnUInt {
 	pub fn invoke(&self) -> u32 {
-		unsafe { (self.ptr.read().invoke)(self.ptr) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr) }
 	}
 }
 
@@ -2183,7 +2183,7 @@ pub struct CallbackReturnLong {
 
 impl CallbackReturnLong {
 	pub fn invoke(&self) -> i64 {
-		unsafe { (self.ptr.read().invoke)(self.ptr) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr) }
 	}
 }
 
@@ -2206,7 +2206,7 @@ pub struct CallbackReturnULong {
 
 impl CallbackReturnULong {
 	pub fn invoke(&self) -> u64 {
-		unsafe { (self.ptr.read().invoke)(self.ptr) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr) }
 	}
 }
 
@@ -2229,7 +2229,7 @@ pub struct CallbackReturnFloat {
 
 impl CallbackReturnFloat {
 	pub fn invoke(&self) -> f32 {
-		unsafe { (self.ptr.read().invoke)(self.ptr) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr) }
 	}
 }
 
@@ -2252,7 +2252,7 @@ pub struct CallbackReturnDouble {
 
 impl CallbackReturnDouble {
 	pub fn invoke(&self) -> f64 {
-		unsafe { (self.ptr.read().invoke)(self.ptr) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr) }
 	}
 }
 
@@ -2275,7 +2275,7 @@ pub struct CallbackReturnString {
 
 impl CallbackReturnString {
 	pub fn invoke(&self) -> KString {
-		unsafe { KString::wrap((self.ptr.read().invoke)(self.ptr)) }
+		unsafe { KString::wrap(((&*self.ptr).invoke)(self.ptr)) }
 	}
 }
 
@@ -2298,7 +2298,7 @@ pub struct CallbackReturnStringN {
 
 impl CallbackReturnStringN {
 	pub fn invoke(&self) -> Option<KString> {
-		unsafe { KString::wrap_nullable((self.ptr.read().invoke)(self.ptr)) }
+		unsafe { KString::wrap_nullable(((&*self.ptr).invoke)(self.ptr)) }
 	}
 }
 
@@ -2321,7 +2321,7 @@ pub struct CallbackReturnCallback {
 
 impl CallbackReturnCallback {
 	pub fn invoke(&self) -> VoidCallback {
-		unsafe { VoidCallback::wrap((self.ptr.read().invoke)(self.ptr)) }
+		unsafe { VoidCallback::wrap(((&*self.ptr).invoke)(self.ptr)) }
 	}
 }
 
@@ -2344,7 +2344,7 @@ pub struct CallbackReturnCallbackN {
 
 impl CallbackReturnCallbackN {
 	pub fn invoke(&self) -> Option<VoidCallback> {
-		unsafe { VoidCallback::wrap_nullable((self.ptr.read().invoke)(self.ptr)) }
+		unsafe { VoidCallback::wrap_nullable(((&*self.ptr).invoke)(self.ptr)) }
 	}
 }
 
@@ -2367,7 +2367,7 @@ pub struct CallbackReturnEnum {
 
 impl CallbackReturnEnum {
 	pub fn invoke(&self) -> MyEnum {
-		unsafe { MyEnum::from_int((self.ptr.read().invoke)(self.ptr)) }
+		unsafe { MyEnum::from_int(((&*self.ptr).invoke)(self.ptr)) }
 	}
 }
 
@@ -2390,7 +2390,7 @@ pub struct CallbackReturnDictionary {
 
 impl CallbackReturnDictionary {
 	pub fn invoke(&self) -> MyDictionary {
-		unsafe { MyDictionary::wrap((self.ptr.read().invoke)(self.ptr)) }
+		unsafe { MyDictionary::wrap(((&*self.ptr).invoke)(self.ptr)) }
 	}
 }
 
@@ -2413,7 +2413,7 @@ pub struct CallbackReturnDictionaryN {
 
 impl CallbackReturnDictionaryN {
 	pub fn invoke(&self) -> Option<MyDictionary> {
-		unsafe { MyDictionary::wrap_nullable((self.ptr.read().invoke)(self.ptr)) }
+		unsafe { MyDictionary::wrap_nullable(((&*self.ptr).invoke)(self.ptr)) }
 	}
 }
 
@@ -2436,7 +2436,7 @@ pub struct CallbackPassCharArray {
 
 impl CallbackPassCharArray {
 	pub fn invoke(&self, arg: KCharArray) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, KCharArray::unwrap(arg)) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, KCharArray::unwrap(arg)) }
 	}
 }
 
@@ -2459,7 +2459,7 @@ pub struct CallbackPassCharArrayN {
 
 impl CallbackPassCharArrayN {
 	pub fn invoke(&self, arg: Option<KCharArray>) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, KCharArray::unwrap_nullable(arg)) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, KCharArray::unwrap_nullable(arg)) }
 	}
 }
 
@@ -2482,7 +2482,7 @@ pub struct CallbackPassBooleanArray {
 
 impl CallbackPassBooleanArray {
 	pub fn invoke(&self, arg: KBooleanArray) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, KBooleanArray::unwrap(arg)) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, KBooleanArray::unwrap(arg)) }
 	}
 }
 
@@ -2505,7 +2505,7 @@ pub struct CallbackPassByteArray {
 
 impl CallbackPassByteArray {
 	pub fn invoke(&self, arg: KByteArray) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, KByteArray::unwrap(arg)) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, KByteArray::unwrap(arg)) }
 	}
 }
 
@@ -2528,7 +2528,7 @@ pub struct CallbackPassUByteArray {
 
 impl CallbackPassUByteArray {
 	pub fn invoke(&self, arg: KUByteArray) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, KUByteArray::unwrap(arg)) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, KUByteArray::unwrap(arg)) }
 	}
 }
 
@@ -2551,7 +2551,7 @@ pub struct CallbackPassShortArray {
 
 impl CallbackPassShortArray {
 	pub fn invoke(&self, arg: KShortArray) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, KShortArray::unwrap(arg)) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, KShortArray::unwrap(arg)) }
 	}
 }
 
@@ -2574,7 +2574,7 @@ pub struct CallbackPassUShortArray {
 
 impl CallbackPassUShortArray {
 	pub fn invoke(&self, arg: KUShortArray) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, KUShortArray::unwrap(arg)) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, KUShortArray::unwrap(arg)) }
 	}
 }
 
@@ -2597,7 +2597,7 @@ pub struct CallbackPassIntArray {
 
 impl CallbackPassIntArray {
 	pub fn invoke(&self, arg: KIntArray) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, KIntArray::unwrap(arg)) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, KIntArray::unwrap(arg)) }
 	}
 }
 
@@ -2620,7 +2620,7 @@ pub struct CallbackPassUIntArray {
 
 impl CallbackPassUIntArray {
 	pub fn invoke(&self, arg: KUIntArray) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, KUIntArray::unwrap(arg)) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, KUIntArray::unwrap(arg)) }
 	}
 }
 
@@ -2643,7 +2643,7 @@ pub struct CallbackPassLongArray {
 
 impl CallbackPassLongArray {
 	pub fn invoke(&self, arg: KLongArray) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, KLongArray::unwrap(arg)) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, KLongArray::unwrap(arg)) }
 	}
 }
 
@@ -2666,7 +2666,7 @@ pub struct CallbackPassULongArray {
 
 impl CallbackPassULongArray {
 	pub fn invoke(&self, arg: KULongArray) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, KULongArray::unwrap(arg)) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, KULongArray::unwrap(arg)) }
 	}
 }
 
@@ -2689,7 +2689,7 @@ pub struct CallbackPassFloatArray {
 
 impl CallbackPassFloatArray {
 	pub fn invoke(&self, arg: KFloatArray) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, KFloatArray::unwrap(arg)) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, KFloatArray::unwrap(arg)) }
 	}
 }
 
@@ -2712,7 +2712,7 @@ pub struct CallbackPassDoubleArray {
 
 impl CallbackPassDoubleArray {
 	pub fn invoke(&self, arg: KDoubleArray) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, KDoubleArray::unwrap(arg)) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, KDoubleArray::unwrap(arg)) }
 	}
 }
 
@@ -2735,7 +2735,7 @@ pub struct CallbackPassStringArray {
 
 impl CallbackPassStringArray {
 	pub fn invoke(&self, arg: KArray<KString>) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, KArray::unwrap(arg)) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, KArray::unwrap(arg)) }
 	}
 }
 
@@ -2758,7 +2758,7 @@ pub struct CallbackPassStringArrayN {
 
 impl CallbackPassStringArrayN {
 	pub fn invoke(&self, arg: KArrayOpt<KString>) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, KArrayOpt::unwrap(arg)) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, KArrayOpt::unwrap(arg)) }
 	}
 }
 
@@ -2781,7 +2781,7 @@ pub struct CallbackPassEnumArray {
 
 impl CallbackPassEnumArray {
 	pub fn invoke(&self, arg: KIntArray) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, KIntArray::unwrap(arg)) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, KIntArray::unwrap(arg)) }
 	}
 }
 
@@ -2804,7 +2804,7 @@ pub struct CallbackPassDictionaryArray {
 
 impl CallbackPassDictionaryArray {
 	pub fn invoke(&self, arg: KArray<MyDictionary>) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, KArray::unwrap(arg)) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, KArray::unwrap(arg)) }
 	}
 }
 
@@ -2827,7 +2827,7 @@ pub struct CallbackPassDictionaryArrayN {
 
 impl CallbackPassDictionaryArrayN {
 	pub fn invoke(&self, arg: KArrayOpt<MyDictionary>) -> bool {
-		unsafe { (self.ptr.read().invoke)(self.ptr, KArrayOpt::unwrap(arg)) }
+		unsafe { ((&*self.ptr).invoke)(self.ptr, KArrayOpt::unwrap(arg)) }
 	}
 }
 
@@ -2850,7 +2850,7 @@ pub struct CallbackReturnCharArray {
 
 impl CallbackReturnCharArray {
 	pub fn invoke(&self) -> KCharArray {
-		unsafe { KCharArray::wrap((self.ptr.read().invoke)(self.ptr)) }
+		unsafe { KCharArray::wrap(((&*self.ptr).invoke)(self.ptr)) }
 	}
 }
 
@@ -2873,7 +2873,7 @@ pub struct CallbackReturnCharArrayN {
 
 impl CallbackReturnCharArrayN {
 	pub fn invoke(&self) -> Option<KCharArray> {
-		unsafe { KCharArray::wrap_nullable((self.ptr.read().invoke)(self.ptr)) }
+		unsafe { KCharArray::wrap_nullable(((&*self.ptr).invoke)(self.ptr)) }
 	}
 }
 
@@ -2896,7 +2896,7 @@ pub struct CallbackReturnBooleanArray {
 
 impl CallbackReturnBooleanArray {
 	pub fn invoke(&self) -> KBooleanArray {
-		unsafe { KBooleanArray::wrap((self.ptr.read().invoke)(self.ptr)) }
+		unsafe { KBooleanArray::wrap(((&*self.ptr).invoke)(self.ptr)) }
 	}
 }
 
@@ -2919,7 +2919,7 @@ pub struct CallbackReturnByteArray {
 
 impl CallbackReturnByteArray {
 	pub fn invoke(&self) -> KByteArray {
-		unsafe { KByteArray::wrap((self.ptr.read().invoke)(self.ptr)) }
+		unsafe { KByteArray::wrap(((&*self.ptr).invoke)(self.ptr)) }
 	}
 }
 
@@ -2942,7 +2942,7 @@ pub struct CallbackReturnUByteArray {
 
 impl CallbackReturnUByteArray {
 	pub fn invoke(&self) -> KUByteArray {
-		unsafe { KUByteArray::wrap((self.ptr.read().invoke)(self.ptr)) }
+		unsafe { KUByteArray::wrap(((&*self.ptr).invoke)(self.ptr)) }
 	}
 }
 
@@ -2965,7 +2965,7 @@ pub struct CallbackReturnShortArray {
 
 impl CallbackReturnShortArray {
 	pub fn invoke(&self) -> KShortArray {
-		unsafe { KShortArray::wrap((self.ptr.read().invoke)(self.ptr)) }
+		unsafe { KShortArray::wrap(((&*self.ptr).invoke)(self.ptr)) }
 	}
 }
 
@@ -2988,7 +2988,7 @@ pub struct CallbackReturnUShortArray {
 
 impl CallbackReturnUShortArray {
 	pub fn invoke(&self) -> KUShortArray {
-		unsafe { KUShortArray::wrap((self.ptr.read().invoke)(self.ptr)) }
+		unsafe { KUShortArray::wrap(((&*self.ptr).invoke)(self.ptr)) }
 	}
 }
 
@@ -3011,7 +3011,7 @@ pub struct CallbackReturnIntArray {
 
 impl CallbackReturnIntArray {
 	pub fn invoke(&self) -> KIntArray {
-		unsafe { KIntArray::wrap((self.ptr.read().invoke)(self.ptr)) }
+		unsafe { KIntArray::wrap(((&*self.ptr).invoke)(self.ptr)) }
 	}
 }
 
@@ -3034,7 +3034,7 @@ pub struct CallbackReturnUIntArray {
 
 impl CallbackReturnUIntArray {
 	pub fn invoke(&self) -> KUIntArray {
-		unsafe { KUIntArray::wrap((self.ptr.read().invoke)(self.ptr)) }
+		unsafe { KUIntArray::wrap(((&*self.ptr).invoke)(self.ptr)) }
 	}
 }
 
@@ -3057,7 +3057,7 @@ pub struct CallbackReturnLongArray {
 
 impl CallbackReturnLongArray {
 	pub fn invoke(&self) -> KLongArray {
-		unsafe { KLongArray::wrap((self.ptr.read().invoke)(self.ptr)) }
+		unsafe { KLongArray::wrap(((&*self.ptr).invoke)(self.ptr)) }
 	}
 }
 
@@ -3080,7 +3080,7 @@ pub struct CallbackReturnULongArray {
 
 impl CallbackReturnULongArray {
 	pub fn invoke(&self) -> KULongArray {
-		unsafe { KULongArray::wrap((self.ptr.read().invoke)(self.ptr)) }
+		unsafe { KULongArray::wrap(((&*self.ptr).invoke)(self.ptr)) }
 	}
 }
 
@@ -3103,7 +3103,7 @@ pub struct CallbackReturnFloatArray {
 
 impl CallbackReturnFloatArray {
 	pub fn invoke(&self) -> KFloatArray {
-		unsafe { KFloatArray::wrap((self.ptr.read().invoke)(self.ptr)) }
+		unsafe { KFloatArray::wrap(((&*self.ptr).invoke)(self.ptr)) }
 	}
 }
 
@@ -3126,7 +3126,7 @@ pub struct CallbackReturnDoubleArray {
 
 impl CallbackReturnDoubleArray {
 	pub fn invoke(&self) -> KDoubleArray {
-		unsafe { KDoubleArray::wrap((self.ptr.read().invoke)(self.ptr)) }
+		unsafe { KDoubleArray::wrap(((&*self.ptr).invoke)(self.ptr)) }
 	}
 }
 
@@ -3149,7 +3149,7 @@ pub struct CallbackReturnStringArray {
 
 impl CallbackReturnStringArray {
 	pub fn invoke(&self) -> KArray<KString> {
-		unsafe { KArray::wrap((self.ptr.read().invoke)(self.ptr)) }
+		unsafe { KArray::wrap(((&*self.ptr).invoke)(self.ptr)) }
 	}
 }
 
@@ -3172,7 +3172,7 @@ pub struct CallbackReturnStringArrayN {
 
 impl CallbackReturnStringArrayN {
 	pub fn invoke(&self) -> KArrayOpt<KString> {
-		unsafe { KArrayOpt::wrap((self.ptr.read().invoke)(self.ptr)) }
+		unsafe { KArrayOpt::wrap(((&*self.ptr).invoke)(self.ptr)) }
 	}
 }
 
@@ -3195,7 +3195,7 @@ pub struct CallbackReturnEnumArray {
 
 impl CallbackReturnEnumArray {
 	pub fn invoke(&self) -> KIntArray {
-		unsafe { KIntArray::wrap((self.ptr.read().invoke)(self.ptr)) }
+		unsafe { KIntArray::wrap(((&*self.ptr).invoke)(self.ptr)) }
 	}
 }
 
@@ -3218,7 +3218,7 @@ pub struct CallbackReturnDictionaryArray {
 
 impl CallbackReturnDictionaryArray {
 	pub fn invoke(&self) -> KArray<MyDictionary> {
-		unsafe { KArray::wrap((self.ptr.read().invoke)(self.ptr)) }
+		unsafe { KArray::wrap(((&*self.ptr).invoke)(self.ptr)) }
 	}
 }
 
@@ -3241,7 +3241,7 @@ pub struct CallbackReturnDictionaryArrayN {
 
 impl CallbackReturnDictionaryArrayN {
 	pub fn invoke(&self) -> KArrayOpt<MyDictionary> {
-		unsafe { KArrayOpt::wrap((self.ptr.read().invoke)(self.ptr)) }
+		unsafe { KArrayOpt::wrap(((&*self.ptr).invoke)(self.ptr)) }
 	}
 }
 
