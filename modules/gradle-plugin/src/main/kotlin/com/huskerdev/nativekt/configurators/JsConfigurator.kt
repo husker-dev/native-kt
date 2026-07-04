@@ -208,18 +208,15 @@ private abstract class PrepareNativesJs: DefaultTask() {
         // ASSERTIONS=2 -s SAFE_HEAP=1 -s STACK_OVERFLOW_CHECK=1
         val args = listOf(
             "--no-entry",
-
-            "SAFE_HEAP=1",
-            "ASSERTIONS=2",
-            "STACK_OVERFLOW_CHECK=1",
-
             "ALLOW_MEMORY_GROWTH=1",
             "ALLOW_TABLE_GROWTH=1",
+            "GROWABLE_ARRAYBUFFERS=0", // TODO: Remove (https://github.com/emscripten-core/emscripten/issues/27241)
+
             "MODULARIZE=1",
             "EXPORT_ES6=1",
-            "GROWABLE_ARRAYBUFFERS=0", // TODO: Remove (https://github.com/emscripten-core/emscripten/issues/27241)
             "WASM_BIGINT=${if (useJsBigInt) "1" else "0"}",
             emscriptenEnv?.joinToString(separator = ",", prefix = "ENVIRONMENT="),
+
             "EXPORTED_RUNTIME_METHODS=$runtimeFunctions",
             "EXPORTED_FUNCTIONS=$exportedFunctions",
         ).filterNotNull().joinToString(separator = " ") { "-s $it" }
