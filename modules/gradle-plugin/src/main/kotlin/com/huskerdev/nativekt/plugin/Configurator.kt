@@ -10,10 +10,7 @@ import com.huskerdev.webidl.resolver.IdlResolver
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.internal.extensions.stdlib.capitalized
 import org.gradle.kotlin.dsl.the
-import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
-import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
-import org.jetbrains.kotlin.gradle.dsl.KotlinProjectExtension
-import org.jetbrains.kotlin.gradle.dsl.KotlinSingleJavaTargetExtension
+import org.jetbrains.kotlin.gradle.dsl.*
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
 import org.jetbrains.kotlin.gradle.plugin.KotlinTargetsContainer
@@ -36,6 +33,7 @@ private fun NativeKtPlugin.validateModule(module: NativeProject): IdlResolver? {
     val initTask = project.tasks.register("cmakeInit${module.name.capitalized()}", InitTask::class.java)
     initTask.get().apply {
         this.dir = module.dir(project).absolutePath
+        this.moduleClasspath = module.classPath
         this.moduleName = module.name
     }
 
@@ -63,6 +61,20 @@ fun NativeKtPlugin.configureKotlin(
     srcGenDir: File
 ){
     project.afterEvaluate {
+        if(kotlin is KotlinMultiplatformExtension) {
+            (kotlin as KotlinMultiplatformExtension).targets
+                .filterIsInstance<HasConfigurableKotlinCompilerOptions<KotlinCommonCompilerOptions>>()
+                .forEach {
+                    it.compilerOptions {
+                        freeCompilerArgs.addAll("-Xexpect-actual-classes")
+                    }
+                }
+        } else if(kotlin is KotlinJvmProjectExtension) {
+            (kotlin as KotlinJvmProjectExtension).target.compilerOptions {
+                freeCompilerArgs.addAll("-Xexpect-actual-classes")
+            }
+        }
+
         extension.forEach {
             val module = it as NativeProject
 
@@ -82,13 +94,18 @@ fun NativeKtPlugin.configureKotlin(
                     CApiHeaderPrinter(
                         idl = idl,
                         target = module.getHeaderFile(project),
-                        guardName = module.name.uppercase()
+                        classPath = module.classPath,
+                        moduleName = module.name,
+                        guardName = module.name.uppercase(),
+                        cFunctions = true
                     )
                 }
                 is BuildSystem.Cargo -> {
                     RustPrinter(
                         idl = idl,
-                        target = module.getApiRsFile(project)
+                        target = module.getApiRsFile(project),
+                        classPath = module.classPath,
+                        moduleName = module.name
                     )
                 }
             }

@@ -8,6 +8,7 @@ class KotlinJvmCIPrinter(
     builder: StringBuilder,
     val implementFields: Boolean,
     val classPath: String,
+    val moduleName: String,
     name: String = "JVMCI",
     parentClass: String
 ) {
@@ -63,7 +64,7 @@ class KotlinJvmCIPrinter(
                     private fun _linkFunction(kName: String, cName: String, alt: Boolean, vararg types: Class<*>) {
                         JVMCIUtils.linkNativeCall(
                             $$name::class.java.getDeclaredMethod(kName, *types),
-                            _address("EXPORTED_$${classPath.replace(".", "_")}_$cName${if (alt) "_" else ""}")
+                            _address(cName + if (alt) "_" else "")
                         )
                     }
                     
@@ -97,7 +98,7 @@ class KotlinJvmCIPrinter(
     private fun printFunctionBinding(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
         val args = buildList {
             add("\"_${function.name.camelCase()}\"")
-            add("\"${function.name.snakeCase()}\"")
+            add("\"${mangle(classPath, moduleName, function.name)}\"")
             add(function.hasString() || function.hasArray())
             addAll(function.args.flatMap {
                 val clazz = "${it.type.toKotlinType(

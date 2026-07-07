@@ -156,6 +156,7 @@ class KotlinJvmPrinter(
             KotlinJvmForeignPrinter(
                 idl, builder,
                 classPath = classPath,
+                moduleName = moduleName,
                 name = "${moduleName.capitalized()}Foreign",
                 parentClass = nativeInvoker,
             )
@@ -168,6 +169,7 @@ class KotlinJvmPrinter(
                 idl, builder,
                 implementFields = !useJNI && !useForeignApi,
                 classPath = classPath,
+                moduleName = moduleName,
                 name = "${moduleName.capitalized()}JVMCI",
                 parentClass = nativeInvoker,
             )

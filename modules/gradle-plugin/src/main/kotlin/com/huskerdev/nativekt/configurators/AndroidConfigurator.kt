@@ -193,6 +193,7 @@ private abstract class PrepareNativesAndroid: DefaultTask() {
             idl = idl,
             target = File(nativesBuildSourcesDir, "jni_utils.h"),
             classPath = moduleClasspath,
+            moduleName = moduleName,
             name = "${moduleName.capitalized()}JNI",
             isAndroid = true
         )
@@ -201,20 +202,29 @@ private abstract class PrepareNativesAndroid: DefaultTask() {
             idl = idl,
             target = File(nativesBuildSourcesDir, "jni_bindings.c"),
             classPath = moduleClasspath,
+            moduleName = moduleName,
             name = "${moduleName.capitalized()}JNI",
             isAndroid = true,
             isAndroidCriticalEnabled = useAndroidCriticalNative
         )
 
+        val useCFunctions = buildSystem is BuildSystem.CMake
+
         CApiHeaderPrinter(
             idl = idl,
             target = File(nativesBuildSourcesDir, "api.h"),
-            isInternal = true
+            classPath = moduleClasspath,
+            moduleName = moduleName,
+            isInternal = true,
+            cFunctions = useCFunctions
         )
 
         CApiImplPrinter(
             idl = idl,
-            target = File(nativesBuildSourcesDir, "api.c")
+            target = File(nativesBuildSourcesDir, "api.c"),
+            classPath = moduleClasspath,
+            moduleName = moduleName,
+            cFunctions = useCFunctions
         )
 
         when(buildSystem) {

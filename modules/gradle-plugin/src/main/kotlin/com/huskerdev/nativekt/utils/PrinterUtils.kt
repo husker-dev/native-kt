@@ -15,6 +15,82 @@ fun asyncLoadFunctionName(moduleName: String) =
 fun syncLoadFunctionName(moduleName: String) =
     "loadLib${moduleName.capitalized()}Sync"
 
+fun mangle(
+    classPath: String,
+    moduleName: String,
+    content: String
+) = "nativekt" +
+        "_${classPath.split(".").joinToString("_") { it.lowercase() }}" +
+        "_${moduleName.snakeCase()}" +
+        "_${content.snakeCase()}"
+
+fun interfaceOperationCName(
+    classPath: String,
+    moduleName: String,
+    inter: ResolvedIdlInterface,
+    operation: ResolvedIdlOperation
+) = mangle(classPath, moduleName,
+    content = "_${inter.name.lowercase()}_fn_${operation.name.snakeCase()}"
+)
+
+fun interfaceConstructorCName(
+    classPath: String,
+    moduleName: String,
+    inter: ResolvedIdlInterface,
+    constructor: ResolvedIdlConstructor
+) = mangle(classPath, moduleName,
+    content = "_${inter.name.lowercase()}_new_${inter.constructors.indexOf(constructor)}"
+)
+
+fun interfaceFreeCName(
+    classPath: String,
+    moduleName: String,
+    inter: ResolvedIdlInterface
+) = mangle(classPath, moduleName,
+    content = "_${inter.name.lowercase()}_free"
+)
+
+fun ResolvedIdlInterface.toOperations(
+    classPath: String,
+    moduleName: String
+) = buildList {
+    val interfaceType = ResolvedIdlType.Default(this@toOperations, emptyList(), false)
+    val interfaceArg = ResolvedIdlField.Argument(
+        "ptr", interfaceType, null,
+        isOptional = false, isVariadic = false, attributes = emptyList()
+    )
+
+    // free
+    add(ResolvedIdlOperation(
+        name = interfaceFreeCName(classPath, moduleName, this@toOperations),
+        type = ResolvedIdlType.Void("void"),
+        args = listOf(interfaceArg),
+        isStatic = false,
+        attributes = emptyList()
+    ))
+    constructors.forEach { constructor ->
+        add(ResolvedIdlOperation(
+            name = interfaceConstructorCName(classPath, moduleName, this@toOperations, constructor),
+            type = interfaceType,
+            args = constructor.args,
+            isStatic = false,
+            attributes = constructor.attributes
+        ))
+    }
+    operations.forEach { operation ->
+        add(ResolvedIdlOperation(
+            name = interfaceOperationCName(classPath, moduleName, this@toOperations, operation),
+            type = operation.type,
+            args = buildList {
+                add(interfaceArg)
+                addAll(operation.args)
+            },
+            isStatic = false,
+            attributes = operation.attributes
+        ))
+    }
+}
+
 // Names
 
 fun String.snakeCase(): String = buildString {
@@ -33,7 +109,7 @@ fun String.snakeCase(): String = buildString {
 
 fun String.camelCase(): String {
     return split("_")
-        .joinToString { it.uppercaseFirstChar() }
+        .joinToString("") { it.uppercaseFirstChar() }
         .replaceFirstChar { it.lowercase() }
 }
 
@@ -135,6 +211,7 @@ fun ResolvedIdlType.toCType(
                 else -> "KArray$ptr$nullable"
             }
         }
+        isInterface() -> "void*$nullable"
         else -> "${(this as ResolvedIdlType.Default).declaration.name.upperCamelCase()}$ptr$nullable"
     }
 }
@@ -412,6 +489,13 @@ fun ResolvedIdlType.isEnum(): Boolean {
     return this is ResolvedIdlType.Default && declaration is ResolvedIdlEnum
 }
 
+fun ResolvedIdlType.isInterface(): Boolean {
+    contract {
+        returns(true) implies(this@isInterface is ResolvedIdlType.Default)
+    }
+    return this is ResolvedIdlType.Default && declaration is ResolvedIdlInterface
+}
+
 fun ResolvedIdlType.isDictionary(): Boolean {
     contract {
         returns(true) implies(this@isDictionary is ResolvedIdlType.Default)
@@ -512,6 +596,7 @@ fun ResolvedIdlDictionary.allFields() = buildList {
 fun functionHeader(
     function: ResolvedIdlOperation,
     isOverride: Boolean = false,
+    isPrivate: Boolean = false,
     isActual: Boolean = false,
     isExternal: Boolean = false,
     isExpect: Boolean = false,
@@ -520,13 +605,14 @@ fun functionHeader(
     stringAsBytes: Boolean = false,
     callbackAsAny: Boolean = false
 ) = StringBuilder().apply {
-    printFunctionHeader(this, function, isOverride, isActual, isExternal, isExpect, name, forceVoid, stringAsBytes, callbackAsAny)
+    printFunctionHeader(this, function, isOverride, isPrivate, isActual, isExternal, isExpect, name, forceVoid, stringAsBytes, callbackAsAny)
 }.toString()
 
 fun printFunctionHeader(
     builder: StringBuilder,
     function: ResolvedIdlOperation,
     isOverride: Boolean = false,
+    isPrivate: Boolean = false,
     isActual: Boolean = false,
     isExternal: Boolean = false,
     isExpect: Boolean = false,
@@ -540,6 +626,7 @@ fun printFunctionHeader(
     if(isActual) append("actual ")
     if(isExpect) append("expect ")
     if(isExternal) append("external ")
+    if(isPrivate) append("private ")
     if(isOverride) append("override ")
 
     val args = function.args.flatMap { arg ->

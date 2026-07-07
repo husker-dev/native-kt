@@ -922,7 +922,9 @@ pub fn jvmci_enum(
 
 use std::ffi::c_void;
 use std::fmt::{Debug, Display, Formatter};
+use std::mem::ManuallyDrop;
 use std::ptr::null;
+use std::sync::Arc;
 
 extern "C" {
     fn malloc(s: usize) -> *const c_void;
@@ -1021,7 +1023,7 @@ impl KString {
             let size = value.len();
             let data = malloc(size) as *mut u8;
             std::ptr::copy_nonoverlapping(value.as_ptr(), data, size);
-            Self { ptr: KString_new(data, length, size, true) }
+            Self { ptr: nativekt_natives_testrs_testrs_kstring_new(data, length, size, true) }
         }
     }
     pub fn from_str(value: &str) -> Self {
@@ -1029,7 +1031,7 @@ impl KString {
             let length = value.chars().count() as i32;
             let size = value.len();
             let data = value.as_ptr();
-            Self { ptr: KString_new(data, length, size, false) }
+            Self { ptr: nativekt_natives_testrs_testrs_kstring_new(data, length, size, false) }
         }
     }
     pub fn as_str(&self) -> &str {
@@ -1055,13 +1057,13 @@ impl Display for KString {
 }
 
 impl_wrapper!(KString, _KString);
-impl_drop_clone!(KString, KString_free, KString_clone);
-impl_ptr_holder!(KString, _KString, KString_free, KString_clone);
+impl_drop_clone!(KString, nativekt_natives_testrs_testrs_kstring_free, nativekt_natives_testrs_testrs_kstring_clone);
+impl_ptr_holder!(KString, _KString, nativekt_natives_testrs_testrs_kstring_free, nativekt_natives_testrs_testrs_kstring_clone);
 
 extern "C" {
-    fn KString_new(data: *const u8, length: i32, size: usize, is_data_owner: bool) -> *const _KString;
-    fn KString_free(self_: *const _KString);
-    fn KString_clone(self_: *const _KString) -> *const _KString;
+    fn nativekt_natives_testrs_testrs_kstring_new(data: *const u8, length: i32, size: usize, is_data_owner: bool) -> *const _KString;
+    fn nativekt_natives_testrs_testrs_kstring_free(self_: *const _KString);
+    fn nativekt_natives_testrs_testrs_kstring_clone(self_: *const _KString) -> *const _KString;
 }
 
 #[macro_export] macro_rules! k_string {
@@ -1082,9 +1084,9 @@ struct _KArray {
 }
 
 extern "C" {
-    fn KArray_new(elements: *const *const c_void, length: i32, is_data_owner: bool) -> *const _KArray;
-    fn KArray_clone(self_: *const _KArray, clone_op: *const c_void) -> *const _KArray;
-    fn KArray_free(self_: *const _KArray, free_op: *const c_void);
+    fn nativekt_natives_testrs_testrs_karray_new(elements: *const *const c_void, length: i32, is_data_owner: bool) -> *const _KArray;
+    fn nativekt_natives_testrs_testrs_karray_clone(self_: *const _KArray, clone_op: *const c_void) -> *const _KArray;
+    fn nativekt_natives_testrs_testrs_karray_free(self_: *const _KArray, free_op: *const c_void);
 }
 
 macro_rules! impl_typed_array {
@@ -1125,18 +1127,18 @@ macro_rules! impl_typed_array {
     };
 }
 
-impl_typed_array!(KCharArray, u16, 2, KCharArray_new, KCharArray_free, KCharArray_clone);
-impl_typed_array!(KBooleanArray, bool, 1, KBooleanArray_new, KBooleanArray_free, KBooleanArray_clone);
-impl_typed_array!(KByteArray, i8, 1, KByteArray_new, KByteArray_free, KByteArray_clone);
-impl_typed_array!(KUByteArray, u8, 1, KUByteArray_new, KUByteArray_free, KUByteArray_clone);
-impl_typed_array!(KShortArray, i16, 2, KShortArray_new, KShortArray_free, KShortArray_clone);
-impl_typed_array!(KUShortArray, u16, 2, KUShortArray_new, KUShortArray_free, KUShortArray_clone);
-impl_typed_array!(KIntArray, i32, 4, KIntArray_new, KIntArray_free, KIntArray_clone);
-impl_typed_array!(KUIntArray, u32, 4, KUIntArray_new, KUIntArray_free, KUIntArray_clone);
-impl_typed_array!(KLongArray, i64, 8, KLongArray_new, KLongArray_free, KLongArray_clone);
-impl_typed_array!(KULongArray, u64, 8, KULongArray_new, KULongArray_free, KULongArray_clone);
-impl_typed_array!(KFloatArray, f32, 4, KFloatArray_new, KFloatArray_free, KFloatArray_clone);
-impl_typed_array!(KDoubleArray, f64, 8, KDoubleArray_new, KDoubleArray_free, KDoubleArray_clone);
+impl_typed_array!(KCharArray, u16, 2, nativekt_natives_testrs_testrs_kchar_array_new, nativekt_natives_testrs_testrs_kchar_array_free, nativekt_natives_testrs_testrs_kchar_array_clone);
+impl_typed_array!(KBooleanArray, bool, 1, nativekt_natives_testrs_testrs_kboolean_array_new, nativekt_natives_testrs_testrs_kboolean_array_free, nativekt_natives_testrs_testrs_kboolean_array_clone);
+impl_typed_array!(KByteArray, i8, 1, nativekt_natives_testrs_testrs_kbyte_array_new, nativekt_natives_testrs_testrs_kbyte_array_free, nativekt_natives_testrs_testrs_kbyte_array_clone);
+impl_typed_array!(KUByteArray, u8, 1, nativekt_natives_testrs_testrs_kubyte_array_new, nativekt_natives_testrs_testrs_kubyte_array_free, nativekt_natives_testrs_testrs_kubyte_array_clone);
+impl_typed_array!(KShortArray, i16, 2, nativekt_natives_testrs_testrs_kshort_array_new, nativekt_natives_testrs_testrs_kshort_array_free, nativekt_natives_testrs_testrs_kshort_array_clone);
+impl_typed_array!(KUShortArray, u16, 2, nativekt_natives_testrs_testrs_kushort_array_new, nativekt_natives_testrs_testrs_kushort_array_free, nativekt_natives_testrs_testrs_kushort_array_clone);
+impl_typed_array!(KIntArray, i32, 4, nativekt_natives_testrs_testrs_kint_array_new, nativekt_natives_testrs_testrs_kint_array_free, nativekt_natives_testrs_testrs_kint_array_clone);
+impl_typed_array!(KUIntArray, u32, 4, nativekt_natives_testrs_testrs_kuint_array_new, nativekt_natives_testrs_testrs_kuint_array_free, nativekt_natives_testrs_testrs_kuint_array_clone);
+impl_typed_array!(KLongArray, i64, 8, nativekt_natives_testrs_testrs_klong_array_new, nativekt_natives_testrs_testrs_klong_array_free, nativekt_natives_testrs_testrs_klong_array_clone);
+impl_typed_array!(KULongArray, u64, 8, nativekt_natives_testrs_testrs_kulong_array_new, nativekt_natives_testrs_testrs_kulong_array_free, nativekt_natives_testrs_testrs_kulong_array_clone);
+impl_typed_array!(KFloatArray, f32, 4, nativekt_natives_testrs_testrs_kfloat_array_new, nativekt_natives_testrs_testrs_kfloat_array_free, nativekt_natives_testrs_testrs_kfloat_array_clone);
+impl_typed_array!(KDoubleArray, f64, 8, nativekt_natives_testrs_testrs_kdouble_array_new, nativekt_natives_testrs_testrs_kdouble_array_free, nativekt_natives_testrs_testrs_kdouble_array_clone);
 
 #[macro_export] macro_rules! k_char_array {
     ($($x:expr),+ $(,)?) => (KCharArray::from(vec![$($x),+]));
@@ -1174,6 +1176,7 @@ impl_typed_array!(KDoubleArray, f64, 8, KDoubleArray_new, KDoubleArray_free, KDo
 #[macro_export] macro_rules! k_double_array {
     ($($x:expr),+ $(,)?) => (KDoubleArray::from(vec![$($x),+]));
 }
+
 
 // KArray
 
@@ -1214,13 +1217,14 @@ impl<T: PtrHolder> KArray<T> {
         of.unwrap().unwrap()
     }
     pub fn new(elements: Vec<T>) -> KArray<T> {
-        let mut ptrs: Vec<*const c_void> = Vec::with_capacity(elements.len());
-        for element in &elements {
-            ptrs.push(element.ptr());
+        unsafe {
+            let mut ptrs = malloc(elements.len() * size_of::<isize>()) as *mut *const c_void;
+            for i in 0..elements.len() {
+                ptrs.offset(i as isize).write(elements[i].ptr());
+            }
+            let ptr = unsafe { nativekt_natives_testrs_testrs_karray_new(ptrs, elements.len() as i32, true) };
+            KArray { ptr, elements }
         }
-        let ptr = unsafe { KArray_new(ptrs.as_ptr(), elements.len() as i32, true) };
-        std::mem::forget(ptrs);
-        KArray { ptr, elements }
     }
     pub fn as_slice(&self) -> &[T] {
         self.elements.as_slice()
@@ -1231,14 +1235,14 @@ impl<T: PtrHolder> Drop for KArray<T> {
     fn drop(&mut self) {
         unsafe { 
             self.elements.set_len(0);
-            KArray_free(self.ptr, T::free_ptr()); 
+            nativekt_natives_testrs_testrs_karray_free(self.ptr, T::free_ptr()); 
         }
     }
 }
 
 impl<T: PtrHolder> Clone for KArray<T> {
     fn clone(&self) -> Self {
-        KArray::wrap(unsafe { KArray_clone(self.ptr, T::clone_ptr()) })
+        KArray::wrap(unsafe { nativekt_natives_testrs_testrs_karray_clone(self.ptr, T::clone_ptr()) })
     }
 }
 
@@ -1290,17 +1294,19 @@ impl<T: PtrHolder> KArrayOpt<T> {
         of.unwrap().unwrap()
     }
     pub fn new(elements: Vec<Option<T>>) -> KArrayOpt<T> {
-        let mut ptrs: Vec<*const c_void> = Vec::with_capacity(elements.len());
-        for element in &elements {
-            if(element.is_none()) {
-                ptrs.push(null())
-            } else {
-                ptrs.push(element.clone().unwrap().ptr());
+        unsafe {
+            let mut ptrs = malloc(elements.len() * size_of::<isize>()) as *mut *const c_void;
+            for i in 0..elements.len() {
+                let element = &elements[i];
+                if(element.is_none()) {
+                    ptrs.offset(i as isize).write(null());
+                } else {
+                    ptrs.offset(i as isize).write(element.clone().unwrap().ptr());
+                }
             }
+            let ptr = unsafe { nativekt_natives_testrs_testrs_karray_new(ptrs, elements.len() as i32, true) };
+            KArrayOpt { ptr, elements }
         }
-        let ptr = unsafe { KArray_new(ptrs.as_ptr(), elements.len() as i32, true) };
-        std::mem::forget(ptrs);
-        KArrayOpt { ptr, elements }
     }
     pub fn as_slice(&self) -> &[Option<T>] {
         self.elements.as_slice()
@@ -1311,14 +1317,14 @@ impl<T: PtrHolder> Drop for KArrayOpt<T> {
     fn drop(&mut self) {
         unsafe {
             self.elements.set_len(0);
-            KArray_free(self.ptr, T::free_ptr()); 
+            nativekt_natives_testrs_testrs_karray_free(self.ptr, T::free_ptr()); 
         }
     }
 }
 
 impl<T: PtrHolder> Clone for KArrayOpt<T> {
     fn clone(&self) -> Self {
-        KArrayOpt::wrap(unsafe { KArray_clone(self.ptr, T::clone_ptr()) })
+        KArrayOpt::wrap(unsafe { nativekt_natives_testrs_testrs_karray_clone(self.ptr, T::clone_ptr()) })
     }
 }
 
@@ -1331,15 +1337,15 @@ impl<T: PtrHolder> Clone for KArrayOpt<T> {
 // ╚═════════════════╝
 
 extern "C" {	
-	fn ParentDictionary_new(a: i32, b: i32) -> *const _ParentDictionary;
-	fn ParentDictionary_clone(self_: *const _ParentDictionary) -> *const _ParentDictionary;
-	fn ParentDictionary_free(self_: *const _ParentDictionary);	
-	fn MyDictionary_new(a: i32, b: i32, c: i32, d: i32) -> *const _MyDictionary;
-	fn MyDictionary_clone(self_: *const _MyDictionary) -> *const _MyDictionary;
-	fn MyDictionary_free(self_: *const _MyDictionary);	
-	fn TypeDictionary_new(a1: u16, a2: bool, a3: i8, a4: u8, a5: i16, a6: u16, a7: i32, a8: u32, a9: i64, a10: u64, a11: f32, a12: f64, a13: *const _KString, a14: i32, a15: *const _MyDictionary, a16: *const _VoidCallback, a17: *const _KArray, a18: *const _KArray, a19: *const _KArray, a20: *const _KArray, a21: *const _KArray, a22: *const _KArray, a23: *const _KArray, a24: *const _KArray, a25: *const _KArray, a26: *const _KArray, a27: *const _KArray, a28: *const _KArray, a29: *const _KArray, a30: *const _KArray, a31: *const _KArray) -> *const _TypeDictionary;
-	fn TypeDictionary_clone(self_: *const _TypeDictionary) -> *const _TypeDictionary;
-	fn TypeDictionary_free(self_: *const _TypeDictionary);
+	fn nativekt_natives_testrs_testrs_parent_dictionary_new(a: i32, b: i32) -> *const _ParentDictionary;
+	fn nativekt_natives_testrs_testrs_parent_dictionary_clone(self_: *const _ParentDictionary) -> *const _ParentDictionary;
+	fn nativekt_natives_testrs_testrs_parent_dictionary_free(self_: *const _ParentDictionary);	
+	fn nativekt_natives_testrs_testrs_my_dictionary_new(a: i32, b: i32, c: i32, d: i32) -> *const _MyDictionary;
+	fn nativekt_natives_testrs_testrs_my_dictionary_clone(self_: *const _MyDictionary) -> *const _MyDictionary;
+	fn nativekt_natives_testrs_testrs_my_dictionary_free(self_: *const _MyDictionary);	
+	fn nativekt_natives_testrs_testrs_type_dictionary_new(a1: u16, a2: bool, a3: i8, a4: u8, a5: i16, a6: u16, a7: i32, a8: u32, a9: i64, a10: u64, a11: f32, a12: f64, a13: *const _KString, a14: i32, a15: *const _MyDictionary, a16: *const _VoidCallback, a17: *const _KArray, a18: *const _KArray, a19: *const _KArray, a20: *const _KArray, a21: *const _KArray, a22: *const _KArray, a23: *const _KArray, a24: *const _KArray, a25: *const _KArray, a26: *const _KArray, a27: *const _KArray, a28: *const _KArray, a29: *const _KArray, a30: *const _KArray, a31: *const _KArray) -> *const _TypeDictionary;
+	fn nativekt_natives_testrs_testrs_type_dictionary_clone(self_: *const _TypeDictionary) -> *const _TypeDictionary;
+	fn nativekt_natives_testrs_testrs_type_dictionary_free(self_: *const _TypeDictionary);
 }
 
 #[repr(C)]
@@ -1358,7 +1364,7 @@ pub struct ParentDictionary {
 
 impl ParentDictionary {
 	pub fn new(a: i32, b: i32) -> Self {
-		Self::wrap(unsafe { ParentDictionary_new(a, b) })
+		Self::wrap(unsafe { nativekt_natives_testrs_testrs_parent_dictionary_new(a, b) })
 	}
 	fn wrap(ptr: *const _ParentDictionary) -> Self {
 	    let r = unsafe { &*ptr };
@@ -1367,8 +1373,8 @@ impl ParentDictionary {
 }
 
 impl_wrapper!(ParentDictionary, _ParentDictionary);
-impl_drop_clone!(ParentDictionary, ParentDictionary_free, ParentDictionary_clone);
-impl_ptr_holder!(ParentDictionary, _ParentDictionary, ParentDictionary_free, ParentDictionary_clone);
+impl_drop_clone!(ParentDictionary, nativekt_natives_testrs_testrs_parent_dictionary_free, nativekt_natives_testrs_testrs_parent_dictionary_clone);
+impl_ptr_holder!(ParentDictionary, _ParentDictionary, nativekt_natives_testrs_testrs_parent_dictionary_free, nativekt_natives_testrs_testrs_parent_dictionary_clone);
 
 #[repr(C)]
 #[derive(Debug)]
@@ -1390,7 +1396,7 @@ pub struct MyDictionary {
 
 impl MyDictionary {
 	pub fn new(a: i32, b: i32, c: i32, d: i32) -> Self {
-		Self::wrap(unsafe { MyDictionary_new(a, b, c, d) })
+		Self::wrap(unsafe { nativekt_natives_testrs_testrs_my_dictionary_new(a, b, c, d) })
 	}
 	fn wrap(ptr: *const _MyDictionary) -> Self {
 	    let r = unsafe { &*ptr };
@@ -1399,8 +1405,8 @@ impl MyDictionary {
 }
 
 impl_wrapper!(MyDictionary, _MyDictionary);
-impl_drop_clone!(MyDictionary, MyDictionary_free, MyDictionary_clone);
-impl_ptr_holder!(MyDictionary, _MyDictionary, MyDictionary_free, MyDictionary_clone);
+impl_drop_clone!(MyDictionary, nativekt_natives_testrs_testrs_my_dictionary_free, nativekt_natives_testrs_testrs_my_dictionary_clone);
+impl_ptr_holder!(MyDictionary, _MyDictionary, nativekt_natives_testrs_testrs_my_dictionary_free, nativekt_natives_testrs_testrs_my_dictionary_clone);
 
 #[repr(C)]
 #[derive(Debug)]
@@ -1476,7 +1482,7 @@ pub struct TypeDictionary {
 
 impl TypeDictionary {
 	pub fn new(a1: u16, a2: bool, a3: i8, a4: u8, a5: i16, a6: u16, a7: i32, a8: u32, a9: i64, a10: u64, a11: f32, a12: f64, a13: KString, a14: MyEnum, a15: MyDictionary, a16: VoidCallback, a17: KCharArray, a18: KBooleanArray, a19: KByteArray, a20: KUByteArray, a21: KShortArray, a22: KUShortArray, a23: KIntArray, a24: KUIntArray, a25: KLongArray, a26: KULongArray, a27: KFloatArray, a28: KDoubleArray, a29: KArray<KString>, a30: KIntArray, a31: KArray<MyDictionary>) -> Self {
-		Self::wrap(unsafe { TypeDictionary_new(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, KString::unwrap(a13), MyEnum::to_int(a14), MyDictionary::unwrap(a15), VoidCallback::unwrap(a16), KCharArray::unwrap(a17), KBooleanArray::unwrap(a18), KByteArray::unwrap(a19), KUByteArray::unwrap(a20), KShortArray::unwrap(a21), KUShortArray::unwrap(a22), KIntArray::unwrap(a23), KUIntArray::unwrap(a24), KLongArray::unwrap(a25), KULongArray::unwrap(a26), KFloatArray::unwrap(a27), KDoubleArray::unwrap(a28), KArray::unwrap(a29), KIntArray::unwrap(a30), KArray::unwrap(a31)) })
+		Self::wrap(unsafe { nativekt_natives_testrs_testrs_type_dictionary_new(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, KString::unwrap(a13), MyEnum::to_int(a14), MyDictionary::unwrap(a15), VoidCallback::unwrap(a16), KCharArray::unwrap(a17), KBooleanArray::unwrap(a18), KByteArray::unwrap(a19), KUByteArray::unwrap(a20), KShortArray::unwrap(a21), KUShortArray::unwrap(a22), KIntArray::unwrap(a23), KUIntArray::unwrap(a24), KLongArray::unwrap(a25), KULongArray::unwrap(a26), KFloatArray::unwrap(a27), KDoubleArray::unwrap(a28), KArray::unwrap(a29), KIntArray::unwrap(a30), KArray::unwrap(a31)) })
 	}
 	fn wrap(ptr: *const _TypeDictionary) -> Self {
 	    let r = unsafe { &*ptr };
@@ -1485,8 +1491,8 @@ impl TypeDictionary {
 }
 
 impl_wrapper!(TypeDictionary, _TypeDictionary);
-impl_drop_clone!(TypeDictionary, TypeDictionary_free, TypeDictionary_clone);
-impl_ptr_holder!(TypeDictionary, _TypeDictionary, TypeDictionary_free, TypeDictionary_clone);
+impl_drop_clone!(TypeDictionary, nativekt_natives_testrs_testrs_type_dictionary_free, nativekt_natives_testrs_testrs_type_dictionary_clone);
+impl_ptr_holder!(TypeDictionary, _TypeDictionary, nativekt_natives_testrs_testrs_type_dictionary_free, nativekt_natives_testrs_testrs_type_dictionary_clone);
 
 // ╔═══════════════════╗
 // ║     Callbacks     ║
@@ -3276,1595 +3282,1141 @@ impl MyEnum {
 // ╚═══════════════════╝
 
 #[no_mangle]
-extern "C" fn pass_void() -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_void() -> bool {
 	crate::pass_void()
 }
 
 #[no_mangle]
-extern "C" fn pass_char(
-	arg: u16
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_char(arg: u16) -> bool {
 	crate::pass_char(arg)
 }
 
 #[no_mangle]
-extern "C" fn pass_boolean(
-	arg: bool
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_boolean(arg: bool) -> bool {
 	crate::pass_boolean(arg)
 }
 
 #[no_mangle]
-extern "C" fn pass_byte(
-	arg: i8
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_byte(arg: i8) -> bool {
 	crate::pass_byte(arg)
 }
 
 #[no_mangle]
-extern "C" fn pass_ubyte(
-	arg: u8
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_ubyte(arg: u8) -> bool {
 	crate::pass_ubyte(arg)
 }
 
 #[no_mangle]
-extern "C" fn pass_short(
-	arg: i16
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_short(arg: i16) -> bool {
 	crate::pass_short(arg)
 }
 
 #[no_mangle]
-extern "C" fn pass_ushort(
-	arg: u16
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_ushort(arg: u16) -> bool {
 	crate::pass_ushort(arg)
 }
 
 #[no_mangle]
-extern "C" fn pass_int(
-	arg: i32
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_int(arg: i32) -> bool {
 	crate::pass_int(arg)
 }
 
 #[no_mangle]
-extern "C" fn pass_uint(
-	arg: u32
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_uint(arg: u32) -> bool {
 	crate::pass_uint(arg)
 }
 
 #[no_mangle]
-extern "C" fn pass_long(
-	arg: i64
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_long(arg: i64) -> bool {
 	crate::pass_long(arg)
 }
 
 #[no_mangle]
-extern "C" fn pass_ulong(
-	arg: u64
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_ulong(arg: u64) -> bool {
 	crate::pass_ulong(arg)
 }
 
 #[no_mangle]
-extern "C" fn pass_float(
-	arg: f32
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_float(arg: f32) -> bool {
 	crate::pass_float(arg)
 }
 
 #[no_mangle]
-extern "C" fn pass_double(
-	arg: f64
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_double(arg: f64) -> bool {
 	crate::pass_double(arg)
 }
 
 #[no_mangle]
-extern "C" fn pass_string(
-	arg: *const _KString
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_string(arg: *const _KString) -> bool {
 	crate::pass_string(KString::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn pass_string_n(
-	arg: *const _KString
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_string_n(arg: *const _KString) -> bool {
 	crate::pass_string_n(KString::wrap_nullable(arg))
 }
 
 #[no_mangle]
-extern "C" fn pass_enum(
-	arg: i32
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_enum(arg: i32) -> bool {
 	crate::pass_enum(MyEnum::from_int(arg))
 }
 
 #[no_mangle]
-extern "C" fn pass_dictionary(
-	arg: *const _MyDictionary
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_dictionary(arg: *const _MyDictionary) -> bool {
 	crate::pass_dictionary(MyDictionary::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn pass_dictionary_n(
-	arg: *const _MyDictionary
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_dictionary_n(arg: *const _MyDictionary) -> bool {
 	crate::pass_dictionary_n(MyDictionary::wrap_nullable(arg))
 }
 
 #[no_mangle]
-extern "C" fn return_void() {
+extern "C" fn nativekt_natives_testrs_testrs_return_void() {
 	crate::return_void()
 }
 
 #[no_mangle]
-extern "C" fn return_char() -> u16 {
+extern "C" fn nativekt_natives_testrs_testrs_return_char() -> u16 {
 	crate::return_char()
 }
 
 #[no_mangle]
-extern "C" fn return_boolean() -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_return_boolean() -> bool {
 	crate::return_boolean()
 }
 
 #[no_mangle]
-extern "C" fn return_byte() -> i8 {
+extern "C" fn nativekt_natives_testrs_testrs_return_byte() -> i8 {
 	crate::return_byte()
 }
 
 #[no_mangle]
-extern "C" fn return_ubyte() -> u8 {
+extern "C" fn nativekt_natives_testrs_testrs_return_ubyte() -> u8 {
 	crate::return_ubyte()
 }
 
 #[no_mangle]
-extern "C" fn return_short() -> i16 {
+extern "C" fn nativekt_natives_testrs_testrs_return_short() -> i16 {
 	crate::return_short()
 }
 
 #[no_mangle]
-extern "C" fn return_ushort() -> u16 {
+extern "C" fn nativekt_natives_testrs_testrs_return_ushort() -> u16 {
 	crate::return_ushort()
 }
 
 #[no_mangle]
-extern "C" fn return_int() -> i32 {
+extern "C" fn nativekt_natives_testrs_testrs_return_int() -> i32 {
 	crate::return_int()
 }
 
 #[no_mangle]
-extern "C" fn return_uint() -> u32 {
+extern "C" fn nativekt_natives_testrs_testrs_return_uint() -> u32 {
 	crate::return_uint()
 }
 
 #[no_mangle]
-extern "C" fn return_long() -> i64 {
+extern "C" fn nativekt_natives_testrs_testrs_return_long() -> i64 {
 	crate::return_long()
 }
 
 #[no_mangle]
-extern "C" fn return_ulong() -> u64 {
+extern "C" fn nativekt_natives_testrs_testrs_return_ulong() -> u64 {
 	crate::return_ulong()
 }
 
 #[no_mangle]
-extern "C" fn return_float() -> f32 {
+extern "C" fn nativekt_natives_testrs_testrs_return_float() -> f32 {
 	crate::return_float()
 }
 
 #[no_mangle]
-extern "C" fn return_double() -> f64 {
+extern "C" fn nativekt_natives_testrs_testrs_return_double() -> f64 {
 	crate::return_double()
 }
 
 #[no_mangle]
-extern "C" fn return_string() -> *const _KString {
+extern "C" fn nativekt_natives_testrs_testrs_return_string() -> *const _KString {
 	KString::unwrap(crate::return_string())
 }
 
 #[no_mangle]
-extern "C" fn return_string_n() -> *const _KString {
+extern "C" fn nativekt_natives_testrs_testrs_return_string_n() -> *const _KString {
 	KString::unwrap_nullable(crate::return_string_n())
 }
 
 #[no_mangle]
-extern "C" fn return_enum() -> i32 {
+extern "C" fn nativekt_natives_testrs_testrs_return_enum() -> i32 {
 	MyEnum::to_int(crate::return_enum())
 }
 
 #[no_mangle]
-extern "C" fn return_dictionary() -> *const _MyDictionary {
+extern "C" fn nativekt_natives_testrs_testrs_return_dictionary() -> *const _MyDictionary {
 	MyDictionary::unwrap(crate::return_dictionary())
 }
 
 #[no_mangle]
-extern "C" fn return_dictionary_n() -> *const _MyDictionary {
+extern "C" fn nativekt_natives_testrs_testrs_return_dictionary_n() -> *const _MyDictionary {
 	MyDictionary::unwrap_nullable(crate::return_dictionary_n())
 }
 
 #[no_mangle]
-extern "C" fn ping_char(
-	arg: u16
-) -> u16 {
+extern "C" fn nativekt_natives_testrs_testrs_ping_char(arg: u16) -> u16 {
 	crate::ping_char(arg)
 }
 
 #[no_mangle]
-extern "C" fn ping_boolean(
-	arg: bool
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_ping_boolean(arg: bool) -> bool {
 	crate::ping_boolean(arg)
 }
 
 #[no_mangle]
-extern "C" fn ping_byte(
-	arg: i8
-) -> i8 {
+extern "C" fn nativekt_natives_testrs_testrs_ping_byte(arg: i8) -> i8 {
 	crate::ping_byte(arg)
 }
 
 #[no_mangle]
-extern "C" fn ping_ubyte(
-	arg: u8
-) -> u8 {
+extern "C" fn nativekt_natives_testrs_testrs_ping_ubyte(arg: u8) -> u8 {
 	crate::ping_ubyte(arg)
 }
 
 #[no_mangle]
-extern "C" fn ping_short(
-	arg: i16
-) -> i16 {
+extern "C" fn nativekt_natives_testrs_testrs_ping_short(arg: i16) -> i16 {
 	crate::ping_short(arg)
 }
 
 #[no_mangle]
-extern "C" fn ping_ushort(
-	arg: u16
-) -> u16 {
+extern "C" fn nativekt_natives_testrs_testrs_ping_ushort(arg: u16) -> u16 {
 	crate::ping_ushort(arg)
 }
 
 #[no_mangle]
-extern "C" fn ping_int(
-	arg: i32
-) -> i32 {
+extern "C" fn nativekt_natives_testrs_testrs_ping_int(arg: i32) -> i32 {
 	crate::ping_int(arg)
 }
 
 #[no_mangle]
-extern "C" fn ping_uint(
-	arg: u32
-) -> u32 {
+extern "C" fn nativekt_natives_testrs_testrs_ping_uint(arg: u32) -> u32 {
 	crate::ping_uint(arg)
 }
 
 #[no_mangle]
-extern "C" fn ping_long(
-	arg: i64
-) -> i64 {
+extern "C" fn nativekt_natives_testrs_testrs_ping_long(arg: i64) -> i64 {
 	crate::ping_long(arg)
 }
 
 #[no_mangle]
-extern "C" fn ping_ulong(
-	arg: u64
-) -> u64 {
+extern "C" fn nativekt_natives_testrs_testrs_ping_ulong(arg: u64) -> u64 {
 	crate::ping_ulong(arg)
 }
 
 #[no_mangle]
-extern "C" fn ping_float(
-	arg: f32
-) -> f32 {
+extern "C" fn nativekt_natives_testrs_testrs_ping_float(arg: f32) -> f32 {
 	crate::ping_float(arg)
 }
 
 #[no_mangle]
-extern "C" fn ping_double(
-	arg: f64
-) -> f64 {
+extern "C" fn nativekt_natives_testrs_testrs_ping_double(arg: f64) -> f64 {
 	crate::ping_double(arg)
 }
 
 #[no_mangle]
-extern "C" fn ping_string(
-	arg: *const _KString
-) -> *const _KString {
+extern "C" fn nativekt_natives_testrs_testrs_ping_string(arg: *const _KString) -> *const _KString {
 	KString::unwrap(crate::ping_string(KString::wrap(arg)))
 }
 
 #[no_mangle]
-extern "C" fn ping_string_n(
-	arg: *const _KString
-) -> *const _KString {
+extern "C" fn nativekt_natives_testrs_testrs_ping_string_n(arg: *const _KString) -> *const _KString {
 	KString::unwrap_nullable(crate::ping_string_n(KString::wrap_nullable(arg)))
 }
 
 #[no_mangle]
-extern "C" fn ping_enum(
-	arg: i32
-) -> i32 {
+extern "C" fn nativekt_natives_testrs_testrs_ping_enum(arg: i32) -> i32 {
 	MyEnum::to_int(crate::ping_enum(MyEnum::from_int(arg)))
 }
 
 #[no_mangle]
-extern "C" fn ping_dictionary(
-	arg: *const _MyDictionary
-) -> *const _MyDictionary {
+extern "C" fn nativekt_natives_testrs_testrs_ping_dictionary(arg: *const _MyDictionary) -> *const _MyDictionary {
 	MyDictionary::unwrap(crate::ping_dictionary(MyDictionary::wrap(arg)))
 }
 
 #[no_mangle]
-extern "C" fn ping_dictionary_n(
-	arg: *const _MyDictionary
-) -> *const _MyDictionary {
+extern "C" fn nativekt_natives_testrs_testrs_ping_dictionary_n(arg: *const _MyDictionary) -> *const _MyDictionary {
 	MyDictionary::unwrap_nullable(crate::ping_dictionary_n(MyDictionary::wrap_nullable(arg)))
 }
 
 #[no_mangle]
-extern "C" fn callback_void(
-	arg: *const _VoidCallback
-) {
+extern "C" fn nativekt_natives_testrs_testrs_callback_void(arg: *const _VoidCallback) {
 	crate::callback_void(VoidCallback::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_void_n(
-	arg: *const _VoidCallback
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_void_n(arg: *const _VoidCallback) -> bool {
 	crate::callback_void_n(VoidCallback::wrap_nullable(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_char(
-	arg: *const _CallbackPassChar
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_char(arg: *const _CallbackPassChar) -> bool {
 	crate::callback_arg_char(CallbackPassChar::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_boolean(
-	arg: *const _CallbackPassBoolean
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_boolean(arg: *const _CallbackPassBoolean) -> bool {
 	crate::callback_arg_boolean(CallbackPassBoolean::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_byte(
-	arg: *const _CallbackPassByte
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_byte(arg: *const _CallbackPassByte) -> bool {
 	crate::callback_arg_byte(CallbackPassByte::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_ubyte(
-	arg: *const _CallbackPassUByte
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_ubyte(arg: *const _CallbackPassUByte) -> bool {
 	crate::callback_arg_ubyte(CallbackPassUByte::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_short(
-	arg: *const _CallbackPassShort
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_short(arg: *const _CallbackPassShort) -> bool {
 	crate::callback_arg_short(CallbackPassShort::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_ushort(
-	arg: *const _CallbackPassUShort
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_ushort(arg: *const _CallbackPassUShort) -> bool {
 	crate::callback_arg_ushort(CallbackPassUShort::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_int(
-	arg: *const _CallbackPassInt
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_int(arg: *const _CallbackPassInt) -> bool {
 	crate::callback_arg_int(CallbackPassInt::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_uint(
-	arg: *const _CallbackPassUInt
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_uint(arg: *const _CallbackPassUInt) -> bool {
 	crate::callback_arg_uint(CallbackPassUInt::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_long(
-	arg: *const _CallbackPassLong
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_long(arg: *const _CallbackPassLong) -> bool {
 	crate::callback_arg_long(CallbackPassLong::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_ulong(
-	arg: *const _CallbackPassULong
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_ulong(arg: *const _CallbackPassULong) -> bool {
 	crate::callback_arg_ulong(CallbackPassULong::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_float(
-	arg: *const _CallbackPassFloat
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_float(arg: *const _CallbackPassFloat) -> bool {
 	crate::callback_arg_float(CallbackPassFloat::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_double(
-	arg: *const _CallbackPassDouble
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_double(arg: *const _CallbackPassDouble) -> bool {
 	crate::callback_arg_double(CallbackPassDouble::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_string(
-	arg: *const _CallbackPassString
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_string(arg: *const _CallbackPassString) -> bool {
 	crate::callback_arg_string(CallbackPassString::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_string_n(
-	arg: *const _CallbackPassStringN
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_string_n(arg: *const _CallbackPassStringN) -> bool {
 	crate::callback_arg_string_n(CallbackPassStringN::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_callback(
-	pass: *const _VoidCallback,
-	arg: *const _CallbackPassCallback
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_callback(pass: *const _VoidCallback, arg: *const _CallbackPassCallback) -> bool {
 	crate::callback_arg_callback(VoidCallback::wrap(pass), CallbackPassCallback::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_callback_n(
-	arg: *const _CallbackPassCallbackN
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_callback_n(arg: *const _CallbackPassCallbackN) -> bool {
 	crate::callback_arg_callback_n(CallbackPassCallbackN::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_enum(
-	arg: *const _CallbackPassEnum
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_enum(arg: *const _CallbackPassEnum) -> bool {
 	crate::callback_arg_enum(CallbackPassEnum::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_dictionary(
-	arg: *const _CallbackPassDictionary
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_dictionary(arg: *const _CallbackPassDictionary) -> bool {
 	crate::callback_arg_dictionary(CallbackPassDictionary::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_dictionary_n(
-	arg: *const _CallbackPassDictionaryN
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_dictionary_n(arg: *const _CallbackPassDictionaryN) -> bool {
 	crate::callback_arg_dictionary_n(CallbackPassDictionaryN::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_char(
-	arg: *const _CallbackReturnChar
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_char(arg: *const _CallbackReturnChar) -> bool {
 	crate::callback_return_char(CallbackReturnChar::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_boolean(
-	arg: *const _CallbackReturnBoolean
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_boolean(arg: *const _CallbackReturnBoolean) -> bool {
 	crate::callback_return_boolean(CallbackReturnBoolean::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_byte(
-	arg: *const _CallbackReturnByte
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_byte(arg: *const _CallbackReturnByte) -> bool {
 	crate::callback_return_byte(CallbackReturnByte::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_ubyte(
-	arg: *const _CallbackReturnUByte
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_ubyte(arg: *const _CallbackReturnUByte) -> bool {
 	crate::callback_return_ubyte(CallbackReturnUByte::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_short(
-	arg: *const _CallbackReturnShort
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_short(arg: *const _CallbackReturnShort) -> bool {
 	crate::callback_return_short(CallbackReturnShort::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_ushort(
-	arg: *const _CallbackReturnUShort
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_ushort(arg: *const _CallbackReturnUShort) -> bool {
 	crate::callback_return_ushort(CallbackReturnUShort::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_int(
-	arg: *const _CallbackReturnInt
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_int(arg: *const _CallbackReturnInt) -> bool {
 	crate::callback_return_int(CallbackReturnInt::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_uint(
-	arg: *const _CallbackReturnUInt
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_uint(arg: *const _CallbackReturnUInt) -> bool {
 	crate::callback_return_uint(CallbackReturnUInt::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_long(
-	arg: *const _CallbackReturnLong
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_long(arg: *const _CallbackReturnLong) -> bool {
 	crate::callback_return_long(CallbackReturnLong::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_ulong(
-	arg: *const _CallbackReturnULong
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_ulong(arg: *const _CallbackReturnULong) -> bool {
 	crate::callback_return_ulong(CallbackReturnULong::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_float(
-	arg: *const _CallbackReturnFloat
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_float(arg: *const _CallbackReturnFloat) -> bool {
 	crate::callback_return_float(CallbackReturnFloat::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_double(
-	arg: *const _CallbackReturnDouble
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_double(arg: *const _CallbackReturnDouble) -> bool {
 	crate::callback_return_double(CallbackReturnDouble::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_string(
-	arg: *const _CallbackReturnString
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_string(arg: *const _CallbackReturnString) -> bool {
 	crate::callback_return_string(CallbackReturnString::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_string_n(
-	arg: *const _CallbackReturnStringN
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_string_n(arg: *const _CallbackReturnStringN) -> bool {
 	crate::callback_return_string_n(CallbackReturnStringN::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_callback(
-	arg: *const _CallbackReturnCallback
-) -> *const _VoidCallback {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_callback(arg: *const _CallbackReturnCallback) -> *const _VoidCallback {
 	VoidCallback::unwrap(crate::callback_return_callback(CallbackReturnCallback::wrap(arg)))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_callback_n(
-	arg: *const _CallbackReturnCallbackN
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_callback_n(arg: *const _CallbackReturnCallbackN) -> bool {
 	crate::callback_return_callback_n(CallbackReturnCallbackN::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_enum(
-	arg: *const _CallbackReturnEnum
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_enum(arg: *const _CallbackReturnEnum) -> bool {
 	crate::callback_return_enum(CallbackReturnEnum::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_dictionary(
-	arg: *const _CallbackReturnDictionary
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_dictionary(arg: *const _CallbackReturnDictionary) -> bool {
 	crate::callback_return_dictionary(CallbackReturnDictionary::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_dictionary_n(
-	arg: *const _CallbackReturnDictionaryN
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_dictionary_n(arg: *const _CallbackReturnDictionaryN) -> bool {
 	crate::callback_return_dictionary_n(CallbackReturnDictionaryN::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn pass_char_array(
-	arg: *const _KArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_char_array(arg: *const _KArray) -> bool {
 	crate::pass_char_array(KCharArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn pass_char_array_n(
-	arg: *const _KArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_char_array_n(arg: *const _KArray) -> bool {
 	crate::pass_char_array_n(KCharArray::wrap_nullable(arg))
 }
 
 #[no_mangle]
-extern "C" fn pass_boolean_array(
-	arg: *const _KArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_boolean_array(arg: *const _KArray) -> bool {
 	crate::pass_boolean_array(KBooleanArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn pass_byte_array(
-	arg: *const _KArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_byte_array(arg: *const _KArray) -> bool {
 	crate::pass_byte_array(KByteArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn pass_ubyte_array(
-	arg: *const _KArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_ubyte_array(arg: *const _KArray) -> bool {
 	crate::pass_ubyte_array(KUByteArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn pass_short_array(
-	arg: *const _KArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_short_array(arg: *const _KArray) -> bool {
 	crate::pass_short_array(KShortArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn pass_ushort_array(
-	arg: *const _KArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_ushort_array(arg: *const _KArray) -> bool {
 	crate::pass_ushort_array(KUShortArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn pass_int_array(
-	arg: *const _KArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_int_array(arg: *const _KArray) -> bool {
 	crate::pass_int_array(KIntArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn pass_uint_array(
-	arg: *const _KArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_uint_array(arg: *const _KArray) -> bool {
 	crate::pass_uint_array(KUIntArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn pass_long_array(
-	arg: *const _KArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_long_array(arg: *const _KArray) -> bool {
 	crate::pass_long_array(KLongArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn pass_ulong_array(
-	arg: *const _KArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_ulong_array(arg: *const _KArray) -> bool {
 	crate::pass_ulong_array(KULongArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn pass_float_array(
-	arg: *const _KArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_float_array(arg: *const _KArray) -> bool {
 	crate::pass_float_array(KFloatArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn pass_double_array(
-	arg: *const _KArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_double_array(arg: *const _KArray) -> bool {
 	crate::pass_double_array(KDoubleArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn pass_string_array(
-	arg: *const _KArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_string_array(arg: *const _KArray) -> bool {
 	crate::pass_string_array(KArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn pass_string_array_n(
-	arg: *const _KArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_string_array_n(arg: *const _KArray) -> bool {
 	crate::pass_string_array_n(KArrayOpt::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn pass_enum_array(
-	arg: *const _KArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_enum_array(arg: *const _KArray) -> bool {
 	crate::pass_enum_array(KIntArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn pass_dictionary_array(
-	arg: *const _KArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_dictionary_array(arg: *const _KArray) -> bool {
 	crate::pass_dictionary_array(KArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn pass_dictionary_array_n(
-	arg: *const _KArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_dictionary_array_n(arg: *const _KArray) -> bool {
 	crate::pass_dictionary_array_n(KArrayOpt::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn return_char_array() -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_return_char_array() -> *const _KArray {
 	KCharArray::unwrap(crate::return_char_array())
 }
 
 #[no_mangle]
-extern "C" fn return_char_array_n() -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_return_char_array_n() -> *const _KArray {
 	KCharArray::unwrap_nullable(crate::return_char_array_n())
 }
 
 #[no_mangle]
-extern "C" fn return_boolean_array() -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_return_boolean_array() -> *const _KArray {
 	KBooleanArray::unwrap(crate::return_boolean_array())
 }
 
 #[no_mangle]
-extern "C" fn return_byte_array() -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_return_byte_array() -> *const _KArray {
 	KByteArray::unwrap(crate::return_byte_array())
 }
 
 #[no_mangle]
-extern "C" fn return_ubyte_array() -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_return_ubyte_array() -> *const _KArray {
 	KUByteArray::unwrap(crate::return_ubyte_array())
 }
 
 #[no_mangle]
-extern "C" fn return_short_array() -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_return_short_array() -> *const _KArray {
 	KShortArray::unwrap(crate::return_short_array())
 }
 
 #[no_mangle]
-extern "C" fn return_ushort_array() -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_return_ushort_array() -> *const _KArray {
 	KUShortArray::unwrap(crate::return_ushort_array())
 }
 
 #[no_mangle]
-extern "C" fn return_int_array() -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_return_int_array() -> *const _KArray {
 	KIntArray::unwrap(crate::return_int_array())
 }
 
 #[no_mangle]
-extern "C" fn return_uint_array() -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_return_uint_array() -> *const _KArray {
 	KUIntArray::unwrap(crate::return_uint_array())
 }
 
 #[no_mangle]
-extern "C" fn return_long_array() -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_return_long_array() -> *const _KArray {
 	KLongArray::unwrap(crate::return_long_array())
 }
 
 #[no_mangle]
-extern "C" fn return_ulong_array() -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_return_ulong_array() -> *const _KArray {
 	KULongArray::unwrap(crate::return_ulong_array())
 }
 
 #[no_mangle]
-extern "C" fn return_float_array() -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_return_float_array() -> *const _KArray {
 	KFloatArray::unwrap(crate::return_float_array())
 }
 
 #[no_mangle]
-extern "C" fn return_double_array() -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_return_double_array() -> *const _KArray {
 	KDoubleArray::unwrap(crate::return_double_array())
 }
 
 #[no_mangle]
-extern "C" fn return_string_array() -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_return_string_array() -> *const _KArray {
 	KArray::unwrap(crate::return_string_array())
 }
 
 #[no_mangle]
-extern "C" fn return_string_array_n() -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_return_string_array_n() -> *const _KArray {
 	KArrayOpt::unwrap(crate::return_string_array_n())
 }
 
 #[no_mangle]
-extern "C" fn return_enum_array() -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_return_enum_array() -> *const _KArray {
 	KIntArray::unwrap(crate::return_enum_array())
 }
 
 #[no_mangle]
-extern "C" fn return_dictionary_array() -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_return_dictionary_array() -> *const _KArray {
 	KArray::unwrap(crate::return_dictionary_array())
 }
 
 #[no_mangle]
-extern "C" fn return_dictionary_array_n() -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_return_dictionary_array_n() -> *const _KArray {
 	KArrayOpt::unwrap(crate::return_dictionary_array_n())
 }
 
 #[no_mangle]
-extern "C" fn ping_char_array(
-	arg: *const _KArray
-) -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_ping_char_array(arg: *const _KArray) -> *const _KArray {
 	KCharArray::unwrap(crate::ping_char_array(KCharArray::wrap(arg)))
 }
 
 #[no_mangle]
-extern "C" fn ping_char_array_n(
-	arg: *const _KArray
-) -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_ping_char_array_n(arg: *const _KArray) -> *const _KArray {
 	KCharArray::unwrap_nullable(crate::ping_char_array_n(KCharArray::wrap_nullable(arg)))
 }
 
 #[no_mangle]
-extern "C" fn ping_boolean_array(
-	arg: *const _KArray
-) -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_ping_boolean_array(arg: *const _KArray) -> *const _KArray {
 	KBooleanArray::unwrap(crate::ping_boolean_array(KBooleanArray::wrap(arg)))
 }
 
 #[no_mangle]
-extern "C" fn ping_byte_array(
-	arg: *const _KArray
-) -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_ping_byte_array(arg: *const _KArray) -> *const _KArray {
 	KByteArray::unwrap(crate::ping_byte_array(KByteArray::wrap(arg)))
 }
 
 #[no_mangle]
-extern "C" fn ping_ubyte_array(
-	arg: *const _KArray
-) -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_ping_ubyte_array(arg: *const _KArray) -> *const _KArray {
 	KUByteArray::unwrap(crate::ping_ubyte_array(KUByteArray::wrap(arg)))
 }
 
 #[no_mangle]
-extern "C" fn ping_short_array(
-	arg: *const _KArray
-) -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_ping_short_array(arg: *const _KArray) -> *const _KArray {
 	KShortArray::unwrap(crate::ping_short_array(KShortArray::wrap(arg)))
 }
 
 #[no_mangle]
-extern "C" fn ping_ushort_array(
-	arg: *const _KArray
-) -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_ping_ushort_array(arg: *const _KArray) -> *const _KArray {
 	KUShortArray::unwrap(crate::ping_ushort_array(KUShortArray::wrap(arg)))
 }
 
 #[no_mangle]
-extern "C" fn ping_int_array(
-	arg: *const _KArray
-) -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_ping_int_array(arg: *const _KArray) -> *const _KArray {
 	KIntArray::unwrap(crate::ping_int_array(KIntArray::wrap(arg)))
 }
 
 #[no_mangle]
-extern "C" fn ping_uint_array(
-	arg: *const _KArray
-) -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_ping_uint_array(arg: *const _KArray) -> *const _KArray {
 	KUIntArray::unwrap(crate::ping_uint_array(KUIntArray::wrap(arg)))
 }
 
 #[no_mangle]
-extern "C" fn ping_long_array(
-	arg: *const _KArray
-) -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_ping_long_array(arg: *const _KArray) -> *const _KArray {
 	KLongArray::unwrap(crate::ping_long_array(KLongArray::wrap(arg)))
 }
 
 #[no_mangle]
-extern "C" fn ping_ulong_array(
-	arg: *const _KArray
-) -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_ping_ulong_array(arg: *const _KArray) -> *const _KArray {
 	KULongArray::unwrap(crate::ping_ulong_array(KULongArray::wrap(arg)))
 }
 
 #[no_mangle]
-extern "C" fn ping_float_array(
-	arg: *const _KArray
-) -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_ping_float_array(arg: *const _KArray) -> *const _KArray {
 	KFloatArray::unwrap(crate::ping_float_array(KFloatArray::wrap(arg)))
 }
 
 #[no_mangle]
-extern "C" fn ping_double_array(
-	arg: *const _KArray
-) -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_ping_double_array(arg: *const _KArray) -> *const _KArray {
 	KDoubleArray::unwrap(crate::ping_double_array(KDoubleArray::wrap(arg)))
 }
 
 #[no_mangle]
-extern "C" fn ping_string_array(
-	arg: *const _KArray
-) -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_ping_string_array(arg: *const _KArray) -> *const _KArray {
 	KArray::unwrap(crate::ping_string_array(KArray::wrap(arg)))
 }
 
 #[no_mangle]
-extern "C" fn ping_string_array_n(
-	arg: *const _KArray
-) -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_ping_string_array_n(arg: *const _KArray) -> *const _KArray {
 	KArrayOpt::unwrap(crate::ping_string_array_n(KArrayOpt::wrap(arg)))
 }
 
 #[no_mangle]
-extern "C" fn ping_enum_array(
-	arg: *const _KArray
-) -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_ping_enum_array(arg: *const _KArray) -> *const _KArray {
 	KIntArray::unwrap(crate::ping_enum_array(KIntArray::wrap(arg)))
 }
 
 #[no_mangle]
-extern "C" fn ping_dictionary_array(
-	arg: *const _KArray
-) -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_ping_dictionary_array(arg: *const _KArray) -> *const _KArray {
 	KArray::unwrap(crate::ping_dictionary_array(KArray::wrap(arg)))
 }
 
 #[no_mangle]
-extern "C" fn ping_dictionary_array_n(
-	arg: *const _KArray
-) -> *const _KArray {
+extern "C" fn nativekt_natives_testrs_testrs_ping_dictionary_array_n(arg: *const _KArray) -> *const _KArray {
 	KArrayOpt::unwrap(crate::ping_dictionary_array_n(KArrayOpt::wrap(arg)))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_char_array(
-	arg: *const _CallbackPassCharArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_char_array(arg: *const _CallbackPassCharArray) -> bool {
 	crate::callback_arg_char_array(CallbackPassCharArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_char_array_n(
-	arg: *const _CallbackPassCharArrayN
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_char_array_n(arg: *const _CallbackPassCharArrayN) -> bool {
 	crate::callback_arg_char_array_n(CallbackPassCharArrayN::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_boolean_array(
-	arg: *const _CallbackPassBooleanArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_boolean_array(arg: *const _CallbackPassBooleanArray) -> bool {
 	crate::callback_arg_boolean_array(CallbackPassBooleanArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_byte_array(
-	arg: *const _CallbackPassByteArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_byte_array(arg: *const _CallbackPassByteArray) -> bool {
 	crate::callback_arg_byte_array(CallbackPassByteArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_ubyte_array(
-	arg: *const _CallbackPassUByteArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_ubyte_array(arg: *const _CallbackPassUByteArray) -> bool {
 	crate::callback_arg_ubyte_array(CallbackPassUByteArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_short_array(
-	arg: *const _CallbackPassShortArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_short_array(arg: *const _CallbackPassShortArray) -> bool {
 	crate::callback_arg_short_array(CallbackPassShortArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_ushort_array(
-	arg: *const _CallbackPassUShortArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_ushort_array(arg: *const _CallbackPassUShortArray) -> bool {
 	crate::callback_arg_ushort_array(CallbackPassUShortArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_int_array(
-	arg: *const _CallbackPassIntArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_int_array(arg: *const _CallbackPassIntArray) -> bool {
 	crate::callback_arg_int_array(CallbackPassIntArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_uint_array(
-	arg: *const _CallbackPassUIntArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_uint_array(arg: *const _CallbackPassUIntArray) -> bool {
 	crate::callback_arg_uint_array(CallbackPassUIntArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_long_array(
-	arg: *const _CallbackPassLongArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_long_array(arg: *const _CallbackPassLongArray) -> bool {
 	crate::callback_arg_long_array(CallbackPassLongArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_ulong_array(
-	arg: *const _CallbackPassULongArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_ulong_array(arg: *const _CallbackPassULongArray) -> bool {
 	crate::callback_arg_ulong_array(CallbackPassULongArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_float_array(
-	arg: *const _CallbackPassFloatArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_float_array(arg: *const _CallbackPassFloatArray) -> bool {
 	crate::callback_arg_float_array(CallbackPassFloatArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_double_array(
-	arg: *const _CallbackPassDoubleArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_double_array(arg: *const _CallbackPassDoubleArray) -> bool {
 	crate::callback_arg_double_array(CallbackPassDoubleArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_string_array(
-	arg: *const _CallbackPassStringArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_string_array(arg: *const _CallbackPassStringArray) -> bool {
 	crate::callback_arg_string_array(CallbackPassStringArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_string_array_n(
-	arg: *const _CallbackPassStringArrayN
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_string_array_n(arg: *const _CallbackPassStringArrayN) -> bool {
 	crate::callback_arg_string_array_n(CallbackPassStringArrayN::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_enum_array(
-	arg: *const _CallbackPassEnumArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_enum_array(arg: *const _CallbackPassEnumArray) -> bool {
 	crate::callback_arg_enum_array(CallbackPassEnumArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_dictionary_array(
-	arg: *const _CallbackPassDictionaryArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_dictionary_array(arg: *const _CallbackPassDictionaryArray) -> bool {
 	crate::callback_arg_dictionary_array(CallbackPassDictionaryArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_arg_dictionary_array_n(
-	arg: *const _CallbackPassDictionaryArrayN
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_arg_dictionary_array_n(arg: *const _CallbackPassDictionaryArrayN) -> bool {
 	crate::callback_arg_dictionary_array_n(CallbackPassDictionaryArrayN::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_char_array(
-	arg: *const _CallbackReturnCharArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_char_array(arg: *const _CallbackReturnCharArray) -> bool {
 	crate::callback_return_char_array(CallbackReturnCharArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_char_array_n(
-	arg: *const _CallbackReturnCharArrayN
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_char_array_n(arg: *const _CallbackReturnCharArrayN) -> bool {
 	crate::callback_return_char_array_n(CallbackReturnCharArrayN::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_boolean_array(
-	arg: *const _CallbackReturnBooleanArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_boolean_array(arg: *const _CallbackReturnBooleanArray) -> bool {
 	crate::callback_return_boolean_array(CallbackReturnBooleanArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_byte_array(
-	arg: *const _CallbackReturnByteArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_byte_array(arg: *const _CallbackReturnByteArray) -> bool {
 	crate::callback_return_byte_array(CallbackReturnByteArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_ubyte_array(
-	arg: *const _CallbackReturnUByteArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_ubyte_array(arg: *const _CallbackReturnUByteArray) -> bool {
 	crate::callback_return_ubyte_array(CallbackReturnUByteArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_short_array(
-	arg: *const _CallbackReturnShortArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_short_array(arg: *const _CallbackReturnShortArray) -> bool {
 	crate::callback_return_short_array(CallbackReturnShortArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_ushort_array(
-	arg: *const _CallbackReturnUShortArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_ushort_array(arg: *const _CallbackReturnUShortArray) -> bool {
 	crate::callback_return_ushort_array(CallbackReturnUShortArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_int_array(
-	arg: *const _CallbackReturnIntArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_int_array(arg: *const _CallbackReturnIntArray) -> bool {
 	crate::callback_return_int_array(CallbackReturnIntArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_uint_array(
-	arg: *const _CallbackReturnUIntArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_uint_array(arg: *const _CallbackReturnUIntArray) -> bool {
 	crate::callback_return_uint_array(CallbackReturnUIntArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_long_array(
-	arg: *const _CallbackReturnLongArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_long_array(arg: *const _CallbackReturnLongArray) -> bool {
 	crate::callback_return_long_array(CallbackReturnLongArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_ulong_array(
-	arg: *const _CallbackReturnULongArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_ulong_array(arg: *const _CallbackReturnULongArray) -> bool {
 	crate::callback_return_ulong_array(CallbackReturnULongArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_float_array(
-	arg: *const _CallbackReturnFloatArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_float_array(arg: *const _CallbackReturnFloatArray) -> bool {
 	crate::callback_return_float_array(CallbackReturnFloatArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_double_array(
-	arg: *const _CallbackReturnDoubleArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_double_array(arg: *const _CallbackReturnDoubleArray) -> bool {
 	crate::callback_return_double_array(CallbackReturnDoubleArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_string_array(
-	arg: *const _CallbackReturnStringArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_string_array(arg: *const _CallbackReturnStringArray) -> bool {
 	crate::callback_return_string_array(CallbackReturnStringArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_string_array_n(
-	arg: *const _CallbackReturnStringArrayN
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_string_array_n(arg: *const _CallbackReturnStringArrayN) -> bool {
 	crate::callback_return_string_array_n(CallbackReturnStringArrayN::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_enum_array(
-	arg: *const _CallbackReturnEnumArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_enum_array(arg: *const _CallbackReturnEnumArray) -> bool {
 	crate::callback_return_enum_array(CallbackReturnEnumArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_dictionary_array(
-	arg: *const _CallbackReturnDictionaryArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_dictionary_array(arg: *const _CallbackReturnDictionaryArray) -> bool {
 	crate::callback_return_dictionary_array(CallbackReturnDictionaryArray::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn callback_return_dictionary_array_n(
-	arg: *const _CallbackReturnDictionaryArrayN
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_callback_return_dictionary_array_n(arg: *const _CallbackReturnDictionaryArrayN) -> bool {
 	crate::callback_return_dictionary_array_n(CallbackReturnDictionaryArrayN::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn pass_big_dictionary(
-	arg: *const _TypeDictionary
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_big_dictionary(arg: *const _TypeDictionary) -> bool {
 	crate::pass_big_dictionary(TypeDictionary::wrap(arg))
 }
 
 #[no_mangle]
-extern "C" fn return_big_dictionary(
-	callback: *const _VoidCallback
-) -> *const _TypeDictionary {
+extern "C" fn nativekt_natives_testrs_testrs_return_big_dictionary(callback: *const _VoidCallback) -> *const _TypeDictionary {
 	TypeDictionary::unwrap(crate::return_big_dictionary(VoidCallback::wrap(callback)))
 }
 
 #[no_mangle]
-extern "C" fn ping_big_dictionary(
-	arg: *const _TypeDictionary
-) -> *const _TypeDictionary {
+extern "C" fn nativekt_natives_testrs_testrs_ping_big_dictionary(arg: *const _TypeDictionary) -> *const _TypeDictionary {
 	TypeDictionary::unwrap(crate::ping_big_dictionary(TypeDictionary::wrap(arg)))
 }
 
 #[no_mangle]
-extern "C" fn pass_big_dictionary_n(
-	arg: *const _TypeDictionary
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_pass_big_dictionary_n(arg: *const _TypeDictionary) -> bool {
 	crate::pass_big_dictionary_n(TypeDictionary::wrap_nullable(arg))
 }
 
 #[no_mangle]
-extern "C" fn return_big_dictionary_n() -> *const _TypeDictionary {
+extern "C" fn nativekt_natives_testrs_testrs_return_big_dictionary_n() -> *const _TypeDictionary {
 	TypeDictionary::unwrap_nullable(crate::return_big_dictionary_n())
 }
 
 #[no_mangle]
-extern "C" fn ping_big_dictionary_n(
-	arg: *const _TypeDictionary
-) -> *const _TypeDictionary {
+extern "C" fn nativekt_natives_testrs_testrs_ping_big_dictionary_n(arg: *const _TypeDictionary) -> *const _TypeDictionary {
 	TypeDictionary::unwrap_nullable(crate::ping_big_dictionary_n(TypeDictionary::wrap_nullable(arg)))
 }
 
 #[no_mangle]
-extern "C" fn critical_primitives(
-	a1: u16,
-	a2: bool,
-	a3: i8,
-	a4: u8,
-	a5: i16,
-	a6: u16,
-	a7: i32,
-	a8: u32,
-	a9: i64,
-	a10: u64,
-	a11: f32,
-	a12: f64
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_critical_primitives(a1: u16, a2: bool, a3: i8, a4: u8, a5: i16, a6: u16, a7: i32, a8: u32, a9: i64, a10: u64, a11: f32, a12: f64) -> bool {
 	crate::critical_primitives(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12)
 }
 
 #[no_mangle]
-extern "C" fn critical_enum(
-	a1: i32
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_critical_enum(a1: i32) -> bool {
 	crate::critical_enum(MyEnum::from_int(a1))
 }
 
 #[no_mangle]
-extern "C" fn critical_string(
-	a1: *const _KString
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_critical_string(a1: *const _KString) -> bool {
 	crate::critical_string(KString::wrap(a1))
 }
 
 #[no_mangle]
-extern "C" fn critical_string_n(
-	a1: *const _KString
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_critical_string_n(a1: *const _KString) -> bool {
 	crate::critical_string_n(KString::wrap_nullable(a1))
 }
 
 #[no_mangle]
-extern "C" fn critical_primitives_array(
-	a1: *const _KArray,
-	a2: *const _KArray,
-	a3: *const _KArray,
-	a4: *const _KArray,
-	a5: *const _KArray,
-	a6: *const _KArray,
-	a7: *const _KArray,
-	a8: *const _KArray,
-	a9: *const _KArray,
-	a10: *const _KArray,
-	a11: *const _KArray,
-	a12: *const _KArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_critical_primitives_array(a1: *const _KArray, a2: *const _KArray, a3: *const _KArray, a4: *const _KArray, a5: *const _KArray, a6: *const _KArray, a7: *const _KArray, a8: *const _KArray, a9: *const _KArray, a10: *const _KArray, a11: *const _KArray, a12: *const _KArray) -> bool {
 	crate::critical_primitives_array(KCharArray::wrap(a1), KBooleanArray::wrap(a2), KByteArray::wrap(a3), KUByteArray::wrap(a4), KShortArray::wrap(a5), KUShortArray::wrap(a6), KIntArray::wrap(a7), KUIntArray::wrap(a8), KLongArray::wrap(a9), KULongArray::wrap(a10), KFloatArray::wrap(a11), KDoubleArray::wrap(a12))
 }
 
 #[no_mangle]
-extern "C" fn critical_enum_array(
-	a1: *const _KArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_critical_enum_array(a1: *const _KArray) -> bool {
 	crate::critical_enum_array(KIntArray::wrap(a1))
 }
 
 #[no_mangle]
-extern "C" fn critical_primitives_array_n(
-	a1: *const _KArray,
-	a2: *const _KArray,
-	a3: *const _KArray,
-	a4: *const _KArray,
-	a5: *const _KArray,
-	a6: *const _KArray,
-	a7: *const _KArray,
-	a8: *const _KArray,
-	a9: *const _KArray,
-	a10: *const _KArray,
-	a11: *const _KArray,
-	a12: *const _KArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_critical_primitives_array_n(a1: *const _KArray, a2: *const _KArray, a3: *const _KArray, a4: *const _KArray, a5: *const _KArray, a6: *const _KArray, a7: *const _KArray, a8: *const _KArray, a9: *const _KArray, a10: *const _KArray, a11: *const _KArray, a12: *const _KArray) -> bool {
 	crate::critical_primitives_array_n(KCharArray::wrap_nullable(a1), KBooleanArray::wrap_nullable(a2), KByteArray::wrap_nullable(a3), KUByteArray::wrap_nullable(a4), KShortArray::wrap_nullable(a5), KUShortArray::wrap_nullable(a6), KIntArray::wrap_nullable(a7), KUIntArray::wrap_nullable(a8), KLongArray::wrap_nullable(a9), KULongArray::wrap_nullable(a10), KFloatArray::wrap_nullable(a11), KDoubleArray::wrap_nullable(a12))
 }
 
 #[no_mangle]
-extern "C" fn critical_enum_array_n(
-	a1: *const _KArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_critical_enum_array_n(a1: *const _KArray) -> bool {
 	crate::critical_enum_array_n(KIntArray::wrap_nullable(a1))
 }
 
 #[no_mangle]
-extern "C" fn critical_return_char() -> u16 {
+extern "C" fn nativekt_natives_testrs_testrs_critical_return_char() -> u16 {
 	crate::critical_return_char()
 }
 
 #[no_mangle]
-extern "C" fn critical_return_boolean() -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_critical_return_boolean() -> bool {
 	crate::critical_return_boolean()
 }
 
 #[no_mangle]
-extern "C" fn critical_return_byte() -> i8 {
+extern "C" fn nativekt_natives_testrs_testrs_critical_return_byte() -> i8 {
 	crate::critical_return_byte()
 }
 
 #[no_mangle]
-extern "C" fn critical_return_ubyte() -> u8 {
+extern "C" fn nativekt_natives_testrs_testrs_critical_return_ubyte() -> u8 {
 	crate::critical_return_ubyte()
 }
 
 #[no_mangle]
-extern "C" fn critical_return_short() -> i16 {
+extern "C" fn nativekt_natives_testrs_testrs_critical_return_short() -> i16 {
 	crate::critical_return_short()
 }
 
 #[no_mangle]
-extern "C" fn critical_return_ushort() -> u16 {
+extern "C" fn nativekt_natives_testrs_testrs_critical_return_ushort() -> u16 {
 	crate::critical_return_ushort()
 }
 
 #[no_mangle]
-extern "C" fn critical_return_int() -> i32 {
+extern "C" fn nativekt_natives_testrs_testrs_critical_return_int() -> i32 {
 	crate::critical_return_int()
 }
 
 #[no_mangle]
-extern "C" fn critical_return_uint() -> u32 {
+extern "C" fn nativekt_natives_testrs_testrs_critical_return_uint() -> u32 {
 	crate::critical_return_uint()
 }
 
 #[no_mangle]
-extern "C" fn critical_return_long() -> i64 {
+extern "C" fn nativekt_natives_testrs_testrs_critical_return_long() -> i64 {
 	crate::critical_return_long()
 }
 
 #[no_mangle]
-extern "C" fn critical_return_ulong() -> u64 {
+extern "C" fn nativekt_natives_testrs_testrs_critical_return_ulong() -> u64 {
 	crate::critical_return_ulong()
 }
 
 #[no_mangle]
-extern "C" fn critical_return_float() -> f32 {
+extern "C" fn nativekt_natives_testrs_testrs_critical_return_float() -> f32 {
 	crate::critical_return_float()
 }
 
 #[no_mangle]
-extern "C" fn critical_return_double() -> f64 {
+extern "C" fn nativekt_natives_testrs_testrs_critical_return_double() -> f64 {
 	crate::critical_return_double()
 }
 
 #[no_mangle]
-extern "C" fn critical_return_enum() -> i32 {
+extern "C" fn nativekt_natives_testrs_testrs_critical_return_enum() -> i32 {
 	MyEnum::to_int(crate::critical_return_enum())
 }
 
 #[no_mangle]
-extern "C" fn jvmci1() -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_jvmci1() -> bool {
 	crate::jvmci1()
 }
 
 #[no_mangle]
-extern "C" fn jvmci2(
-	a1: i32
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_jvmci2(a1: i32) -> bool {
 	crate::jvmci2(a1)
 }
 
 #[no_mangle]
-extern "C" fn jvmci3(
-	a1: i32,
-	a2: i32
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_jvmci3(a1: i32, a2: i32) -> bool {
 	crate::jvmci3(a1, a2)
 }
 
 #[no_mangle]
-extern "C" fn jvmci4(
-	a1: i32,
-	a2: i32,
-	a3: i32,
-	a4: i32,
-	a5: i32,
-	a6: i32,
-	a7: i32,
-	a8: i32,
-	a9: i32
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_jvmci4(a1: i32, a2: i32, a3: i32, a4: i32, a5: i32, a6: i32, a7: i32, a8: i32, a9: i32) -> bool {
 	crate::jvmci4(a1, a2, a3, a4, a5, a6, a7, a8, a9)
 }
 
 #[no_mangle]
-extern "C" fn jvmci5(
-	a1: i32,
-	a2: i64,
-	a3: i32,
-	a4: i64,
-	a5: i32,
-	a6: i64,
-	a7: i32,
-	a8: i32,
-	a9: i64
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_jvmci5(a1: i32, a2: i64, a3: i32, a4: i64, a5: i32, a6: i64, a7: i32, a8: i32, a9: i64) -> bool {
 	crate::jvmci5(a1, a2, a3, a4, a5, a6, a7, a8, a9)
 }
 
 #[no_mangle]
-extern "C" fn jvmci6(
-	a1: f32,
-	a2: f32,
-	a3: f32,
-	a4: f32,
-	a5: f32,
-	a6: f32,
-	a7: f32,
-	a8: f32,
-	a9: f32,
-	a10: i32,
-	a11: i32,
-	a12: i32,
-	a13: i32
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_jvmci6(a1: f32, a2: f32, a3: f32, a4: f32, a5: f32, a6: f32, a7: f32, a8: f32, a9: f32, a10: i32, a11: i32, a12: i32, a13: i32) -> bool {
 	crate::jvmci6(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13)
 }
 
 #[no_mangle]
-extern "C" fn jvmci7(
-	a1: f32,
-	a2: f64,
-	a3: f32,
-	a4: f64,
-	a5: f32,
-	a6: f64,
-	a7: f32,
-	a8: f32,
-	a9: f64
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_jvmci7(a1: f32, a2: f64, a3: f32, a4: f64, a5: f32, a6: f64, a7: f32, a8: f32, a9: f64) -> bool {
 	crate::jvmci7(a1, a2, a3, a4, a5, a6, a7, a8, a9)
 }
 
 #[no_mangle]
-extern "C" fn jvmci8(
-	a1: i32,
-	a2: f64,
-	a3: f32,
-	a4: i64
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_jvmci8(a1: i32, a2: f64, a3: f32, a4: i64) -> bool {
 	crate::jvmci8(a1, a2, a3, a4)
 }
 
 #[no_mangle]
-extern "C" fn jvmci9(
-	a1: i32,
-	a2: f64,
-	a3: f32,
-	a4: i64,
-	a5: i64,
-	a6: f64,
-	a7: f32,
-	a8: f32,
-	a9: i32
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_jvmci9(a1: i32, a2: f64, a3: f32, a4: i64, a5: i64, a6: f64, a7: f32, a8: f32, a9: i32) -> bool {
 	crate::jvmci9(a1, a2, a3, a4, a5, a6, a7, a8, a9)
 }
 
 #[no_mangle]
-extern "C" fn jvmci10(
-	a1: *const _KString,
-	a2: f64,
-	a3: f32,
-	a4: i64,
-	a5: i64,
-	a6: f64,
-	a7: *const _KString,
-	a8: f32,
-	a9: i32
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_jvmci10(a1: *const _KString, a2: f64, a3: f32, a4: i64, a5: i64, a6: f64, a7: *const _KString, a8: f32, a9: i32) -> bool {
 	crate::jvmci10(KString::wrap(a1), a2, a3, a4, a5, a6, KString::wrap(a7), a8, a9)
 }
 
 #[no_mangle]
-extern "C" fn jvmci11(
-	a1: f32,
-	a2: i32,
-	a3: f32,
-	a4: i32,
-	a5: f32,
-	a6: i32,
-	a7: f32,
-	a8: i32,
-	a9: f32,
-	a10: i32,
-	a11: f32,
-	a12: i32,
-	a13: f32,
-	a14: i32,
-	a15: f32,
-	a16: i32,
-	a17: f32
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_jvmci11(a1: f32, a2: i32, a3: f32, a4: i32, a5: f32, a6: i32, a7: f32, a8: i32, a9: f32, a10: i32, a11: f32, a12: i32, a13: f32, a14: i32, a15: f32, a16: i32, a17: f32) -> bool {
 	crate::jvmci11(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17)
 }
 
 #[no_mangle]
-extern "C" fn jvmci12() -> i32 {
+extern "C" fn nativekt_natives_testrs_testrs_jvmci12() -> i32 {
 	crate::jvmci12()
 }
 
 #[no_mangle]
-extern "C" fn jvmci13() -> i64 {
+extern "C" fn nativekt_natives_testrs_testrs_jvmci13() -> i64 {
 	crate::jvmci13()
 }
 
 #[no_mangle]
-extern "C" fn jvmci14() -> f32 {
+extern "C" fn nativekt_natives_testrs_testrs_jvmci14() -> f32 {
 	crate::jvmci14()
 }
 
 #[no_mangle]
-extern "C" fn jvmci15() -> f64 {
+extern "C" fn nativekt_natives_testrs_testrs_jvmci15() -> f64 {
 	crate::jvmci15()
 }
 
 #[no_mangle]
-extern "C" fn jvmci_array(
-	array: *const _KArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_jvmci_array(array: *const _KArray) -> bool {
 	crate::jvmci_array(KIntArray::wrap(array))
 }
 
 #[no_mangle]
-extern "C" fn jvmci_some_arrays(
-	array1: *const _KArray,
-	array2: *const _KArray,
-	array3: *const _KArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_jvmci_some_arrays(array1: *const _KArray, array2: *const _KArray, array3: *const _KArray) -> bool {
 	crate::jvmci_some_arrays(KIntArray::wrap(array1), KFloatArray::wrap(array2), KDoubleArray::wrap(array3))
 }
 
 #[no_mangle]
-extern "C" fn jvmci_enum(
-	enum1: i32,
-	enum2: i32,
-	enum_array: *const _KArray
-) -> bool {
+extern "C" fn nativekt_natives_testrs_testrs_jvmci_enum(enum1: i32, enum2: i32, enum_array: *const _KArray) -> bool {
 	crate::jvmci_enum(MyEnum::from_int(enum1), MyEnum::from_int(enum2), KIntArray::wrap(enum_array))
 }

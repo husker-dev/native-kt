@@ -156,53 +156,78 @@ private abstract class PrepareNativesJs: DefaultTask() {
         val nativesBuildOutDir = File(nativesBuildOutDir)
         val projectDir = File(projectDir)
 
+        val jsMangle = buildList {
+            addAll(listOf(
+                "KString",
+                "KCharArray",
+                "KBooleanArray",
+                "KByteArray",
+                "KShortArray",
+                "KIntArray",
+                "KLongArray",
+                "KFloatArray",
+                "KDoubleArray",
+                "KArray",
+                *idl.dictionaries.values.map { it.name.upperCamelCase() }.toTypedArray()
+            ).flatMap {
+                listOf("${it}_free", "${it}_free_addr")
+            })
+            idl.globalOperators().mapTo(this) { it.name.snakeCase() }
+        }.mapIndexed { index, name ->
+            val sb = StringBuilder()
+            var n = index
+            do {
+                sb.insert(0, ('a'.code + n % 26).toChar())
+                n /= 26
+            } while (n > 0)
+            name to (sb.toString() + "_")
+        }.toMap()
+
         // Create Kotlin/JS bindings
         KotlinJsPrinter(
             idl = idl,
             target = File(kotlinFile),
+            jsMangle = jsMangle,
             classPath = moduleClasspath,
             moduleName = moduleName,
             useCoroutines = useCoroutines,
             expectActual = expectActual
         )
 
+        val useCFunctions = buildSystem is BuildSystem.CMake
+
         CApiHeaderPrinter(
             idl = idl,
             target = File(nativesBuildSourcesDir, "api.h"),
-            isInternal = true
+            classPath = moduleClasspath,
+            moduleName = moduleName,
+            isInternal = true,
+            cFunctions = useCFunctions
         )
         CApiImplPrinter(
             idl = idl,
-            target = File(nativesBuildSourcesDir, "api.c")
+            target = File(nativesBuildSourcesDir, "api.c"),
+            classPath = moduleClasspath,
+            moduleName = moduleName,
+            cFunctions = useCFunctions
         )
         CEmscriptenPrinter(
             idl = idl,
-            target = File(nativesBuildSourcesDir, "emscripten_bindings.c")
+            target = File(nativesBuildSourcesDir, "emscripten_bindings.c"),
+            jsMangle = jsMangle,
+            classPath = moduleClasspath,
+            moduleName = moduleName
         )
 
-        val exportedFunctions = buildList {
-            addAll(listOf(
-                "free",
-                "malloc",
-                "KString_free",
-                "KCharArray_free",
-                "KBooleanArray_free",
-                "KByteArray_free",
-                "KShortArray_free",
-                "KIntArray_free",
-                "KLongArray_free",
-                "KFloatArray_free",
-                "KDoubleArray_free",
-                "KArray_free"
-            ))
-            idl.dictionaries.values.mapTo(this) { "${it.name.upperCamelCase()}_free" }
-            idl.globalOperators().mapTo(this) { it.name.snakeCase() }
-        }.joinToString(separator = ",") { "_$it" }
+        val exportedFunctions = listOf(
+            "_free",
+            "_malloc"
+        )
 
         val runtimeFunctions = listOf(
             "UTF8ToString", "stringToUTF8", "lengthBytesUTF8",
             "HEAP8", "HEAP16", "HEAP32", "HEAPF32", "HEAPF64",
-            "addFunction", "wasmTable"
+            "addFunction"
         ).joinToString(separator = ",")
 
         // ASSERTIONS=2 -s SAFE_HEAP=1 -s STACK_OVERFLOW_CHECK=1
@@ -218,7 +243,7 @@ private abstract class PrepareNativesJs: DefaultTask() {
             emscriptenEnv?.joinToString(separator = ",", prefix = "ENVIRONMENT="),
 
             "EXPORTED_RUNTIME_METHODS=$runtimeFunctions",
-            "EXPORTED_FUNCTIONS=$exportedFunctions",
+            "EXPORTED_FUNCTIONS=${exportedFunctions.joinToString(separator = ",")}",
         ).joinToString(separator = " ") { "-s $it" }
 
         when(buildSystem) {

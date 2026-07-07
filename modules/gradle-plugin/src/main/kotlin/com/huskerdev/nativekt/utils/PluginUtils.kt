@@ -166,8 +166,6 @@ fun validateIDL(idl: IdlResolver) {
             is ResolvedIdlType.Union ->
                 throw UnsupportedOperationException("Union types are not supported: $type")
             is ResolvedIdlType.Default -> when(val declaration = type.declaration) {
-                is ResolvedIdlInterface ->
-                    throw UnsupportedOperationException("Interfaces are not supported yet: $type")
                 is BuiltinIdlDeclaration -> when(declaration.kind) {
                     ANY,
                     MUTABLE_LIST,
@@ -203,6 +201,7 @@ fun validateIDL(idl: IdlResolver) {
                     if(isInsideArray)
                         throw UnsupportedOperationException("Callback arrays are not supported yet")
                 }
+                is ResolvedIdlInterface,
                 is ResolvedIdlDictionary,
                 is ResolvedIdlEnum,
                 is ResolvedIdlNamespace,
@@ -224,9 +223,6 @@ fun validateIDL(idl: IdlResolver) {
         checkName(operation.name)
         operation.args.forEach { checkField(it) }
     }
-
-    if(idl.interfaces.isNotEmpty())
-        throw UnsupportedOperationException("Interfaces are not supported yet")
 
     idl.namespaces.values.forEach { namespace ->
         if(namespace.name != "global")

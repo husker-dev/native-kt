@@ -1,6 +1,7 @@
 package com.huskerdev.nativekt.utils
 
 import com.huskerdev.nativekt.TargetType
+import com.huskerdev.nativekt.plugin.NativeKtInfo
 import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.process.ExecOperations
 import java.io.File
@@ -187,4 +188,63 @@ internal fun getClangTargetArgs(
         )
         else -> emptyList()
     }
+}
+
+internal fun localizeSymbols(
+    execOps: ExecOperations,
+    nativesRootBuildDir: File,
+    lib: File,
+    symbols: List<String>
+) {
+    var ld = "ld"
+    var objcopy = "objcopy"
+    var ar = "ar"
+
+    // Unpack GNU tools on Windows (because clang64 tools in MinGW does not support COFF)
+    if(Os.isFamily(Os.FAMILY_WINDOWS)) {
+        fun unpack(name: String): String {
+            val file = File(nativesRootBuildDir, name)
+            if(!file.exists()) {
+                NativeKtInfo::class.java.getResourceAsStream("/com/huskerdev/nativekt/mingw64/$name").use { ins ->
+                    if (ins == null)
+                        throw NullPointerException("Can not find file in plugin resources: $name")
+                    file.parentFile.mkdirs()
+                    file.outputStream().use { ins.copyTo(it) }
+                }
+            }
+            return file.posixPath
+        }
+        ld = unpack("ld.exe")
+        ar = unpack("ar.exe")
+        objcopy = unpack("objcopy.exe")
+    }
+    val libDir = lib.parentFile
+    val tmpObjName = lib.nameWithoutExtension + "_merged.o"
+    val tmpSymbolsFile = File(libDir, "__symbols.txt")
+
+    // Write all symbols into .txt
+    tmpSymbolsFile.writeText(symbols.joinToString("\n"))
+
+    // Merge .a (a lot of .o) into one .o
+    execOps.exec(
+        "\"$ld\" -r -o $tmpObjName --whole-archive ${lib.name} --no-whole-archive",
+        workingDir = libDir
+    )
+
+    // Localize symbols
+    execOps.exec(
+        "\"$objcopy\" --localize-symbols=${tmpSymbolsFile.name} $tmpObjName",
+        workingDir = libDir
+    )
+
+    // Archive into .a
+    lib.delete()
+    execOps.exec(
+        "\"$ar\" rcs ${lib.name} $tmpObjName",
+        workingDir = libDir
+    )
+
+    // Remove symbols .txt and temporary .o
+    tmpSymbolsFile.delete()
+    File(libDir, tmpObjName).delete()
 }

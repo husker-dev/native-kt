@@ -39,6 +39,8 @@ object JVMCIUtils {
     val emptyDoubleArray = doubleArrayOf()
 
     fun linkNativeCall(method: Method, address: Long){
+        if(address == 0L)
+            throw NullPointerException("JVMCI: ${method.name} address is NULL")
         val convention = CallingConvention.current
 
         val jvmci = JVMCI.getRuntime().hostJVMCIBackend

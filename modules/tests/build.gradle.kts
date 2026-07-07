@@ -43,7 +43,12 @@ kotlin {
         }
     }
 
-    currentNativeTargets()
+    targets
+    currentNativeTargets {
+        compilerOptions {
+            freeCompilerArgs.addAll("-Xexpect-actual-classes")
+        }
+    }
 
     android {
         namespace = group.toString()

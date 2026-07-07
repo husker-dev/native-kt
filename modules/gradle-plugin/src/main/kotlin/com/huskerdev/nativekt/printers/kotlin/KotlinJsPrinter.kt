@@ -8,7 +8,8 @@ import java.io.File
 class KotlinJsPrinter(
     val idl: IdlResolver,
     target: File,
-    classPath: String,
+    val jsMangle: Map<String, String>,
+    val classPath: String,
     val moduleName: String,
     useCoroutines: Boolean,
     val expectActual: Boolean
@@ -312,7 +313,7 @@ class KotlinJsPrinter(
             freeFuncFor(function.type, "_result_native")
         else null
 
-        val call = "_module._${function.name.snakeCase()}($args)"
+        val call = "_module._${jsMangle[function.name.snakeCase()]}($args)"
 
         // === Print ===
 
@@ -369,14 +370,15 @@ class KotlinJsPrinter(
             "KDoubleArray",
             *idl.dictionaries.values.map { it.name }.toTypedArray()
         ).forEach {
-            append("\n\tfun _${it}_free(self: Int)")
-            append("\n\tfun _${it}_free_addr(): Int")
+            append("\n\tfun _${jsMangle["${it}_free"]}(self: Int)")
+            append("\n\tfun _${jsMangle["${it}_free_addr"]}(): Int")
         }
-        append("\n\tfun _KArray_free(self: Int, freeOp: Int)")
+        append("\n\tfun _${jsMangle["KArray_free"]}(self: Int, freeOp: Int)")
         append("\n\n")
 
         idl.globalOperators().forEach { function ->
-            append("\tfun _${function.name.snakeCase()}")
+            append("\tfun _${jsMangle[function.name.snakeCase()]}")
+
             function.args.joinTo(buffer, prefix = "(", postfix = ")") {
                 "${it.name.camelCase()}: ${it.type.toKtJsType()}"
             }
@@ -396,15 +398,15 @@ class KotlinJsPrinter(
         type.isCallback() -> "callbackFree(_module, $content)"
         type.isArray() -> type.arrayType { type ->
             when {
-                type.isPrimitive() -> "_module._${type.toCType(ignoreUnsigned = true)}Array_free($content)"
-                type.isEnum() -> "_module._KIntArray_free($content)"
+                type.isPrimitive() -> "_module._${jsMangle["${type.toCType(ignoreUnsigned = true)}Array_free"]}($content)"
+                type.isEnum() -> "_module._${jsMangle["KIntArray_free"]}($content)"
                 else -> {
-                    val fn = freeFuncFor(type, "").split("(")[0]
-                    "_module._KArray_free($content, ${fn}_addr())"
+                    val freeOp = jsMangle["${type.toCType(ptr = false)}_free_addr"]
+                    "_module._${jsMangle["KArray_free"]}($content, _module._$freeOp())"
                 }
             }
         }
-        else -> "_module._${type.toCType(ptr = false)}_free($content)"
+        else -> "_module._${jsMangle["${type.toCType(ptr = false)}_free"]}($content)"
     }
 
     private fun castToNative(

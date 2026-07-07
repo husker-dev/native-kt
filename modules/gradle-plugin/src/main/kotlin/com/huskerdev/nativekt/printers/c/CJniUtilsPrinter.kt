@@ -14,6 +14,7 @@ class CJniUtilsPrinter(
     val idl: IdlResolver,
     target: File,
     val classPath: String,
+    val moduleName: String,
     val name: String,
     val isAndroid: Boolean
 ) {
@@ -252,7 +253,7 @@ class CJniUtilsPrinter(
                 if(self == NULL)
                     return;
                 self->__flags |= K_FLAG_DATA_OWNER;
-            	KArray_free(self, free_op);
+            	${mangle("KArray_free")}(self, free_op);
             }
             
             jobjectArray JNI_to_kotlin_karray(
@@ -358,7 +359,7 @@ class CJniUtilsPrinter(
                 	if(self == NULL)
                 		return;
                 	self->__flags |= K_FLAG_DATA_OWNER;
-                	KIntArray_free(self);
+                	${mangle("KIntArray_free")}(self);
                 }
                 
                 jobjectArray JNI_to_kotlin_enum_array(
@@ -524,6 +525,9 @@ class CJniUtilsPrinter(
 
         target.writeText(builder.toString())
     }
+
+    fun mangle(name: String) =
+        com.huskerdev.nativekt.utils.mangle(classPath, moduleName, name)
 
     private fun printStructs(builder: StringBuilder) = builder.apply {
         append("\n")

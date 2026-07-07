@@ -15,6 +15,7 @@ import com.huskerdev.webidl.resolver.ResolvedIdlCallbackFunction
 import com.huskerdev.webidl.resolver.ResolvedIdlDictionary
 import com.huskerdev.webidl.resolver.ResolvedIdlEnum
 import com.huskerdev.webidl.resolver.ResolvedIdlField
+import com.huskerdev.webidl.resolver.ResolvedIdlInterface
 import com.huskerdev.webidl.resolver.ResolvedIdlType
 import org.gradle.internal.extensions.stdlib.capitalized
 import java.io.File
@@ -78,6 +79,11 @@ class KotlinCommonPrinter(
             idl.dictionaries.values.forEach { printDictionary(builder, it) }
         }
 
+        if(idl.interfaces.isNotEmpty()) {
+            printLabel(builder, "Interfaces")
+            idl.interfaces.values.forEach { printInterface(builder, it) }
+        }
+
         if(idl.callbacks.isNotEmpty()) {
             printLabel(builder, "Callbacks")
             val maxLength = idl.callbacks.values.maxOf { it.name.length }
@@ -120,6 +126,30 @@ class KotlinCommonPrinter(
 
         enum.elements.joinTo(builder, separator = ",\n\t")
 
+        append("\n}\n")
+    }
+
+    private fun printInterface(builder: StringBuilder, inter: ResolvedIdlInterface) = builder.apply {
+        append("\nexpect class ")
+        append(inter.name.upperCamelCase())
+        if (inter.implements != null)
+            append(": ").append(inter.implements!!.name.upperCamelCase())
+        append(" {")
+
+        if(inter.constructors.size == 1) {
+            append("\n\tconstructor(")
+            inter.constructors[0].args.joinTo(this) {
+                "${it.name.camelCase()}: ${it.type.toKotlinType()}"
+            }
+            append(")")
+        }
+        inter.operations.forEach { operation ->
+            append("\n\tfun ${operation.name.camelCase()}(")
+            operation.args.joinTo(this) {
+                "${it.name.camelCase()}: ${it.type.toKotlinType()}"
+            }
+            append(")")
+        }
         append("\n}\n")
     }
 

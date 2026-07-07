@@ -8,8 +8,11 @@ import kotlin.math.max
 class CApiHeaderPrinter(
     idl: IdlResolver,
     target: File,
+    val classPath: String,
+    val moduleName: String,
     val guardName: String? = null,
-    val isInternal: Boolean = false
+    val isInternal: Boolean = false,
+    val cFunctions: Boolean = false
 ) {
     private val defName = "KOTLIN_NATIVE_${guardName}_H"
 
@@ -19,7 +22,7 @@ class CApiHeaderPrinter(
         val builder = StringBuilder()
         printHeader(builder)
 
-        printLabel(builder, "stdlib")
+        printLabel(builder, "Types")
         printStdLib(builder)
 
         if(idl.callbacks.isNotEmpty() || idl.dictionaries.isNotEmpty()) {
@@ -51,7 +54,28 @@ class CApiHeaderPrinter(
         }
 
         printLabel(builder, "Functions")
-        idl.globalOperators().forEach { printFunction(builder, it) }
+        idl.globalOperators().forEach {
+            printFunction(builder, it)
+        }
+
+        // Critical wrappers
+        if(isInternal) {
+            idl.globalOperators().forEach {
+                if (it.isCriticalCapable() && (it.hasString() || it.hasArray())) {
+                    printCriticalFunction(builder, it)
+                }
+            }
+        }
+
+        if(isInternal) {
+            builder.append("\n")
+            printLabel(builder, "Interfaces")
+            idl.interfaces.values.forEach { inter ->
+                inter.toOperations(classPath, moduleName).forEach {
+                    printFunction(builder, it)
+                }
+            }
+        }
 
         if(idl.callbacks.isNotEmpty()) {
             builder.append("\n")
@@ -64,18 +88,37 @@ class CApiHeaderPrinter(
         target.writeText(builder.toString().replace("\n", System.lineSeparator()))
     }
 
-    private fun printFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
-        append("\n")
-        append(function.type.toCType(printNullable = true))
-        append(" ")
-        append(function.name.snakeCase())
-        append("(")
+    private fun mangle(name: String) =
+        mangle(classPath, moduleName, name)
 
-        function.args.joinTo(builder) {
+    private fun printFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
+        val name = function.name.snakeCase()
+        val type = function.type.toCType(printNullable = true)
+        val args = function.args.joinToString {
             "${it.type.toCType(printNullable = true)} ${it.name.snakeCase()}"
         }
 
-        append(");")
+        if(cFunctions)
+            append("\n$type $name($args);")
+        if (isInternal)
+            append("\nEXTERN_C DLL_EXPORT $type ${mangle(name)}($args);")
+    }
+
+    private fun printCriticalFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
+        val type = function.type.toCType(printNullable = true)
+        val args = function.args.flatMap {
+            val name = it.name.snakeCase()
+            when {
+                it.type.isString() -> listOf("const char* _Nonnull _arr_$name", "KInt _length_$name, KLong _size_$name")
+                it.type.isArray() -> {
+                    val type = (it.type as ResolvedIdlType.Default).arrayType { type -> type.toCType(enumAsInt = true) }
+                    listOf("$type* _Nonnull _arr_$name", "KInt _length_$name")
+                }
+                else -> listOf("${it.type.toCType(enumAsInt = true)} _arg_$name")
+            }
+        }.joinToString()
+        if(isInternal)
+            append("\nEXTERN_C DLL_EXPORT $type ${mangle(function.name)}_($args);")
     }
 
     private fun printEnum(builder: StringBuilder, enum: ResolvedIdlEnum) = builder.apply {
@@ -108,20 +151,29 @@ class CApiHeaderPrinter(
 
     private fun printStructFunctions(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
         val name = dictionary.name.upperCamelCase()
-
-        append("\n$name* _Nonnull ${name}_new(")
-
-        dictionary.allFields().joinTo(builder) { field ->
+        val args = dictionary.allFields().joinToString { field ->
             "${field.type.toCType(printNullable = true)} ${field.name.snakeCase()}"
         }
-        append(");")
 
-        append("\n$name* _Nullable ${name}_clone(const $name* _Nullable self);")
-        append("\nvoid ${name}_free($name* _Nullable self);")
-        if(isInternal) {
-            append("\nvoid _${name}_free_forced($name* _Nullable self);")
+        if(cFunctions) {
+            append("""
+                
+                $name* _Nonnull ${name}_new($args);
+                $name* _Nullable ${name}_clone(const $name* _Nullable self);
+                void ${name}_free($name* _Nullable self);
+                
+            """.trimIndent())
         }
-        append("\n")
+        if(isInternal) {
+            append("""
+                
+                EXTERN_C DLL_EXPORT $name* _Nonnull ${mangle("${name}_new")}($args);
+                EXTERN_C DLL_EXPORT $name* _Nullable ${mangle("${name}_clone")}(const $name* _Nullable self);
+                EXTERN_C DLL_EXPORT void ${mangle("${name}_free")}($name* _Nullable self);
+                EXTERN_C DLL_EXPORT void ${mangle("${name}_free_forced")}($name* _Nullable self);
+                
+            """.trimIndent())
+        }
     }
 
     private fun printCallbacks(builder: StringBuilder, callbacks: Collection<ResolvedIdlCallbackFunction>) = builder.apply {
@@ -185,8 +237,8 @@ class CApiHeaderPrinter(
         append("#undef KCallbackDef\n")
 
         if(isInternal) {
-            append("\nvoid _AbstractCallback_free(_AbstractCallback* _Nullable self);")
-            append("\nvoid __AbstractCallback_free_forced(_AbstractCallback* _Nullable self);\n")
+            append("\nvoid ${mangle("_AbstractCallback_free")}(_AbstractCallback* _Nullable self);")
+            append("\nvoid ${mangle("_AbstractCallback_free_forced")}(_AbstractCallback* _Nullable self);")
         }
     }
 
@@ -214,10 +266,6 @@ class CApiHeaderPrinter(
             #include <stdint.h>
             #include <stdbool.h>
             
-            #ifdef __cplusplus
-            extern "C" {
-            #endif
-            
             #define ARG_LENGTH(...) ARG_LENGTH__(__VA_ARGS__)
             #define ARG_LENGTH__(...) ARG_LENGTH_(,##__VA_ARGS__,                          \
                 63, 62, 61, 60, 59, 58, 57, 56, 55, 54, 53, 52, 51, 50, 49, 48, 47, 46, 45,\
@@ -235,6 +283,20 @@ class CApiHeaderPrinter(
         if(isInternal) {
             builder.append("""
                 
+                #ifdef __cplusplus
+                    #define EXTERN_C extern "C"
+                #else
+                    #define EXTERN_C
+                #endif
+                
+                #ifndef DLL_EXPORT
+                    #if defined(_WIN32) || defined(__CYGWIN__)
+                        #define DLL_EXPORT __declspec(dllexport)
+                    #else
+                        #define DLL_EXPORT __attribute__((visibility("default")))
+                    #endif
+                #endif
+                
                 #define K_FLAG_RELEASABLE 1
                 #define K_FLAG_DATA_OWNER 2
                 
@@ -246,14 +308,6 @@ class CApiHeaderPrinter(
     }
 
     private fun printFooter(builder: StringBuilder){
-        builder.append("""
-            
-            
-            #ifdef __cplusplus
-            }
-            #endif
-        """.trimIndent())
-
         if(guardName != null)
             builder.append("\n\n#endif // $defName")
     }
@@ -281,77 +335,103 @@ class CApiHeaderPrinter(
                 char __flags;
             } KString;
             
-            KString* _Nonnull KString_new(
-                const char* _Nonnull data, 
-                KInt length, 
-                size_t size, 
-                bool is_data_owner
-            );
-            KString* _Nullable KString_clone(const KString* _Nullable self);
-            void KString_free(KString* _Nullable self);
-            
-            #define KArrayDef(Name, Type)                                                \
-            typedef struct Name {                                                        \
-                const Type* _Nonnull elements;                                           \
-                size_t size;				                                             \
-                KInt length;				                                             \
-                char __flags;                                                            \
-            } Name;                                                                      \
-                                                                                         \
-            Name* _Nonnull Name##_new(                     \
-                const Type* _Nonnull elements,             \
-                const KInt length,                         \
-                bool is_data_owner                         \
-            );                                             \
-            Name* _Nonnull _##Name##_of(const int n, ...);
-            
-            KArrayDef(KCharArray,	 KChar          )
-            KArrayDef(KBooleanArray, KBoolean       )
-            KArrayDef(KByteArray,	 KByte          )
-            KArrayDef(KUByteArray,	 KUByte         )
-            KArrayDef(KShortArray,	 KShort         )
-            KArrayDef(KUShortArray,	 KUShort        )
-            KArrayDef(KIntArray,	 KInt           )
-            KArrayDef(KUIntArray,	 KUInt          )
-            KArrayDef(KLongArray,	 KLong          )
-            KArrayDef(KULongArray,	 KULong         )
-            KArrayDef(KFloatArray,	 KFloat         )
-            KArrayDef(KDoubleArray,  KDouble        )
-            KArrayDef(KArray,        void* _Nullable)
-            #undef KArrayDef
-            
-            #define KCharArray_of(...)    _KCharArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
-            #define KBooleanArray_of(...) _KBooleanArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
-            #define KByteArray_of(...)    _KByteArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
-            #define KUByteArray_of(...)   _KUByteArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
-            #define KShortArray_of(...)   _KShortArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
-            #define KUShortArray_of(...)  _KUShortArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
-            #define KIntArray_of(...)     _KIntArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
-            #define KUIntArray_of(...)    _KUIntArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
-            #define KFloatArray_of(...)   _KFloatArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
-            #define KDoubleArray_of(...)  _KDoubleArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
-            #define KArray_of(...)        _KArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
-            
-            #define KArrayCloneFreeDef(Name, Type)                    \
-            Name* _Nullable Name##_clone(const Name* _Nullable self); \
-            void Name##_free(Name* _Nullable self);
-            
-            KArrayCloneFreeDef(KCharArray,    KChar)
-            KArrayCloneFreeDef(KBooleanArray, KBoolean)
-            KArrayCloneFreeDef(KByteArray,    KByte)
-            KArrayCloneFreeDef(KUByteArray,   KUByte)
-            KArrayCloneFreeDef(KShortArray,   KShort)
-            KArrayCloneFreeDef(KUShortArray,  KUShort)
-            KArrayCloneFreeDef(KIntArray,     KInt)
-            KArrayCloneFreeDef(KUIntArray,    KUInt)
-            KArrayCloneFreeDef(KLongArray,    KLong)
-            KArrayCloneFreeDef(KULongArray,   KULong)
-            KArrayCloneFreeDef(KFloatArray,   KFloat)
-            KArrayCloneFreeDef(KDoubleArray,  KDouble)
-            #undef KArrayCloneFreeDef
-            
-            KArray* _Nullable KArray_clone(const KArray* _Nullable self, void* _Nullable (* _Nullable clone_op)(void* _Nullable));
-            void KArray_free(const KArray* _Nullable self, void (* _Nonnull free_op)(void* _Nonnull));
+        """.trimIndent())
+
+        if(cFunctions) {
+            append("""
+                
+                KString* _Nonnull KString_new(const char* _Nonnull data, KInt length, size_t size, bool is_data_owner);
+                KString* _Nullable KString_clone(const KString* _Nullable self);
+                void KString_free(KString* _Nullable self);
+                
+            """.trimIndent())
+        }
+        if(isInternal) {
+            append("""
+                
+                EXTERN_C DLL_EXPORT KString* _Nonnull ${mangle("KString_new")}(const char* _Nonnull data, KInt length, size_t size, bool is_data_owner);
+                EXTERN_C DLL_EXPORT KString* _Nullable ${mangle("KString_clone")}(const KString* _Nullable self);
+                EXTERN_C DLL_EXPORT void ${mangle("KString_free")}(KString* _Nullable self);
+                
+            """.trimIndent())
+        }
+
+        mapOf(
+            "KCharArray" to "KChar",
+            "KBooleanArray" to "KBoolean",
+            "KByteArray" to	"KByte",
+            "KUByteArray" to "KUByte",
+            "KShortArray" to "KShort",
+            "KUShortArray" to "KUShort",
+            "KIntArray" to "KInt",
+            "KUIntArray" to "KUInt",
+            "KLongArray" to "KLong",
+            "KULongArray" to "KULong",
+            "KFloatArray" to "KFloat",
+            "KDoubleArray" to "KDouble",
+            "KArray" to "void* _Nullable"
+        ).forEach {
+            val name = it.key
+            val type = it.value
+
+            append("""
+                
+                typedef struct $name {
+                    const $type* _Nonnull elements;
+                    size_t size;
+                    KInt length;
+                    char __flags;
+                } $name;
+                
+            """.trimIndent())
+
+            if(cFunctions) {
+                append("""
+                    
+                    $name* _Nonnull ${name}_new(const $type* _Nonnull elements, KInt length, bool is_data_owner);
+                    $name* _Nonnull ${name}_of_n(int n, ...);
+                
+                """.trimIndent())
+                if (name != "KArray") {
+                    append("""
+                        $name* _Nullable ${name}_clone(const $name* _Nullable self);
+                        void ${name}_free($name* _Nullable self);
+                    """.trimIndent())
+                } else {
+                    append("""
+                        KArray* _Nullable KArray_clone(const KArray* _Nullable self, void* _Nullable (* _Nullable clone_op)(void* _Nullable));
+                        void KArray_free(const KArray* _Nullable self, void (* _Nonnull free_op)(void* _Nonnull));
+                    """.trimIndent())
+                }
+                append("\n#define ${name}_of(...) ${name}_of_n(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)\n")
+            }
+
+            if(isInternal) {
+                append("""
+                    
+                    EXTERN_C DLL_EXPORT $name* _Nonnull ${mangle("${name}_new")}(const $type* _Nonnull elements, KInt length, bool is_data_owner);
+                    EXTERN_C DLL_EXPORT $name* _Nonnull ${mangle("${name}_of_n")}(int n, ...);
+
+                """.trimIndent())
+
+                if(name != "KArray"){
+                    append("""
+                        EXTERN_C DLL_EXPORT $name* _Nullable ${mangle("${name}_clone")}(const $name* _Nullable self);
+                        EXTERN_C DLL_EXPORT void ${mangle("${name}_free")}($name* _Nullable self);
+                        EXTERN_C DLL_EXPORT void ${mangle("${name}_free_forced")}($name* _Nullable self);
+                    """.trimIndent())
+                } else {
+                    append("""
+                        EXTERN_C DLL_EXPORT KArray* _Nullable ${mangle("KArray_clone")}(const KArray* _Nullable self, void* _Nullable (* _Nullable clone_op)(void* _Nullable));
+                        EXTERN_C DLL_EXPORT void ${mangle("KArray_free")}(const KArray* _Nullable self, void (* _Nonnull free_op)(void* _Nonnull));
+                        EXTERN_C DLL_EXPORT void ${mangle("KArray_free_forced")}(KArray* _Nullable self, void (* _Nonnull free_op)(void* _Nullable));
+                    """.trimIndent())
+                }
+            }
+
+            append("\n")
+        }
+        append("""
 
             #define KCallbackDef(Name, Type, ...)                                       \
             struct Name {                                                               \
@@ -364,75 +444,6 @@ class CApiHeaderPrinter(
             };
             
         """.trimIndent())
-
-        if(isInternal) {
-            arrayOf(
-                "KString",
-                "KCharArray",
-                "KBooleanArray",
-                "KByteArray",
-                "KUByteArray",
-                "KShortArray",
-                "KUShortArray",
-                "KIntArray",
-                "KUIntArray",
-                "KLongArray",
-                "KULongArray",
-                "KFloatArray",
-                "KDoubleArray"
-            ).joinTo(builder, separator = "") {
-                "\nvoid _${it}_free_forced($it* _Nullable self);"
-            }
-            append("\nvoid _KArray_free_forced(KArray* _Nullable self, void (* _Nonnull free_op)(void* _Nullable));")
-            append("\n")
-        }
     }
 }
 
-internal fun cloneFuncFor(
-    type: ResolvedIdlType,
-    content: String
-): String = when {
-    type.isArray() -> type.arrayType { type ->
-        when {
-            type.isPrimitive() -> "${type.toCType(ptr = false)}Array_clone($content)"
-            type.isEnum() -> "KIntArray_clone($content)"
-            else -> "KArray_clone($content, (void*) ${cloneFuncFor(type, "").dropLast(2)})"
-        }
-    }
-    type.isCallback() -> "$content->clone($content)"
-    type.isDictionary() || type.isString() -> "${type.toCType(ptr = false)}_clone($content)"
-    else -> content
-}
-
-internal fun freeFuncFor(
-    type: ResolvedIdlType,
-    content: String
-): String? = when {
-    type.isArray() -> type.arrayType { type ->
-        when {
-            type.isPrimitive() -> "${type.toCType(ptr = false)}Array_free($content)"
-            type.isEnum() -> "KIntArray_free($content)"
-            else -> "KArray_free($content, (void*) ${freeFuncFor(type, "")!!.dropLast(2)})"
-        }
-    }
-    type.isCallback() -> "_AbstractCallback_free((_AbstractCallback*) $content)"
-    type.isDictionary() || type.isString() -> "${type.toCType(ptr = false)}_free($content)"
-    else -> null
-}
-
-internal fun forceFreeFuncFor(
-    type: ResolvedIdlType,
-    content: String
-): String? = when {
-    type.isArray() -> type.arrayType { type ->
-        when {
-            type.isPrimitive() -> "_${type.toCType()}Array_free_forced($content)"
-            type.isEnum() -> "_KIntArray_free_forced($content)"
-            else -> "_KArray_free_forced($content, (void*) ${forceFreeFuncFor(type, "")!!.dropLast(2)})"
-        }
-    }
-    type.isCallback() -> "__AbstractCallback_free_forced((_AbstractCallback*) $content)"
-    type.isDictionary() || type.isString() -> "_${type.toCType(ptr = false)}_free_forced($content)"
-    else -> null
-}

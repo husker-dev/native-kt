@@ -6,7 +6,6 @@ import com.huskerdev.nativekt.plugin.NativeKtJvmInterface
 import com.huskerdev.nativekt.plugin.NativeProject
 import com.huskerdev.nativekt.printers.c.CApiHeaderPrinter
 import com.huskerdev.nativekt.printers.c.CApiImplPrinter
-import com.huskerdev.nativekt.printers.c.CExportedPrinter
 import com.huskerdev.nativekt.printers.c.CJniPrinter
 import com.huskerdev.nativekt.printers.c.CJniUtilsPrinter
 import com.huskerdev.nativekt.printers.kotlin.KotlinJvmPrinter
@@ -234,6 +233,7 @@ private abstract class PrepareNativesJvm: DefaultTask() {
                 idl = idl,
                 target = File(nativesBuildSourcesDir, "jni_utils.h"),
                 classPath = moduleClasspath,
+                moduleName = moduleName,
                 name = "${moduleName.capitalized()}JNI",
                 isAndroid = false
             )
@@ -242,6 +242,7 @@ private abstract class PrepareNativesJvm: DefaultTask() {
                 idl = idl,
                 target = File(nativesBuildSourcesDir, "jni_bindings.c"),
                 classPath = moduleClasspath,
+                moduleName = moduleName,
                 name = "${moduleName.capitalized()}JNI",
                 isAndroid = false,
                 isAndroidCriticalEnabled = false
@@ -278,25 +279,23 @@ private abstract class PrepareNativesJvm: DefaultTask() {
             }
         }
 
-        if(useForeignApi || useJVMCI) {
-            srcList += "externals.c"
-
-            CExportedPrinter(
-                idl = idl,
-                target = File(nativesBuildSourcesDir, "externals.c"),
-                classPath = moduleClasspath
-            )
-        }
+        val useCFunctions = buildSystem is BuildSystem.CMake
 
         CApiHeaderPrinter(
             idl = idl,
             target = File(nativesBuildSourcesDir, "api.h"),
-            isInternal = true
+            classPath = moduleClasspath,
+            moduleName = moduleName,
+            isInternal = true,
+            cFunctions = useCFunctions
         )
 
         CApiImplPrinter(
             idl = idl,
-            target = File(nativesBuildSourcesDir, "api.c")
+            target = File(nativesBuildSourcesDir, "api.c"),
+            classPath = moduleClasspath,
+            moduleName = moduleName,
+            cFunctions = useCFunctions
         )
 
         when(buildSystem) {
@@ -405,10 +404,11 @@ private abstract class CompileNativesJvm @Inject constructor(
                 clangCompile(execOps,
                     sources = sources,
                     includeDirs = includeDirs,
-                    linkerArgs = listOf(
+                    linkerArgs = listOfNotNull(
                         *rustLinkerFlags.toTypedArray(),
                         "-L$rustBuildDir",
-                        "-l$moduleName"
+                        "-l$moduleName",
+                        if(Os.isFamily(Os.FAMILY_WINDOWS)) "-Wl,--export-all-symbols" else null
                     ),
                     dynamicLib = true,
                     workingDir = nativesBuildOutDir

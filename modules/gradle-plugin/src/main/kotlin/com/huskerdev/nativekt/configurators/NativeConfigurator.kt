@@ -121,6 +121,8 @@ internal fun configureNative(
         it.inputs.file(module.getNDLFile(project))
         it.outputs.dirs(nativesBuildOutDir)
 
+        it.idl                    = Json.encodeToString(idl)
+
         it.moduleName             = module.name
         it.targetType             = targetType
 
@@ -195,18 +197,29 @@ private abstract class PrepareNativesKn @Inject constructor(
             idl = idl,
             target = headerFile,
             guardName = moduleName.uppercase(),
+            classPath = moduleClasspath,
+            moduleName = moduleName,
+            isInternal = true,
         )
 
         // Generate api sources
+        val useCFunctions = buildSystem is BuildSystem.CMake
+
         CApiHeaderPrinter(
             idl = idl,
             target = File(nativesBuildSourcesDir, "api.h"),
-            isInternal = true
+            classPath = moduleClasspath,
+            moduleName = moduleName,
+            isInternal = true,
+            cFunctions = useCFunctions
         )
 
         CApiImplPrinter(
             idl = idl,
-            target = File(nativesBuildSourcesDir, "api.c")
+            target = File(nativesBuildSourcesDir, "api.c"),
+            classPath = moduleClasspath,
+            moduleName = moduleName,
+            cFunctions = useCFunctions
         )
 
         when(val buildSystem = buildSystem) {
@@ -293,6 +306,7 @@ private abstract class PrepareNativesKn @Inject constructor(
 private abstract class CompileNativesKn @Inject constructor(
     private val execOps: ExecOperations,
 ): DefaultTask() {
+    @get:Input abstract var idl: String
     @get:Input abstract var moduleName: String
 
     @get:Input abstract var targetType: TargetType
@@ -309,12 +323,20 @@ private abstract class CompileNativesKn @Inject constructor(
 
     @TaskAction
     fun action() {
+        val idl = Json.decodeFromString<IdlResolver>(idl)
+
         val nativesBuildSourcesDir = File(nativesBuildSourcesDir)
         val nativesBuildOutDir = File(nativesBuildOutDir)
 
         when(val buildSystem = buildSystem) {
             is BuildSystem.CMake -> {
                 cmakeBuild(execOps, File(nativesBuildSourcesDir, "cmake"))
+
+                localizeSymbols(execOps,
+                    nativesBuildOutDir.parentFile,
+                    File(nativesBuildOutDir, "liblibstatic_$moduleName.a"),
+                    symbols = idl.globalOperators().map { it.name.snakeCase() }
+                )
             }
             is BuildSystem.Cargo -> {
                 cargoBuild(execOps,

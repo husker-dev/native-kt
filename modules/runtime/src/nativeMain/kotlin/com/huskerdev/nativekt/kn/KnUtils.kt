@@ -18,11 +18,6 @@ const val K_FLAG_DATA_OWNER = 2
 // ║     String     ║
 // ╚════════════════╝
 
-val _handleKStringFree = staticCFunction<COpaquePointer?, Unit> {
-    if(it == null) return@staticCFunction
-    KString_free(it.reinterpret())
-}
-
 fun MemScope.toNativeKStringOnArena(str: String?, pin: Boolean = false): CPointer<KString>? {
     contract {
         (str != null).implies(returnsNotNull())

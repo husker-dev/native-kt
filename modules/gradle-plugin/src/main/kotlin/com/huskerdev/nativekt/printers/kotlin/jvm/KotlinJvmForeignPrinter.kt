@@ -8,16 +8,13 @@ class KotlinJvmForeignPrinter(
     idl: IdlResolver,
     builder: StringBuilder,
     val classPath: String,
+    val moduleName: String,
     val name: String = "Foreign",
     parentClass: String? = null,
     val indent: String = ""
 ) {
     init {
-        builder.append("${indent}private class ")
-        builder.append(name)
-        builder.append("(libraryPath: String, prefix: String = \"EXPORTED_")
-        builder.append(classPath.replace(".", "_"))
-        builder.append("_\")")
+        builder.append("${indent}private class $name(libraryPath: String)")
         if(parentClass != null)
             builder.append(": $parentClass")
         builder.append(" {\n\n")
@@ -38,7 +35,7 @@ class KotlinJvmForeignPrinter(
         builder.append($$"""
             private val handle = SymbolLookup.libraryLookup(java.nio.file.Paths.get(libraryPath), Arena.global())
             
-            private val addressKArrayFree = address(handle, "${prefix}karray_free")
+            private val addressKArrayFree = address(handle, "$${mangle("karray_free")}")
             private val handleKArrayFree = handle(addressKArrayFree, false, null, ValueLayout.ADDRESS, ValueLayout.ADDRESS)
             
         """.replaceIndent("\t"))
@@ -55,7 +52,7 @@ class KotlinJvmForeignPrinter(
             ))
             idl.dictionaries.values.mapTo(this) { it.name }
         }.forEach {
-            builder.append("\n\tprivate val address${it.capitalized()}Free = address(handle, \"\${prefix}${it.snakeCase()}_free\")")
+            builder.append("\n\tprivate val address${it.capitalized()}Free = address(handle, \"${mangle("${it}_free")}\")")
             builder.append("\n\tprivate val handle${it.capitalized()}Free = handle(address${it.capitalized()}Free, false, null, ValueLayout.ADDRESS)\n")
         }
         builder.append("\n")
@@ -76,6 +73,9 @@ class KotlinJvmForeignPrinter(
         }
         builder.append("${indent}}")
     }
+
+    fun mangle(name: String) =
+        mangle(classPath, moduleName, name)
 
     private fun printDictionaryLayout(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
         append("$indent\t\tprivate val layout${dictionary.name.upperCamelCase()} = CStructLayout(")
@@ -135,8 +135,7 @@ class KotlinJvmForeignPrinter(
 
         append("${indent}\tprivate val handle")
         append(function.name.upperCamelCase())
-        append($$" = lookup(handle, \"${prefix}")
-        append(function.name.snakeCase())
+        append($$" = lookup(handle, \"$${mangle(function.name)}")
         if(isCriticalAlt)
             append("_")
         append("\", ${function.isCritical()}, ")

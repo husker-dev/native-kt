@@ -10,6 +10,7 @@ import java.io.File
 
 abstract class InitTask: DefaultTask() {
     @get:Input abstract var dir: String
+    @get:Input abstract var moduleClasspath: String
     @get:Input abstract var moduleName: String
 
     init {
@@ -59,6 +60,8 @@ abstract class InitTask: DefaultTask() {
             CApiHeaderPrinter(
                 idl = idl,
                 target = File(dir, "include/api.h"),
+                classPath = moduleClasspath,
+                moduleName = moduleName,
                 guardName = moduleName.uppercase()
             )
         }

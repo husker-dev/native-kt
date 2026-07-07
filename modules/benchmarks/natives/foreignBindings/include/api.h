@@ -13,10 +13,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #define ARG_LENGTH(...) ARG_LENGTH__(__VA_ARGS__)
 #define ARG_LENGTH__(...) ARG_LENGTH_(,##__VA_ARGS__,                          \
     63, 62, 61, 60, 59, 58, 57, 56, 55, 54, 53, 52, 51, 50, 49, 48, 47, 46, 45,\
@@ -29,9 +25,9 @@ extern "C" {
     _22, _21, _20, _19, _18, _17, _16, _15, _14, _13, _12, _11, _10, _9, _8,   \
     _7, _6, _5, _4, _3, _2, _1, Count, ...) Count
 
-// ╔════════════════╗
-// ║     stdlib     ║
-// ╚════════════════╝
+// ╔═══════════════╗
+// ║     Types     ║
+// ╚═══════════════╝
 
 typedef int32_t  KInt;
 typedef uint32_t KUInt;
@@ -53,77 +49,191 @@ typedef struct KString {
     char __flags;
 } KString;
 
-KString* _Nonnull KString_new(
-    const char* _Nonnull data, 
-    KInt length, 
-    size_t size, 
-    bool is_data_owner
-);
+KString* _Nonnull KString_new(const char* _Nonnull data, KInt length, size_t size, bool is_data_owner);
 KString* _Nullable KString_clone(const KString* _Nullable self);
 void KString_free(KString* _Nullable self);
 
-#define KArrayDef(Name, Type)                                                \
-typedef struct Name {                                                        \
-    const Type* _Nonnull elements;                                           \
-    size_t size;				                                             \
-    KInt length;				                                             \
-    char __flags;                                                            \
-} Name;                                                                      \
-                                                                             \
-Name* _Nonnull Name##_new(                     \
-    const Type* _Nonnull elements,             \
-    const KInt length,                         \
-    bool is_data_owner                         \
-);                                             \
-Name* _Nonnull _##Name##_of(const int n, ...);
+typedef struct KCharArray {
+    const KChar* _Nonnull elements;
+    size_t size;
+    KInt length;
+    char __flags;
+} KCharArray;
 
-KArrayDef(KCharArray,	 KChar          )
-KArrayDef(KBooleanArray, KBoolean       )
-KArrayDef(KByteArray,	 KByte          )
-KArrayDef(KUByteArray,	 KUByte         )
-KArrayDef(KShortArray,	 KShort         )
-KArrayDef(KUShortArray,	 KUShort        )
-KArrayDef(KIntArray,	 KInt           )
-KArrayDef(KUIntArray,	 KUInt          )
-KArrayDef(KLongArray,	 KLong          )
-KArrayDef(KULongArray,	 KULong         )
-KArrayDef(KFloatArray,	 KFloat         )
-KArrayDef(KDoubleArray,  KDouble        )
-KArrayDef(KArray,        void* _Nullable)
-#undef KArrayDef
+KCharArray* _Nonnull KCharArray_new(const KChar* _Nonnull elements, KInt length, bool is_data_owner);
+KCharArray* _Nonnull KCharArray_of_n(int n, ...);
+KCharArray* _Nullable KCharArray_clone(const KCharArray* _Nullable self);
+void KCharArray_free(KCharArray* _Nullable self);
+#define KCharArray_of(...) KCharArray_of_n(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
 
-#define KCharArray_of(...)    _KCharArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
-#define KBooleanArray_of(...) _KBooleanArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
-#define KByteArray_of(...)    _KByteArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
-#define KUByteArray_of(...)   _KUByteArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
-#define KShortArray_of(...)   _KShortArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
-#define KUShortArray_of(...)  _KUShortArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
-#define KIntArray_of(...)     _KIntArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
-#define KUIntArray_of(...)    _KUIntArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
-#define KFloatArray_of(...)   _KFloatArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
-#define KDoubleArray_of(...)  _KDoubleArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
-#define KArray_of(...)        _KArray_of(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
 
-#define KArrayCloneFreeDef(Name, Type)                    \
-Name* _Nullable Name##_clone(const Name* _Nullable self); \
-void Name##_free(Name* _Nullable self);
+typedef struct KBooleanArray {
+    const KBoolean* _Nonnull elements;
+    size_t size;
+    KInt length;
+    char __flags;
+} KBooleanArray;
 
-KArrayCloneFreeDef(KCharArray,    KChar)
-KArrayCloneFreeDef(KBooleanArray, KBoolean)
-KArrayCloneFreeDef(KByteArray,    KByte)
-KArrayCloneFreeDef(KUByteArray,   KUByte)
-KArrayCloneFreeDef(KShortArray,   KShort)
-KArrayCloneFreeDef(KUShortArray,  KUShort)
-KArrayCloneFreeDef(KIntArray,     KInt)
-KArrayCloneFreeDef(KUIntArray,    KUInt)
-KArrayCloneFreeDef(KLongArray,    KLong)
-KArrayCloneFreeDef(KULongArray,   KULong)
-KArrayCloneFreeDef(KFloatArray,   KFloat)
-KArrayCloneFreeDef(KDoubleArray,  KDouble)
-#undef KArrayCloneFreeDef
+KBooleanArray* _Nonnull KBooleanArray_new(const KBoolean* _Nonnull elements, KInt length, bool is_data_owner);
+KBooleanArray* _Nonnull KBooleanArray_of_n(int n, ...);
+KBooleanArray* _Nullable KBooleanArray_clone(const KBooleanArray* _Nullable self);
+void KBooleanArray_free(KBooleanArray* _Nullable self);
+#define KBooleanArray_of(...) KBooleanArray_of_n(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
 
+
+typedef struct KByteArray {
+    const KByte* _Nonnull elements;
+    size_t size;
+    KInt length;
+    char __flags;
+} KByteArray;
+
+KByteArray* _Nonnull KByteArray_new(const KByte* _Nonnull elements, KInt length, bool is_data_owner);
+KByteArray* _Nonnull KByteArray_of_n(int n, ...);
+KByteArray* _Nullable KByteArray_clone(const KByteArray* _Nullable self);
+void KByteArray_free(KByteArray* _Nullable self);
+#define KByteArray_of(...) KByteArray_of_n(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
+
+
+typedef struct KUByteArray {
+    const KUByte* _Nonnull elements;
+    size_t size;
+    KInt length;
+    char __flags;
+} KUByteArray;
+
+KUByteArray* _Nonnull KUByteArray_new(const KUByte* _Nonnull elements, KInt length, bool is_data_owner);
+KUByteArray* _Nonnull KUByteArray_of_n(int n, ...);
+KUByteArray* _Nullable KUByteArray_clone(const KUByteArray* _Nullable self);
+void KUByteArray_free(KUByteArray* _Nullable self);
+#define KUByteArray_of(...) KUByteArray_of_n(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
+
+
+typedef struct KShortArray {
+    const KShort* _Nonnull elements;
+    size_t size;
+    KInt length;
+    char __flags;
+} KShortArray;
+
+KShortArray* _Nonnull KShortArray_new(const KShort* _Nonnull elements, KInt length, bool is_data_owner);
+KShortArray* _Nonnull KShortArray_of_n(int n, ...);
+KShortArray* _Nullable KShortArray_clone(const KShortArray* _Nullable self);
+void KShortArray_free(KShortArray* _Nullable self);
+#define KShortArray_of(...) KShortArray_of_n(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
+
+
+typedef struct KUShortArray {
+    const KUShort* _Nonnull elements;
+    size_t size;
+    KInt length;
+    char __flags;
+} KUShortArray;
+
+KUShortArray* _Nonnull KUShortArray_new(const KUShort* _Nonnull elements, KInt length, bool is_data_owner);
+KUShortArray* _Nonnull KUShortArray_of_n(int n, ...);
+KUShortArray* _Nullable KUShortArray_clone(const KUShortArray* _Nullable self);
+void KUShortArray_free(KUShortArray* _Nullable self);
+#define KUShortArray_of(...) KUShortArray_of_n(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
+
+
+typedef struct KIntArray {
+    const KInt* _Nonnull elements;
+    size_t size;
+    KInt length;
+    char __flags;
+} KIntArray;
+
+KIntArray* _Nonnull KIntArray_new(const KInt* _Nonnull elements, KInt length, bool is_data_owner);
+KIntArray* _Nonnull KIntArray_of_n(int n, ...);
+KIntArray* _Nullable KIntArray_clone(const KIntArray* _Nullable self);
+void KIntArray_free(KIntArray* _Nullable self);
+#define KIntArray_of(...) KIntArray_of_n(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
+
+
+typedef struct KUIntArray {
+    const KUInt* _Nonnull elements;
+    size_t size;
+    KInt length;
+    char __flags;
+} KUIntArray;
+
+KUIntArray* _Nonnull KUIntArray_new(const KUInt* _Nonnull elements, KInt length, bool is_data_owner);
+KUIntArray* _Nonnull KUIntArray_of_n(int n, ...);
+KUIntArray* _Nullable KUIntArray_clone(const KUIntArray* _Nullable self);
+void KUIntArray_free(KUIntArray* _Nullable self);
+#define KUIntArray_of(...) KUIntArray_of_n(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
+
+
+typedef struct KLongArray {
+    const KLong* _Nonnull elements;
+    size_t size;
+    KInt length;
+    char __flags;
+} KLongArray;
+
+KLongArray* _Nonnull KLongArray_new(const KLong* _Nonnull elements, KInt length, bool is_data_owner);
+KLongArray* _Nonnull KLongArray_of_n(int n, ...);
+KLongArray* _Nullable KLongArray_clone(const KLongArray* _Nullable self);
+void KLongArray_free(KLongArray* _Nullable self);
+#define KLongArray_of(...) KLongArray_of_n(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
+
+
+typedef struct KULongArray {
+    const KULong* _Nonnull elements;
+    size_t size;
+    KInt length;
+    char __flags;
+} KULongArray;
+
+KULongArray* _Nonnull KULongArray_new(const KULong* _Nonnull elements, KInt length, bool is_data_owner);
+KULongArray* _Nonnull KULongArray_of_n(int n, ...);
+KULongArray* _Nullable KULongArray_clone(const KULongArray* _Nullable self);
+void KULongArray_free(KULongArray* _Nullable self);
+#define KULongArray_of(...) KULongArray_of_n(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
+
+
+typedef struct KFloatArray {
+    const KFloat* _Nonnull elements;
+    size_t size;
+    KInt length;
+    char __flags;
+} KFloatArray;
+
+KFloatArray* _Nonnull KFloatArray_new(const KFloat* _Nonnull elements, KInt length, bool is_data_owner);
+KFloatArray* _Nonnull KFloatArray_of_n(int n, ...);
+KFloatArray* _Nullable KFloatArray_clone(const KFloatArray* _Nullable self);
+void KFloatArray_free(KFloatArray* _Nullable self);
+#define KFloatArray_of(...) KFloatArray_of_n(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
+
+
+typedef struct KDoubleArray {
+    const KDouble* _Nonnull elements;
+    size_t size;
+    KInt length;
+    char __flags;
+} KDoubleArray;
+
+KDoubleArray* _Nonnull KDoubleArray_new(const KDouble* _Nonnull elements, KInt length, bool is_data_owner);
+KDoubleArray* _Nonnull KDoubleArray_of_n(int n, ...);
+KDoubleArray* _Nullable KDoubleArray_clone(const KDoubleArray* _Nullable self);
+void KDoubleArray_free(KDoubleArray* _Nullable self);
+#define KDoubleArray_of(...) KDoubleArray_of_n(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
+
+
+typedef struct KArray {
+    const void* _Nullable* _Nonnull elements;
+    size_t size;
+    KInt length;
+    char __flags;
+} KArray;
+
+KArray* _Nonnull KArray_new(const void* _Nullable* _Nonnull elements, KInt length, bool is_data_owner);
+KArray* _Nonnull KArray_of_n(int n, ...);
 KArray* _Nullable KArray_clone(const KArray* _Nullable self, void* _Nullable (* _Nullable clone_op)(void* _Nullable));
 void KArray_free(const KArray* _Nullable self, void (* _Nonnull free_op)(void* _Nonnull));
+#define KArray_of(...) KArray_of_n(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
+
 
 #define KCallbackDef(Name, Type, ...)                                       \
 struct Name {                                                               \
@@ -145,9 +255,5 @@ KInt call_foreign_string(KString* _Nonnull arg);
 KInt call_critical_foreign();
 KInt call_critical_foreign_add(KInt a, KInt b);
 KInt call_critical_foreign_string(KString* _Nonnull arg);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif // KOTLIN_NATIVE_FOREIGNBINDINGS_H

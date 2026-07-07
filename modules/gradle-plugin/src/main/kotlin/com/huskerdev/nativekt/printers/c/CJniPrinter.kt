@@ -9,6 +9,7 @@ class CJniPrinter(
     val idl: IdlResolver,
     target: File,
     val classPath: String,
+    val moduleName: String,
     val name: String = "JNI",
     val isAndroid: Boolean,
     val isAndroidCriticalEnabled: Boolean
@@ -145,7 +146,7 @@ class CJniPrinter(
                 "__jvm_${it.name.snakeCase()}"
             else "__native_${it.name.snakeCase()}"
         }
-        val call = "${function.name.snakeCase()}($args)"
+        val call = "${mangle(classPath, moduleName, function.name)}($args)"
 
         if(returns) {
             if(needReleases) {
@@ -164,6 +165,7 @@ class CJniPrinter(
 
         if(function.type.isReleasable()) {
             freeFuncFor(
+                classPath, moduleName,
                 function.type,
                 "result_native"
             )?.apply { append("\n\t$this;") }
@@ -182,10 +184,10 @@ class CJniPrinter(
                     when {
                         type.isPrimitive() -> "JNI_release_${type.toCType(ignoreUnsigned = true).lowercase()}array_on_stack(env, ${castToSignedC(arg.type, name)})"
                         type.isEnum() -> "JNI_release_enum_array_on_stack($name)"
-                        else -> "JNI_release_karray_on_stack($name, (void*) ${freeFuncFor(type, "")!!.dropLast(2)})"
+                        else -> "JNI_release_karray_on_stack($name, (void*) ${freeFuncFor(classPath, moduleName, type, "")!!.dropLast(2)})"
                     }
                 }
-                type.isDictionary() -> forceFreeFuncFor(type, name)
+                type.isDictionary() -> forceFreeFuncFor(classPath, moduleName, type, name)
                 else -> return@forEach
             }.apply { append("\n\t$this;") }
         }
@@ -202,14 +204,14 @@ class CJniPrinter(
     private fun printCriticalFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
         append("\nstatic ")
         printCriticalNativeFunctionContent(
-            builder,
+            builder, classPath, moduleName,
             name = "${function.jniName()}_",
             function
         )
     }
 
     private fun ResolvedIdlOperation.jniName() =
-        "Java_${classPath.replace(".", "_")}_${this@CJniPrinter.name}_${name.snakeCase()}"
+        "JNI__${name.snakeCase()}"
 }
 
 internal fun castJniToKotlin(
