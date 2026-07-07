@@ -196,7 +196,7 @@ internal fun localizeSymbols(
     lib: File,
     symbols: List<String>
 ) {
-    var ld = "ld"
+    var ld = "lld"
     var objcopy = "objcopy"
     var ar = "ar"
 
