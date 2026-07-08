@@ -196,6 +196,11 @@ internal fun localizeSymbols(
     lib: File,
     symbols: List<String>
 ) {
+    val libDir = lib.parentFile
+    val tmpDir = File(libDir, "_tmp").fresh()
+    val tmpObjFile = File(tmpDir, "__merged.o")
+    val tmpSymbolsFile = File(tmpDir, "__symbols.txt")
+
     var ld = "ld"
     var objcopy = "objcopy"
     var ar = "ar"
@@ -219,10 +224,6 @@ internal fun localizeSymbols(
         objcopy = unpack("objcopy.exe")
     }
 
-    val libDir = lib.parentFile
-    val tmpDir = File(libDir, "_tmp").fresh()
-    val tmpObj = File(tmpDir, "__merged.o")
-    val tmpSymbolsFile = File(tmpDir, "__symbols.txt")
 
     // Write all symbols into .txt
     tmpSymbolsFile.writeText(symbols.joinToString("\n") {
@@ -234,7 +235,7 @@ internal fun localizeSymbols(
     if(Os.isFamily(Os.FAMILY_WINDOWS)) {
         // Unpack all .a into several .o + merge into one
         execOps.exec(
-            "$ld -r -o ${tmpObj.name} --whole-archive ../${lib.name} --no-whole-archive",
+            "$ld -r -o ${tmpObjFile.name} --whole-archive ../${lib.name} --no-whole-archive",
             workingDir = tmpDir
         )
     } else {
@@ -246,7 +247,7 @@ internal fun localizeSymbols(
 
         // Merge several .o into one
         execOps.exec(
-            "$ld -r *.o -o ${tmpObj.name}",
+            "$ld -r *.o -o ${tmpObjFile.name}",
             workingDir = tmpDir
         )
     }
@@ -254,12 +255,12 @@ internal fun localizeSymbols(
     // Localize symbols
     if(Os.isFamily(Os.FAMILY_MAC)) {
         execOps.exec(
-            command = "nmedit -R ${tmpSymbolsFile.name} ${tmpObj.name}",
+            command = "nmedit -R ${tmpSymbolsFile.name} ${tmpObjFile.name}",
             workingDir = tmpDir
         )
     } else {
         execOps.exec(
-            command = "$objcopy --localize-symbols=${tmpSymbolsFile.name} ${tmpObj.name}",
+            command = "$objcopy --localize-symbols=${tmpSymbolsFile.name} ${tmpObjFile.name}",
             workingDir = tmpDir
         )
     }
@@ -267,7 +268,7 @@ internal fun localizeSymbols(
     // Archive into .a
     lib.delete()
     execOps.exec(
-        "$ar rcs ../${lib.name} ${tmpObj.name}",
+        "$ar rcs ../${lib.name} ${tmpObjFile.name}",
         workingDir = tmpDir
     )
 

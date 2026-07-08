@@ -1,7 +1,34 @@
-use crate::nativekt::{CallbackPassBoolean, CallbackPassBooleanArray, CallbackPassByte, CallbackPassByteArray, CallbackPassCallback, CallbackPassCallbackN, CallbackPassChar, CallbackPassCharArray, CallbackPassCharArrayN, CallbackPassDictionary, CallbackPassDictionaryArray, CallbackPassDictionaryArrayN, CallbackPassDictionaryN, CallbackPassDouble, CallbackPassDoubleArray, CallbackPassEnum, CallbackPassEnumArray, CallbackPassFloat, CallbackPassFloatArray, CallbackPassInt, CallbackPassIntArray, CallbackPassLong, CallbackPassLongArray, CallbackPassShort, CallbackPassShortArray, CallbackPassString, CallbackPassStringArray, CallbackPassStringArrayN, CallbackPassStringN, CallbackPassUByte, CallbackPassUByteArray, CallbackPassUInt, CallbackPassUIntArray, CallbackPassULong, CallbackPassULongArray, CallbackPassUShort, CallbackPassUShortArray, CallbackReturnBoolean, CallbackReturnBooleanArray, CallbackReturnByte, CallbackReturnByteArray, CallbackReturnCallback, CallbackReturnCallbackN, CallbackReturnChar, CallbackReturnCharArray, CallbackReturnCharArrayN, CallbackReturnDictionary, CallbackReturnDictionaryArray, CallbackReturnDictionaryArrayN, CallbackReturnDictionaryN, CallbackReturnDouble, CallbackReturnDoubleArray, CallbackReturnEnum, CallbackReturnEnumArray, CallbackReturnFloat, CallbackReturnFloatArray, CallbackReturnInt, CallbackReturnIntArray, CallbackReturnLong, CallbackReturnLongArray, CallbackReturnShort, CallbackReturnShortArray, CallbackReturnString, CallbackReturnStringArray, CallbackReturnStringArrayN, CallbackReturnStringN, CallbackReturnUByte, CallbackReturnUByteArray, CallbackReturnUInt, CallbackReturnUIntArray, CallbackReturnULong, CallbackReturnULongArray, CallbackReturnUShort, CallbackReturnUShortArray, KArray, KArrayOpt, KBooleanArray, KByteArray, KCharArray, KDoubleArray, KFloatArray, KIntArray, KLongArray, KShortArray, KString, KUByteArray, KUIntArray, KULongArray, KUShortArray, MyDictionary, MyEnum, TypeDictionary, VoidCallback};
+use std::sync::Arc;
+use crate::nativekt::*;
 
 mod nativekt;
 
+pub struct B;
+
+impl B {
+    fn new() -> Self { 
+        B {}
+    }
+}
+
+pub struct A;
+
+impl A {
+    fn new() -> Self {
+        A {}
+    }
+    fn test(&self, _arg: Arc<B>) {
+        println!("Hello from interface!")
+    }
+}
+
+fn f32_cmp(f1: f32, f2: f32) -> bool {
+    (f1 - f2).abs() < 0.00001
+}
+
+fn f64_cmp(f1: f64, f2: f64) -> bool {
+    (f1 - f2).abs() < 0.00001
+}
 
 pub fn test_func(
     arg1: Option<KString>,
@@ -80,7 +107,7 @@ pub fn pass_ulong(
 pub fn pass_float(
     arg: f32
 ) -> bool {
-    arg == 99.9
+    f32_cmp(arg, 99.9)
 }
 
 pub fn pass_double(
@@ -1199,7 +1226,10 @@ pub fn return_big_dictionary(
         k_ulong_array!(1, 2),
         k_float_array!(1.2, 3.4),
         k_double_array!(1.2, 3.4),
-        k_array!(KString::from_str("string1"), KString::from_str("string2")),
+        k_array!(
+            KString::from_str("string1"),
+            KString::from_str("string2")
+        ),
         k_int_array!(MyEnum::CASE1.to_int(), MyEnum::CASE2.to_int()),
         k_array!(
             MyDictionary::new(1, 2, 3, 4),
@@ -1244,6 +1274,7 @@ pub fn critical_primitives(
     a11: f32,
     a12: f64
 ) -> bool {
+    println!();
     a1 == 'a' as u16 &&
         a2 == true &&
         a3 == 1 &&
@@ -1254,8 +1285,8 @@ pub fn critical_primitives(
         a8 == 4294967295 &&
         a9 == 7 &&
         a10 == 18446744073709551615 &&
-        a11 == 1.0 &&
-        a12 == 2.0
+        f32_cmp(a11, 1.0) &&
+        f64_cmp(a12, 2.0)
 }
 
 pub fn critical_enum(
@@ -1452,10 +1483,10 @@ pub fn jvmci6(
     a12: i32,
     a13: i32
 ) -> bool {
-    a1 == 1.0 && a2 == 2.0 && a3 == 3.0 &&
-        a4 == 4.0 && a5 == 5.0 &&
-        a6 == 6.0 && a7 == 7.0 && a8 == 8.0 &&
-        a9 == 9.0 && a10 == 10 && a11 == 11 &&
+    f32_cmp(a1, 1.0) && f32_cmp(a2, 2.0) && f32_cmp(a3, 3.0) &&
+        f32_cmp(a4, 4.0) && f32_cmp(a5, 5.0) &&
+        f32_cmp(a6, 6.0) && f32_cmp(a7, 7.0) && f32_cmp(a8, 8.0) &&
+        f32_cmp(a9, 9.0) && a10 == 10 && a11 == 11 &&
         a12 == 12 && a13 == 13
 }
 
@@ -1470,9 +1501,9 @@ pub fn jvmci7(
     a8: f32,
     a9: f64
 ) -> bool {
-    a1 == 1.0 && a2 == 2.0 && a3 == 3.0 &&
-        a4 == 4.0 && a5 == 5.0 && a6 == 6.0 &&
-        a7 == 7.0 && a8 == 8.0 && a9 == 9.0
+    f32_cmp(a1, 1.0) && f64_cmp(a2, 2.0) && f32_cmp(a3, 3.0) &&
+        f64_cmp(a4, 4.0) && f32_cmp(a5, 5.0) && f64_cmp(a6, 6.0) &&
+        f32_cmp(a7, 7.0) && f32_cmp(a8, 8.0) && f64_cmp(a9, 9.0)
 }
 
 pub fn jvmci8(
@@ -1481,7 +1512,7 @@ pub fn jvmci8(
     a3: f32,
     a4: i64
 ) -> bool {
-    a1 == 1 && a2 == 2.0 && a3 == 3.0 && a4 == 4
+    a1 == 1 && f64_cmp(a2, 2.0) && f32_cmp(a3, 3.0) && a4 == 4
 }
 
 pub fn jvmci9(
@@ -1495,9 +1526,9 @@ pub fn jvmci9(
     a8: f32,
     a9: i32
 ) -> bool {
-    a1 == 1 && a2 == 2.0 && a3 == 3.0 &&
-        a4 == 4 && a5 == 5 && a6 == 6.0 &&
-        a7 == 7.0 && a8 == 8.0 && a9 == 9
+    a1 == 1 && f64_cmp(a2, 2.0) && f32_cmp(a3, 3.0) &&
+        a4 == 4 && a5 == 5 && f64_cmp(a6, 6.0) &&
+        f32_cmp(a7, 7.0) && f32_cmp(a8, 8.0) && a9 == 9
 }
 
 pub fn jvmci10(
@@ -1511,9 +1542,9 @@ pub fn jvmci10(
     a8: f32,
     a9: i32
 ) -> bool {
-    a1.as_str() == "string1" && a2 == 2.0 && a3 == 3.0 &&
-        a4 == 4 && a5 == 5 && a6 == 6.0 &&
-        a7.as_str() == "string7" && a8 == 8.0 && a9 == 9
+    a1.as_str() == "string1" && f64_cmp(a2, 2.0) && f32_cmp(a3, 3.0) &&
+        a4 == 4 && a5 == 5 && f64_cmp(a6, 6.0) &&
+        a7.as_str() == "string7" && f32_cmp(a8, 8.0) && a9 == 9
 }
 
 pub fn jvmci11(
@@ -1535,12 +1566,12 @@ pub fn jvmci11(
     a16: i32,
     a17: f32
 ) -> bool {
-    a1 == 1.0 && a2 == 2 && a3 == 3.0 &&
-        a4 == 4 && a5 == 5.0 && a6 == 6 &&
-        a7 == 7.0 && a8 == 8 && a9 == 9.0 &&
-        a10 == 10 && a11 == 11.0 && a12 == 12 &&
-        a13 == 13.0 && a14 == 14 && a15 == 15.0 &&
-        a16 == 16 && a17 == 17.0
+    f32_cmp(a1, 1.0) && a2 == 2 && f32_cmp(a3, 3.0) &&
+        a4 == 4 && f32_cmp(a5, 5.0) && a6 == 6 &&
+        f32_cmp(a7, 7.0) && a8 == 8 && f32_cmp(a9 , 9.0) &&
+        a10 == 10 && f32_cmp(a11, 11.0) && a12 == 12 &&
+        f32_cmp(a13, 13.0) && a14 == 14 && f32_cmp(a15, 15.0) &&
+        a16 == 16 && f32_cmp(a17, 17.0)
 }
 
 pub fn jvmci12() -> i32 {
