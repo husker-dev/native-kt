@@ -231,17 +231,25 @@ internal fun localizeSymbols(
         else it
     })
 
-    // Unpack all .a into several .o
-    execOps.exec(
-        "$ar x ../${lib.name}",
-        workingDir = tmpDir
-    )
+    if(Os.isFamily(Os.FAMILY_WINDOWS)) {
+        // Unpack all .a into several .o + merge into one
+        execOps.exec(
+            "$ld -r -o ${tmpObj.name} --whole-archive ../${lib.name} --no-whole-archive",
+            workingDir = tmpDir
+        )
+    } else {
+        // Unpack all .a into several .o
+        execOps.exec(
+            "$ar x ../${lib.name}",
+            workingDir = tmpDir
+        )
 
-    // Merge several .o into one
-    execOps.exec(
-        "$ld -r *.o -o ${tmpObj.name}",
-        workingDir = tmpDir
-    )
+        // Merge several .o into one
+        execOps.exec(
+            "$ld -r *.o -o ${tmpObj.name}",
+            workingDir = tmpDir
+        )
+    }
 
     // Localize symbols
     if(Os.isFamily(Os.FAMILY_MAC)) {
