@@ -196,28 +196,27 @@ internal fun localizeSymbols(
     lib: File,
     symbols: List<String>
 ) {
-    var ld = "lld"
-    var objcopy = "objcopy"
-    var ar = "ar"
+    if(!Os.isFamily(Os.FAMILY_WINDOWS))
+        return
 
     // Unpack GNU tools on Windows (because clang64 tools in MinGW does not support COFF)
-    if(Os.isFamily(Os.FAMILY_WINDOWS)) {
-        fun unpack(name: String): String {
-            val file = File(nativesRootBuildDir, name)
-            if(!file.exists()) {
-                NativeKtInfo::class.java.getResourceAsStream("/com/huskerdev/nativekt/mingw64/$name").use { ins ->
-                    if (ins == null)
-                        throw NullPointerException("Can not find file in plugin resources: $name")
-                    file.parentFile.mkdirs()
-                    file.outputStream().use { ins.copyTo(it) }
-                }
+    fun unpack(name: String): String {
+        val file = File(nativesRootBuildDir, name)
+        if(!file.exists()) {
+            NativeKtInfo::class.java.getResourceAsStream("/com/huskerdev/nativekt/mingw64/$name").use { ins ->
+                if (ins == null)
+                    throw NullPointerException("Can not find file in plugin resources: $name")
+                file.parentFile.mkdirs()
+                file.outputStream().use { ins.copyTo(it) }
             }
-            return file.posixPath
         }
-        ld = unpack("ld.exe")
-        ar = unpack("ar.exe")
-        objcopy = unpack("objcopy.exe")
+        return "\"${file.posixPath}\""
     }
+
+    val ld = unpack("ld.exe")
+    val ar = unpack("ar.exe")
+    val objcopy = unpack("objcopy.exe")
+
     val libDir = lib.parentFile
     val tmpObjName = lib.nameWithoutExtension + "_merged.o"
     val tmpSymbolsFile = File(libDir, "__symbols.txt")
