@@ -196,54 +196,73 @@ internal fun localizeSymbols(
     lib: File,
     symbols: List<String>
 ) {
-    if(!Os.isFamily(Os.FAMILY_WINDOWS))
-        return
+    var ld = "ld"
+    var objcopy = "objcopy"
+    var ar = "ar"
 
     // Unpack GNU tools on Windows (because clang64 tools in MinGW does not support COFF)
-    fun unpack(name: String): String {
-        val file = File(nativesRootBuildDir, name)
-        if(!file.exists()) {
-            NativeKtInfo::class.java.getResourceAsStream("/com/huskerdev/nativekt/mingw64/$name").use { ins ->
-                if (ins == null)
-                    throw NullPointerException("Can not find file in plugin resources: $name")
-                file.parentFile.mkdirs()
-                file.outputStream().use { ins.copyTo(it) }
+    if(Os.isFamily(Os.FAMILY_WINDOWS)) {
+        fun unpack(name: String): String {
+            val file = File(nativesRootBuildDir, name)
+            if(!file.exists()) {
+                NativeKtInfo::class.java.getResourceAsStream("/com/huskerdev/nativekt/mingw64/$name").use { ins ->
+                    if (ins == null)
+                        throw NullPointerException("Can not find file in plugin resources: $name")
+                    file.parentFile.mkdirs()
+                    file.outputStream().use { ins.copyTo(it) }
+                }
             }
+            return "\"${file.posixPath}\""
         }
-        return "\"${file.posixPath}\""
+        ld = unpack("ld.exe")
+        ar = unpack("ar.exe")
+        objcopy = unpack("objcopy.exe")
     }
 
-    val ld = unpack("ld.exe")
-    val ar = unpack("ar.exe")
-    val objcopy = unpack("objcopy.exe")
-
     val libDir = lib.parentFile
-    val tmpObjName = lib.nameWithoutExtension + "_merged.o"
-    val tmpSymbolsFile = File(libDir, "__symbols.txt")
+    val tmpDir = File(libDir, "_tmp").fresh()
+    val tmpObj = File(tmpDir, "__merged.o")
+    val tmpSymbolsFile = File(tmpDir, "__symbols.txt")
 
     // Write all symbols into .txt
-    tmpSymbolsFile.writeText(symbols.joinToString("\n"))
+    tmpSymbolsFile.writeText(symbols.joinToString("\n") {
+        if(Os.isFamily(Os.FAMILY_MAC))
+            "_$it"
+        else it
+    })
 
-    // Merge .a (a lot of .o) into one .o
+    // Unpack all .a into several .o
     execOps.exec(
-        "\"$ld\" -r -o $tmpObjName --whole-archive ${lib.name} --no-whole-archive",
-        workingDir = libDir
+        "$ar x ../${lib.name}",
+        workingDir = tmpDir
+    )
+
+    // Merge several .o into one
+    execOps.exec(
+        "$ld -r *.o -o ${tmpObj.name}",
+        workingDir = tmpDir
     )
 
     // Localize symbols
-    execOps.exec(
-        "\"$objcopy\" --localize-symbols=${tmpSymbolsFile.name} $tmpObjName",
-        workingDir = libDir
-    )
+    if(Os.isFamily(Os.FAMILY_MAC)) {
+        execOps.exec(
+            command = "nmedit -R ${tmpSymbolsFile.name} ${tmpObj.name}",
+            workingDir = tmpDir
+        )
+    } else {
+        execOps.exec(
+            command = "$objcopy --localize-symbols=${tmpSymbolsFile.name} ${tmpObj.name}",
+            workingDir = tmpDir
+        )
+    }
 
     // Archive into .a
     lib.delete()
     execOps.exec(
-        "\"$ar\" rcs ${lib.name} $tmpObjName",
-        workingDir = libDir
+        "$ar rcs ../${lib.name} ${tmpObj.name}",
+        workingDir = tmpDir
     )
 
-    // Remove symbols .txt and temporary .o
-    tmpSymbolsFile.delete()
-    File(libDir, tmpObjName).delete()
+    // Remove temporary dir
+    tmpDir.deleteRecursively()
 }
