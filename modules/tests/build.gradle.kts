@@ -111,10 +111,10 @@ natives {
 
     val commonNdl = file("natives/api.ndl")
     create("test") {
-        ndlFile = commonNdl
+        //ndlFile = commonNdl
     }
     create("testrs") {
-        ndlFile = commonNdl
+        //ndlFile = commonNdl
         cargo()
     }
 }

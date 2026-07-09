@@ -5,6 +5,18 @@
 /*
 =============================================================== *\
 
+pub struct B;
+
+=============================================================== *\
+
+pub struct A;
+
+impl A {
+	fn test(&self) {}
+}
+
+=============================================================== *\
+
 pub fn pass_void() -> bool {}
 
 pub fn pass_char(
@@ -3276,6 +3288,43 @@ impl MyEnum {
     }
 }
 
+// ╔════════════════════╗
+// ║     Interfaces     ║
+// ╚════════════════════╝
+
+fn clone_arc<T>(arc: *const T) -> Arc<T> {
+    unsafe {
+        let _self = Arc::from_raw(arc);
+        let result = _self.clone();
+        std::mem::forget(_self);
+        result
+    }
+}
+
+#[no_mangle]
+extern "C" fn nativekt_natives_testrs_testrs_b_free(ptr: *const crate::B) {
+    unsafe { let _ = Arc::from_raw(ptr); }
+}
+
+#[no_mangle]
+extern "C" fn nativekt_natives_testrs_testrs_b_new_0() -> *const crate::B {
+    Arc::into_raw(Arc::new(crate::B::new()))
+}
+
+#[no_mangle]
+extern "C" fn nativekt_natives_testrs_testrs_a_free(ptr: *const crate::A) {
+    unsafe { let _ = Arc::from_raw(ptr); }
+}
+
+#[no_mangle]
+extern "C" fn nativekt_natives_testrs_testrs_a_new_0() -> *const crate::A {
+    Arc::into_raw(Arc::new(crate::A::new()))
+}
+
+#[no_mangle]
+extern "C" fn nativekt_natives_testrs_testrs_a_fn_test(ptr: *const crate::A, arg: *const crate::B) {
+    clone_arc(ptr).test(clone_arc(arg))
+}
 
 // ╔═══════════════════╗
 // ║     Functions     ║

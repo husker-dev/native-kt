@@ -156,6 +156,7 @@ private abstract class PrepareNativesJs: DefaultTask() {
         val nativesBuildOutDir = File(nativesBuildOutDir)
         val projectDir = File(projectDir)
 
+        // Collect all available functions and mangle them into the short name to minimize .js file
         val jsMangle = buildList {
             addAll(listOf(
                 "KString",
@@ -172,7 +173,13 @@ private abstract class PrepareNativesJs: DefaultTask() {
             ).flatMap {
                 listOf("${it}_free", "${it}_free_addr")
             })
-            idl.globalOperators().mapTo(this) { it.name.snakeCase() }
+
+            idl.globalOperators()
+                .mapTo(this) { it.name.snakeCase() }
+
+            idl.interfaces.values
+                .flatMap { it.toOperations() }
+                .mapTo(this) { it.name }
         }.mapIndexed { index, name ->
             val sb = StringBuilder()
             var n = index

@@ -61,6 +61,10 @@ class KotlinJvmForeignPrinter(
             printFunctionHandle(builder, it)
         }
 
+        idl.interfaces.values
+            .flatMap { it.toOperations() }
+            .forEach { printFunctionHandle(builder, it, true) }
+
         builder.append("""
             
             override fun _address(name: String): Long =
@@ -71,6 +75,9 @@ class KotlinJvmForeignPrinter(
         idl.globalOperators().forEach {
             printFunctionCall(builder, it)
         }
+        idl.interfaces.values
+            .flatMap { it.toOperations() }
+            .forEach { printFunctionCall(builder, it, true) }
         builder.append("${indent}}")
     }
 
@@ -130,30 +137,43 @@ class KotlinJvmForeignPrinter(
         append("\n\t\t\t) } else null\n")
     }
 
-    private fun printFunctionHandle(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
-        val isCriticalAlt = function.isCritical() && function.isCriticalCapable() && (function.hasString() || function.hasArray())
+    private fun printFunctionHandle(
+        builder: StringBuilder,
+        function: ResolvedIdlOperation,
+        isInterfaceFunction: Boolean = false
+    ) = builder.apply {
+        val isCriticalAlt = function.isCritical() &&
+                function.isCriticalCapable() &&
+                (function.hasString() || function.hasArray())
 
-        append("${indent}\tprivate val handle")
-        append(function.name.upperCamelCase())
-        append($$" = lookup(handle, \"$${mangle(function.name)}")
-        if(isCriticalAlt)
-            append("_")
-        append("\", ${function.isCritical()}, ")
+        val handleName = "handle${if(isInterfaceFunction) "_" else ""}${function.name.upperCamelCase()}"
+        val cName = mangle(function.name) + if(isCriticalAlt) "_" else ""
 
-        val args = arrayListOf(function.type.toForeignType())
-        args += function.args.flatMap {
-            when {
-                isCriticalAlt && it.type.isString() -> listOf("ValueLayout.ADDRESS", "ValueLayout.JAVA_INT", "ValueLayout.JAVA_INT")
-                isCriticalAlt && it.type.isArray() -> listOf("ValueLayout.ADDRESS", "ValueLayout.JAVA_INT")
-                it.type.isUByte() || it.type.isUShort() -> listOf("ValueLayout.JAVA_INT")
-                else -> listOf(it.type.toForeignType())
+        append("${indent}\tprivate val $handleName = lookup(")
+
+        buildList {
+            add("handle")
+            add("\"$cName\"")
+            add(function.isCritical())
+            add(function.type.toForeignType())
+            function.args.flatMapTo(this) {
+                when {
+                    isCriticalAlt && it.type.isString() -> listOf("ValueLayout.ADDRESS", "ValueLayout.JAVA_INT", "ValueLayout.JAVA_INT")
+                    isCriticalAlt && it.type.isArray() -> listOf("ValueLayout.ADDRESS", "ValueLayout.JAVA_INT")
+                    it.type.isUByte() || it.type.isUShort() -> listOf("ValueLayout.JAVA_INT")
+                    else -> listOf(it.type.toForeignType())
+                }
             }
-        }
-        args.joinTo(builder)
-        append(")\n")
+        }.joinTo(builder, postfix = ")\n")
     }
 
-    private fun printFunctionCall(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
+    private fun printFunctionCall(
+        builder: StringBuilder,
+        function: ResolvedIdlOperation,
+        isInterfaceFunction: Boolean = false
+    ) = builder.apply {
+
+        val handleName = "handle${if(isInterfaceFunction) "_" else ""}${function.name.upperCamelCase()}"
 
         val useArena = function.args.any {
             (it.type.isString() && !function.isCritical()) ||
@@ -197,12 +217,15 @@ class KotlinJvmForeignPrinter(
             freeFuncFor(function.type, "_result_native")
         else null
 
-        val call = "(handle${function.name.upperCamelCase()}.invokeExact($args) as ${function.type.toKotlinForeignType()})"
+        val call = "($handleName.invokeExact($args) as ${function.type.toKotlinForeignType()})"
 
         // === Print ===
 
         append("\n${indent}\t")
-        printFunctionHeader(builder, function, isOverride = true)
+        printFunctionHeader(builder, function,
+            name = (if(isInterfaceFunction) "_" else "") + function.name.camelCase(),
+            isOverride = true
+        )
 
         when {
             useArena -> append(" = Arena.ofConfined().use { arena ->")
@@ -313,6 +336,7 @@ class KotlinJvmForeignPrinter(
             type.isCallback() -> "toKotlinCallback<${type.toKotlinType()}>($content)$nullAssert"
             type.isEnum() -> "${type.declaration.name}.entries[$content]"
             type.isDictionary() -> "toKotlinDictionary${type.declaration.name}($content)$nullAssert"
+            type.isInterface() -> "${type.declaration.name.upperCamelCase()}._wrap($content.address())$nullAssert"
             type.isArray() -> type.arrayType { type ->
                 when {
                     type.isPrimitive() -> "toKotlinK${type.toKotlinType(ignoreUnsigned = true)}Array($content)$nullAssert"
@@ -344,6 +368,7 @@ class KotlinJvmForeignPrinter(
         type.isDictionary() ->
             if (useArena) "toNativeDictionary${type.declaration.name}OnArena(arena, $content)"
             else "toNativeDictionary${type.declaration.name}($content)"
+        type.isInterface() -> "MemorySegment.ofAddress($content._ptr)"
         type.isArray() -> type.arrayType { type ->
             when {
                 type.isPrimitive() ->
@@ -383,7 +408,7 @@ class KotlinJvmForeignPrinter(
     private fun ResolvedIdlType.toKotlinForeignType(
         smallUnsignedTypesAsInt: Boolean = false
     ): String {
-        return if(isCallback() || isString() || isArray() || isDictionary())
+        return if(isCallback() || isString() || isArray() || isDictionary() || isInterface())
             "MemorySegment"
         else toKotlinType(
             enumAsInt = true,

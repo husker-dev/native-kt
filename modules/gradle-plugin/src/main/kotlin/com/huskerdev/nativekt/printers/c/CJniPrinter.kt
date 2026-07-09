@@ -21,7 +21,11 @@ class CJniPrinter(
             
         """.trimIndent())
 
-        idl.globalOperators().forEach {
+        listOf(
+            *idl.globalOperators().toTypedArray(),
+            *idl.interfaces.values
+                .flatMap { it.toOperations() }.toTypedArray()
+        ).forEach {
             printFunction(builder, it)
 
             if(isAndroid && isAndroidCriticalEnabled && it.isCritical() && it.isAndroidCriticalCapable())
@@ -38,6 +42,12 @@ class CJniPrinter(
 
         val isCritical = if(isAndroid && isAndroidCriticalEnabled)
             ", jboolean critical" else ""
+
+        val operations = listOf(
+            *idl.globalOperators().toTypedArray(),
+            *idl.interfaces.values
+                .flatMap { it.toOperations() }.toTypedArray()
+        )
 
         append("""
             
@@ -65,11 +75,10 @@ class CJniPrinter(
             
             JNIEXPORT void JNICALL Java_${classPath.replace(".", "_")}_${name}_nJNILoad(JNIEnv *env, jclass clazz, jobject mangled_methods$isCritical) {
                 char** mangled_names = JNI_read_mangled_methods(env, mangled_methods);
-                JNINativeMethod* methods = malloc(sizeof(JNINativeMethod) * ${idl.globalOperators().size});
+                JNINativeMethod* methods = malloc(sizeof(JNINativeMethod) * ${operations.size});
         """.trimIndent())
 
-        val operators = idl.globalOperators()
-        operators.forEachIndexed { index, function ->
+        operations.forEachIndexed { index, function ->
             val funcName = function.jniName()
             val funcDesc = function.toJavaDesc(classPath)
             val nl = "\n\t\t"
@@ -90,7 +99,7 @@ class CJniPrinter(
 
         append("""
             
-                JNI_Init(env, methods, ${idl.globalOperators().size});
+                JNI_Init(env, methods, ${operations.size});
                 free(methods);
                 JNI_free_mangled_methods(env, mangled_methods, mangled_names);
             }
@@ -223,6 +232,7 @@ internal fun castJniToKotlin(
     type.isDictionary() -> "JNI_to_kotlin_${type.toCType(ptr = false).lowercase()}(env, $content)"
     type.isString() -> "JNI_to_kotlin_kstring(env, $content)"
     type.isCallback() -> "JNI_to_kotlin_callback(env, (_AbstractCallback*) $content)"
+    type.isInterface() -> "JNI_to_kotlin_${type.declaration.name.lowercase()}(env, $content)"
     type.isArray() -> type.arrayType { type ->
         when {
             type.isPrimitive() -> "JNI_to_kotlin_${type.toCType(ptr = false).lowercase()}array(env, $content)"
@@ -253,6 +263,7 @@ internal fun castKotlinToJNI(
         if (onStack) "($name*) JNI_to_native_callback_on_stack(env, $content, (void(*)()) JNI_CALLBACK_INVOKE_${name.lowercase()}, alloca(JNI_ABSTRACT_CALLBACK_SIZE))"
         else "($name*) JNI_to_native_callback(env, $content, (void(*)()) JNI_CALLBACK_INVOKE_${name.lowercase()}, $flags)"
     }
+    type.isInterface() -> "JNI_to_native__interface(env, $content)"
     type.isArray() -> type.arrayType { type ->
         when {
             type.isPrimitive() ->

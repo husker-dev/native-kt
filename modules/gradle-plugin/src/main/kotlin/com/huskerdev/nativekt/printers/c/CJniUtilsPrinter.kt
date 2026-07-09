@@ -506,6 +506,11 @@ class CJniUtilsPrinter(
             printStructs(builder)
         }
 
+        if(idl.interfaces.isNotEmpty()) {
+            printLabel(builder, "Interfaces")
+            printInterfaces(builder)
+        }
+
         if(idl.callbacks.isNotEmpty()) {
             printLabel(builder, "Callback invokes")
             builder.append("\n")
@@ -586,6 +591,42 @@ class CJniUtilsPrinter(
             append("\n\t};")
             append("\n\treturn result;\n}\n")
         }
+    }
+
+    private fun printInterfaces(builder: StringBuilder) = builder.apply {
+        append("\njmethodID interface_ptr;\n")
+        idl.interfaces.values
+            .map { "class_${it.name.lowercase()}" }
+            .chunked(3)
+            .joinTo(builder, prefix = "jclass ", separator = ",\n\t", postfix = ";\n") { it.joinToString() }
+
+        idl.interfaces.values
+            .map { "interface_${it.name.lowercase()}_constructor" }
+            .chunked(3)
+            .joinTo(builder, prefix = "jmethodID ", separator = ",\n\t", postfix = ";\n") { it.joinToString() }
+
+        idl.interfaces.values.forEach { inter ->
+            val name = inter.name.upperCamelCase()
+            append("\n// $name\n")
+
+            // to JVM
+            append("""
+                
+                jobject JNI_to_kotlin_${inter.name.lowercase()}(JNIEnv *env, void* src) {
+                    if(src == NULL) return NULL;
+                    return (*env)->CallStaticObjectMethod(env, class_${inter.name.lowercase()}, interface_${inter.name.lowercase()}_constructor, (jlong) src);
+                }
+                
+            """.trimIndent())
+        }
+        append("""
+            
+            void* JNI_to_native__interface(JNIEnv *env, jobject src) {
+                if(src == NULL) return NULL;
+                return (void*) (*env)->CallLongMethod(env, src, interface_ptr);
+            }
+            
+        """.trimIndent())
     }
 
     private fun printCallbackInvokeDef(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
@@ -716,39 +757,24 @@ class CJniUtilsPrinter(
         }
 
         if(idl.dictionaries.isNotEmpty()) {
-            append("\n\t")
-            append("// Struct")
+            append("\n\t// Struct")
             idl.dictionaries.values.forEach { struct ->
                 val structClassPath = "${classPath.replace(".", "/")}/${struct.name}"
                 val classFieldName = "class_${struct.name.lowercase()}"
                 val companionFieldName = "struct_${struct.name.lowercase()}_companion"
                 val constructorFieldName = "struct_${struct.name.lowercase()}_constructor"
 
-                append("\n\t")
+                val argsDesc = struct.allFields().joinToString(separator = "") {
+                    it.type.toJavaDesc(classPath)
+                }
 
-                append(classFieldName)
-                append(" = (*env)->NewGlobalRef(env, (*env)->FindClass(env, \"")
-                append(structClassPath)
-                append("\"));\n\t")
-
-
-                append(companionFieldName)
-                append(" = (*env)->NewGlobalRef(env, (*env)->GetStaticObjectField(env, ")
-                append(classFieldName)
-                append(", (*env)->GetStaticFieldID(env, ")
-                append(classFieldName)
-                append(", \"Companion\", \"L")
-                append(structClassPath)
-                append($$"$Companion;\")));\n\t")
-
-                append(constructorFieldName)
-                append(" = (*env)->GetMethodID(env, (*env)->FindClass(env, \"")
-                append(structClassPath)
-                append($$"$Companion\"), \"of\", \"(")
-                struct.allFields().joinTo(builder, separator = "") { d -> d.type.toJavaDesc(classPath) }
-                append(")L")
-                append(structClassPath)
-                append(";\");\n\t")
+                append($$"""
+                    
+                    $$classFieldName = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "$$structClassPath"));
+                    $$companionFieldName = (*env)->NewGlobalRef(env, (*env)->GetStaticObjectField(env, $$classFieldName, (*env)->GetStaticFieldID(env, $$classFieldName, "Companion", "L$$structClassPath$Companion;")));
+                    $$constructorFieldName = (*env)->GetMethodID(env, (*env)->FindClass(env, "$$structClassPath$Companion"), "of", "($$argsDesc)L$$structClassPath;");
+                
+                """.replaceIndent("\t"))
 
                 struct.allFields().joinTo(builder, separator = "\n\t") { field ->
                     val fieldVariableName = "struct_${struct.name.lowercase()}_field_${field.name.snakeCase()}"
@@ -760,6 +786,23 @@ class CJniUtilsPrinter(
                     "$fieldVariableName = $getMethodId(env, $classFieldName, \"get${field.name.capitalized()}\", \"()${field.type.toJavaDesc(classPath)}\");"
                 }
                 append("\n")
+            }
+        }
+
+        if(idl.interfaces.isNotEmpty()) {
+            append("\n\t// Interfaces")
+            append("\n\tinterface_ptr = (*env)->GetMethodID(env, (*env)->FindClass(env, \"com/huskerdev/nativekt/jvm/NativeKtResourceJvm\"), \"get_ptr\", \"()J\");")
+            idl.interfaces.values.forEach { inter ->
+                val interfaceClassPath = "${classPath.replace(".", "/")}/${inter.name}"
+                val classFieldName = "class_${inter.name.lowercase()}"
+                val constructorFieldName = "interface_${inter.name.lowercase()}_constructor"
+
+                append($$"""
+                    
+                    $$classFieldName = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "$$interfaceClassPath"));
+                    $$constructorFieldName = (*env)->GetStaticMethodID(env, $$classFieldName, "_wrap", "(J)L$$interfaceClassPath;");
+                    
+                """.replaceIndent("\t"))
             }
         }
 

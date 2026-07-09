@@ -381,7 +381,7 @@ class RustPrinter(
                 
                 
                 #[no_mangle]
-                extern "C" fn ${interfaceFreeCName(classPath, moduleName, inter)}(ptr: *const $name) {
+                extern "C" fn ${mangle(interfaceFreeCName(inter))}(ptr: *const $name) {
                     unsafe { let _ = Arc::from_raw(ptr); }
                 }
             """.trimIndent())
@@ -399,7 +399,7 @@ class RustPrinter(
                     
                     
                     #[no_mangle]
-                    extern "C" fn ${interfaceConstructorCName(classPath, moduleName, inter, constructor)}($cArgs) -> *const $name {
+                    extern "C" fn ${mangle(interfaceConstructorCName(inter, constructor))}($cArgs) -> *const $name {
                         Arc::into_raw(Arc::new($name::$constructorName($rustArgs)))
                     }
                 """.trimIndent())
@@ -425,7 +425,7 @@ class RustPrinter(
                     
                     
                     #[no_mangle]
-                    extern "C" fn ${interfaceOperationCName(classPath, moduleName, inter, operation)}($cArgs) {
+                    extern "C" fn ${mangle(interfaceOperationCName(inter, operation))}($cArgs) {
                         $call
                     }
                 """.trimIndent())

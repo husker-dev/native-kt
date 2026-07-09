@@ -5,6 +5,7 @@ import com.huskerdev.nativekt.utils.globalOperators
 import com.huskerdev.nativekt.utils.isAndroidCriticalCapable
 import com.huskerdev.nativekt.utils.isCritical
 import com.huskerdev.nativekt.utils.printFunctionHeader
+import com.huskerdev.nativekt.utils.toOperations
 import com.huskerdev.webidl.resolver.IdlResolver
 
 class KotlinJvmJniPrinter(
@@ -31,11 +32,25 @@ class KotlinJvmJniPrinter(
         val unmangle = buildString {
             append("\n$indent\t\t")
             append("val names = listOf(\n\t\t\t")
-            idl.globalOperators().chunked(6).joinTo(this, separator = ",\n$indent\t\t\t") {
+
+            val names = listOf(
+                *idl.globalOperators()
+                    .map { it to it.name.camelCase() }
+                    .toTypedArray(),
+                *idl.interfaces.values
+                    .flatMap { it.toOperations() }
+                    .map { it to ("_" + it.name.camelCase()) }
+                    .toTypedArray()
+            )
+
+            names.chunked(6).joinTo(this, separator = ",\n$indent\t\t\t") {
                 it.joinToString { el ->
-                    if(isAndroid && isAndroidCriticalEnabled && el.isCritical() && el.isAndroidCriticalCapable())
-                        "c(\"${el.name.camelCase()}\")"
-                    else "\"${el.name.camelCase()}\""
+                    val operator = el.first
+                    val name = el.second
+
+                    if(isAndroid && isAndroidCriticalEnabled && operator.isCritical() && operator.isAndroidCriticalCapable())
+                        "c(\"$name\")"
+                    else "\"$name\""
                 }
             }
             append("\n")
@@ -108,7 +123,6 @@ class KotlinJvmJniPrinter(
             """.replaceIndent("$indent\t"))
             builder.append(unmangle)
             builder.append("""
-                    
                     System.load(libraryPath)
                     nJNILoad(names.values.toTypedArray())
                 }
@@ -120,7 +134,7 @@ class KotlinJvmJniPrinter(
             builder.append("\n")
 
             idl.globalOperators().forEach { function ->
-                builder.append("${indent}\t")
+                builder.append("$indent\t")
                 printFunctionHeader(
                     builder, function,
                     isExternal = true,
@@ -128,6 +142,18 @@ class KotlinJvmJniPrinter(
                 )
                 builder.append("\n")
             }
+            idl.interfaces.values
+                .flatMap { it.toOperations() }
+                .forEach { function ->
+                    builder.append("${indent}\t")
+                    printFunctionHeader(
+                        builder, function,
+                        name = "_" + function.name.camelCase(),
+                        isExternal = true,
+                        isOverride = parentClass != null
+                    )
+                    builder.append("\n")
+                }
         }
         builder.append("${indent}}")
     }

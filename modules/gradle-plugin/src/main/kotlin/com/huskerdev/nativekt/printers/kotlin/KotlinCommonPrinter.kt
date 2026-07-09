@@ -132,9 +132,11 @@ class KotlinCommonPrinter(
     private fun printInterface(builder: StringBuilder, inter: ResolvedIdlInterface) = builder.apply {
         append("\nexpect class ")
         append(inter.name.upperCamelCase())
-        if (inter.implements != null)
-            append(": ").append(inter.implements!!.name.upperCamelCase())
-        append(" {")
+
+        listOfNotNull(
+            inter.implements?.name?.upperCamelCase(),
+            "AutoCloseable"
+        ).joinTo(this, prefix = ": ", postfix = " {")
 
         if(inter.constructors.size == 1) {
             append("\n\tconstructor(")
@@ -150,6 +152,7 @@ class KotlinCommonPrinter(
             }
             append(")")
         }
+        append("\n\toverride fun close()")
         append("\n}\n")
     }
 

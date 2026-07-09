@@ -4,6 +4,7 @@ import com.huskerdev.nativekt.utils.globalOperators
 import com.huskerdev.nativekt.utils.isVoid
 import com.huskerdev.nativekt.utils.snakeCase
 import com.huskerdev.nativekt.utils.toCType
+import com.huskerdev.nativekt.utils.toOperations
 import com.huskerdev.nativekt.utils.upperCamelCase
 import com.huskerdev.webidl.resolver.IdlResolver
 import java.io.File
@@ -53,7 +54,10 @@ class CEmscriptenPrinter(
             """.trimIndent())
         }
 
-        idl.globalOperators().forEach { function ->
+        listOf(
+            *idl.globalOperators().toTypedArray(),
+            *idl.interfaces.values.flatMap { it.toOperations() }.toTypedArray()
+        ).forEach { function ->
             val name = function.name.snakeCase()
             val type = function.type.toCType()
             val args = function.args.joinToString {

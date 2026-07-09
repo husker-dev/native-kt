@@ -71,7 +71,7 @@ class CApiHeaderPrinter(
             builder.append("\n")
             printLabel(builder, "Interfaces")
             idl.interfaces.values.forEach { inter ->
-                inter.toOperations(classPath, moduleName).forEach {
+                inter.toOperations().forEach {
                     printFunction(builder, it)
                 }
             }

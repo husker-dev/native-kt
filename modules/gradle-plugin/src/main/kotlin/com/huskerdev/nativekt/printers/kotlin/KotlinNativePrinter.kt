@@ -27,6 +27,7 @@ class KotlinNativePrinter(
             
             import kotlinx.cinterop.*
             import kotlin.contracts.*
+            import com.huskerdev.nativekt.*
             import com.huskerdev.nativekt.kn.*
             import platform.posix.*
             
@@ -81,16 +82,17 @@ class KotlinNativePrinter(
         val name = inter.name.upperCamelCase()
         append("""
             
-            actual class $name(val _ptr: COpaquePointer) {
+            actual class $name(val _ptr: COpaquePointer): NativeKtResource() {
                 companion object {
                     internal fun _wrap(ptr: COpaquePointer?): $name? = 
-                        if(ptr == null) null else $name(ptr)
+                        ptr?.run { $name(this) }
                 }
+                
         """.trimIndent())
 
         if(inter.constructors.size == 1) {
             val constructor = inter.constructors[0]
-            val nativeFunc = interfaceConstructorCName(classPath, moduleName, inter, constructor).camelCase()
+            val nativeFunc = "_" + interfaceConstructorCName(inter, constructor).camelCase()
 
             append("\n\tactual constructor(")
             constructor.args.joinTo(this) {
@@ -101,7 +103,7 @@ class KotlinNativePrinter(
             append(")._ptr)")
         }
         inter.operations.forEach { operation ->
-            val nativeFunc = interfaceOperationCName(classPath, moduleName, inter, operation).camelCase()
+            val nativeFunc = "_" + interfaceOperationCName(inter, operation).camelCase()
 
             append("\n\tactual fun ${operation.name.camelCase()}(")
             operation.args.joinTo(this) {
@@ -114,10 +116,15 @@ class KotlinNativePrinter(
             }.joinTo(this)
             append(")")
         }
-        append("\n}\n")
+        append("""
+            
+            
+                override fun _close() = _${interfaceFreeCName(inter).camelCase()}(this)
+            }
+            
+        """.trimIndent())
 
-
-        inter.toOperations(classPath, moduleName).forEach {
+        inter.toOperations().forEach {
             printFunction(builder, it, true)
         }
     }
@@ -283,6 +290,7 @@ class KotlinNativePrinter(
 
         append('\n')
         printFunctionHeader(builder, function,
+            name = (if(isInterfaceFunction) "_" else "") + function.name.camelCase(),
             isActual = expectActual && !isInterfaceFunction,
             isPrivate = isInterfaceFunction
         )

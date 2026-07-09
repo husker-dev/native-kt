@@ -397,12 +397,3 @@ dictionary TypeDictionary {
     Array<MyEnum> a30;
     Array<MyDictionary> a31;
 };
-
-interface B {
-    constructor();
-};
-
-interface A {
-    constructor();
-    void test(B arg);
-};

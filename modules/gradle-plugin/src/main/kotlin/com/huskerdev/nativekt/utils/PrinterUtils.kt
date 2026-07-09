@@ -25,35 +25,23 @@ fun mangle(
         "_${content.snakeCase()}"
 
 fun interfaceOperationCName(
-    classPath: String,
-    moduleName: String,
     inter: ResolvedIdlInterface,
     operation: ResolvedIdlOperation
-) = mangle(classPath, moduleName,
-    content = "_${inter.name.lowercase()}_fn_${operation.name.snakeCase()}"
-)
+) = "${inter.name.snakeCase()}_fn_${operation.name.snakeCase()}"
+
 
 fun interfaceConstructorCName(
-    classPath: String,
-    moduleName: String,
     inter: ResolvedIdlInterface,
     constructor: ResolvedIdlConstructor
-) = mangle(classPath, moduleName,
-    content = "_${inter.name.lowercase()}_new_${inter.constructors.indexOf(constructor)}"
-)
+) = "${inter.name.snakeCase()}_new_${inter.constructors.indexOf(constructor)}"
+
 
 fun interfaceFreeCName(
-    classPath: String,
-    moduleName: String,
     inter: ResolvedIdlInterface
-) = mangle(classPath, moduleName,
-    content = "_${inter.name.lowercase()}_free"
-)
+) = "${inter.name.snakeCase()}_free"
 
-fun ResolvedIdlInterface.toOperations(
-    classPath: String,
-    moduleName: String
-) = buildList {
+
+fun ResolvedIdlInterface.toOperations() = buildList {
     val interfaceType = ResolvedIdlType.Default(this@toOperations, emptyList(), false)
     val interfaceArg = ResolvedIdlField.Argument(
         "ptr", interfaceType, null,
@@ -62,7 +50,7 @@ fun ResolvedIdlInterface.toOperations(
 
     // free
     add(ResolvedIdlOperation(
-        name = interfaceFreeCName(classPath, moduleName, this@toOperations),
+        name = interfaceFreeCName(this@toOperations),
         type = ResolvedIdlType.Void("void"),
         args = listOf(interfaceArg),
         isStatic = false,
@@ -70,7 +58,7 @@ fun ResolvedIdlInterface.toOperations(
     ))
     constructors.forEach { constructor ->
         add(ResolvedIdlOperation(
-            name = interfaceConstructorCName(classPath, moduleName, this@toOperations, constructor),
+            name = interfaceConstructorCName(this@toOperations, constructor),
             type = interfaceType,
             args = constructor.args,
             isStatic = false,
@@ -79,7 +67,7 @@ fun ResolvedIdlInterface.toOperations(
     }
     operations.forEach { operation ->
         add(ResolvedIdlOperation(
-            name = interfaceOperationCName(classPath, moduleName, this@toOperations, operation),
+            name = interfaceOperationCName(this@toOperations, operation),
             type = operation.type,
             args = buildList {
                 add(interfaceArg)

@@ -26,6 +26,7 @@ class KotlinJsPrinter(
             
             package $classPath
             
+            import com.huskerdev.nativekt.*
             import com.huskerdev.nativekt.web.*
             import kotlin.js.*
             
@@ -107,6 +108,11 @@ class KotlinJsPrinter(
         }
 
         idl.globalOperators().forEach { printFunction(builder, it) }
+
+        if(idl.interfaces.isNotEmpty()) {
+            printLabel(builder, "Interfaces")
+            idl.interfaces.values.forEach { printInterface(builder, it) }
+        }
 
         printTypes(builder)
 
@@ -297,7 +303,11 @@ class KotlinJsPrinter(
         append("\n\t)\n}\n")
     }
 
-    private fun printFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
+    private fun printFunction(
+        builder: StringBuilder,
+        function: ResolvedIdlOperation,
+        isInterfaceFunction: Boolean = false
+    ) = builder.apply {
         val useArena = function.args.any {
             it.type.isString() ||
             it.type.isArray() ||
@@ -318,7 +328,11 @@ class KotlinJsPrinter(
         // === Print ===
 
         append('\n')
-        printFunctionHeader(builder, function, isActual = expectActual)
+        printFunctionHeader(builder, function,
+            name = (if(isInterfaceFunction) "_" else "") + function.name.camelCase(),
+            isActual = expectActual && !isInterfaceFunction,
+            isPrivate = isInterfaceFunction
+        )
 
         append(when {
             useArena -> " = Arena.use(_module) {"
@@ -346,6 +360,57 @@ class KotlinJsPrinter(
         if(useArena || deallocFunc != null)
             append("\n}")
         append("\n")
+    }
+
+    private fun printInterface(builder: StringBuilder, inter: ResolvedIdlInterface) = builder.apply {
+        val name = inter.name.upperCamelCase()
+        append("""
+            
+            actual class $name(val _ptr: Int): NativeKtResource() {
+                companion object {
+                    internal fun _wrap(ptr: Int): $name? = 
+                        if(ptr == 0) null else $name(ptr)
+                }
+                
+        """.trimIndent())
+
+        if(inter.constructors.size == 1) {
+            val constructor = inter.constructors[0]
+            val nativeFunc = "_" + interfaceConstructorCName(inter, constructor).camelCase()
+
+            append("\n\tactual constructor(")
+            constructor.args.joinTo(this) {
+                "${it.name.camelCase()}: ${it.type.toKotlinType()}"
+            }
+            append("): this($nativeFunc(")
+            constructor.args.joinTo(this) { it.name }
+            append(")._ptr)")
+        }
+        inter.operations.forEach { operation ->
+            val nativeFunc = "_" + interfaceOperationCName(inter, operation).camelCase()
+
+            append("\n\tactual fun ${operation.name.camelCase()}(")
+            operation.args.joinTo(this) {
+                "${it.name.camelCase()}: ${it.type.toKotlinType()}"
+            }
+            append(") = $nativeFunc(")
+            buildList {
+                add("this")
+                operation.args.mapTo(this) { it.name }
+            }.joinTo(this)
+            append(")")
+        }
+        append("""
+            
+            
+                override fun _close() = _${interfaceFreeCName(inter).camelCase()}(this)
+            }
+            
+        """.trimIndent())
+
+        inter.toOperations().forEach {
+            printFunction(builder, it, true)
+        }
     }
 
     private fun printTypes(buffer: StringBuilder) = buffer.apply {
@@ -376,7 +441,10 @@ class KotlinJsPrinter(
         append("\n\tfun _${jsMangle["KArray_free"]}(self: Int, freeOp: Int)")
         append("\n\n")
 
-        idl.globalOperators().forEach { function ->
+        listOf(
+            *idl.globalOperators().toTypedArray(),
+            *idl.interfaces.values.flatMap { it.toOperations() }.toTypedArray()
+        ).forEach { function ->
             append("\tfun _${jsMangle[function.name.snakeCase()]}")
 
             function.args.joinTo(buffer, prefix = "(", postfix = ")") {
@@ -432,6 +500,7 @@ class KotlinJsPrinter(
         type.isDictionary() ->
             if (useArena) "toNative${type.declaration.name}OnArena($content)"
             else "toNative${type.declaration.name}(_module, $content)"
+        type.isInterface() -> "$content._ptr"
         type.isArray() -> type.arrayType { type ->
             when {
                 type.isPrimitive() ->
@@ -470,6 +539,7 @@ class KotlinJsPrinter(
             type.isString() -> "toKotlinKString(_module, $content)$assert"
             type.isCallback() -> "toKotlinCallback<${type.toKotlinType()}>(_module, $content)$assert"
             type.isDictionary() -> "toKotlin${type.declaration.name}(_module, $content)$assert"
+            type.isInterface() -> "${type.declaration.name.upperCamelCase()}._wrap($content)$assert"
             type.isArray() -> type.arrayType { type ->
                 when {
                     type.isPrimitive() -> "toKotlin${type.toCType()}Array(_module, $content)$assert"
