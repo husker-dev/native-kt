@@ -1,10 +1,7 @@
 package com.huskerdev.nativekt.printers.rust
 
 import com.huskerdev.nativekt.utils.*
-import com.huskerdev.webidl.resolver.IdlResolver
-import com.huskerdev.webidl.resolver.ResolvedIdlOperation
-import com.huskerdev.webidl.resolver.ResolvedIdlType
-import org.gradle.kotlin.dsl.support.uppercaseFirstChar
+import com.huskerdev.webidl.resolver.*
 import java.io.File
 
 class RustPrinter(
@@ -17,6 +14,8 @@ class RustPrinter(
         target.parentFile.mkdirs()
 
         val builder = StringBuilder()
+        fun mangle(name: String) = mangle(classPath, moduleName, "_$name")
+
         builder.printApi()
         builder.printHeaderDef()
         builder.printStringDef(::mangle)
@@ -35,15 +34,43 @@ class RustPrinter(
         target.writeText(builder.toString().replace("\n", System.lineSeparator()))
     }
 
-    private fun mangle(name: String) =
-        mangle(classPath, moduleName, name)
+    private val ResolvedIdlDeclaration.rustName: String
+        get() = when (this) {
+            is ResolvedIdlEnum -> rustName
+            is ResolvedIdlDictionary -> rustName
+            is ResolvedIdlCallbackFunction -> rustName
+            is ResolvedIdlInterface -> rustName
+            else -> throw UnsupportedOperationException("${(this as BuiltinIdlDeclaration).kind}")
+        }
+
+    private val ResolvedIdlOperation.rustName: String
+        get() = when {
+            isInterfaceOperationConstructor() -> "new"
+            isInterfaceOperationFn() -> interfaceFunctionName().snakeCase()
+            else -> name.snakeCase()
+        }
+
+    private val ResolvedIdlDictionary.rustName: String
+        get() = name.upperCamelCase()
+
+    private val ResolvedIdlField.rustName: String
+        get() = name.snakeCase()
+
+    private val ResolvedIdlEnum.rustName: String
+        get() = name.upperCamelCase()
+
+    private val ResolvedIdlCallbackFunction.rustName: String
+        get() = name.upperCamelCase()
+
+    private val ResolvedIdlInterface.rustName: String
+        get() = "crate::${name.upperCamelCase()}"
 
     private fun StringBuilder.printApi() {
         printLabel(this, "API")
         append("/*\n=============================================================== *\\")
 
         idl.interfaces.values.forEach { inter ->
-            val name = inter.name.upperCamelCase()
+            val name = inter.rustName
 
             append("\n\npub struct $name")
             if(inter.fields.isEmpty())
@@ -52,16 +79,26 @@ class RustPrinter(
             if(inter.operations.isNotEmpty()) {
                 append("\n\nimpl $name {")
 
-                inter.operations.forEach { op ->
-                    append("\n\tfn ${op.name.camelCase()}(")
-                    buildList {
-                        add("&self")
-                    }.joinTo(this)
-                    append(")")
+                inter.toOperations().forEach { operation ->
+                    val args = operation.args
+                        .map { it.type.toRustType() }
+                    val type = if(!operation.type.isVoid())
+                        " -> ${operation.type.toRustType()}"
+                    else ""
 
-                    if(!op.type.isVoid())
-                        append(" -> ${op.type.toRustType()}")
-                    append(" {}")
+                    when {
+                        operation.isInterfaceOperationConstructor() -> {
+                            append("\n\tfn ${operation.rustName}(${args.joinToString()}) -> Self {}")
+                        }
+                        operation.isInterfaceOperationFn() -> {
+                            val args = buildList {
+                                add("&self")
+                                addAll(args.drop(1))
+                            }.joinToString()
+
+                            append("\n\tfn ${operation.rustName}($args)$type {}")
+                        }
+                    }
                 }
                 append("\n}")
             }
@@ -70,9 +107,9 @@ class RustPrinter(
         }
 
         idl.globalOperators().forEach { operation ->
-            append("\n\npub fn ${operation.name.snakeCase()}(")
+            append("\n\npub fn ${operation.rustName}(")
             operation.args.joinTo(this, ",") {
-                "\n\t${it.name.snakeCase()}: ${it.type.toRustType()}"
+                "\n\t${it.rustName}: ${it.type.toRustType()}"
             }
             if(operation.args.isNotEmpty())
                 append("\n")
@@ -88,12 +125,10 @@ class RustPrinter(
     private fun StringBuilder.printFunction(operation: ResolvedIdlOperation) {
         append("\n#[no_mangle]")
 
-        val cName = mangle(operation.name)
-
         // Header
-        append("\nextern \"C\" fn $cName(")
+        append("\nextern \"C\" fn ${operation.cnameMangled(classPath, moduleName)}(")
         operation.args.joinTo(this, ", ") {
-            "${it.name.snakeCase()}: ${it.type.toNativeRustType()}"
+            "${it.rustName}: ${it.type.toNativeRustType()}"
         }
         append(") ")
         if(!operation.type.isVoid())
@@ -102,9 +137,9 @@ class RustPrinter(
 
         // Call
         val call = buildString {
-            append("crate::${operation.name.snakeCase()}")
+            append("crate::${operation.rustName}")
             operation.args.joinTo(this, prefix = "(", postfix = ")") {
-                toRustType(it.type, it.name.snakeCase())
+                toRustType(it.type, it.rustName)
             }
         }
         append(toNativeType(operation.type, call))
@@ -119,22 +154,26 @@ class RustPrinter(
 
         append("\nextern \"C\" {")
         idl.dictionaries.values.forEach { dictionary ->
-            val name = dictionary.name
+            val name = dictionary.rustName
             val args = dictionary.allFields().joinToString {
-                "${it.name}: ${it.type.toNativeRustType()}"
+                "${it.rustName}: ${it.type.toNativeRustType()}"
             }
             append("""
                 
-                fn ${mangle("${name}_new")}($args) -> *const _${name};
-                fn ${mangle("${name}_clone")}(self_: *const _${name}) -> *const _${name};
-                fn ${mangle("${name}_free")}(self_: *const _${name});
+                fn ${dictionary.subCFunc(classPath, moduleName, "new")}($args) -> *const _$name;
+                fn ${dictionary.subCFunc(classPath, moduleName, "clone")}(self_: *const _$name) -> *const _$name;
+                fn ${dictionary.subCFunc(classPath, moduleName, "free")}(self_: *const _$name);
             """.replaceIndent("\t"))
         }
         append("\n}\n")
 
         idl.dictionaries.values.forEach { dictionary ->
-            val name = dictionary.name.upperCamelCase()
+            val name = dictionary.rustName
             val fields = dictionary.allFields()
+
+            val funcCNew = dictionary.subCFunc(classPath, moduleName, "new")
+            val funcCClone = dictionary.subCFunc(classPath, moduleName, "clone")
+            val funcCFree = dictionary.subCFunc(classPath, moduleName, "free")
 
             // Native struct
             append("""
@@ -144,7 +183,7 @@ class RustPrinter(
                 struct _$name {
             """.trimIndent())
             fields.forEach {
-                append("\n\t${it.name.snakeCase()}: ${it.type.toNativeRustType()},")
+                append("\n\t${it.rustName}: ${it.type.toNativeRustType()},")
             }
             append("\n\t__flags: i8\n}\n\n")
 
@@ -154,7 +193,7 @@ class RustPrinter(
                     ptr: *const _$name,
             """.trimIndent())
             fields.forEach {
-                append("\n\tpub ${it.name.snakeCase()}: ${it.type.toRustType()},")
+                append("\n\tpub ${it.rustName}: ${it.type.toRustType()},")
             }
             append("\n}\n\n")
 
@@ -166,12 +205,12 @@ class RustPrinter(
             // new
             append("\n\tpub fn new(")
             fields.joinTo(this) {
-                "${it.name.snakeCase()}: ${it.type.toRustType()}"
+                "${it.rustName}: ${it.type.toRustType()}"
             }
             append(") -> Self {")
-            append("\n\t\tSelf::wrap(unsafe { ${mangle("${name}_new")}(")
+            append("\n\t\tSelf::wrap(unsafe { $funcCNew(")
             fields.joinTo(this) {
-                toNativeType(it.type, it.name.snakeCase())
+                toNativeType(it.type, it.rustName)
             }
             append(") })\n\t}\n")
 
@@ -184,7 +223,7 @@ class RustPrinter(
             buildList {
                 add("ptr" to "ptr")
                 fields.mapTo(this) {
-                    toRustType(it.type, "r.${it.name.snakeCase()}") to it.name.snakeCase()
+                    toRustType(it.type, "r.${it.rustName}") to it.rustName
                 }
             }.joinTo(this) {
                 if(it.first != it.second)
@@ -196,8 +235,8 @@ class RustPrinter(
             append("""
                 
                 impl_wrapper!($name, _$name);
-                impl_drop_clone!($name, ${mangle("${name}_free")}, ${mangle("${name}_clone")});
-                impl_ptr_holder!($name, _$name, ${mangle("${name}_free")}, ${mangle("${name}_clone")});
+                impl_drop_clone!($name, $funcCFree, $funcCClone);
+                impl_ptr_holder!($name, _$name, $funcCFree, $funcCClone);
                 
             """.trimIndent())
         }
@@ -243,7 +282,7 @@ class RustPrinter(
         """.trimIndent())
 
         idl.callbacks.values.forEach { callback ->
-            val name = callback.name.uppercaseFirstChar()
+            val name = callback.rustName
 
             // Struct
             append("""
@@ -285,7 +324,7 @@ class RustPrinter(
             buildList {
                 add("&self")
                 callback.args.mapTo(this) {
-                    "${it.name}: ${it.type.toRustType()}"
+                    "${it.rustName}: ${it.type.toRustType()}"
                 }
             }.joinTo(this, prefix = "(", postfix = ")")
             if(!callback.type.isVoid())
@@ -296,7 +335,7 @@ class RustPrinter(
                 buildList {
                     add("self.ptr")
                     callback.args.mapTo(this) {
-                        toNativeType(it.type, it.name)
+                        toNativeType(it.type, it.rustName)
                     }
                 }.joinTo(this, prefix = "(", postfix = ")")
             }
@@ -320,7 +359,7 @@ class RustPrinter(
         printLabel(this, "Enums")
 
         idl.enums.values.forEach { enum ->
-            val name = enum.name.upperCamelCase()
+            val name = enum.rustName
 
             append("""
                 
@@ -372,62 +411,37 @@ class RustPrinter(
                     result
                 }
             }
+            
         """.trimIndent())
 
         idl.interfaces.values.forEach { inter ->
-            val name = "crate::${inter.name.upperCamelCase()}"
-
-            append("""
-                
-                
-                #[no_mangle]
-                extern "C" fn ${mangle(interfaceFreeCName(inter))}(ptr: *const $name) {
-                    unsafe { let _ = Arc::from_raw(ptr); }
+            inter.toOperations().forEach { operation ->
+                val rustName = operation.rustName
+                val cArgs = operation.args.joinToString {
+                    "${it.rustName}: ${it.type.toNativeRustType()}"
                 }
-            """.trimIndent())
-
-            inter.constructors.forEach { constructor ->
-                val constructorName = "new"
-                val cArgs = constructor.args.joinToString {
-                    "${it.name.snakeCase()}: ${it.type.toNativeRustType()}"
+                val rustArgs = operation.args.map {
+                    toRustType(it.type, it.rustName)
                 }
-                val rustArgs = constructor.args.joinToString {
-                    toRustType(it.type, it.name.snakeCase())
-                }
+                val type = if(!operation.type.isVoid())
+                    " -> ${operation.type.toNativeRustType()}"
+                else ""
 
+                val body = when {
+                    operation.isInterfaceOperationFree() ->
+                        "unsafe { let _ = Arc::from_raw(ptr); }"
+                    operation.isInterfaceOperationConstructor() ->
+                        "Arc::into_raw(Arc::new(${inter.rustName}::$rustName(${rustArgs.joinToString()})))"
+                    operation.isInterfaceOperationFn() ->
+                        toNativeType(operation.type, "clone_arc(ptr).$rustName(${rustArgs.drop(1).joinToString()})")
+                    else -> throw UnsupportedOperationException()
+                }
+                append("\n")
                 append("""
-                    
-                    
-                    #[no_mangle]
-                    extern "C" fn ${mangle(interfaceConstructorCName(inter, constructor))}($cArgs) -> *const $name {
-                        Arc::into_raw(Arc::new($name::$constructorName($rustArgs)))
+                    #[no_mangle] extern "C" fn ${operation.cnameMangled(classPath, moduleName)}(${cArgs})$type {
+                        $body
                     }
-                """.trimIndent())
-            }
-
-            inter.operations.forEach { operation ->
-                val operationName = operation.name.snakeCase()
-
-                val cArgs = buildList {
-                    add("ptr: *const $name")
-                    operation.args.mapTo(this) {
-                        "${it.name.snakeCase()}: ${it.type.toNativeRustType()}"
-                    }
-                }.joinToString()
-
-                val rustArgs = operation.args.joinToString {
-                    toRustType(it.type, it.name.snakeCase())
-                }
-
-                val call = toNativeType(operation.type, "clone_arc(ptr).$operationName($rustArgs)")
-
-                append("""
                     
-                    
-                    #[no_mangle]
-                    extern "C" fn ${mangle(interfaceOperationCName(inter, operation))}($cArgs) {
-                        $call
-                    }
                 """.trimIndent())
             }
         }
@@ -437,10 +451,12 @@ class RustPrinter(
         val nullable = if(type.isNullable) "_nullable" else ""
         return when {
             type.isVoid() || type.isPrimitive() -> content
-            type.isEnum() -> "${type.declaration.name}::to_int($content)"
+            type.isEnum() -> "${type.declaration.rustName}::to_int($content)"
             type.isArray() && type.arrayTypeOrNull()!!.isNullable -> "KArrayOpt::unwrap$nullable($content)"
             type.isInterface() -> "Arc::into_raw($content)"
-            else -> "${type.toCType(ptr = false)}::unwrap$nullable($content)"
+            type.isPrimitive() -> content
+            type is ResolvedIdlType.Default -> "${type.toCType(ptr = false)}::unwrap$nullable($content)"
+            else -> throw UnsupportedOperationException()
         }
     }
 
@@ -448,10 +464,11 @@ class RustPrinter(
         val nullable = if(type.isNullable) "_nullable" else ""
         return when {
             type.isVoid() || type.isPrimitive() -> content
-            type.isEnum() -> "${type.declaration.name}::from_int($content)"
+            type.isEnum() -> "${type.declaration.rustName}::from_int($content)"
             type.isArray() && type.arrayTypeOrNull()!!.isNullable -> "KArrayOpt::wrap$nullable($content)"
             type.isInterface() -> "clone_arc($content)"
-            else -> "${type.toCType(ptr = false)}::wrap$nullable($content)"
+            type is ResolvedIdlType.Default -> "${type.toCType(ptr = false)}::wrap$nullable($content)"
+            else -> throw UnsupportedOperationException()
         }
     }
 
@@ -471,8 +488,8 @@ class RustPrinter(
         isArray() -> "*const _KArray"
         isEnum() -> "i32"
         isString() -> "*const _KString"
-        isCallback() || isDictionary() -> "*const _${declaration.name.upperCamelCase()}"
-        isInterface() -> "*const crate::${declaration.name.upperCamelCase()}"
+        isCallback() || isDictionary() -> "*const _${declaration.rustName}"
+        isInterface() -> "*const ${declaration.rustName}"
         else -> "UNKNOWN"
     }
 
@@ -490,10 +507,10 @@ class RustPrinter(
             isULong() -> "u64"
             isFloat() -> "f32"
             isDouble() -> "f64"
-            isEnum() -> declaration.name.upperCamelCase()
+            isEnum() -> declaration.rustName
             isString() -> "KString"
-            isCallback() || isDictionary() -> declaration.name.upperCamelCase()
-            isInterface() -> "Arc<crate::${declaration.name.upperCamelCase()}>"
+            isCallback() || isDictionary() -> declaration.rustName
+            isInterface() -> "Arc<${declaration.rustName}>"
             isArray() -> arrayType { type ->
                 when {
                     type.isPrimitive() -> "${type.toCType(ptr = false)}Array"

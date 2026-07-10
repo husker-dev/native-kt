@@ -3,18 +3,7 @@ package com.huskerdev.nativekt.printers.kotlin
 import com.huskerdev.nativekt.printers.kotlin.jvm.KotlinJvmCIPrinter
 import com.huskerdev.nativekt.printers.kotlin.jvm.KotlinJvmForeignPrinter
 import com.huskerdev.nativekt.printers.kotlin.jvm.KotlinJvmJniPrinter
-import com.huskerdev.nativekt.utils.asyncLoadFunctionName
-import com.huskerdev.nativekt.utils.camelCase
-import com.huskerdev.nativekt.utils.functionHeader
-import com.huskerdev.nativekt.utils.globalOperators
-import com.huskerdev.nativekt.utils.interfaceConstructorCName
-import com.huskerdev.nativekt.utils.interfaceFreeCName
-import com.huskerdev.nativekt.utils.interfaceOperationCName
-import com.huskerdev.nativekt.utils.printFunctionHeader
-import com.huskerdev.nativekt.utils.syncLoadFunctionName
-import com.huskerdev.nativekt.utils.toKotlinType
-import com.huskerdev.nativekt.utils.toOperations
-import com.huskerdev.nativekt.utils.upperCamelCase
+import com.huskerdev.nativekt.utils.*
 import com.huskerdev.webidl.resolver.IdlResolver
 import com.huskerdev.webidl.resolver.ResolvedIdlInterface
 import com.huskerdev.webidl.resolver.ResolvedIdlOperation
@@ -118,32 +107,31 @@ class KotlinJvmPrinter(
                 ${syncLoadFunctionName(moduleName)}()
                 onReady()
             }
+            
         """.trimIndent())
 
         if(useCoroutines) builder.append("""
             
-            
             ${actual}suspend fun ${asyncLoadFunctionName(moduleName)}() =
                 ${syncLoadFunctionName(moduleName)}()
+            
         """.trimIndent())
 
         if(idl.interfaces.isNotEmpty()) {
-            builder.append("\n\n// === Interfaces ===\n")
+            printLabel(builder, "Interfaces")
             idl.interfaces.values.forEach {
-                printInterface(builder, it)
+                printJvmInterface(builder, it)
             }
         }
 
         // Functions
-        builder.append("\n\n// === Functions ===\n")
-        idl.globalOperators().forEach { printFunctionProxy(builder, it) }
-        idl.interfaces.values
-            .flatMap { it.toOperations() }
-            .forEach { printFunctionProxy(builder, it, true) }
+        printLabel(builder, "Functions")
+        idl.allOperators().forEach { printFunctionProxy(builder, it) }
 
         // Implementation
-        builder.append("\n\n// === Implementation ===\n\n")
+        printLabel(builder, "Implementation")
         builder.append("""
+            
             private var $implName: $nativeInvoker? = null
             
             private sealed interface $nativeInvoker {
@@ -151,17 +139,15 @@ class KotlinJvmPrinter(
                 
         """.trimIndent())
 
-        listOf(
-            // Default functions
-            *idl.globalOperators()
-                .map { it to false }.toTypedArray(),
+        idl.allOperators().forEach {
+            val isInterfaceConstructor = it.isInterfaceOperationConstructor()
 
-            // Interface functions
-            *idl.interfaces.values
-                .flatMap { it.toOperations() }
-                .map { it to true }.toTypedArray()
-        ).joinTo(builder, "\n\t") {
-            functionHeader(it.first, name = (if(it.second) "_" else "") + it.first.name.camelCase())
+            builder.append("\n\t")
+            builder.append(functionHeader(it,
+                printType = !isInterfaceConstructor
+            ))
+            if(isInterfaceConstructor)
+                builder.append(": Long")
         }
         builder.append("\n}")
 
@@ -208,68 +194,59 @@ class KotlinJvmPrinter(
 
     private fun printFunctionProxy(
         builder: StringBuilder,
-        function: ResolvedIdlOperation,
-        isInterfaceFunction: Boolean = false
+        function: ResolvedIdlOperation
     ) = builder.apply {
+        val isInterfaceFunction = function.isInterfaceOperation()
+        val isInterfaceConstructor = function.isInterfaceOperationConstructor()
+
         append('\n')
         printFunctionHeader(builder, function,
-            name = (if(isInterfaceFunction) "_" else "") + function.name.camelCase(),
+            name = function.kname,
+            printType = !isInterfaceConstructor,
             isActual = expectActual && !isInterfaceFunction,
             isPrivate = isInterfaceFunction,
             forcePrintVoid = true
         )
-        append(" = \n\t$implName!!.")
-        if(isInterfaceFunction)
-            append("_")
-        append(function.name.camelCase())
-        function.args.joinTo(this, prefix = "(", postfix = ")\n") { it.name.camelCase() }
+        if(isInterfaceConstructor)
+            append(": Long")
+        append(" = \n\t$implName!!.${function.kname}")
+        function.args.joinTo(this, prefix = "(", postfix = ")\n") { it.kname }
     }
+}
 
-    private fun printInterface(builder: StringBuilder, inter: ResolvedIdlInterface) = builder.apply {
-        val name = inter.name.upperCamelCase()
-        append("""
+internal fun printJvmInterface(builder: StringBuilder, inter: ResolvedIdlInterface) = builder.apply {
+    val name = inter.kname
+    append("""
             
             actual class $name(_ptr: Long): NativeKtResourceJvm(_ptr) {
                 companion object {
                     @JvmStatic fun _wrap(ptr: Long): $name? = 
                         if(ptr == 0L) null else $name(ptr)
                 }
-                
         """.trimIndent())
 
-        if(inter.constructors.size == 1) {
-            val constructor = inter.constructors[0]
-            val nativeFunc = "_" + interfaceConstructorCName(inter, constructor).camelCase()
-
-            append("\n\tactual constructor(")
-            constructor.args.joinTo(this) {
-                "${it.name.camelCase()}: ${it.type.toKotlinType()}"
-            }
-            append("): this($nativeFunc(")
-            constructor.args.joinTo(this) { it.name }
-            append(")._ptr)")
+    inter.toOperations().forEach { operation ->
+        val args = operation.args.map {
+            "${it.kname}: ${it.type.toKotlinType()}"
         }
-        inter.operations.forEach { operation ->
-            val nativeFunc = "_" + interfaceOperationCName(inter, operation).camelCase()
+        val argNames = operation.args.map { it.kname }
 
-            append("\n\tactual fun ${operation.name.camelCase()}(")
-            operation.args.joinTo(this) {
-                "${it.name.camelCase()}: ${it.type.toKotlinType()}"
+        append("\n\t")
+        append(when {
+            operation.isInterfaceOperationConstructor() ->
+                "actual constructor(${args.joinToString()}): this(${operation.kname}(${argNames.joinToString()}))"
+            operation.isInterfaceOperationFn() -> {
+                val name = operation.interfaceFunctionName()
+                val args = args.drop(1).joinToString()
+                val argNames = argNames.toMutableList()
+                    .apply { set(0, "this") }
+                    .joinToString()
+                "actual fun $name($args) = ${operation.kname}($argNames)"
             }
-            append(") = $nativeFunc(")
-            buildList {
-                add("this")
-                operation.args.mapTo(this) { it.name }
-            }.joinTo(this)
-            append(")")
-        }
-        append("""
-            
-            
-                override fun _close() = _${interfaceFreeCName(inter).camelCase()}(this)
-            }
-            
-        """.trimIndent())
+            operation.isInterfaceOperationFree() ->
+                "override fun _close() = ${operation.kname}(this)"
+            else -> throw UnsupportedOperationException()
+        })
     }
-
+    append("\n}\n")
 }

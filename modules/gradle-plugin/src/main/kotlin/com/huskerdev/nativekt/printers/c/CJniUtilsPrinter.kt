@@ -1,7 +1,9 @@
 package com.huskerdev.nativekt.printers.c
 
 import com.huskerdev.nativekt.utils.allFields
+import com.huskerdev.nativekt.utils.cname
 import com.huskerdev.nativekt.utils.isUnsigned
+import com.huskerdev.nativekt.utils.kname
 import com.huskerdev.nativekt.utils.printLabel
 import com.huskerdev.nativekt.utils.snakeCase
 import com.huskerdev.nativekt.utils.toCType
@@ -253,7 +255,7 @@ class CJniUtilsPrinter(
                 if(self == NULL)
                     return;
                 self->__flags |= K_FLAG_DATA_OWNER;
-            	${mangle("KArray_free")}(self, free_op);
+            	${mangle("karray_free")}(self, free_op);
             }
             
             jobjectArray JNI_to_kotlin_karray(
@@ -359,7 +361,7 @@ class CJniUtilsPrinter(
                 	if(self == NULL)
                 		return;
                 	self->__flags |= K_FLAG_DATA_OWNER;
-                	${mangle("KIntArray_free")}(self);
+                	${mangle("kint_array_free")}(self);
                 }
                 
                 jobjectArray JNI_to_kotlin_enum_array(
@@ -532,7 +534,7 @@ class CJniUtilsPrinter(
     }
 
     fun mangle(name: String) =
-        com.huskerdev.nativekt.utils.mangle(classPath, moduleName, name)
+        com.huskerdev.nativekt.utils.mangle(classPath, moduleName, "_$name")
 
     private fun printStructs(builder: StringBuilder) = builder.apply {
         append("\n")
@@ -570,7 +572,7 @@ class CJniUtilsPrinter(
             append("return (*env)->CallObjectMethod(env, struct_${struct.name.lowercase()}_companion, struct_${struct.name.lowercase()}_constructor, \n\t\t")
 
             struct.allFields().joinTo(builder, separator = ",\n\t\t") {
-                castJniToKotlin(it.type, "src->${it.name.snakeCase()}")
+                castJniToKotlin(it.type, "src->${it.cname}")
             }
             append("\n\t);\n}\n")
 
@@ -759,7 +761,7 @@ class CJniUtilsPrinter(
         if(idl.dictionaries.isNotEmpty()) {
             append("\n\t// Struct")
             idl.dictionaries.values.forEach { struct ->
-                val structClassPath = "${classPath.replace(".", "/")}/${struct.name}"
+                val structClassPath = "${classPath.replace(".", "/")}/${struct.kname}"
                 val classFieldName = "class_${struct.name.lowercase()}"
                 val companionFieldName = "struct_${struct.name.lowercase()}_companion"
                 val constructorFieldName = "struct_${struct.name.lowercase()}_constructor"
@@ -783,7 +785,7 @@ class CJniUtilsPrinter(
                         "JNI_get_unmangled_method_id"
                     else "(*env)->GetMethodID"
 
-                    "$fieldVariableName = $getMethodId(env, $classFieldName, \"get${field.name.capitalized()}\", \"()${field.type.toJavaDesc(classPath)}\");"
+                    "$fieldVariableName = $getMethodId(env, $classFieldName, \"get${field.kname.capitalized()}\", \"()${field.type.toJavaDesc(classPath)}\");"
                 }
                 append("\n")
             }

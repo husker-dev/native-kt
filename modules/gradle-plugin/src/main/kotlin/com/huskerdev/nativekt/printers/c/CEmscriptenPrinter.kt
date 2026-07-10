@@ -1,11 +1,6 @@
 package com.huskerdev.nativekt.printers.c
 
-import com.huskerdev.nativekt.utils.globalOperators
-import com.huskerdev.nativekt.utils.isVoid
-import com.huskerdev.nativekt.utils.snakeCase
-import com.huskerdev.nativekt.utils.toCType
-import com.huskerdev.nativekt.utils.toOperations
-import com.huskerdev.nativekt.utils.upperCamelCase
+import com.huskerdev.nativekt.utils.*
 import com.huskerdev.webidl.resolver.IdlResolver
 import java.io.File
 
@@ -23,8 +18,8 @@ class CEmscriptenPrinter(
 
         builder.append("""
             
-            EMSCRIPTEN_KEEPALIVE void ${jsMangle["KArray_free"]}(const KArray* self, void (*free_op)(void*)) {
-                ${mangle("KArray_free")}(self, free_op);
+            EMSCRIPTEN_KEEPALIVE void ${jsMangle["karray_free"]}(const KArray* self, void (*free_op)(void*)) {
+                ${mangle("karray_free")}(self, free_op);
             }
             
         """.trimIndent())
@@ -39,36 +34,50 @@ class CEmscriptenPrinter(
             "KLongArray",
             "KFloatArray",
             "KDoubleArray",
-            *idl.dictionaries.values.map { it.name.upperCamelCase() }.toTypedArray()
         ).forEach { name ->
+            val lowerName = name.snakeCase()
             builder.append("""
                 
-                EMSCRIPTEN_KEEPALIVE void ${jsMangle["${name}_free"]}($name* self) {
-                    ${mangle("${name}_free")}(self);
+                EMSCRIPTEN_KEEPALIVE void ${jsMangle["${lowerName}_free"]}($name* self) {
+                    ${mangle("${lowerName}_free")}(self);
                 }
                 
-                EMSCRIPTEN_KEEPALIVE void* ${jsMangle["${name}_free_addr"]}() {
-                    return (void*) &${mangle("${name}_free")};
+                EMSCRIPTEN_KEEPALIVE void* ${jsMangle["${lowerName}_free_addr"]}() {
+                    return (void*) &${mangle("${lowerName}_free")};
                 }
                 
             """.trimIndent())
         }
 
-        listOf(
-            *idl.globalOperators().toTypedArray(),
-            *idl.interfaces.values.flatMap { it.toOperations() }.toTypedArray()
-        ).forEach { function ->
-            val name = function.name.snakeCase()
+        idl.dictionaries.values.forEach {
+            val name = it.name.lowercase()
+            val funcFree = it.subCFunc(classPath, moduleName, "free")
+            builder.append("""
+                
+                EMSCRIPTEN_KEEPALIVE void ${jsMangle["${name}_free"]}(${it.cname}* self) {
+                    $funcFree(self);
+                }
+                
+                EMSCRIPTEN_KEEPALIVE void* ${jsMangle["${name}_free_addr"]}() {
+                    return (void*) &$funcFree;
+                }
+                
+            """.trimIndent())
+        }
+
+        idl.allOperators().forEach { function ->
+            val name = function.cname
+            val mangledName = function.cnameMangled(classPath, moduleName)
             val type = function.type.toCType()
             val args = function.args.joinToString {
-                "${it.type.toCType()} ${it.name.snakeCase()}"
+                "${it.type.toCType()} ${it.cname}"
             }
-            val argNames = function.args.joinToString { it.name.snakeCase() }
+            val argNames = function.args.joinToString { it.cname }
 
             builder.append("""
                 
                 EMSCRIPTEN_KEEPALIVE $type ${jsMangle[name]}($args) {
-                    ${if(function.type.isVoid()) "" else "return "}${mangle(name)}($argNames);
+                    ${if(function.type.isVoid()) "" else "return "}$mangledName($argNames);
                 }
                 
             """.trimIndent())
@@ -78,5 +87,5 @@ class CEmscriptenPrinter(
     }
 
     private fun mangle(name: String) =
-        com.huskerdev.nativekt.utils.mangle(classPath, moduleName, name)
+        com.huskerdev.nativekt.utils.mangle(classPath, moduleName, "_$name")
 }

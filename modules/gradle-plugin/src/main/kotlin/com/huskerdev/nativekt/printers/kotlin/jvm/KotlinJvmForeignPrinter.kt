@@ -5,7 +5,7 @@ import com.huskerdev.webidl.resolver.*
 import org.gradle.internal.extensions.stdlib.capitalized
 
 class KotlinJvmForeignPrinter(
-    idl: IdlResolver,
+    val idl: IdlResolver,
     builder: StringBuilder,
     val classPath: String,
     val moduleName: String,
@@ -32,38 +32,7 @@ class KotlinJvmForeignPrinter(
             builder.append("\t}\n\n")
         }
 
-        builder.append($$"""
-            private val handle = SymbolLookup.libraryLookup(java.nio.file.Paths.get(libraryPath), Arena.global())
-            
-            private val addressKArrayFree = address(handle, "$${mangle("karray_free")}")
-            private val handleKArrayFree = handle(addressKArrayFree, false, null, ValueLayout.ADDRESS, ValueLayout.ADDRESS)
-            
-        """.replaceIndent("\t"))
-
-        buildList {
-            addAll(listOf(
-                "KString",
-                "KCharArray", "KBooleanArray",
-                "KByteArray", "KUByteArray",
-                "KShortArray", "KUShortArray",
-                "KIntArray", "KUIntArray",
-                "KLongArray", "KULongArray",
-                "KFloatArray", "KDoubleArray"
-            ))
-            idl.dictionaries.values.mapTo(this) { it.name }
-        }.forEach {
-            builder.append("\n\tprivate val address${it.capitalized()}Free = address(handle, \"${mangle("${it}_free")}\")")
-            builder.append("\n\tprivate val handle${it.capitalized()}Free = handle(address${it.capitalized()}Free, false, null, ValueLayout.ADDRESS)\n")
-        }
-        builder.append("\n")
-
-        idl.globalOperators().forEach {
-            printFunctionHandle(builder, it)
-        }
-
-        idl.interfaces.values
-            .flatMap { it.toOperations() }
-            .forEach { printFunctionHandle(builder, it, true) }
+        printHandles(builder)
 
         builder.append("""
             
@@ -72,20 +41,59 @@ class KotlinJvmForeignPrinter(
             
         """.replaceIndent("$indent\t"))
 
-        idl.globalOperators().forEach {
+        idl.allOperators().forEach {
             printFunctionCall(builder, it)
         }
-        idl.interfaces.values
-            .flatMap { it.toOperations() }
-            .forEach { printFunctionCall(builder, it, true) }
         builder.append("${indent}}")
     }
 
     fun mangle(name: String) =
-        mangle(classPath, moduleName, name)
+        mangle(classPath, moduleName, "_$name")
+
+    private fun printHandles(builder: StringBuilder) = builder.apply {
+        append("""
+            private val handle = SymbolLookup.libraryLookup(java.nio.file.Paths.get(libraryPath), Arena.global())
+            
+        """.replaceIndent("\t"))
+
+        listOf(
+            "KString",
+            "KCharArray", "KBooleanArray",
+            "KByteArray", "KUByteArray",
+            "KShortArray", "KUShortArray",
+            "KIntArray", "KUIntArray",
+            "KLongArray", "KULongArray",
+            "KFloatArray", "KDoubleArray"
+        ).apply {
+            append("\n\tprivate val address_KArrayFree = address(handle, \"${mangle("karray_free")}\")")
+            forEach {
+                append("\n\tprivate val address_${it.upperCamelCase()}Free = address(handle, \"${mangle("${it.snakeCase()}_free")}\")")
+            }
+
+            append("\n\n\tprivate val handle_KArrayFree = handle(address_KArrayFree, false, null, ValueLayout.ADDRESS, ValueLayout.ADDRESS)")
+            forEach {
+                append("\n\tprivate val handle_${it.upperCamelCase()}Free = handle(address_${it.upperCamelCase()}Free, false, null, ValueLayout.ADDRESS)")
+            }
+        }
+
+        append("\n")
+        idl.dictionaries.values.forEach {
+            val funcFree = it.subCFunc(classPath, moduleName, "free")
+            val name = it.name.upperCamelCase()
+            builder.append("\n\tprivate val address_${name}Free = address(handle, \"$funcFree\")")
+            builder.append("\n\tprivate val handle_${name}Free = handle(address_${name}Free, false, null, ValueLayout.ADDRESS)")
+        }
+        append("\n\n")
+
+        idl.allOperators().forEach {
+            printFunctionHandle(builder, it)
+        }
+    }
 
     private fun printDictionaryLayout(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
-        append("$indent\t\tprivate val layout${dictionary.name.upperCamelCase()} = CStructLayout(")
+        val layout = "layout${dictionary.name.upperCamelCase()}"
+
+        append("$indent\t\tprivate val $layout = CStructLayout(")
         buildList {
             dictionary.allFields().mapTo(this) { it.type.toForeignType() }
             add("ValueLayout.JAVA_BYTE")
@@ -103,7 +111,7 @@ class KotlinJvmForeignPrinter(
         append("of?.run { malloc($layout.size).apply {")
 
         fields.forEachIndexed { i, it ->
-            val value = castToNative(it.type, "of.${it.name.camelCase()}", useArena = false)
+            val value = castToNative(it.type, "of.${it.kname}", useArena = false)
             val set = "set(${it.type.toForeignType()}, $layout[$i], $value)"
             append("\n\t\t\t$set")
         }
@@ -116,7 +124,7 @@ class KotlinJvmForeignPrinter(
         append("of?.run { arena.allocate($layout.size).apply {")
 
         fields.forEachIndexed { i, it ->
-            val value = castToNative(it.type, "of.${it.name.camelCase()}", useArena = true)
+            val value = castToNative(it.type, "of.${it.kname}", useArena = true)
             val set = "set(${it.type.toForeignType()}, $layout[$i], $value)"
             append("\n\t\t\t$set")
         }
@@ -139,15 +147,14 @@ class KotlinJvmForeignPrinter(
 
     private fun printFunctionHandle(
         builder: StringBuilder,
-        function: ResolvedIdlOperation,
-        isInterfaceFunction: Boolean = false
+        function: ResolvedIdlOperation
     ) = builder.apply {
         val isCriticalAlt = function.isCritical() &&
                 function.isCriticalCapable() &&
                 (function.hasString() || function.hasArray())
 
-        val handleName = "handle${if(isInterfaceFunction) "_" else ""}${function.name.upperCamelCase()}"
-        val cName = mangle(function.name) + if(isCriticalAlt) "_" else ""
+        val handleName = "handle${function.kname.capitalized()}"
+        val cName = (if(isCriticalAlt) "c_" else "") + function.cnameMangled(classPath, moduleName)
 
         append("${indent}\tprivate val $handleName = lookup(")
 
@@ -169,11 +176,11 @@ class KotlinJvmForeignPrinter(
 
     private fun printFunctionCall(
         builder: StringBuilder,
-        function: ResolvedIdlOperation,
-        isInterfaceFunction: Boolean = false
+        function: ResolvedIdlOperation
     ) = builder.apply {
+        val isInterfaceConstructor = function.isInterfaceOperationConstructor()
 
-        val handleName = "handle${if(isInterfaceFunction) "_" else ""}${function.name.upperCamelCase()}"
+        val handleName = "handle${function.kname.capitalized()}"
 
         val useArena = function.args.any {
             (it.type.isString() && !function.isCritical()) ||
@@ -192,7 +199,7 @@ class KotlinJvmForeignPrinter(
         }
 
         val args = function.args.flatMap {
-            val name = it.name.camelCase()
+            val name = it.kname
             val nullable = if(it.type.isNullable) "?" else ""
             val elseNum = if(it.type.isNullable) " ?: -1" else ""
             when {
@@ -223,9 +230,12 @@ class KotlinJvmForeignPrinter(
 
         append("\n${indent}\t")
         printFunctionHeader(builder, function,
-            name = (if(isInterfaceFunction) "_" else "") + function.name.camelCase(),
+            name = function.kname,
+            printType = !isInterfaceConstructor,
             isOverride = true
         )
+        if(isInterfaceConstructor)
+            append(": Long")
 
         when {
             useArena -> append(" = Arena.ofConfined().use { arena ->")
@@ -251,7 +261,10 @@ class KotlinJvmForeignPrinter(
         } else {
             if(!useArena && transforms.isNotEmpty())
                 append("return ")
-            append(castFromNative(function.type, call))
+            if(!isInterfaceConstructor)
+                append(castFromNative(function.type, call))
+            else
+                append("$call.address()")
         }
 
         if(useArena || deallocFunc != null || transforms.isNotEmpty())
@@ -262,25 +275,25 @@ class KotlinJvmForeignPrinter(
     private fun printCallbackInvoke(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
         val args = buildList {
             add("_callback: MemorySegment")
-            callback.args.mapTo(this) { "${it.name.camelCase()}: ${it.type.toKotlinForeignType()}" }
+            callback.args.mapTo(this) { "${it.kname}: ${it.type.toKotlinForeignType()}" }
         }.joinToString()
 
-        val lambdaArgs = callback.args.joinToString { castFromNative(it.type, it.name.camelCase()) }
+        val lambdaArgs = callback.args.joinToString { castFromNative(it.type, it.kname) }
         val type = callback.type.toKotlinForeignType(smallUnsignedTypesAsInt = true)
 
-        append("\n\t\t@JvmStatic fun invoke${callback.name.upperCamelCase()}($args): $type =\n\t\t\t")
+        append("\n\t\t@JvmStatic fun invoke${callback.kname}($args): $type =\n\t\t\t")
 
-        val call = "toKotlinCallback<${callback.name.upperCamelCase()}>(_callback)!!($lambdaArgs)"
+        val call = "toKotlinCallback<${callback.kname}>(_callback)!!($lambdaArgs)"
 
         append(castToNative(callback.type, call, useArena = false, smallTypesAsInt = true))
         append("\n")
     }
 
     private fun printCallbackUpcall(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
-        append("\n\t\tprivate val upcall${callback.name.upperCamelCase()} = lookup.upcall(\n\t\t\t")
+        append("\n\t\tprivate val upcall${callback.kname} = lookup.upcall(\n\t\t\t")
 
         // lookup
-        append("\"invoke${callback.name.upperCamelCase()}\",\n\t\t\t")
+        append("\"invoke${callback.kname}\",\n\t\t\t")
         append("MethodType.methodType(")
 
         val returnType = if(callback.type is ResolvedIdlType.Void)
@@ -314,17 +327,17 @@ class KotlinJvmForeignPrinter(
         type: ResolvedIdlType,
         content: String
     ) = when {
-        type.isString() -> "handleKStringFree.invoke($content)"
+        type.isString() -> "handle_KStringFree.invoke($content)"
         type.isArray() -> type.arrayType { type ->
             when {
-                type.isPrimitive() -> "handle${type.toCType()}ArrayFree.invoke($content)"
+                type.isPrimitive() -> "handle_${type.toCType()}ArrayFree.invoke($content)"
                 type.isEnum() ->
-                    "handleKIntArrayFree.invoke($content)"
-                else -> "handleKArrayFree.invoke($content, address${type.toCType(ptr = false)}Free)"
+                    "handle_KIntArrayFree.invoke($content)"
+                else -> "handle_KArrayFree.invoke($content, address_${type.toCType(ptr = false)}Free)"
             }
         }
         type.isCallback() -> "ForeignUtils.callbackFree($content)"
-        type.isDictionary() || type.isString() -> "handle${type.toCType(ptr = false)}Free.invoke($content)"
+        type.isDictionary() || type.isString() -> "handle_${type.toCType(ptr = false)}Free.invoke($content)"
         else -> null
     }
 

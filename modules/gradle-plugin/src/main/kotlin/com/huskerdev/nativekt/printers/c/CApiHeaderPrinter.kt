@@ -89,25 +89,27 @@ class CApiHeaderPrinter(
     }
 
     private fun mangle(name: String) =
-        mangle(classPath, moduleName, name)
+        mangle(classPath, moduleName, "_$name")
 
     private fun printFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
-        val name = function.name.snakeCase()
+        val name = function.cname
+        val mangledName = function.cnameMangled(classPath, moduleName)
         val type = function.type.toCType(printNullable = true)
         val args = function.args.joinToString {
-            "${it.type.toCType(printNullable = true)} ${it.name.snakeCase()}"
+            "${it.type.toCType(printNullable = true)} ${it.cname}"
         }
 
         if(cFunctions)
             append("\n$type $name($args);")
         if (isInternal)
-            append("\nEXTERN_C DLL_EXPORT $type ${mangle(name)}($args);")
+            append("\nEXTERN_C DLL_EXPORT $type $mangledName($args);")
     }
 
     private fun printCriticalFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
+        val name = function.cnameMangled(classPath, moduleName)
         val type = function.type.toCType(printNullable = true)
         val args = function.args.flatMap {
-            val name = it.name.snakeCase()
+            val name = it.cname
             when {
                 it.type.isString() -> listOf("const char* _Nonnull _arr_$name", "KInt _length_$name, KLong _size_$name")
                 it.type.isArray() -> {
@@ -118,30 +120,30 @@ class CApiHeaderPrinter(
             }
         }.joinToString()
         if(isInternal)
-            append("\nEXTERN_C DLL_EXPORT $type ${mangle(function.name)}_($args);")
+            append("\nEXTERN_C DLL_EXPORT $type c_${name}($args);")
     }
 
     private fun printEnum(builder: StringBuilder, enum: ResolvedIdlEnum) = builder.apply {
         append("\ntypedef enum {\n\t")
         enum.elements.joinTo(builder, separator = ",\n\t") {
-            "${enum.name.upperCamelCase()}_${it}"
+            "${enum.cname}_${it}"
         }
         append("\n} ")
-        append(enum.name.upperCamelCase())
+        append(enum.cname)
         append(";\n")
     }
 
     private fun printStruct(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
         append("\nstruct ")
-        append(dictionary.name.upperCamelCase())
+        append(dictionary.cname)
         append(" {")
         if(dictionary.implements != null)
-            append(" // : ").append(dictionary.implements!!.name.upperCamelCase())
+            append(" // : ").append(dictionary.implements!!.cname)
         append("\n\t")
 
         buildList {
             dictionary.allFields().mapTo(this) { field ->
-                "${field.type.toCType(printNullable = true)} ${field.name.snakeCase()};"
+                "${field.type.toCType(printNullable = true)} ${field.cname};"
             }
             add("char __flags;")
         }.joinTo(builder, separator = "\n\t")
@@ -150,7 +152,7 @@ class CApiHeaderPrinter(
     }
 
     private fun printStructFunctions(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
-        val name = dictionary.name.upperCamelCase()
+        val name = dictionary.cname
         val args = dictionary.allFields().joinToString { field ->
             "${field.type.toCType(printNullable = true)} ${field.name.snakeCase()}"
         }
@@ -165,12 +167,16 @@ class CApiHeaderPrinter(
             """.trimIndent())
         }
         if(isInternal) {
+            val funcNew = dictionary.subCFunc(classPath, moduleName, "new")
+            val funcClone = dictionary.subCFunc(classPath, moduleName, "clone")
+            val funcFree = dictionary.subCFunc(classPath, moduleName, "free")
+            val funcFreeForced = dictionary.subCFunc(classPath, moduleName, "free_forced")
             append("""
                 
-                EXTERN_C DLL_EXPORT $name* _Nonnull ${mangle("${name}_new")}($args);
-                EXTERN_C DLL_EXPORT $name* _Nullable ${mangle("${name}_clone")}(const $name* _Nullable self);
-                EXTERN_C DLL_EXPORT void ${mangle("${name}_free")}($name* _Nullable self);
-                EXTERN_C DLL_EXPORT void ${mangle("${name}_free_forced")}($name* _Nullable self);
+                EXTERN_C DLL_EXPORT $name* _Nonnull $funcNew($args);
+                EXTERN_C DLL_EXPORT $name* _Nullable $funcClone(const $name* _Nullable self);
+                EXTERN_C DLL_EXPORT void $funcFree($name* _Nullable self);
+                EXTERN_C DLL_EXPORT void $funcFreeForced($name* _Nullable self);
                 
             """.trimIndent())
         }
@@ -186,9 +192,9 @@ class CApiHeaderPrinter(
         val args = arrayListOf<String>()
 
         callbacks.forEach { callback ->
-            names += callback.name.upperCamelCase() + ","
+            names += callback.cname + ","
             types += callback.type.toCType(printNullable = true) + if(callback.args.isNotEmpty()) "," else ""
-            args += callback.args.joinToString { "${it.type.toCType(printNullable = true)} ${it.name.snakeCase()}" }
+            args += callback.args.joinToString { "${it.type.toCType(printNullable = true)} ${it.cname}" }
         }
 
         val width1 = max(column1.length, names.maxOf { it.length })
@@ -237,8 +243,8 @@ class CApiHeaderPrinter(
         append("#undef KCallbackDef\n")
 
         if(isInternal) {
-            append("\nvoid ${mangle("_AbstractCallback_free")}(_AbstractCallback* _Nullable self);")
-            append("\nvoid ${mangle("_AbstractCallback_free_forced")}(_AbstractCallback* _Nullable self);")
+            append("\nvoid ${mangle("abstract_callback_free")}(_AbstractCallback* _Nullable self);")
+            append("\nvoid ${mangle("abstract_callback_free_forced")}(_AbstractCallback* _Nullable self);")
         }
     }
 
@@ -349,9 +355,9 @@ class CApiHeaderPrinter(
         if(isInternal) {
             append("""
                 
-                EXTERN_C DLL_EXPORT KString* _Nonnull ${mangle("KString_new")}(const char* _Nonnull data, KInt length, size_t size, bool is_data_owner);
-                EXTERN_C DLL_EXPORT KString* _Nullable ${mangle("KString_clone")}(const KString* _Nullable self);
-                EXTERN_C DLL_EXPORT void ${mangle("KString_free")}(KString* _Nullable self);
+                EXTERN_C DLL_EXPORT KString* _Nonnull ${mangle("kstring_new")}(const char* _Nonnull data, KInt length, size_t size, bool is_data_owner);
+                EXTERN_C DLL_EXPORT KString* _Nullable ${mangle("kstring_clone")}(const KString* _Nullable self);
+                EXTERN_C DLL_EXPORT void ${mangle("kstring_free")}(KString* _Nullable self);
                 
             """.trimIndent())
         }
@@ -407,24 +413,26 @@ class CApiHeaderPrinter(
             }
 
             if(isInternal) {
+                val lowerName = name.snakeCase()
+
                 append("""
                     
-                    EXTERN_C DLL_EXPORT $name* _Nonnull ${mangle("${name}_new")}(const $type* _Nonnull elements, KInt length, bool is_data_owner);
-                    EXTERN_C DLL_EXPORT $name* _Nonnull ${mangle("${name}_of_n")}(int n, ...);
+                    EXTERN_C DLL_EXPORT $name* _Nonnull ${mangle("${lowerName}_new")}(const $type* _Nonnull elements, KInt length, bool is_data_owner);
+                    EXTERN_C DLL_EXPORT $name* _Nonnull ${mangle("${lowerName}_of_n")}(int n, ...);
 
                 """.trimIndent())
 
                 if(name != "KArray"){
                     append("""
-                        EXTERN_C DLL_EXPORT $name* _Nullable ${mangle("${name}_clone")}(const $name* _Nullable self);
-                        EXTERN_C DLL_EXPORT void ${mangle("${name}_free")}($name* _Nullable self);
-                        EXTERN_C DLL_EXPORT void ${mangle("${name}_free_forced")}($name* _Nullable self);
+                        EXTERN_C DLL_EXPORT $name* _Nullable ${mangle("${lowerName}_clone")}(const $name* _Nullable self);
+                        EXTERN_C DLL_EXPORT void ${mangle("${lowerName}_free")}($name* _Nullable self);
+                        EXTERN_C DLL_EXPORT void ${mangle("${lowerName}_free_forced")}($name* _Nullable self);
                     """.trimIndent())
                 } else {
                     append("""
-                        EXTERN_C DLL_EXPORT KArray* _Nullable ${mangle("KArray_clone")}(const KArray* _Nullable self, void* _Nullable (* _Nullable clone_op)(void* _Nullable));
-                        EXTERN_C DLL_EXPORT void ${mangle("KArray_free")}(const KArray* _Nullable self, void (* _Nonnull free_op)(void* _Nonnull));
-                        EXTERN_C DLL_EXPORT void ${mangle("KArray_free_forced")}(KArray* _Nullable self, void (* _Nonnull free_op)(void* _Nullable));
+                        EXTERN_C DLL_EXPORT KArray* _Nullable ${mangle("karray_clone")}(const KArray* _Nullable self, void* _Nullable (* _Nullable clone_op)(void* _Nullable));
+                        EXTERN_C DLL_EXPORT void ${mangle("karray_free")}(const KArray* _Nullable self, void (* _Nonnull free_op)(void* _Nonnull));
+                        EXTERN_C DLL_EXPORT void ${mangle("karray_free_forced")}(KArray* _Nullable self, void (* _Nonnull free_op)(void* _Nullable));
                     """.trimIndent())
                 }
             }

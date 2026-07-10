@@ -159,33 +159,28 @@ private abstract class PrepareNativesJs: DefaultTask() {
         // Collect all available functions and mangle them into the short name to minimize .js file
         val jsMangle = buildList {
             addAll(listOf(
-                "KString",
-                "KCharArray",
-                "KBooleanArray",
-                "KByteArray",
-                "KShortArray",
-                "KIntArray",
-                "KLongArray",
-                "KFloatArray",
-                "KDoubleArray",
-                "KArray",
-                *idl.dictionaries.values.map { it.name.upperCamelCase() }.toTypedArray()
+                "kstring",
+                "kchar_array",
+                "kboolean_array",
+                "kbyte_array",
+                "kshort_array",
+                "kint_array",
+                "klong_array",
+                "kfloat_array",
+                "kdouble_array",
+                "karray",
+                *idl.dictionaries.values.map { it.name.lowercase() }.toTypedArray()
             ).flatMap {
                 listOf("${it}_free", "${it}_free_addr")
             })
-
-            idl.globalOperators()
-                .mapTo(this) { it.name.snakeCase() }
-
-            idl.interfaces.values
-                .flatMap { it.toOperations() }
-                .mapTo(this) { it.name }
+            idl.allOperators().mapTo(this) { it.cname }
         }.mapIndexed { index, name ->
             val sb = StringBuilder()
             var n = index
             do {
-                sb.insert(0, ('a'.code + n % 26).toChar())
-                n /= 26
+                val d = n % 52
+                sb.insert(0, (if (d < 26) 'A'.code + d else 'a'.code + d - 26).toChar())
+                n /= 52
             } while (n > 0)
             name to (sb.toString() + "_")
         }.toMap()

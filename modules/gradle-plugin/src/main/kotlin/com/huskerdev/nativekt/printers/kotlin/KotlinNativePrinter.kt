@@ -45,7 +45,7 @@ class KotlinNativePrinter(
             
             private val _handleKStringFree = staticCFunction<COpaquePointer?, Unit> {
             	if(it == null) return@staticCFunction
-            	$cinteropPath.${mangle("KString_free")}(it.reinterpret())
+            	$cinteropPath.${mangle("_kstring_free")}(it.reinterpret())
             }
             
         """.trimIndent())
@@ -61,9 +61,9 @@ class KotlinNativePrinter(
             idl.callbacks.values.forEach { printCallbackWrap(builder, it) }
         }
 
-        if(idl.globalOperators().isNotEmpty()) {
+        if(idl.allOperators().isNotEmpty()) {
             printLabel(builder, "Functions")
-            idl.globalOperators().forEach { printFunction(builder, it) }
+            idl.allOperators().forEach { printFunction(builder, it) }
         }
 
         if(idl.interfaces.isNotEmpty()) {
@@ -87,57 +87,44 @@ class KotlinNativePrinter(
                     internal fun _wrap(ptr: COpaquePointer?): $name? = 
                         ptr?.run { $name(this) }
                 }
-                
         """.trimIndent())
 
-        if(inter.constructors.size == 1) {
-            val constructor = inter.constructors[0]
-            val nativeFunc = "_" + interfaceConstructorCName(inter, constructor).camelCase()
-
-            append("\n\tactual constructor(")
-            constructor.args.joinTo(this) {
-                "${it.name.camelCase()}: ${it.type.toKotlinType()}"
+        inter.toOperations().forEach { operation ->
+            val args = operation.args.map {
+                "${it.kname}: ${it.type.toKotlinType()}"
             }
-            append("): this($nativeFunc(")
-            constructor.args.joinTo(this) { it.name }
-            append(")._ptr)")
-        }
-        inter.operations.forEach { operation ->
-            val nativeFunc = "_" + interfaceOperationCName(inter, operation).camelCase()
+            val argNames = operation.args.map { it.kname }
 
-            append("\n\tactual fun ${operation.name.camelCase()}(")
-            operation.args.joinTo(this) {
-                "${it.name.camelCase()}: ${it.type.toKotlinType()}"
-            }
-            append(") = $nativeFunc(")
-            buildList {
-                add("this")
-                operation.args.mapTo(this) { it.name }
-            }.joinTo(this)
-            append(")")
+            append("\n\t")
+            append(when {
+                operation.isInterfaceOperationConstructor() ->
+                    "actual constructor(${args.joinToString()}): this(${operation.kname}(${argNames.joinToString()}))"
+                operation.isInterfaceOperationFn() -> {
+                    val args = args.drop(1).joinToString()
+                    val argNames = argNames.toMutableList()
+                        .apply { set(0, "this") }
+                        .joinToString()
+                    val name = operation.interfaceFunctionName().camelCase()
+                    "actual fun ${name}($args) = ${operation.kname}($argNames)"
+                }
+                operation.isInterfaceOperationFree() ->
+                    "override fun _close(): Unit = ${operation.kname}(this)"
+                else -> throw UnsupportedOperationException()
+            })
         }
-        append("""
-            
-            
-                override fun _close() = _${interfaceFreeCName(inter).camelCase()}(this)
-            }
-            
-        """.trimIndent())
-
-        inter.toOperations().forEach {
-            printFunction(builder, it, true)
-        }
+        append("\n}\n")
     }
 
     private fun printDictionaryCasts(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
-        val name = dictionary.name.upperCamelCase()
+        val name = dictionary.kname
+        val cname = "$cinteropPath.${dictionary.cname}"
 
         // free handle
         append($$"""
             
             private val _handle$${name}Free = staticCFunction<COpaquePointer?, Unit> {
                 if(it == null) return@staticCFunction
-                $$cinteropPath.$${mangle("${name}_free")}(it.reinterpret())
+                $$cinteropPath.$${dictionary.subCFunc(classPath, moduleName, "free")}(it.reinterpret())
             }
             
         """.trimIndent())
@@ -146,22 +133,22 @@ class KotlinNativePrinter(
 
         append($$"""
             
-            private fun MemScope.toNative$${name}OnArena(of: $$name?): CPointer<$$cinteropPath.$$name>? {
+            private fun MemScope.toNative$${name}OnArena(of: $$name?): CPointer<$$cname>? {
                 contract {
                     (of != null).implies(returnsNotNull())
                 }
                 if(of == null) return null
-                val mem = alloc<$$cinteropPath.$$name>()
+                val mem = alloc<$$cname>()
         """.trimIndent())
 
         dictionary.allFields().forEach {
             val value = castToNative(
                 type = it.type,
-                content = "of.${it.name.camelCase()}",
+                content = "of.${it.kname}",
                 useArena = true,
                 pin = false
             )
-            append("\n\tmem.${it.name} = $value")
+            append("\n\tmem.${it.cname} = $value")
         }
         append("""
             
@@ -175,22 +162,22 @@ class KotlinNativePrinter(
 
         append($$"""
             
-            private fun toNative$$name(of: $$name?): CPointer<$$cinteropPath.$$name>? {
+            private fun toNative$$name(of: $$name?): CPointer<$$cname>? {
                 contract {
                     (of != null).implies(returnsNotNull())
                 }
                 if(of == null) return null
-                val mem = malloc(sizeOf<$$cinteropPath.$$name>().convert())!!.reinterpret<$$cinteropPath.$$name>().pointed
+                val mem = malloc(sizeOf<$$cname>().convert())!!.reinterpret<$$cname>().pointed
         """.trimIndent())
 
         dictionary.allFields().forEach {
             val value = castToNative(
                 type = it.type,
-                content = "of.${it.name.camelCase()}",
+                content = "of.${it.kname}",
                 useArena = false,
                 pin = false
             )
-            append("\n\tmem.${it.name} = $value")
+            append("\n\tmem.${it.cname} = $value")
         }
         append("""
             
@@ -204,7 +191,7 @@ class KotlinNativePrinter(
 
         append($$"""
             
-            private fun toKotlin$$name(of: CPointer<$$cinteropPath.$$name>?): $$name? {
+            private fun toKotlin$$name(of: CPointer<$$cname>?): $$name? {
                 contract {
                     (of != null).implies(returnsNotNull())
                 }
@@ -214,7 +201,7 @@ class KotlinNativePrinter(
         """.trimIndent())
 
         dictionary.allFields().forEach {
-            append("\n\t\t${it.name} = ${castFromNative(it.type, "mem.${it.name.camelCase()}")},")
+            append("\n\t\t${it.kname} = ${castFromNative(it.type, "mem.${it.cname}")},")
         }
         append("\n\t)\n}\n")
 
@@ -222,19 +209,20 @@ class KotlinNativePrinter(
 
         append($$"""
             
-            private fun toKotlin$$name(of: CPointer<$$cinteropPath.$$name>): $$name =
-                toKotlin$$name(of as CPointer<$$cinteropPath.$$name>?)
+            private fun toKotlin$$name(of: CPointer<$$cname>): $$name =
+                toKotlin$$name(of as CPointer<$$cname>?)
             
         """.trimIndent())
     }
 
     private fun printCallbackWrap(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
-        val name = callback.name.upperCamelCase()
+        val name = callback.kname
+        val cname = "$cinteropPath.${callback.cname}"
 
         // Header
         append("\nprivate val _invoke$name: CPointer<CFunction<(")
         buildList {
-            add("CPointer<$cinteropPath.$name>")
+            add("CPointer<$cname>")
             callback.args.mapTo(this) { it.type.toKnType() }
         }.joinTo(builder)
         append(") -> ${callback.type.toKnType()}>> =")
@@ -243,13 +231,13 @@ class KotlinNativePrinter(
         append("\n\tstaticCFunction { ")
         buildList {
             add("_callback")
-            callback.args.mapTo(this) { it.name.camelCase() }
+            callback.args.mapTo(this) { it.kname }
         }.joinTo(builder)
         append(" ->")
 
         // Call
         val args = callback.args.joinToString {
-            castFromNative(it.type, it.name.camelCase())
+            castFromNative(it.type, it.kname)
         }
         val call = "toKotlinCallback<$name>(_callback)($args)"
         append("\n\t\t${castToNative(callback.type, call, useArena = false, pin = false)}")
@@ -260,9 +248,11 @@ class KotlinNativePrinter(
 
     private fun printFunction(
         builder: StringBuilder,
-        function: ResolvedIdlOperation,
-        isInterfaceFunction: Boolean = false
+        function: ResolvedIdlOperation
     ) = builder.apply {
+
+        val isInterfaceFunction = function.isInterfaceOperation()
+        val isInterfaceConstructor = function.isInterfaceOperationConstructor()
 
         val useArena = function.args.any {
             it.type.isString() ||
@@ -274,7 +264,7 @@ class KotlinNativePrinter(
         val args = function.args.joinToString {
             castToNative(
                 it.type,
-                it.name.camelCase(),
+                it.kname,
                 useArena = useArena,
                 pin = function.isCritical()
             )
@@ -284,16 +274,19 @@ class KotlinNativePrinter(
             freeFuncFor(function.type, "_result_native")
         else null
 
-        val call = "$cinteropPath.${mangle(function.name)}($args)"
+        val call = "$cinteropPath.${function.cnameMangled(classPath, moduleName)}($args)"
 
         // === Print ===
 
         append('\n')
         printFunctionHeader(builder, function,
-            name = (if(isInterfaceFunction) "_" else "") + function.name.camelCase(),
+            name = function.kname,
+            printType = !isInterfaceConstructor,
             isActual = expectActual && !isInterfaceFunction,
             isPrivate = isInterfaceFunction
         )
+        if(isInterfaceConstructor)
+            append(": COpaquePointer")
 
         append(when {
             useArena -> " = memScoped {"
@@ -315,7 +308,9 @@ class KotlinNativePrinter(
                     append("return ")
                 append("_result_kt")
             }
-        } else
+        } else if(isInterfaceConstructor)
+            append("$call!!")
+        else
             append(castFromNative(function.type, call))
 
         if(useArena || deallocFunc != null)
@@ -329,13 +324,13 @@ class KotlinNativePrinter(
     ): String? = when {
         type.isArray() -> type.arrayType { type ->
             when {
-                type.isPrimitive() -> "${cinteropPath}.${mangle("${type.toCType()}Array_free")}($content?.reinterpret())"
-                type.isEnum() -> "${cinteropPath}.${mangle("KIntArray_free")}($content?.reinterpret())"
-                else -> "${cinteropPath}.${mangle("KArray_free")}($content, _handle${type.toCType(ptr = false)}Free)"
+                type.isPrimitive() -> "${cinteropPath}.${mangle("_${type.toCType().lowercase()}_array_free")}($content?.reinterpret())"
+                type.isEnum() -> "${cinteropPath}.${mangle("_kint_array_free")}($content?.reinterpret())"
+                else -> "${cinteropPath}.${mangle("_karray_free")}($content, _handle${type.toCType(ptr = false)}Free)"
             }
         }
         type.isCallback() -> "callbackFree($content?.reinterpret())"
-        type.isDictionary() -> "${cinteropPath}.${mangle("${type.toCType(ptr = false)}_free")}($content)"
+        type.isDictionary() -> "${cinteropPath}.${mangle("_${type.toCType(ptr = false).lowercase()}_free")}($content)"
         else -> null
     }
 
@@ -350,9 +345,9 @@ class KotlinNativePrinter(
             type.isChar() -> "$content.toInt().toChar()"
             type.isString() -> "toKotlinKString($content$nullable.reinterpret())"
             type.isCallback() -> "toKotlinCallback<${type.toKotlinType()}>($content$nullable1)"
-            type.isEnum() -> "${type.declaration.name}.entries[${content}.ordinal]"
-            type.isDictionary() -> "toKotlin${type.declaration.name}($content$nullable1)"
-            type.isInterface() -> "${type.declaration.name.upperCamelCase()}._wrap($content)$nullable1"
+            type.isEnum() -> "${type.declaration.kname}.entries[${content}.ordinal]"
+            type.isDictionary() -> "toKotlin${type.declaration.kname}($content$nullable1)"
+            type.isInterface() -> "${type.declaration.kname}._wrap($content)$nullable1"
             type.isArray() -> type.arrayType { type ->
                 when {
                     type.isPrimitive() -> "toKotlin${type.toCType()}Array($content$nullable.reinterpret())"
@@ -383,16 +378,16 @@ class KotlinNativePrinter(
         return when {
             type.isArray() && type.isUnsigned() -> castToNative(type.toSignedType(), castToSigned(type, content), useArena, pin)
             type.isChar() -> "$content.code.toUShort()"
-            type.isEnum() -> "${cinteropPath}.${type.declaration.name}.entries[$content.ordinal]"
+            type.isEnum() -> "${cinteropPath}.${type.declaration.cname}.entries[$content.ordinal]"
             type.isString() ->
                 if(useArena) "toNativeKStringOnArena($content, $pin)$nullable.reinterpret()"
                 else "toNativeKString($content)$nullable.reinterpret()"
             type.isCallback() ->
-                if(useArena) "toNativeCallbackOnArena($content, _invoke${type.declaration.name.capitalized()})$nullable.reinterpret()"
-                else "toNativeCallback($content, _invoke${type.declaration.name.capitalized()})$nullable.reinterpret()"
+                if(useArena) "toNativeCallbackOnArena($content, _invoke${type.declaration.kname})$nullable.reinterpret()"
+                else "toNativeCallback($content, _invoke${type.declaration.kname})$nullable.reinterpret()"
             type.isDictionary() ->
-                if (useArena) "toNative${type.declaration.name}OnArena($content)"
-                else "toNative${type.declaration.name}($content)"
+                if (useArena) "toNative${type.declaration.kname}OnArena($content)"
+                else "toNative${type.declaration.kname}($content)"
             type.isInterface() -> "$content._ptr"
             type.isArray() -> type.arrayType { type ->
                 when {

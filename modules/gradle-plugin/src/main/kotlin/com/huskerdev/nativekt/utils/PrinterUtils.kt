@@ -15,76 +15,8 @@ fun asyncLoadFunctionName(moduleName: String) =
 fun syncLoadFunctionName(moduleName: String) =
     "loadLib${moduleName.capitalized()}Sync"
 
-fun mangle(
-    classPath: String,
-    moduleName: String,
-    content: String
-) = "nativekt" +
-        "_${classPath.split(".").joinToString("_") { it.lowercase() }}" +
-        "_${moduleName.snakeCase()}" +
-        "_${content.snakeCase()}"
-
-fun interfaceOperationCName(
-    inter: ResolvedIdlInterface,
-    operation: ResolvedIdlOperation
-) = "${inter.name.snakeCase()}_fn_${operation.name.snakeCase()}"
-
-
-fun interfaceConstructorCName(
-    inter: ResolvedIdlInterface,
-    constructor: ResolvedIdlConstructor
-) = "${inter.name.snakeCase()}_new_${inter.constructors.indexOf(constructor)}"
-
-
-fun interfaceFreeCName(
-    inter: ResolvedIdlInterface
-) = "${inter.name.snakeCase()}_free"
-
-
-fun ResolvedIdlInterface.toOperations() = buildList {
-    val interfaceType = ResolvedIdlType.Default(this@toOperations, emptyList(), false)
-    val interfaceArg = ResolvedIdlField.Argument(
-        "ptr", interfaceType, null,
-        isOptional = false, isVariadic = false, attributes = emptyList()
-    )
-
-    // free
-    add(ResolvedIdlOperation(
-        name = interfaceFreeCName(this@toOperations),
-        type = ResolvedIdlType.Void("void"),
-        args = listOf(interfaceArg),
-        isStatic = false,
-        attributes = emptyList()
-    ))
-    constructors.forEach { constructor ->
-        add(ResolvedIdlOperation(
-            name = interfaceConstructorCName(this@toOperations, constructor),
-            type = interfaceType,
-            args = constructor.args,
-            isStatic = false,
-            attributes = constructor.attributes
-        ))
-    }
-    operations.forEach { operation ->
-        add(ResolvedIdlOperation(
-            name = interfaceOperationCName(this@toOperations, operation),
-            type = operation.type,
-            args = buildList {
-                add(interfaceArg)
-                addAll(operation.args)
-            },
-            isStatic = false,
-            attributes = operation.attributes
-        ))
-    }
-}
-
-// Names
-
 fun String.snakeCase(): String = buildString {
     this@snakeCase.forEachIndexed { index, c ->
-
-        // for: aaAAAaaA -> aa_aaa_aa_a
         if(c.isUpperCase() &&
             index > 1 &&
             index < this@snakeCase.length &&
@@ -103,6 +35,92 @@ fun String.camelCase(): String {
 
 fun String.upperCamelCase(): String =
     camelCase().uppercaseFirstChar()
+
+fun mangle(
+    classPath: String,
+    moduleName: String,
+    content: String
+) = "nativekt" +
+        "_${classPath.split(".").joinToString("_") { it.lowercase() }}" +
+        "_${moduleName.snakeCase()}" +
+        "_$content"
+
+// Names
+
+fun ResolvedIdlOperation.cnameMangled(
+    classPath: String,
+    moduleName: String
+) = mangle(classPath, moduleName, cname)
+
+val ResolvedIdlDeclaration.kname: String
+    get() = when (this) {
+        is ResolvedIdlEnum -> kname
+        is ResolvedIdlDictionary -> kname
+        is ResolvedIdlCallbackFunction -> kname
+        is ResolvedIdlInterface -> kname
+        else -> throw UnsupportedOperationException()
+    }
+
+val ResolvedIdlDeclaration.cname: String
+    get() = when (this) {
+        is ResolvedIdlEnum -> cname
+        is ResolvedIdlDictionary -> cname
+        is ResolvedIdlCallbackFunction -> cname
+        is ResolvedIdlInterface -> cname
+        else -> throw UnsupportedOperationException()
+    }
+
+val ResolvedIdlOperation.cname: String
+    get() = when {
+        isInterfaceOperationFn() -> "_interface_${interfaceName().lowercase()}_fn_${interfaceFunctionName().snakeCase()}"
+        isInterfaceOperationFree() -> "_interface_${interfaceName().lowercase()}_free"
+        isInterfaceOperationConstructor() -> "_interface_${interfaceName().lowercase()}_new${interfaceConstructorIndex()}"
+        else -> name.snakeCase()
+    }
+
+val ResolvedIdlOperation.kname: String
+    get() = when {
+        isInterfaceOperationFn() -> "_interface${interfaceName().upperCamelCase()}Fn${interfaceFunctionName().upperCamelCase()}"
+        isInterfaceOperationFree() -> "_interface${interfaceName().upperCamelCase()}Free"
+        isInterfaceOperationConstructor() -> "_interface${interfaceName().upperCamelCase()}New${interfaceConstructorIndex()}"
+        else -> name.camelCase()
+    }
+
+val ResolvedIdlField.cname: String
+    get() = name.snakeCase()
+
+val ResolvedIdlField.kname: String
+    get() = name.camelCase()
+
+val ResolvedIdlDictionary.cname: String
+    get() = name.upperCamelCase()
+
+val ResolvedIdlDictionary.kname: String
+    get() = name.upperCamelCase()
+
+fun ResolvedIdlDictionary.subCFunc(
+    classPath: String,
+    moduleName: String,
+    func: String
+): String = mangle(classPath, moduleName, "_${name.lowercase()}_$func")
+
+val ResolvedIdlEnum.cname: String
+    get() = name.upperCamelCase()
+
+val ResolvedIdlEnum.kname: String
+    get() = name.upperCamelCase()
+
+val ResolvedIdlCallbackFunction.cname: String
+    get() = name.upperCamelCase()
+
+val ResolvedIdlCallbackFunction.kname: String
+    get() = name.upperCamelCase()
+
+val ResolvedIdlInterface.cname: String
+    get() = name.upperCamelCase()
+
+val ResolvedIdlInterface.kname: String
+    get() = name.upperCamelCase()
 
 
 // Types
@@ -550,10 +568,31 @@ internal fun IdlResolver.isUsingLong(): Boolean {
     return false
 }
 
-fun ResolvedIdlOperation.isCritical(): Boolean =
-    this.attributes.any {
-        it is IdlExtendedAttribute.NoArgs && it.name.lowercase() == "critical"
-    }
+private fun ResolvedIdlOperation.hasAttribute(name: String): Boolean =
+    attributes.any { it.name.lowercase() == name }
+
+fun ResolvedIdlOperation.isInterfaceOperation() = hasAttribute("__interface")
+
+fun ResolvedIdlOperation.interfaceName(): String = attributes
+    .filterIsInstance<IdlExtendedAttribute.StringValue>()
+    .first { it.name.lowercase() == "__interface" }
+    .value
+
+fun ResolvedIdlOperation.interfaceFunctionName(): String = attributes
+    .filterIsInstance<IdlExtendedAttribute.StringValue>()
+    .first { it.name.lowercase() == "__interface_fn" }
+    .value
+
+fun ResolvedIdlOperation.interfaceConstructorIndex(): Int = attributes
+    .filterIsInstance<IdlExtendedAttribute.IntegerValue>()
+    .first { it.name.lowercase() == "__interface_new" }
+    .value
+
+fun ResolvedIdlOperation.isInterfaceOperationFree() = hasAttribute("__interface_free")
+fun ResolvedIdlOperation.isInterfaceOperationConstructor() = hasAttribute("__interface_new")
+fun ResolvedIdlOperation.isInterfaceOperationFn() = hasAttribute("__interface_fn")
+
+fun ResolvedIdlOperation.isCritical(): Boolean = hasAttribute("critical")
 
 fun ResolvedIdlOperation.isCriticalCapable(): Boolean =
     !type.isArray() && !type.isString() && !type.isDictionary() &&
@@ -570,8 +609,18 @@ fun ResolvedIdlOperation.hasString(): Boolean =
 fun ResolvedIdlOperation.hasArray(): Boolean =
     args.any { it.type.isArray() }
 
+// ========
+
+fun IdlResolver.allOperators() = buildList {
+    addAll(globalOperators())
+    addAll(interfaceOperators())
+}
+
 fun IdlResolver.globalOperators() =
     namespaces.values.flatMap { it.operations }
+
+fun IdlResolver.interfaceOperators() =
+    interfaces.values.flatMap { it.toOperations() }
 
 fun ResolvedIdlDictionary.allFields() = buildList {
     var cur: ResolvedIdlDictionary? = this@allFields
@@ -581,6 +630,55 @@ fun ResolvedIdlDictionary.allFields() = buildList {
     }
 }
 
+fun ResolvedIdlInterface.toOperations() = buildList {
+    val interfaceType = ResolvedIdlType.Default(this@toOperations, emptyList(), false)
+    val interfaceArg = ResolvedIdlField.Argument(
+        "ptr", interfaceType, null,
+        isOptional = false, isVariadic = false, attributes = emptyList()
+    )
+
+    val interfaceTagAttribute = IdlExtendedAttribute.StringValue("__interface", name)
+
+    constructors.forEachIndexed { index, constructor ->
+        add(ResolvedIdlOperation(
+            name = "INTERFACE_CONSTRUCTOR",
+            type = interfaceType,
+            args = constructor.args,
+            isStatic = false,
+            attributes = buildList {
+                add(interfaceTagAttribute)
+                add(IdlExtendedAttribute.IntegerValue("__interface_new", index))
+                addAll(constructor.attributes)
+            }
+        ))
+    }
+    operations.forEach { operation ->
+        add(ResolvedIdlOperation(
+            name = "INTERFACE_FUNCTION",
+            type = operation.type,
+            args = buildList {
+                add(interfaceArg)
+                addAll(operation.args)
+            },
+            isStatic = false,
+            attributes = buildList {
+                add(interfaceTagAttribute)
+                add(IdlExtendedAttribute.StringValue("__interface_fn", operation.name))
+                addAll(operation.attributes)
+            }
+        ))
+    }
+
+    // free
+    add(ResolvedIdlOperation(
+        name = "INTERFACE_FREE",
+        type = ResolvedIdlType.Void("void"),
+        args = listOf(interfaceArg),
+        isStatic = false,
+        attributes = listOf(interfaceTagAttribute, IdlExtendedAttribute.NoArgs("__interface_free"))
+    ))
+}
+
 fun functionHeader(
     function: ResolvedIdlOperation,
     isOverride: Boolean = false,
@@ -588,12 +686,13 @@ fun functionHeader(
     isActual: Boolean = false,
     isExternal: Boolean = false,
     isExpect: Boolean = false,
-    name: String = function.name,
+    name: String = function.kname,
+    printType: Boolean = true,
     forceVoid: Boolean = false,
     stringAsBytes: Boolean = false,
     callbackAsAny: Boolean = false
 ) = StringBuilder().apply {
-    printFunctionHeader(this, function, isOverride, isPrivate, isActual, isExternal, isExpect, name, forceVoid, stringAsBytes, callbackAsAny)
+    printFunctionHeader(this, function, isOverride, isPrivate, isActual, isExternal, isExpect, name, printType, forceVoid, stringAsBytes, callbackAsAny)
 }.toString()
 
 fun printFunctionHeader(
@@ -604,7 +703,8 @@ fun printFunctionHeader(
     isActual: Boolean = false,
     isExternal: Boolean = false,
     isExpect: Boolean = false,
-    name: String = function.name.camelCase(),
+    name: String = function.kname,
+    printType: Boolean = true,
     forcePrintVoid: Boolean = false,
     stringAsBytes: Boolean = false,
     enumAsInt: Boolean = false,
@@ -618,7 +718,7 @@ fun printFunctionHeader(
     if(isOverride) append("override ")
 
     val args = function.args.flatMap { arg ->
-        val name = arg.name.camelCase()
+        val name = arg.kname
         val result = "$name: ${arg.type.toKotlinType(stringAsBytes, enumAsInt, ignoreUnsigned = ignoreUnsigned)}"
         when {
             stringAsBytes && arg.type.isString() ->
@@ -631,7 +731,7 @@ fun printFunctionHeader(
 
     append("fun $name($args)")
 
-    if(forcePrintVoid || function.type !is ResolvedIdlType.Void)
+    if(printType && (forcePrintVoid || function.type !is ResolvedIdlType.Void))
         append(": ${function.type.toKotlinType(stringAsBytes, enumAsInt, ignoreUnsigned = ignoreUnsigned)}")
 }
 

@@ -21,11 +21,7 @@ class CJniPrinter(
             
         """.trimIndent())
 
-        listOf(
-            *idl.globalOperators().toTypedArray(),
-            *idl.interfaces.values
-                .flatMap { it.toOperations() }.toTypedArray()
-        ).forEach {
+        idl.allOperators().forEach {
             printFunction(builder, it)
 
             if(isAndroid && isAndroidCriticalEnabled && it.isCritical() && it.isAndroidCriticalCapable())
@@ -85,7 +81,7 @@ class CJniPrinter(
 
             append("\n\tmethods[$index] = (JNINativeMethod) {$nl")
             if(isAndroid && isAndroidCriticalEnabled && function.isCritical() && function.isAndroidCriticalCapable()) {
-                val criticalFuncName = funcName + "_"
+                val criticalFuncName = "c_$funcName"
                 val criticalFuncDesc = function.toJavaDesc(classPath, isCritical = true)
 
                 append("mangled_names[$index],$nl")
@@ -107,11 +103,14 @@ class CJniPrinter(
     }
 
     private fun printFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
-        append("\nstatic ")
-        append(function.type.toJNIType())
-        append(" ")
-        append(function.jniName())
+        val isInterfaceConstructor = function.isInterfaceOperationConstructor()
 
+        val jtype = if(isInterfaceConstructor)
+            "jlong"
+        else
+            function.type.toJNIType()
+
+        append("\nstatic $jtype ${function.jniName()}")
         buildList {
             add("JNIEnv *env")
             add("jclass cls")
@@ -155,16 +154,20 @@ class CJniPrinter(
                 "__jvm_${it.name.snakeCase()}"
             else "__native_${it.name.snakeCase()}"
         }
-        val call = "${mangle(classPath, moduleName, function.name)}($args)"
+        val call = "${function.cnameMangled(classPath, moduleName)}($args)"
 
         if(returns) {
             if(needReleases) {
-                if(!function.type.isPrimitive()) {
+                if(!function.type.isPrimitive() && !isInterfaceConstructor) {
                     append("\n\t${function.type.toCType()} result_native = $call;")
-                    append("\n\t${function.type.toJNIType()} result_jvm = ${castJniToKotlin(function.type, "result_native")};")
-                } else
-                    append("\n\t${function.type.toJNIType()} result_jvm = ${castJniToKotlin(function.type, call)};")
-            } else
+                    append("\n\t$jtype result_jvm = ${castJniToKotlin(function.type, "result_native")};")
+                } else if(isInterfaceConstructor)
+                    append("\n\t$jtype result_jvm = (jlong) $call;")
+                else
+                    append("\n\t$jtype result_jvm = ${castJniToKotlin(function.type, call)};")
+            } else if(isInterfaceConstructor)
+                append("\n\treturn (jlong) $call;")
+            else
                 append("\n\treturn ${castJniToKotlin(function.type, call)};")
         } else append("\n\t$call;")
 
@@ -214,13 +217,13 @@ class CJniPrinter(
         append("\nstatic ")
         printCriticalNativeFunctionContent(
             builder, classPath, moduleName,
-            name = "${function.jniName()}_",
+            name = "c_${function.jniName()}",
             function
         )
     }
 
     private fun ResolvedIdlOperation.jniName() =
-        "JNI__${name.snakeCase()}"
+        "JNI__${cname}"
 }
 
 internal fun castJniToKotlin(
@@ -330,5 +333,7 @@ internal fun ResolvedIdlOperation.toJavaDesc(
     args.joinTo(this, "", prefix = "(", postfix = ")") {
         it.type.toJavaDesc(classpath, isCritical)
     }
-    append(type.toJavaDesc(classpath, isCritical))
+    if(isInterfaceOperationConstructor())
+        append("J")
+    else append(type.toJavaDesc(classpath, isCritical))
 }

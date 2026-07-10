@@ -115,7 +115,7 @@ internal fun StringBuilder.printStringDef(
                     let size = value.len();
                     let data = malloc(size) as *mut u8;
                     std::ptr::copy_nonoverlapping(value.as_ptr(), data, size);
-                    Self { ptr: $${mangle("KString_new")}(data, length, size, true) }
+                    Self { ptr: $${mangle("kstring_new")}(data, length, size, true) }
                 }
             }
             pub fn from_str(value: &str) -> Self {
@@ -123,7 +123,7 @@ internal fun StringBuilder.printStringDef(
                     let length = value.chars().count() as i32;
                     let size = value.len();
                     let data = value.as_ptr();
-                    Self { ptr: $${mangle("KString_new")}(data, length, size, false) }
+                    Self { ptr: $${mangle("kstring_new")}(data, length, size, false) }
                 }
             }
             pub fn as_str(&self) -> &str {
@@ -149,13 +149,13 @@ internal fun StringBuilder.printStringDef(
         }
 
         impl_wrapper!(KString, _KString);
-        impl_drop_clone!(KString, $${mangle("KString_free")}, $${mangle("KString_clone")});
-        impl_ptr_holder!(KString, _KString, $${mangle("KString_free")}, $${mangle("KString_clone")});
+        impl_drop_clone!(KString, $${mangle("kstring_free")}, $${mangle("kstring_clone")});
+        impl_ptr_holder!(KString, _KString, $${mangle("kstring_free")}, $${mangle("kstring_clone")});
 
         extern "C" {
-            fn $${mangle("KString_new")}(data: *const u8, length: i32, size: usize, is_data_owner: bool) -> *const _KString;
-            fn $${mangle("KString_free")}(self_: *const _KString);
-            fn $${mangle("KString_clone")}(self_: *const _KString) -> *const _KString;
+            fn $${mangle("kstring_new")}(data: *const u8, length: i32, size: usize, is_data_owner: bool) -> *const _KString;
+            fn $${mangle("kstring_free")}(self_: *const _KString);
+            fn $${mangle("kstring_clone")}(self_: *const _KString) -> *const _KString;
         }
 
         #[macro_export] macro_rules! k_string {
@@ -182,9 +182,9 @@ internal fun StringBuilder.printArraysDef(
         }
         
         extern "C" {
-            fn $${mangle("KArray_new")}(elements: *const *const c_void, length: i32, is_data_owner: bool) -> *const _KArray;
-            fn $${mangle("KArray_clone")}(self_: *const _KArray, clone_op: *const c_void) -> *const _KArray;
-            fn $${mangle("KArray_free")}(self_: *const _KArray, free_op: *const c_void);
+            fn $${mangle("karray_new")}(elements: *const *const c_void, length: i32, is_data_owner: bool) -> *const _KArray;
+            fn $${mangle("karray_clone")}(self_: *const _KArray, clone_op: *const c_void) -> *const _KArray;
+            fn $${mangle("karray_free")}(self_: *const _KArray, free_op: *const c_void);
         }
         
         macro_rules! impl_typed_array {
@@ -225,18 +225,18 @@ internal fun StringBuilder.printArraysDef(
             };
         }
         
-        impl_typed_array!(KCharArray, u16, 2, $${mangle("KCharArray_new")}, $${mangle("KCharArray_free")}, $${mangle("KCharArray_clone")});
-        impl_typed_array!(KBooleanArray, bool, 1, $${mangle("KBooleanArray_new")}, $${mangle("KBooleanArray_free")}, $${mangle("KBooleanArray_clone")});
-        impl_typed_array!(KByteArray, i8, 1, $${mangle("KByteArray_new")}, $${mangle("KByteArray_free")}, $${mangle("KByteArray_clone")});
-        impl_typed_array!(KUByteArray, u8, 1, $${mangle("KUByteArray_new")}, $${mangle("KUByteArray_free")}, $${mangle("KUByteArray_clone")});
-        impl_typed_array!(KShortArray, i16, 2, $${mangle("KShortArray_new")}, $${mangle("KShortArray_free")}, $${mangle("KShortArray_clone")});
-        impl_typed_array!(KUShortArray, u16, 2, $${mangle("KUShortArray_new")}, $${mangle("KUShortArray_free")}, $${mangle("KUShortArray_clone")});
-        impl_typed_array!(KIntArray, i32, 4, $${mangle("KIntArray_new")}, $${mangle("KIntArray_free")}, $${mangle("KIntArray_clone")});
-        impl_typed_array!(KUIntArray, u32, 4, $${mangle("KUIntArray_new")}, $${mangle("KUIntArray_free")}, $${mangle("KUIntArray_clone")});
-        impl_typed_array!(KLongArray, i64, 8, $${mangle("KLongArray_new")}, $${mangle("KLongArray_free")}, $${mangle("KLongArray_clone")});
-        impl_typed_array!(KULongArray, u64, 8, $${mangle("KULongArray_new")}, $${mangle("KULongArray_free")}, $${mangle("KULongArray_clone")});
-        impl_typed_array!(KFloatArray, f32, 4, $${mangle("KFloatArray_new")}, $${mangle("KFloatArray_free")}, $${mangle("KFloatArray_clone")});
-        impl_typed_array!(KDoubleArray, f64, 8, $${mangle("KDoubleArray_new")}, $${mangle("KDoubleArray_free")}, $${mangle("KDoubleArray_clone")});
+        impl_typed_array!(KCharArray, u16, 2, $${mangle("kchar_array_new")}, $${mangle("kchar_array_free")}, $${mangle("_kchar_array_clone")});
+        impl_typed_array!(KBooleanArray, bool, 1, $${mangle("kboolean_array_new")}, $${mangle("kboolean_array_free")}, $${mangle("_kboolean_array_clone")});
+        impl_typed_array!(KByteArray, i8, 1, $${mangle("kbyte_array_new")}, $${mangle("kbyte_array_free")}, $${mangle("_kbyte_array_clone")});
+        impl_typed_array!(KUByteArray, u8, 1, $${mangle("kubyte_array_new")}, $${mangle("kubyte_array_free")}, $${mangle("_kubyte_array_clone")});
+        impl_typed_array!(KShortArray, i16, 2, $${mangle("kshort_array_new")}, $${mangle("kshort_array_free")}, $${mangle("_kshort_array_clone")});
+        impl_typed_array!(KUShortArray, u16, 2, $${mangle("kushort_array_new")}, $${mangle("kushort_array_free")}, $${mangle("_kushort_array_clone")});
+        impl_typed_array!(KIntArray, i32, 4, $${mangle("kint_array_new")}, $${mangle("kint_array_free")}, $${mangle("_kint_array_clone")});
+        impl_typed_array!(KUIntArray, u32, 4, $${mangle("kuint_array_new")}, $${mangle("kuint_array_free")}, $${mangle("_kuint_array_clone")});
+        impl_typed_array!(KLongArray, i64, 8, $${mangle("klong_array_new")}, $${mangle("klong_array_free")}, $${mangle("_klong_array_clone")});
+        impl_typed_array!(KULongArray, u64, 8, $${mangle("kulong_array_new")}, $${mangle("kulong_array_free")}, $${mangle("_kulong_array_clone")});
+        impl_typed_array!(KFloatArray, f32, 4, $${mangle("kfloat_array_new")}, $${mangle("kfloat_array_free")}, $${mangle("_kdloat_array_clone")});
+        impl_typed_array!(KDoubleArray, f64, 8, $${mangle("kdouble_array_new")}, $${mangle("kdouble_array_free")}, $${mangle("_kdouble_array_clone")});
         
         #[macro_export] macro_rules! k_char_array {
             ($($x:expr),+ $(,)?) => (KCharArray::from(vec![$($x),+]));
@@ -320,7 +320,7 @@ internal fun StringBuilder.printArraysDef(
                     for i in 0..elements.len() {
                         ptrs.offset(i as isize).write(elements[i].ptr());
                     }
-                    let ptr = unsafe { nativekt_natives_testrs_testrs_karray_new(ptrs, elements.len() as i32, true) };
+                    let ptr = unsafe { $${mangle("karray_new")}(ptrs, elements.len() as i32, true) };
                     KArray { ptr, elements }
                 }
             }
@@ -333,14 +333,14 @@ internal fun StringBuilder.printArraysDef(
             fn drop(&mut self) {
                 unsafe { 
                     self.elements.set_len(0);
-                    $${mangle("KArray_free")}(self.ptr, T::free_ptr()); 
+                    $${mangle("karray_free")}(self.ptr, T::free_ptr()); 
                 }
             }
         }
         
         impl<T: PtrHolder> Clone for KArray<T> {
             fn clone(&self) -> Self {
-                KArray::wrap(unsafe { $${mangle("KArray_clone")}(self.ptr, T::clone_ptr()) })
+                KArray::wrap(unsafe { $${mangle("karray_clone")}(self.ptr, T::clone_ptr()) })
             }
         }
         
@@ -402,7 +402,7 @@ internal fun StringBuilder.printArraysDef(
                             ptrs.offset(i as isize).write(element.clone().unwrap().ptr());
                         }
                     }
-                    let ptr = unsafe { nativekt_natives_testrs_testrs_karray_new(ptrs, elements.len() as i32, true) };
+                    let ptr = unsafe { $${mangle("karray_new")}(ptrs, elements.len() as i32, true) };
                     KArrayOpt { ptr, elements }
                 }
             }
@@ -415,14 +415,14 @@ internal fun StringBuilder.printArraysDef(
             fn drop(&mut self) {
                 unsafe {
                     self.elements.set_len(0);
-                    $${mangle("KArray_free")}(self.ptr, T::free_ptr()); 
+                    $${mangle("karray_free")}(self.ptr, T::free_ptr()); 
                 }
             }
         }
 
         impl<T: PtrHolder> Clone for KArrayOpt<T> {
             fn clone(&self) -> Self {
-                KArrayOpt::wrap(unsafe { $${mangle("KArray_clone")}(self.ptr, T::clone_ptr()) })
+                KArrayOpt::wrap(unsafe { $${mangle("karray_clone")}(self.ptr, T::clone_ptr()) })
             }
         }
         

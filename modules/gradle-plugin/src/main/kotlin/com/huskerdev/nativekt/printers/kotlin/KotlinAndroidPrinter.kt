@@ -36,6 +36,7 @@ class KotlinAndroidPrinter(
             builder.append("""
                 
                 import android.os.Build
+                import com.huskerdev.nativekt.jvm.*
                 import dalvik.annotation.optimization.*
                 
                 
@@ -76,7 +77,9 @@ class KotlinAndroidPrinter(
             """.trimIndent())
         }
 
-        idl.globalOperators().forEach { printFunction(builder, it) }
+        idl.allOperators().forEach {
+            printFunction(builder, it)
+        }
 
         builder.append("\n\n")
         KotlinJvmJniPrinter(idl, builder,
@@ -86,28 +89,53 @@ class KotlinAndroidPrinter(
             isAndroidCriticalEnabled = isAndroidCriticalEnabled
         )
 
+        if(idl.interfaces.isNotEmpty()) {
+            printLabel(builder, "Interfaces")
+            idl.interfaces.values.forEach {
+                printJvmInterface(builder, it)
+            }
+        }
+
         target.parentFile.mkdirs()
         target.writeText(builder.toString())
     }
 
-    private fun printFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
+    private fun printFunction(
+        builder: StringBuilder,
+        function: ResolvedIdlOperation
+    ) = builder.apply {
+        val isInterfaceFunction = function.isInterfaceOperation()
+        val isInterfaceConstructor = function.isInterfaceOperationConstructor()
+
         append('\n')
-        printFunctionHeader(builder, function, isActual = expectActual)
-        append(" = \n\t")
+        if(expectActual && !isInterfaceFunction)
+            append("actual ")
+        if(isInterfaceFunction)
+            append("private ")
+        val kArgs = function.args.joinToString {
+            "${it.kname}: ${it.type.toKotlinType()}"
+        }
+        val type = if(!function.type.isVoid()) {
+            ": " + if(isInterfaceConstructor)
+                "Long"
+            else function.type.toKotlinType()
+        } else ""
+
+        append("fun ${function.kname}($kArgs)$type = \n\t")
 
         if(isAndroidCriticalEnabled && function.isCritical() && function.isAndroidCriticalCapable()) {
             val args = function.args.joinToString {
-                toNativeCriticalType(it.type, it.name.camelCase(), ignoreUnsigned = true)
+                toNativeCriticalType(it.type, it.kname, ignoreUnsigned = true)
             }
-            val call = "$jniClassName._${function.name.camelCase()}($args)"
+            val call = "$jniClassName.c_${function.kname}($args)"
 
             val castedCall = toKotlinCriticalType(function.type, call, ignoreUnsigned = true)
             append("if(supportsCritical) $castedCall\n\telse ")
         }
 
-        val args = function.args.joinToString { it.name }
+        val args = function.args.joinToString { it.kname }
 
-        append("$jniClassName.${function.name.camelCase()}($args)")
+        append("$jniClassName.${function.kname}($args)")
         append("\n")
     }
 }

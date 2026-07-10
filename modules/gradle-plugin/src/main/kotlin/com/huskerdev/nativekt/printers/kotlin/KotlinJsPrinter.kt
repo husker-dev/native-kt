@@ -32,12 +32,13 @@ class KotlinJsPrinter(
             
         """.trimIndent())
 
-        if(useCoroutines)
+        if(useCoroutines) {
             builder.append("""
                 import kotlinx.coroutines.suspendCancellableCoroutine
                 import kotlin.coroutines.resume
                 
             """.trimIndent())
+        }
 
         builder.append("""
             
@@ -107,7 +108,7 @@ class KotlinJsPrinter(
             idl.dictionaries.values.forEach { printDictionaryCasts(builder, it) }
         }
 
-        idl.globalOperators().forEach { printFunction(builder, it) }
+        idl.allOperators().forEach { printFunction(builder, it) }
 
         if(idl.interfaces.isNotEmpty()) {
             printLabel(builder, "Interfaces")
@@ -119,6 +120,12 @@ class KotlinJsPrinter(
         target.parentFile.mkdirs()
         target.writeText(builder.toString())
     }
+
+    private val ResolvedIdlDictionary.layoutName: String
+        get() = "_layout${kname}"
+
+    private val ResolvedIdlCallbackFunction.invokeName: String
+        get() = "_invoke${kname}"
 
     private fun printCallbacks(builder: StringBuilder) = builder.apply {
         // Variables
@@ -153,7 +160,7 @@ class KotlinJsPrinter(
 
         // Invoke address
         idl.callbacks.values.joinTo(builder, separator = "") {
-            "\nprivate var _invoke${it.name}: Int = 0"
+            "\nprivate var ${it.invokeName}: Int = 0"
         }
 
         // init
@@ -178,10 +185,12 @@ class KotlinJsPrinter(
     ) = builder.apply {
         val args = buildList {
             add("_c: Int")
-            callback.args.mapTo(this) { "${it.name.camelCase()}: ${it.type.toKtJsType()}" }
-        }
+            callback.args.mapTo(this) {
+                "${it.kname}: ${it.type.toKtJsType()}"
+            }
+        }.joinToString()
         val castedArgs = callback.args.map {
-            castToKotlin(it.type, it.name.camelCase())
+            castToKotlin(it.type, it.kname)
         }
         val desc = buildString {
             append(callback.type.toInternalDesc())
@@ -189,24 +198,21 @@ class KotlinJsPrinter(
             callback.args.joinTo(this, separator = "") { it.type.toInternalDesc() }
         }
 
+        val call = "toKotlinCallback<${callback.kname}>(_module, _c)!!(${castedArgs.joinToString()})"
+        val body = castToNative(callback.type, call, useArena = false)
+
         // header
-        append("\n\t_invoke${callback.name.upperCamelCase()} = _module.addFunction(${callback.descName()} { ")
-        args.joinTo(builder)
-        append(" ->\n\t\t")
-
-        // body
-        val call = "toKotlinCallback<${callback.name.upperCamelCase()}>(_module, _c)!!(${castedArgs.joinToString()})"
-        val casted = castToNative(callback.type, call, useArena = false)
-
-        append(casted)
-        append("\n\t")
-
-        // footer
-        append("}, \"$desc\")\n")
+        append("""
+            
+            ${callback.invokeName} = _module.addFunction(${callback.descName()} { $args ->
+                $body
+            }, "$desc")
+            
+        """.replaceIndent("\t"))
     }
 
     private fun printDictionaryLayout(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
-        append("\nprivate val _layout${dictionary.name.upperCamelCase()} = CStructLayout(")
+        append("\nprivate val ${dictionary.layoutName} = CStructLayout(")
         buildList {
             dictionary.allFields().mapTo(this) { it.type.toLayoutType() }
             add("Byte::class")
@@ -215,7 +221,8 @@ class KotlinJsPrinter(
     }
 
     private fun printDictionaryCasts(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
-        val name = dictionary.name.upperCamelCase()
+        val name = dictionary.kname
+        val layoutName = dictionary.layoutName
         val fields = dictionary.allFields()
 
         fun heaps(toNative: Boolean) = buildString {
@@ -237,21 +244,21 @@ class KotlinJsPrinter(
         fun ref(i: Int, mem: String): String {
             val type = fields[i].type
             return when {
-                type.isByte() || type.isUByte() || type.isBoolean() -> "HEAP8[$mem + _layout$name[$i]]"
-                type.isShort() || type.isUShort() || type.isChar() -> "HEAP16[($mem + _layout$name[$i]) shr 1]"
-                type.isLong() || type.isULong() -> "HEAP64[($mem + _layout$name[$i]) shr 3]"
-                type.isFloat() -> "HEAPF32[($mem + _layout$name[$i]) shr 2]"
-                type.isDouble() -> "HEAPF64[($mem + _layout$name[$i]) shr 3]"
-                else -> "HEAP32[($mem + _layout$name[$i]) shr 2]"
+                type.isByte() || type.isUByte() || type.isBoolean() -> "HEAP8[$mem + $layoutName[$i]]"
+                type.isShort() || type.isUShort() || type.isChar() -> "HEAP16[($mem + $layoutName[$i]) shr 1]"
+                type.isLong() || type.isULong() -> "HEAP64[($mem + $layoutName[$i]) shr 3]"
+                type.isFloat() -> "HEAPF32[($mem + $layoutName[$i]) shr 2]"
+                type.isDouble() -> "HEAPF64[($mem + $layoutName[$i]) shr 3]"
+                else -> "HEAP32[($mem + $layoutName[$i]) shr 2]"
             }
         }
 
         // to native (arena)
-        append("\nprivate fun Arena.toNative${name}OnArena(of: $name?) = of?.run { alloc(_layout$name.size).apply {")
+        append("\nprivate fun Arena.toNative${name}OnArena(of: $name?) = of?.run { alloc($layoutName.size).apply {")
         append(heaps(true))
         buildList {
             fields.forEachIndexed { i, field ->
-                val ref = field.name.camelCase()
+                val ref = field.kname
                 val casted = when {
                     field.type.isBoolean() || field.type.isChar() ||
                             field.type.isByte() || field.type.isShort()-> ref
@@ -261,16 +268,16 @@ class KotlinJsPrinter(
                 }
                 add("\n\t${ref(i, "this")} = $casted")
             }
-            add("\n\tHEAP8[this + _layout$name[${fields.size}]] = 0")
+            add("\n\tHEAP8[this + $layoutName[${fields.size}]] = 0")
         }.joinTo(builder, separator = "")
         append("\n} } ?: 0\n")
 
         // to native
-        append("\nprivate fun toNative$name(module: Module, of: $name?) = of?.run { _module._malloc(_layout$name.size).apply {")
+        append("\nprivate fun toNative$name(module: Module, of: $name?) = of?.run { _module._malloc($layoutName.size).apply {")
         append(heaps(true))
         buildList {
             fields.forEachIndexed { i, field ->
-                val ref = field.name.camelCase()
+                val ref = field.kname
                 val casted = when {
                     field.type.isBoolean() || field.type.isChar() ||
                             field.type.isByte() || field.type.isShort()-> ref
@@ -280,7 +287,7 @@ class KotlinJsPrinter(
                 }
                 add("\n\t${ref(i, "this")} = $casted")
             }
-            add("\n\tHEAP8[this + _layout$name[${fields.size}]] = FLAG_RELEASABLE.toByte()")
+            add("\n\tHEAP8[this + $layoutName[${fields.size}]] = FLAG_RELEASABLE.toByte()")
         }.joinTo(builder, separator = "")
         append("\n} } ?: 0\n")
 
@@ -305,9 +312,11 @@ class KotlinJsPrinter(
 
     private fun printFunction(
         builder: StringBuilder,
-        function: ResolvedIdlOperation,
-        isInterfaceFunction: Boolean = false
+        function: ResolvedIdlOperation
     ) = builder.apply {
+        val isInterfaceFunction = function.isInterfaceOperation()
+        val isInterfaceConstructor = function.isInterfaceOperationConstructor()
+
         val useArena = function.args.any {
             it.type.isString() ||
             it.type.isArray() ||
@@ -316,23 +325,26 @@ class KotlinJsPrinter(
         }
 
         val args = function.args.joinToString {
-            castToNative(it.type, it.name.camelCase(), useArena = useArena)
+            castToNative(it.type, it.kname, useArena = useArena)
         }
 
         val deallocFunc = if(function.type.isReleasable())
             freeFuncFor(function.type, "_result_native")
         else null
 
-        val call = "_module._${jsMangle[function.name.snakeCase()]}($args)"
+        val call = "_module._${jsMangle[function.cname]}($args)"
 
         // === Print ===
 
         append('\n')
         printFunctionHeader(builder, function,
-            name = (if(isInterfaceFunction) "_" else "") + function.name.camelCase(),
+            name = function.kname,
+            printType = !isInterfaceConstructor,
             isActual = expectActual && !isInterfaceFunction,
             isPrivate = isInterfaceFunction
         )
+        if(isInterfaceConstructor)
+            append(": Int")
 
         append(when {
             useArena -> " = Arena.use(_module) {"
@@ -354,7 +366,9 @@ class KotlinJsPrinter(
                     append("return ")
                 append("_result_kt")
             }
-        } else
+        } else if(isInterfaceConstructor)
+            append(call)
+        else
             append(castToKotlin(function.type, call))
 
         if(useArena || deallocFunc != null)
@@ -371,46 +385,32 @@ class KotlinJsPrinter(
                     internal fun _wrap(ptr: Int): $name? = 
                         if(ptr == 0) null else $name(ptr)
                 }
-                
         """.trimIndent())
 
-        if(inter.constructors.size == 1) {
-            val constructor = inter.constructors[0]
-            val nativeFunc = "_" + interfaceConstructorCName(inter, constructor).camelCase()
-
-            append("\n\tactual constructor(")
-            constructor.args.joinTo(this) {
-                "${it.name.camelCase()}: ${it.type.toKotlinType()}"
+        inter.toOperations().forEach { operation ->
+            val args = operation.args.map {
+                "${it.kname}: ${it.type.toKotlinType()}"
             }
-            append("): this($nativeFunc(")
-            constructor.args.joinTo(this) { it.name }
-            append(")._ptr)")
-        }
-        inter.operations.forEach { operation ->
-            val nativeFunc = "_" + interfaceOperationCName(inter, operation).camelCase()
+            val argNames = operation.args.map { it.kname }
+            val kname = operation.kname
 
-            append("\n\tactual fun ${operation.name.camelCase()}(")
-            operation.args.joinTo(this) {
-                "${it.name.camelCase()}: ${it.type.toKotlinType()}"
-            }
-            append(") = $nativeFunc(")
-            buildList {
-                add("this")
-                operation.args.mapTo(this) { it.name }
-            }.joinTo(this)
-            append(")")
+            append("\n\t")
+            append(when {
+                operation.isInterfaceOperationConstructor() ->
+                    "actual constructor(${args.joinToString()}): this($kname(${argNames.joinToString()}))"
+                operation.isInterfaceOperationFn() -> {
+                    val args = args.drop(1).joinToString()
+                    val argNames = argNames.toMutableList()
+                        .apply { set(0, "this") }
+                        .joinToString()
+                    "actual fun ${operation.interfaceFunctionName().camelCase()}($args) = $kname($argNames)"
+                }
+                operation.isInterfaceOperationFree() ->
+                    "override fun _close(): Unit = $kname(this)"
+                else -> throw UnsupportedOperationException()
+            })
         }
-        append("""
-            
-            
-                override fun _close() = _${interfaceFreeCName(inter).camelCase()}(this)
-            }
-            
-        """.trimIndent())
-
-        inter.toOperations().forEach {
-            printFunction(builder, it, true)
-        }
+        append("\n}\n")
     }
 
     private fun printTypes(buffer: StringBuilder) = buffer.apply {
@@ -424,31 +424,28 @@ class KotlinJsPrinter(
         """.trimIndent())
 
         listOf(
-            "KString",
-            "KCharArray",
-            "KBooleanArray",
-            "KByteArray",
-            "KShortArray",
-            "KIntArray",
-            "KLongArray",
-            "KFloatArray",
-            "KDoubleArray",
-            *idl.dictionaries.values.map { it.name }.toTypedArray()
+            "kstring",
+            "kchar_array",
+            "kboolean_array",
+            "kbyte_array",
+            "kshort_array",
+            "kint_array",
+            "klong_array",
+            "kfloat_array",
+            "kdouble_array",
+            *idl.dictionaries.values.map { it.name.lowercase() }.toTypedArray()
         ).forEach {
             append("\n\tfun _${jsMangle["${it}_free"]}(self: Int)")
             append("\n\tfun _${jsMangle["${it}_free_addr"]}(): Int")
         }
-        append("\n\tfun _${jsMangle["KArray_free"]}(self: Int, freeOp: Int)")
+        append("\n\tfun _${jsMangle["karray_free"]}(self: Int, freeOp: Int)")
         append("\n\n")
 
-        listOf(
-            *idl.globalOperators().toTypedArray(),
-            *idl.interfaces.values.flatMap { it.toOperations() }.toTypedArray()
-        ).forEach { function ->
-            append("\tfun _${jsMangle[function.name.snakeCase()]}")
+        idl.allOperators().forEach { function ->
+            append("\tfun _${jsMangle[function.cname]}")
 
             function.args.joinTo(buffer, prefix = "(", postfix = ")") {
-                "${it.name.camelCase()}: ${it.type.toKtJsType()}"
+                "${it.kname}: ${it.type.toKtJsType()}"
             }
             if(function.type !is ResolvedIdlType.Void) {
                 append(": ")
@@ -466,15 +463,15 @@ class KotlinJsPrinter(
         type.isCallback() -> "callbackFree(_module, $content)"
         type.isArray() -> type.arrayType { type ->
             when {
-                type.isPrimitive() -> "_module._${jsMangle["${type.toCType(ignoreUnsigned = true)}Array_free"]}($content)"
-                type.isEnum() -> "_module._${jsMangle["KIntArray_free"]}($content)"
+                type.isPrimitive() -> "_module._${jsMangle["${type.toCType(ignoreUnsigned = true).lowercase()}_array_free"]}($content)"
+                type.isEnum() -> "_module._${jsMangle["kint_array_free"]}($content)"
                 else -> {
-                    val freeOp = jsMangle["${type.toCType(ptr = false)}_free_addr"]
-                    "_module._${jsMangle["KArray_free"]}($content, _module._$freeOp())"
+                    val freeOp = jsMangle["${type.toCType(ptr = false).lowercase()}_free_addr"]
+                    "_module._${jsMangle["karray_free"]}($content, _module._$freeOp())"
                 }
             }
         }
-        else -> "_module._${jsMangle["${type.toCType(ptr = false)}_free"]}($content)"
+        else -> "_module._${jsMangle["${type.toCType(ptr = false).lowercase()}_free"]}($content)"
     }
 
     private fun castToNative(

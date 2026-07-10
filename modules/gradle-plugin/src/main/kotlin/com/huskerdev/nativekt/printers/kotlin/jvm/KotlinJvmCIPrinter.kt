@@ -39,7 +39,7 @@ class KotlinJvmCIPrinter(
                     append("\n\t\t@JvmStatic ")
                     printFunctionHeader(
                         builder, it,
-                        name = "_${it.name.camelCase()}",
+                        name = "c_${it.kname}",
                         isExternal = true,
                         stringAsBytes = true,
                         arraysLen = true,
@@ -64,7 +64,7 @@ class KotlinJvmCIPrinter(
                     private fun _linkFunction(kName: String, cName: String, alt: Boolean, vararg types: Class<*>) {
                         JVMCIUtils.linkNativeCall(
                             $$name::class.java.getDeclaredMethod(kName, *types),
-                            _address(cName + if (alt) "_" else "")
+                            _address((if (alt) "c_" else "") + cName)
                         )
                     }
                     
@@ -97,8 +97,8 @@ class KotlinJvmCIPrinter(
 
     private fun printFunctionBinding(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
         val args = buildList {
-            add("\"_${function.name.camelCase()}\"")
-            add("\"${mangle(classPath, moduleName, function.name)}\"")
+            add("\"c_${function.kname}\"")
+            add("\"${function.cnameMangled(classPath, moduleName)}\"")
             add(function.hasString() || function.hasArray())
             addAll(function.args.flatMap {
                 val clazz = "${it.type.toKotlinType(
@@ -126,7 +126,7 @@ class KotlinJvmCIPrinter(
 
         val casts = buildString {
             function.args.forEach {
-                val name = it.name.camelCase()
+                val name = it.kname
                 val nullable = if (it.type.isNullable) "?" else ""
                 if (it.type.isString()) {
                     append("\n\t\tval _bytes_$name = $name$nullable.toByteArray()")
@@ -144,7 +144,7 @@ class KotlinJvmCIPrinter(
         else append(" {")
 
         function.args.forEach {
-            val name = it.name.camelCase()
+            val name = it.kname
             val nullable = if(it.type.isNullable) "?" else ""
             if(it.type.isString()) {
                 append("\n\t\tval _bytes_$name = $name$nullable.toByteArray()")
@@ -163,7 +163,7 @@ class KotlinJvmCIPrinter(
         val args = function.args.joinToString {
             toNativeCriticalType(it.type, it.name.camelCase())
         }
-        val call = "_${function.name.camelCase()}(${args})"
+        val call = "c_${function.name.camelCase()}(${args})"
         append(toKotlinCriticalType(function.type, call))
 
         if(casts.isNotEmpty())

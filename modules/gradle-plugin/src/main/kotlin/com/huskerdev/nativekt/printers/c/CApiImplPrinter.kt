@@ -45,12 +45,12 @@ class CApiImplPrinter(
             printLabel(builder, "Callback free")
             builder.append("""
                 
-                void ${mangle("_AbstractCallback_free")}(_AbstractCallback* self) {
+                void ${mangle("abstract_callback_free")}(_AbstractCallback* self) {
                     if(self == NULL) return;
                     self->free(self);
                 }
                 
-                void ${mangle("_AbstractCallback_free_forced")}(_AbstractCallback* self) {
+                void ${mangle("abstract_callback_free_forced")}(_AbstractCallback* self) {
                     if(self == NULL) return;
                     self->__flags |= K_FLAG_RELEASABLE;
                     self->free(self);
@@ -72,7 +72,7 @@ class CApiImplPrinter(
                 builder.append("\n")
                 printCriticalNativeFunctionContent(
                     builder, classPath, moduleName,
-                    name = "${mangle(it.name)}_",
+                    name = "c_${it.cnameMangled(classPath, moduleName)}",
                     function = it
                 )
             }
@@ -82,20 +82,24 @@ class CApiImplPrinter(
     }
 
     private fun mangle(name: String) =
-        mangle(classPath, moduleName, name)
+        mangle(classPath, moduleName, "_$name")
 
-    private fun printFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
+    private fun printFunction(
+        builder: StringBuilder,
+        function: ResolvedIdlOperation
+    ) = builder.apply {
         if(cFunctions) {
-            val name = function.name.snakeCase()
+            val name = function.cname
+            val mangledName = function.cnameMangled(classPath, moduleName)
             val type = function.type.toCType(printNullable = true)
             val args = function.args.joinToString {
-                "${it.type.toCType(printNullable = true)} ${it.name.snakeCase()}"
+                "${it.type.toCType(printNullable = true)} ${it.cname}"
             }
-            val argNames = function.args.joinToString { it.name.snakeCase() }
+            val argNames = function.args.joinToString { it.cname }
 
             append("""
                 
-                $type ${mangle(name)}($args) {
+                $type $mangledName($args) {
                     ${if(function.type.isVoid()) "" else "return "}$name($argNames);
                 }
                 
@@ -103,23 +107,28 @@ class CApiImplPrinter(
         }
     }
 
-    private fun printStructNew(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
-        val name = dictionary.name.upperCamelCase()
+    private fun printStructNew(
+        builder: StringBuilder,
+        dictionary: ResolvedIdlDictionary
+    ) = builder.apply {
+        val name = dictionary.cname
         val fields = dictionary.allFields()
         val args = fields.joinToString { field ->
             val const = if(field.type.isPrimitive())
                 "const " else ""
-            "$const${field.type.toCType()} ${field.name.snakeCase()}"
+            "$const${field.type.toCType()} ${field.cname}"
         }
+
+        val funcNew = dictionary.subCFunc(classPath, moduleName, "new")
 
         append("""
             
-            $name* ${mangle("${name}_new")}($args) {
+            $name* $funcNew($args) {
                 $name* result = ($name*) malloc(sizeof($name));
                 *result = ($name) { 
         """.trimIndent())
         buildList {
-            fields.mapTo(this) { it.name.snakeCase() }
+            fields.mapTo(this) { it.cname }
             add("K_FLAG_RELEASABLE")
         }.joinTo(builder)
 
@@ -130,7 +139,7 @@ class CApiImplPrinter(
             append("""
                 
                 $name* ${name}_new($args) {
-                    return ${mangle("${name}_new")}(${fields.joinToString { it.name }});
+                    return $funcNew(${fields.joinToString { it.cname }});
                 }
                 
             """.trimIndent())
@@ -138,18 +147,20 @@ class CApiImplPrinter(
     }
 
     private fun printStructClone(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
-        val name = dictionary.name.upperCamelCase()
+        val name = dictionary.cname
         val fields = dictionary.allFields()
+        val funcClone = dictionary.subCFunc(classPath, moduleName, "clone")
+        val funcNew = dictionary.subCFunc(classPath, moduleName, "new")
 
         append("""
             
-            $name* ${mangle("${name}_clone")}(const $name* self) {
+            $name* $funcClone(const $name* self) {
                 if(self == NULL) return NULL;
-                return ${mangle("${name}_new")}(
+                return $funcNew(
                     
         """.trimIndent())
         fields.joinTo(builder, separator = ",\n\t\t") { field ->
-            cloneFuncFor(field.type, "self->${field.name.snakeCase()}")
+            cloneFuncFor(field.type, "self->${field.cname}")
         }
         append("\n\t);\n}\n")
 
@@ -157,7 +168,7 @@ class CApiImplPrinter(
             append("""
                 
                 $name* ${name}_clone(const $name* self) {
-                    return ${mangle("${name}_clone")}(self);
+                    return $funcClone(self);
                 }
                 
             """.trimIndent())
@@ -165,13 +176,15 @@ class CApiImplPrinter(
     }
 
     private fun printStructFree(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
-        val name = dictionary.name.upperCamelCase()
+        val name = dictionary.cname
         val fields = dictionary.allFields()
+        val funcFree = dictionary.subCFunc(classPath, moduleName, "free")
+        val funcFreeForced = dictionary.subCFunc(classPath, moduleName, "free_forced")
 
         // free
         append("""
             
-            void ${mangle("${name}_free")}($name* self) {
+            void $funcFree($name* self) {
                 if (self == NULL)
                     return;
         """.trimIndent())
@@ -179,7 +192,7 @@ class CApiImplPrinter(
             freeFuncFor(
                 classPath, moduleName,
                 field.type,
-                "self->${field.name.snakeCase()}"
+                "self->${field.cname}"
             )?.apply { append("\n\t$this;") }
         }
         append("""
@@ -190,13 +203,13 @@ class CApiImplPrinter(
         append("\n}\n")
 
         // forceFree
-        append("\nvoid ${mangle("${name}_free_forced")}($name* self) {")
+        append("\nvoid $funcFreeForced($name* self) {")
         append("\n\tif(self == NULL) return;")
         fields.forEach { field ->
             forceFreeFuncFor(
                 classPath, moduleName,
                 field.type,
-                "self->${field.name.snakeCase()}"
+                "self->${field.cname}"
             )?.apply { append("\n\t$this;") }
         }
         append("""
@@ -210,11 +223,11 @@ class CApiImplPrinter(
             append("""
                 
                 void ${name}_free($name* self) {
-                    ${mangle("${name}_free")}(self);
+                    $funcFree(self);
                 }
                 
                 void ${name}_free_forced($name* self) {
-                    ${mangle("${name}_free_forced")}(self);
+                    $funcFreeForced(self);
                 }
                 
             """.trimIndent())
@@ -230,15 +243,15 @@ class CApiImplPrinter(
             append("""
                 
                 KString* KString_new(const char* data, const KInt length, const size_t size, const bool is_data_owner) {
-                    return ${mangle("KString_new")}(data, length, size, is_data_owner);
+                    return ${mangle("kstring_new")}(data, length, size, is_data_owner);
                 }
                 
                 KString* KString_clone(const KString* of) {
-                    return ${mangle("KString_clone")}(of);
+                    return ${mangle("kstring_clone")}(of);
                 }
                 
                 void KString_free(KString* self) {
-                    ${mangle("KString_free")}(self);
+                    ${mangle("kstring_free")}(self);
                 }
                 
             """.trimIndent())
@@ -246,21 +259,21 @@ class CApiImplPrinter(
 
         builder.append("""
             
-            KString* ${mangle("KString_new")}(const char* data, const KInt length, const size_t size, const bool is_data_owner) {
+            KString* ${mangle("kstring_new")}(const char* data, const KInt length, const size_t size, const bool is_data_owner) {
                 KString* result = (KString*) malloc(sizeof(KString));
                 *result = (KString) { data, size, length, K_FLAG_RELEASABLE | (is_data_owner ? K_FLAG_DATA_OWNER : 0) };
                 return result;
             }
             
-            KString* ${mangle("KString_clone")}(const KString* of) {
+            KString* ${mangle("kstring_clone")}(const KString* of) {
                 if (of == NULL) return NULL;
                 const KInt size = of->size;
                 void* data = malloc(size);
                 memcpy(data, of->data, size);
-                return ${mangle("KString_new")}((const char*) data, size, of->length, true);
+                return ${mangle("kstring_new")}((const char*) data, size, of->length, true);
             }
             
-            void ${mangle("KString_free")}(KString* self) {
+            void ${mangle("kstring_free")}(KString* self) {
                 if (self == NULL)
                     return;
                 if (K_OBJECT_IS_DATA_OWNER(self->__flags))
@@ -269,10 +282,10 @@ class CApiImplPrinter(
                     free((void*) self);
             }
             
-            void ${mangle("KString_free_forced")}(KString* self) {
+            void ${mangle("kstring_free_forced")}(KString* self) {
                 if (self == NULL) return;
                 self->__flags |= K_FLAG_RELEASABLE;
-                ${mangle("KString_free")}(self);
+                ${mangle("kstring_free")}(self);
             }
             
         """.trimIndent())
@@ -293,6 +306,7 @@ class CApiImplPrinter(
             Triple("KArray", "void*", "void*")
         ).forEach {
             val name = it.first
+            val lowerName = name.snakeCase()
             val type = it.second
             val varargType = it.third
 
@@ -300,7 +314,7 @@ class CApiImplPrinter(
                 
                 // $name
                 
-                $name* ${mangle("${name}_new")}(
+                $name* ${mangle("${lowerName}_new")}(
                     const $type* elements,
                     const KInt length,
                     const bool is_data_owner
@@ -319,15 +333,15 @@ class CApiImplPrinter(
             if(name != "KArray") {
                 append("""
                     
-                    $name* ${mangle("${name}_clone")}(const $name* of) {
+                    $name* ${mangle("${lowerName}_clone")}(const $name* of) {
                         if(of == NULL) return NULL;
                         const KInt size = of->size;
                         void** elements = malloc(size);
                         memcpy(elements, (void*) of->elements, size);
-                        return ${mangle("${name}_new")}(($type*) elements, of->length, true);
+                        return ${mangle("${lowerName}_new")}(($type*) elements, of->length, true);
                     }
                     
-                    void ${mangle("${name}_free")}($name* self) {
+                    void ${mangle("${lowerName}_free")}($name* self) {
                         if (self == NULL)
                             return;
                         if (K_OBJECT_IS_DATA_OWNER(self->__flags))
@@ -336,16 +350,16 @@ class CApiImplPrinter(
                             free((void*) self);
                     }
                     
-                    void ${mangle("${name}_free_forced")}($name* self) {
+                    void ${mangle("${lowerName}_free_forced")}($name* self) {
                         if (self == NULL) return;
                         self->__flags |= K_FLAG_RELEASABLE;
-                        ${mangle("${name}_free")}(self);
+                        ${mangle("${lowerName}_free")}(self);
                     }
                     
                 """.trimIndent())
             } else {
                 append("""
-                    KArray* ${mangle("KArray_clone")}(const KArray* _Nullable self, void* _Nullable (* _Nullable clone_op)(void* _Nullable)) {
+                    KArray* ${mangle("karray_clone")}(const KArray* _Nullable self, void* _Nullable (* _Nullable clone_op)(void* _Nullable)) {
                         if(self == NULL) return NULL;
                         const KInt size = self->size;
                         void** elements = malloc(size);
@@ -353,10 +367,10 @@ class CApiImplPrinter(
                             void* element = (void*) self->elements[i];
                             elements[i] = element == NULL ? NULL : clone_op(element);
                         }
-                        return ${mangle("KArray_new")}((const void**) elements, self->length, true);
+                        return ${mangle("karray_new")}((const void**) elements, self->length, true);
                     }
         
-                    void ${mangle("KArray_free")}(const KArray* _Nullable self, void (* _Nonnull free_op)(void* _Nonnull)) {
+                    void ${mangle("karray_free")}(const KArray* _Nullable self, void (* _Nonnull free_op)(void* _Nonnull)) {
                         if (self == NULL)
                             return;
                         if (K_OBJECT_IS_DATA_OWNER(self->__flags)) {
@@ -372,10 +386,10 @@ class CApiImplPrinter(
                             free((void*) self);
                     }
                     
-                    void ${mangle("KArray_free_forced")}(KArray* self, void (*free_op)(void*)) {
+                    void ${mangle("karray_free_forced")}(KArray* self, void (*free_op)(void*)) {
                         if(self == NULL) return;
                         self->__flags |= K_FLAG_RELEASABLE;
-                        ${mangle("KArray_free")}(self, free_op);
+                        ${mangle("karray_free")}(self, free_op);
                     }
                     
                 """.trimIndent())
@@ -384,7 +398,7 @@ class CApiImplPrinter(
                 append("""
                     
                     $name* ${name}_new(const $type* elements, const KInt length, const bool is_data_owner) {
-                        return ${mangle("${name}_new")}(elements, length, is_data_owner);
+                        return ${mangle("${lowerName}_new")}(elements, length, is_data_owner);
                     }
                     
                     $name* ${name}_of_n(const int n, ...) {
@@ -394,7 +408,7 @@ class CApiImplPrinter(
                         for (int i = 0; i < n; i++)
                             elements[i] = ($type) va_arg(args, $varargType);
                         va_end(args);
-                        return ${mangle("${name}_new")}((const $type*) elements, (KInt) n, true);
+                        return ${mangle("${lowerName}_new")}((const $type*) elements, (KInt) n, true);
                     }
                     
                 """.trimIndent())
@@ -402,15 +416,15 @@ class CApiImplPrinter(
                     append("""
                         
                         $name* ${name}_clone(const $name* of) {
-                            return ${mangle("${name}_clone")}(of);
+                            return ${mangle("${lowerName}_clone")}(of);
                         }
                         
                         void ${name}_free($name* self) {
-                            ${mangle("${name}_free")}(self);
+                            ${mangle("${lowerName}_free")}(self);
                         }
                         
                         void ${name}_free_forced($name* self) {
-                            ${mangle("${name}_free_forced")}(self);
+                            ${mangle("${lowerName}_free_forced")}(self);
                         }
                         
                     """.trimIndent())
@@ -418,15 +432,15 @@ class CApiImplPrinter(
                     append("""
                         
                         $name* KArray_clone(const KArray* _Nullable self, void* _Nullable (* _Nullable clone_op)(void* _Nullable)) {
-                            return ${mangle("KArray_clone")}(self, clone_op);
+                            return ${mangle("karray_clone")}(self, clone_op);
                         }
                         
                         void KArray_free(const KArray* _Nullable self, void (* _Nonnull free_op)(void* _Nonnull)) {
-                            ${mangle("KArray_free")}(self, free_op);
+                            ${mangle("karray_free")}(self, free_op);
                         }
                         
                         void KArray_free_forced(KArray* self, void (*free_op)(void*)) {
-                            ${mangle("KArray_free_forced")}(self, free_op);
+                            ${mangle("karray_free_forced")}(self, free_op);
                         }
                         
                     """.trimIndent())
@@ -441,13 +455,13 @@ class CApiImplPrinter(
     ): String = when {
         type.isArray() -> type.arrayType { type ->
             when {
-                type.isPrimitive() -> "${mangle("${type.toCType(ptr = false)}Array_clone")}($content)"
-                type.isEnum() -> "${mangle("KIntArray_clone")}($content)"
-                else -> "${mangle("KArray_clone")}($content, (void*) ${cloneFuncFor(type, "").dropLast(2)})"
+                type.isPrimitive() -> "${mangle("${type.toCType(ptr = false).lowercase()}_array_clone")}($content)"
+                type.isEnum() -> "${mangle("kint_array_clone")}($content)"
+                else -> "${mangle("karray_clone")}($content, (void*) ${cloneFuncFor(type, "").dropLast(2)})"
             }
         }
         type.isCallback() -> "$content->clone($content)"
-        type.isDictionary() || type.isString() -> "${mangle("${type.toCType(ptr = false)}_clone")}($content)"
+        type.isDictionary() || type.isString() -> "${mangle("${type.toCType(ptr = false).lowercase()}_clone")}($content)"
         else -> content
     }
 }
@@ -458,17 +472,17 @@ internal fun freeFuncFor(
     type: ResolvedIdlType,
     content: String
 ): String? {
-    fun mangle(name: String) = mangle(classPath, moduleName, name)
+    fun mangle(name: String) = mangle(classPath, moduleName, "_$name")
     return when {
         type.isArray() -> type.arrayType { type ->
             when {
-                type.isPrimitive() -> "${mangle("${type.toCType(ptr = false)}Array_free")}($content)"
-                type.isEnum() -> "${mangle("KIntArray_free")}($content)"
-                else -> "${mangle("KArray_free")}($content, (void*) ${freeFuncFor(classPath, moduleName, type, "")!!.dropLast(2)})"
+                type.isPrimitive() -> "${mangle("${type.toCType(ptr = false).lowercase()}_array_free")}($content)"
+                type.isEnum() -> "${mangle("kint_array_free")}($content)"
+                else -> "${mangle("karray_free")}($content, (void*) ${freeFuncFor(classPath, moduleName, type, "")!!.dropLast(2)})"
             }
         }
-        type.isCallback() -> "${mangle("_AbstractCallback_free")}((_AbstractCallback*) $content)"
-        type.isDictionary() || type.isString() -> "${mangle("${type.toCType(ptr = false)}_free")}($content)"
+        type.isCallback() -> "${mangle("abstract_callback_free")}((_AbstractCallback*) $content)"
+        type.isDictionary() || type.isString() -> "${mangle("${type.toCType(ptr = false).lowercase()}_free")}($content)"
         else -> null
     }
 }
@@ -479,17 +493,17 @@ internal fun forceFreeFuncFor(
     type: ResolvedIdlType,
     content: String
 ): String? {
-    fun mangle(name: String) = mangle(classPath, moduleName, name)
+    fun mangle(name: String) = mangle(classPath, moduleName, "_$name")
     return when {
         type.isArray() -> type.arrayType { type ->
             when {
-                type.isPrimitive() -> "${mangle("${type.toCType()}Array_free_forced")}($content)"
-                type.isEnum() -> "${mangle("KIntArray_free_forced")}($content)"
-                else -> "${mangle("KArray_free_forced")}($content, (void*) ${forceFreeFuncFor(classPath, moduleName, type, "")!!.dropLast(2)})"
+                type.isPrimitive() -> "${mangle("${type.toCType().lowercase()}_array_free_forced")}($content)"
+                type.isEnum() -> "${mangle("kint_array_free_forced")}($content)"
+                else -> "${mangle("karray_free_forced")}($content, (void*) ${forceFreeFuncFor(classPath, moduleName, type, "")!!.dropLast(2)})"
             }
         }
-        type.isCallback() -> "${mangle("_AbstractCallback_free_forced")}((_AbstractCallback*) $content)"
-        type.isDictionary() || type.isString() -> "${mangle("${type.toCType(ptr = false)}_free_forced")}($content)"
+        type.isCallback() -> "${mangle("abstract_callback_free_forced")}((_AbstractCallback*) $content)"
+        type.isDictionary() || type.isString() -> "${mangle("${type.toCType(ptr = false).lowercase()}_free_forced")}($content)"
         else -> null
     }
 }
@@ -508,7 +522,7 @@ internal fun printCriticalNativeFunctionContent(
 
     // == Function args ==
     function.args.flatMap {
-        val name = it.name.snakeCase()
+        val name = it.cname
         when {
             it.type.isString() -> listOf("const char* _arr_$name", "KInt _length_$name, KLong _size_$name")
             it.type.isArray() -> {
@@ -521,7 +535,7 @@ internal fun printCriticalNativeFunctionContent(
 
     // == Casts ==
     function.args.forEach {
-        val name = it.name.snakeCase()
+        val name = it.cname
         when {
             it.type.isString() -> append("\n\tKString _arg_$name = (KString) { _arr_$name, _size_$name, _length_$name, 0 };")
             it.type.isArray() -> {
@@ -533,7 +547,7 @@ internal fun printCriticalNativeFunctionContent(
 
     // == Call args ==
     val args = function.args.joinToString {
-        val name = it.name.snakeCase()
+        val name = it.cname
         if(it.type.isString() || it.type.isArray()) {
             if(it.type.isNullable)
                 "_length_$name == -1 ? 0 : &_arg_$name"
@@ -546,7 +560,7 @@ internal fun printCriticalNativeFunctionContent(
     if(function.type !is ResolvedIdlType.Void)
         append("return ")
 
-    val call = "${mangle(classPath, moduleName, function.name)}($args)"
+    val call = "${function.cnameMangled(classPath, moduleName)}($args)"
     append(call)
     append(";\n}\n")
 }

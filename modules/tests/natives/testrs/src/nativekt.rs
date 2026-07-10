@@ -5,14 +5,15 @@
 /*
 =============================================================== *\
 
-pub struct B;
+pub struct crate::B;
 
 =============================================================== *\
 
-pub struct A;
+pub struct crate::A;
 
-impl A {
-	fn test(&self) {}
+impl crate::A {
+	fn new() -> Self {}
+	fn test(&self, Arc<crate::B>) {}
 }
 
 =============================================================== *\
@@ -1035,7 +1036,7 @@ impl KString {
             let size = value.len();
             let data = malloc(size) as *mut u8;
             std::ptr::copy_nonoverlapping(value.as_ptr(), data, size);
-            Self { ptr: nativekt_natives_testrs_testrs_kstring_new(data, length, size, true) }
+            Self { ptr: nativekt_natives_testrs_testrs__kstring_new(data, length, size, true) }
         }
     }
     pub fn from_str(value: &str) -> Self {
@@ -1043,7 +1044,7 @@ impl KString {
             let length = value.chars().count() as i32;
             let size = value.len();
             let data = value.as_ptr();
-            Self { ptr: nativekt_natives_testrs_testrs_kstring_new(data, length, size, false) }
+            Self { ptr: nativekt_natives_testrs_testrs__kstring_new(data, length, size, false) }
         }
     }
     pub fn as_str(&self) -> &str {
@@ -1069,13 +1070,13 @@ impl Display for KString {
 }
 
 impl_wrapper!(KString, _KString);
-impl_drop_clone!(KString, nativekt_natives_testrs_testrs_kstring_free, nativekt_natives_testrs_testrs_kstring_clone);
-impl_ptr_holder!(KString, _KString, nativekt_natives_testrs_testrs_kstring_free, nativekt_natives_testrs_testrs_kstring_clone);
+impl_drop_clone!(KString, nativekt_natives_testrs_testrs__kstring_free, nativekt_natives_testrs_testrs__kstring_clone);
+impl_ptr_holder!(KString, _KString, nativekt_natives_testrs_testrs__kstring_free, nativekt_natives_testrs_testrs__kstring_clone);
 
 extern "C" {
-    fn nativekt_natives_testrs_testrs_kstring_new(data: *const u8, length: i32, size: usize, is_data_owner: bool) -> *const _KString;
-    fn nativekt_natives_testrs_testrs_kstring_free(self_: *const _KString);
-    fn nativekt_natives_testrs_testrs_kstring_clone(self_: *const _KString) -> *const _KString;
+    fn nativekt_natives_testrs_testrs__kstring_new(data: *const u8, length: i32, size: usize, is_data_owner: bool) -> *const _KString;
+    fn nativekt_natives_testrs_testrs__kstring_free(self_: *const _KString);
+    fn nativekt_natives_testrs_testrs__kstring_clone(self_: *const _KString) -> *const _KString;
 }
 
 #[macro_export] macro_rules! k_string {
@@ -1096,9 +1097,9 @@ struct _KArray {
 }
 
 extern "C" {
-    fn nativekt_natives_testrs_testrs_karray_new(elements: *const *const c_void, length: i32, is_data_owner: bool) -> *const _KArray;
-    fn nativekt_natives_testrs_testrs_karray_clone(self_: *const _KArray, clone_op: *const c_void) -> *const _KArray;
-    fn nativekt_natives_testrs_testrs_karray_free(self_: *const _KArray, free_op: *const c_void);
+    fn nativekt_natives_testrs_testrs__karray_new(elements: *const *const c_void, length: i32, is_data_owner: bool) -> *const _KArray;
+    fn nativekt_natives_testrs_testrs__karray_clone(self_: *const _KArray, clone_op: *const c_void) -> *const _KArray;
+    fn nativekt_natives_testrs_testrs__karray_free(self_: *const _KArray, free_op: *const c_void);
 }
 
 macro_rules! impl_typed_array {
@@ -1139,18 +1140,18 @@ macro_rules! impl_typed_array {
     };
 }
 
-impl_typed_array!(KCharArray, u16, 2, nativekt_natives_testrs_testrs_kchar_array_new, nativekt_natives_testrs_testrs_kchar_array_free, nativekt_natives_testrs_testrs_kchar_array_clone);
-impl_typed_array!(KBooleanArray, bool, 1, nativekt_natives_testrs_testrs_kboolean_array_new, nativekt_natives_testrs_testrs_kboolean_array_free, nativekt_natives_testrs_testrs_kboolean_array_clone);
-impl_typed_array!(KByteArray, i8, 1, nativekt_natives_testrs_testrs_kbyte_array_new, nativekt_natives_testrs_testrs_kbyte_array_free, nativekt_natives_testrs_testrs_kbyte_array_clone);
-impl_typed_array!(KUByteArray, u8, 1, nativekt_natives_testrs_testrs_kubyte_array_new, nativekt_natives_testrs_testrs_kubyte_array_free, nativekt_natives_testrs_testrs_kubyte_array_clone);
-impl_typed_array!(KShortArray, i16, 2, nativekt_natives_testrs_testrs_kshort_array_new, nativekt_natives_testrs_testrs_kshort_array_free, nativekt_natives_testrs_testrs_kshort_array_clone);
-impl_typed_array!(KUShortArray, u16, 2, nativekt_natives_testrs_testrs_kushort_array_new, nativekt_natives_testrs_testrs_kushort_array_free, nativekt_natives_testrs_testrs_kushort_array_clone);
-impl_typed_array!(KIntArray, i32, 4, nativekt_natives_testrs_testrs_kint_array_new, nativekt_natives_testrs_testrs_kint_array_free, nativekt_natives_testrs_testrs_kint_array_clone);
-impl_typed_array!(KUIntArray, u32, 4, nativekt_natives_testrs_testrs_kuint_array_new, nativekt_natives_testrs_testrs_kuint_array_free, nativekt_natives_testrs_testrs_kuint_array_clone);
-impl_typed_array!(KLongArray, i64, 8, nativekt_natives_testrs_testrs_klong_array_new, nativekt_natives_testrs_testrs_klong_array_free, nativekt_natives_testrs_testrs_klong_array_clone);
-impl_typed_array!(KULongArray, u64, 8, nativekt_natives_testrs_testrs_kulong_array_new, nativekt_natives_testrs_testrs_kulong_array_free, nativekt_natives_testrs_testrs_kulong_array_clone);
-impl_typed_array!(KFloatArray, f32, 4, nativekt_natives_testrs_testrs_kfloat_array_new, nativekt_natives_testrs_testrs_kfloat_array_free, nativekt_natives_testrs_testrs_kfloat_array_clone);
-impl_typed_array!(KDoubleArray, f64, 8, nativekt_natives_testrs_testrs_kdouble_array_new, nativekt_natives_testrs_testrs_kdouble_array_free, nativekt_natives_testrs_testrs_kdouble_array_clone);
+impl_typed_array!(KCharArray, u16, 2, nativekt_natives_testrs_testrs__kchar_array_new, nativekt_natives_testrs_testrs__kchar_array_free, nativekt_natives_testrs_testrs___kchar_array_clone);
+impl_typed_array!(KBooleanArray, bool, 1, nativekt_natives_testrs_testrs__kboolean_array_new, nativekt_natives_testrs_testrs__kboolean_array_free, nativekt_natives_testrs_testrs___kboolean_array_clone);
+impl_typed_array!(KByteArray, i8, 1, nativekt_natives_testrs_testrs__kbyte_array_new, nativekt_natives_testrs_testrs__kbyte_array_free, nativekt_natives_testrs_testrs___kbyte_array_clone);
+impl_typed_array!(KUByteArray, u8, 1, nativekt_natives_testrs_testrs__kubyte_array_new, nativekt_natives_testrs_testrs__kubyte_array_free, nativekt_natives_testrs_testrs___kubyte_array_clone);
+impl_typed_array!(KShortArray, i16, 2, nativekt_natives_testrs_testrs__kshort_array_new, nativekt_natives_testrs_testrs__kshort_array_free, nativekt_natives_testrs_testrs___kshort_array_clone);
+impl_typed_array!(KUShortArray, u16, 2, nativekt_natives_testrs_testrs__kushort_array_new, nativekt_natives_testrs_testrs__kushort_array_free, nativekt_natives_testrs_testrs___kushort_array_clone);
+impl_typed_array!(KIntArray, i32, 4, nativekt_natives_testrs_testrs__kint_array_new, nativekt_natives_testrs_testrs__kint_array_free, nativekt_natives_testrs_testrs___kint_array_clone);
+impl_typed_array!(KUIntArray, u32, 4, nativekt_natives_testrs_testrs__kuint_array_new, nativekt_natives_testrs_testrs__kuint_array_free, nativekt_natives_testrs_testrs___kuint_array_clone);
+impl_typed_array!(KLongArray, i64, 8, nativekt_natives_testrs_testrs__klong_array_new, nativekt_natives_testrs_testrs__klong_array_free, nativekt_natives_testrs_testrs___klong_array_clone);
+impl_typed_array!(KULongArray, u64, 8, nativekt_natives_testrs_testrs__kulong_array_new, nativekt_natives_testrs_testrs__kulong_array_free, nativekt_natives_testrs_testrs___kulong_array_clone);
+impl_typed_array!(KFloatArray, f32, 4, nativekt_natives_testrs_testrs__kfloat_array_new, nativekt_natives_testrs_testrs__kfloat_array_free, nativekt_natives_testrs_testrs___kdloat_array_clone);
+impl_typed_array!(KDoubleArray, f64, 8, nativekt_natives_testrs_testrs__kdouble_array_new, nativekt_natives_testrs_testrs__kdouble_array_free, nativekt_natives_testrs_testrs___kdouble_array_clone);
 
 #[macro_export] macro_rules! k_char_array {
     ($($x:expr),+ $(,)?) => (KCharArray::from(vec![$($x),+]));
@@ -1234,7 +1235,7 @@ impl<T: PtrHolder> KArray<T> {
             for i in 0..elements.len() {
                 ptrs.offset(i as isize).write(elements[i].ptr());
             }
-            let ptr = unsafe { nativekt_natives_testrs_testrs_karray_new(ptrs, elements.len() as i32, true) };
+            let ptr = unsafe { nativekt_natives_testrs_testrs__karray_new(ptrs, elements.len() as i32, true) };
             KArray { ptr, elements }
         }
     }
@@ -1247,14 +1248,14 @@ impl<T: PtrHolder> Drop for KArray<T> {
     fn drop(&mut self) {
         unsafe { 
             self.elements.set_len(0);
-            nativekt_natives_testrs_testrs_karray_free(self.ptr, T::free_ptr()); 
+            nativekt_natives_testrs_testrs__karray_free(self.ptr, T::free_ptr()); 
         }
     }
 }
 
 impl<T: PtrHolder> Clone for KArray<T> {
     fn clone(&self) -> Self {
-        KArray::wrap(unsafe { nativekt_natives_testrs_testrs_karray_clone(self.ptr, T::clone_ptr()) })
+        KArray::wrap(unsafe { nativekt_natives_testrs_testrs__karray_clone(self.ptr, T::clone_ptr()) })
     }
 }
 
@@ -1316,7 +1317,7 @@ impl<T: PtrHolder> KArrayOpt<T> {
                     ptrs.offset(i as isize).write(element.clone().unwrap().ptr());
                 }
             }
-            let ptr = unsafe { nativekt_natives_testrs_testrs_karray_new(ptrs, elements.len() as i32, true) };
+            let ptr = unsafe { nativekt_natives_testrs_testrs__karray_new(ptrs, elements.len() as i32, true) };
             KArrayOpt { ptr, elements }
         }
     }
@@ -1329,14 +1330,14 @@ impl<T: PtrHolder> Drop for KArrayOpt<T> {
     fn drop(&mut self) {
         unsafe {
             self.elements.set_len(0);
-            nativekt_natives_testrs_testrs_karray_free(self.ptr, T::free_ptr()); 
+            nativekt_natives_testrs_testrs__karray_free(self.ptr, T::free_ptr()); 
         }
     }
 }
 
 impl<T: PtrHolder> Clone for KArrayOpt<T> {
     fn clone(&self) -> Self {
-        KArrayOpt::wrap(unsafe { nativekt_natives_testrs_testrs_karray_clone(self.ptr, T::clone_ptr()) })
+        KArrayOpt::wrap(unsafe { nativekt_natives_testrs_testrs__karray_clone(self.ptr, T::clone_ptr()) })
     }
 }
 
@@ -1349,15 +1350,15 @@ impl<T: PtrHolder> Clone for KArrayOpt<T> {
 // ╚═════════════════╝
 
 extern "C" {	
-	fn nativekt_natives_testrs_testrs_parent_dictionary_new(a: i32, b: i32) -> *const _ParentDictionary;
-	fn nativekt_natives_testrs_testrs_parent_dictionary_clone(self_: *const _ParentDictionary) -> *const _ParentDictionary;
-	fn nativekt_natives_testrs_testrs_parent_dictionary_free(self_: *const _ParentDictionary);	
-	fn nativekt_natives_testrs_testrs_my_dictionary_new(a: i32, b: i32, c: i32, d: i32) -> *const _MyDictionary;
-	fn nativekt_natives_testrs_testrs_my_dictionary_clone(self_: *const _MyDictionary) -> *const _MyDictionary;
-	fn nativekt_natives_testrs_testrs_my_dictionary_free(self_: *const _MyDictionary);	
-	fn nativekt_natives_testrs_testrs_type_dictionary_new(a1: u16, a2: bool, a3: i8, a4: u8, a5: i16, a6: u16, a7: i32, a8: u32, a9: i64, a10: u64, a11: f32, a12: f64, a13: *const _KString, a14: i32, a15: *const _MyDictionary, a16: *const _VoidCallback, a17: *const _KArray, a18: *const _KArray, a19: *const _KArray, a20: *const _KArray, a21: *const _KArray, a22: *const _KArray, a23: *const _KArray, a24: *const _KArray, a25: *const _KArray, a26: *const _KArray, a27: *const _KArray, a28: *const _KArray, a29: *const _KArray, a30: *const _KArray, a31: *const _KArray) -> *const _TypeDictionary;
-	fn nativekt_natives_testrs_testrs_type_dictionary_clone(self_: *const _TypeDictionary) -> *const _TypeDictionary;
-	fn nativekt_natives_testrs_testrs_type_dictionary_free(self_: *const _TypeDictionary);
+	fn nativekt_natives_testrs_testrs__parentdictionary_new(a: i32, b: i32) -> *const _ParentDictionary;
+	fn nativekt_natives_testrs_testrs__parentdictionary_clone(self_: *const _ParentDictionary) -> *const _ParentDictionary;
+	fn nativekt_natives_testrs_testrs__parentdictionary_free(self_: *const _ParentDictionary);	
+	fn nativekt_natives_testrs_testrs__mydictionary_new(a: i32, b: i32, c: i32, d: i32) -> *const _MyDictionary;
+	fn nativekt_natives_testrs_testrs__mydictionary_clone(self_: *const _MyDictionary) -> *const _MyDictionary;
+	fn nativekt_natives_testrs_testrs__mydictionary_free(self_: *const _MyDictionary);	
+	fn nativekt_natives_testrs_testrs__typedictionary_new(a1: u16, a2: bool, a3: i8, a4: u8, a5: i16, a6: u16, a7: i32, a8: u32, a9: i64, a10: u64, a11: f32, a12: f64, a13: *const _KString, a14: i32, a15: *const _MyDictionary, a16: *const _VoidCallback, a17: *const _KArray, a18: *const _KArray, a19: *const _KArray, a20: *const _KArray, a21: *const _KArray, a22: *const _KArray, a23: *const _KArray, a24: *const _KArray, a25: *const _KArray, a26: *const _KArray, a27: *const _KArray, a28: *const _KArray, a29: *const _KArray, a30: *const _KArray, a31: *const _KArray) -> *const _TypeDictionary;
+	fn nativekt_natives_testrs_testrs__typedictionary_clone(self_: *const _TypeDictionary) -> *const _TypeDictionary;
+	fn nativekt_natives_testrs_testrs__typedictionary_free(self_: *const _TypeDictionary);
 }
 
 #[repr(C)]
@@ -1376,7 +1377,7 @@ pub struct ParentDictionary {
 
 impl ParentDictionary {
 	pub fn new(a: i32, b: i32) -> Self {
-		Self::wrap(unsafe { nativekt_natives_testrs_testrs_parent_dictionary_new(a, b) })
+		Self::wrap(unsafe { nativekt_natives_testrs_testrs__parentdictionary_new(a, b) })
 	}
 	fn wrap(ptr: *const _ParentDictionary) -> Self {
 	    let r = unsafe { &*ptr };
@@ -1385,8 +1386,8 @@ impl ParentDictionary {
 }
 
 impl_wrapper!(ParentDictionary, _ParentDictionary);
-impl_drop_clone!(ParentDictionary, nativekt_natives_testrs_testrs_parent_dictionary_free, nativekt_natives_testrs_testrs_parent_dictionary_clone);
-impl_ptr_holder!(ParentDictionary, _ParentDictionary, nativekt_natives_testrs_testrs_parent_dictionary_free, nativekt_natives_testrs_testrs_parent_dictionary_clone);
+impl_drop_clone!(ParentDictionary, nativekt_natives_testrs_testrs__parentdictionary_free, nativekt_natives_testrs_testrs__parentdictionary_clone);
+impl_ptr_holder!(ParentDictionary, _ParentDictionary, nativekt_natives_testrs_testrs__parentdictionary_free, nativekt_natives_testrs_testrs__parentdictionary_clone);
 
 #[repr(C)]
 #[derive(Debug)]
@@ -1408,7 +1409,7 @@ pub struct MyDictionary {
 
 impl MyDictionary {
 	pub fn new(a: i32, b: i32, c: i32, d: i32) -> Self {
-		Self::wrap(unsafe { nativekt_natives_testrs_testrs_my_dictionary_new(a, b, c, d) })
+		Self::wrap(unsafe { nativekt_natives_testrs_testrs__mydictionary_new(a, b, c, d) })
 	}
 	fn wrap(ptr: *const _MyDictionary) -> Self {
 	    let r = unsafe { &*ptr };
@@ -1417,8 +1418,8 @@ impl MyDictionary {
 }
 
 impl_wrapper!(MyDictionary, _MyDictionary);
-impl_drop_clone!(MyDictionary, nativekt_natives_testrs_testrs_my_dictionary_free, nativekt_natives_testrs_testrs_my_dictionary_clone);
-impl_ptr_holder!(MyDictionary, _MyDictionary, nativekt_natives_testrs_testrs_my_dictionary_free, nativekt_natives_testrs_testrs_my_dictionary_clone);
+impl_drop_clone!(MyDictionary, nativekt_natives_testrs_testrs__mydictionary_free, nativekt_natives_testrs_testrs__mydictionary_clone);
+impl_ptr_holder!(MyDictionary, _MyDictionary, nativekt_natives_testrs_testrs__mydictionary_free, nativekt_natives_testrs_testrs__mydictionary_clone);
 
 #[repr(C)]
 #[derive(Debug)]
@@ -1494,7 +1495,7 @@ pub struct TypeDictionary {
 
 impl TypeDictionary {
 	pub fn new(a1: u16, a2: bool, a3: i8, a4: u8, a5: i16, a6: u16, a7: i32, a8: u32, a9: i64, a10: u64, a11: f32, a12: f64, a13: KString, a14: MyEnum, a15: MyDictionary, a16: VoidCallback, a17: KCharArray, a18: KBooleanArray, a19: KByteArray, a20: KUByteArray, a21: KShortArray, a22: KUShortArray, a23: KIntArray, a24: KUIntArray, a25: KLongArray, a26: KULongArray, a27: KFloatArray, a28: KDoubleArray, a29: KArray<KString>, a30: KIntArray, a31: KArray<MyDictionary>) -> Self {
-		Self::wrap(unsafe { nativekt_natives_testrs_testrs_type_dictionary_new(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, KString::unwrap(a13), MyEnum::to_int(a14), MyDictionary::unwrap(a15), VoidCallback::unwrap(a16), KCharArray::unwrap(a17), KBooleanArray::unwrap(a18), KByteArray::unwrap(a19), KUByteArray::unwrap(a20), KShortArray::unwrap(a21), KUShortArray::unwrap(a22), KIntArray::unwrap(a23), KUIntArray::unwrap(a24), KLongArray::unwrap(a25), KULongArray::unwrap(a26), KFloatArray::unwrap(a27), KDoubleArray::unwrap(a28), KArray::unwrap(a29), KIntArray::unwrap(a30), KArray::unwrap(a31)) })
+		Self::wrap(unsafe { nativekt_natives_testrs_testrs__typedictionary_new(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, KString::unwrap(a13), MyEnum::to_int(a14), MyDictionary::unwrap(a15), VoidCallback::unwrap(a16), KCharArray::unwrap(a17), KBooleanArray::unwrap(a18), KByteArray::unwrap(a19), KUByteArray::unwrap(a20), KShortArray::unwrap(a21), KUShortArray::unwrap(a22), KIntArray::unwrap(a23), KUIntArray::unwrap(a24), KLongArray::unwrap(a25), KULongArray::unwrap(a26), KFloatArray::unwrap(a27), KDoubleArray::unwrap(a28), KArray::unwrap(a29), KIntArray::unwrap(a30), KArray::unwrap(a31)) })
 	}
 	fn wrap(ptr: *const _TypeDictionary) -> Self {
 	    let r = unsafe { &*ptr };
@@ -1503,8 +1504,8 @@ impl TypeDictionary {
 }
 
 impl_wrapper!(TypeDictionary, _TypeDictionary);
-impl_drop_clone!(TypeDictionary, nativekt_natives_testrs_testrs_type_dictionary_free, nativekt_natives_testrs_testrs_type_dictionary_clone);
-impl_ptr_holder!(TypeDictionary, _TypeDictionary, nativekt_natives_testrs_testrs_type_dictionary_free, nativekt_natives_testrs_testrs_type_dictionary_clone);
+impl_drop_clone!(TypeDictionary, nativekt_natives_testrs_testrs__typedictionary_free, nativekt_natives_testrs_testrs__typedictionary_clone);
+impl_ptr_holder!(TypeDictionary, _TypeDictionary, nativekt_natives_testrs_testrs__typedictionary_free, nativekt_natives_testrs_testrs__typedictionary_clone);
 
 // ╔═══════════════════╗
 // ║     Callbacks     ║
@@ -3301,30 +3302,26 @@ fn clone_arc<T>(arc: *const T) -> Arc<T> {
     }
 }
 
-#[no_mangle]
-extern "C" fn nativekt_natives_testrs_testrs_b_free(ptr: *const crate::B) {
-    unsafe { let _ = Arc::from_raw(ptr); }
-}
-
-#[no_mangle]
-extern "C" fn nativekt_natives_testrs_testrs_b_new_0() -> *const crate::B {
+#[no_mangle] extern "C" fn nativekt_natives_testrs_testrs__interface_b_new0() -> *const crate::B {
     Arc::into_raw(Arc::new(crate::B::new()))
 }
 
-#[no_mangle]
-extern "C" fn nativekt_natives_testrs_testrs_a_free(ptr: *const crate::A) {
+#[no_mangle] extern "C" fn nativekt_natives_testrs_testrs__interface_b_free(ptr: *const crate::B) {
     unsafe { let _ = Arc::from_raw(ptr); }
 }
 
-#[no_mangle]
-extern "C" fn nativekt_natives_testrs_testrs_a_new_0() -> *const crate::A {
+#[no_mangle] extern "C" fn nativekt_natives_testrs_testrs__interface_a_new0() -> *const crate::A {
     Arc::into_raw(Arc::new(crate::A::new()))
 }
 
-#[no_mangle]
-extern "C" fn nativekt_natives_testrs_testrs_a_fn_test(ptr: *const crate::A, arg: *const crate::B) {
+#[no_mangle] extern "C" fn nativekt_natives_testrs_testrs__interface_a_fn_test(ptr: *const crate::A, arg: *const crate::B) {
     clone_arc(ptr).test(clone_arc(arg))
 }
+
+#[no_mangle] extern "C" fn nativekt_natives_testrs_testrs__interface_a_free(ptr: *const crate::A) {
+    unsafe { let _ = Arc::from_raw(ptr); }
+}
+
 
 // ╔═══════════════════╗
 // ║     Functions     ║
