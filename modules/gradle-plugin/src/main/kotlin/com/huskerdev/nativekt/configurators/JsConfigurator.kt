@@ -2,6 +2,7 @@ package com.huskerdev.nativekt.configurators
 
 import com.android.build.gradle.internal.tasks.factory.dependsOn
 import com.huskerdev.nativekt.plugin.BuildSystem
+import com.huskerdev.nativekt.plugin.Language
 import com.huskerdev.nativekt.plugin.NATIVE_TASK_GROUP
 import com.huskerdev.nativekt.plugin.NativeKtJsInterface
 import com.huskerdev.nativekt.plugin.NativeProject
@@ -156,6 +157,9 @@ private abstract class PrepareNativesJs: DefaultTask() {
         val nativesBuildOutDir = File(nativesBuildOutDir)
         val projectDir = File(projectDir)
 
+        val sourceExtension = buildSystem.language.sourceExtension ?: "c"
+        val headerExtension = buildSystem.language.headerExtension ?: "h"
+
         // Collect all available functions and mangle them into the short name to minimize .js file
         val jsMangle = buildList {
             addAll(listOf(
@@ -196,26 +200,25 @@ private abstract class PrepareNativesJs: DefaultTask() {
             expectActual = expectActual
         )
 
-        val useCFunctions = buildSystem is BuildSystem.CMake
-
         CApiHeaderPrinter(
             idl = idl,
-            target = File(nativesBuildSourcesDir, "api.h"),
+            target = File(nativesBuildSourcesDir, "api.$headerExtension"),
+            language = buildSystem.language,
             classPath = moduleClasspath,
             moduleName = moduleName,
-            isInternal = true,
-            cFunctions = useCFunctions
+            isInternal = true
         )
         CApiImplPrinter(
             idl = idl,
-            target = File(nativesBuildSourcesDir, "api.c"),
+            target = File(nativesBuildSourcesDir, "api.$sourceExtension"),
+            language = buildSystem.language,
             classPath = moduleClasspath,
-            moduleName = moduleName,
-            cFunctions = useCFunctions
+            moduleName = moduleName
         )
         CEmscriptenPrinter(
             idl = idl,
-            target = File(nativesBuildSourcesDir, "emscripten_bindings.c"),
+            target = File(nativesBuildSourcesDir, "emscripten_bindings.$sourceExtension"),
+            language = buildSystem.language,
             jsMangle = jsMangle,
             classPath = moduleClasspath,
             moduleName = moduleName
@@ -254,13 +257,13 @@ private abstract class PrepareNativesJs: DefaultTask() {
                 File(nativesBuildSourcesDir, "CMakeLists.txt").writeText($$"""
                     cmake_minimum_required(VERSION 3.15)
             
-                    project("$$moduleName")
+                    project("$$moduleName"$${if (buildSystem.language == Language.CPP) " LANGUAGES CXX" else ""})
                     
                     set(EXTRA_LINK_FLAGS "" CACHE STRING "Extra linker flags")
             
                     add_subdirectory("$${projectDir.posixPath}" "$${File(nativesBuildOutDir, "sub").posixPath}")
                 
-                    add_executable(lib$$moduleName $<TARGET_OBJECTS:$$moduleName> emscripten_bindings.c api.c)
+                    add_executable(lib$$moduleName $<TARGET_OBJECTS:$$moduleName> emscripten_bindings.$$sourceExtension api.$$sourceExtension)
                     
                     set_target_properties(lib$$moduleName PROPERTIES LINK_FLAGS "${EXTRA_LINK_FLAGS} $$args")
                 """.trimIndent())

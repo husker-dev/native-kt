@@ -5,13 +5,14 @@ import natives.testrs.B
 import withRustLib
 import kotlin.test.Test
 
-class Interfaces {
+class Rust_Interfaces {
 
     @Test
     fun simple() = withRustLib {
         val a = A()
-        a.test(B())
+        val b = B()
+        a.test(b)
         a.close()
-
+        b.close()
     }
 }

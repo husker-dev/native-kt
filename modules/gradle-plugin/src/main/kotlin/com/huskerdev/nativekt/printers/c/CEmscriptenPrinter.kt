@@ -1,5 +1,6 @@
 package com.huskerdev.nativekt.printers.c
 
+import com.huskerdev.nativekt.plugin.Language
 import com.huskerdev.nativekt.utils.*
 import com.huskerdev.webidl.resolver.IdlResolver
 import java.io.File
@@ -7,18 +8,25 @@ import java.io.File
 class CEmscriptenPrinter(
     val idl: IdlResolver,
     target: File,
+    language: Language,
     val jsMangle: Map<String, String>,
     val classPath: String,
     val moduleName: String
 ) {
     init {
         val builder = StringBuilder()
-        builder.append("#include \"api.h\"\n")
-        builder.append("#include <emscripten.h>\n")
+
+        val headerExtension = language.headerExtension ?: "h"
 
         builder.append("""
+            #include "api.$headerExtension"
+            #include <emscripten.h>
             
-            EMSCRIPTEN_KEEPALIVE void ${jsMangle["karray_free"]}(const KArray* self, void (*free_op)(void*)) {
+            #ifdef __cplusplus
+            extern "C" {
+            #endif
+            
+            EMSCRIPTEN_KEEPALIVE void ${jsMangle["karray_free"]}(KArray* self, void (*free_op)(void*)) {
                 ${mangle("karray_free")}(self, free_op);
             }
             
@@ -83,9 +91,15 @@ class CEmscriptenPrinter(
             """.trimIndent())
         }
 
+        builder.append("""
+            
+            #ifdef __cplusplus
+            }
+            #endif
+        """.trimIndent())
         target.writeText(builder.toString())
     }
 
     private fun mangle(name: String) =
-        com.huskerdev.nativekt.utils.mangle(classPath, moduleName, "_$name")
+        mangle(classPath, moduleName, "_$name")
 }

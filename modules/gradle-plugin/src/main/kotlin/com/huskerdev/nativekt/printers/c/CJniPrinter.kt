@@ -1,5 +1,6 @@
 package com.huskerdev.nativekt.printers.c
 
+import com.huskerdev.nativekt.plugin.Language
 import com.huskerdev.nativekt.utils.*
 import com.huskerdev.nativekt.utils.arrayType
 import com.huskerdev.webidl.resolver.*
@@ -64,7 +65,8 @@ class CJniPrinter(
             }
             
             static void JNI_free_mangled_methods(JNIEnv *env, jobject mangled_methods, char** mangled_names) {
-                for (jsize i = 0; i < (*env)->GetArrayLength(env, mangled_methods); i++)
+                jsize length = (*env)->GetArrayLength(env, mangled_methods);
+                for (jsize i = 0; i < length; i++)
                     free(mangled_names[i]);
                 free(mangled_names);
             }
@@ -216,7 +218,7 @@ class CJniPrinter(
     private fun printCriticalFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
         append("\nstatic ")
         printCriticalNativeFunctionContent(
-            builder, classPath, moduleName,
+            builder, Language.C, classPath, moduleName,
             name = "c_${function.jniName()}",
             function
         )

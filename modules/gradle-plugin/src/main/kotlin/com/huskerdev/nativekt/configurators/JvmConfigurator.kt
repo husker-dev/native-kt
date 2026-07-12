@@ -1,6 +1,7 @@
 package com.huskerdev.nativekt.configurators
 
 import com.huskerdev.nativekt.plugin.BuildSystem
+import com.huskerdev.nativekt.plugin.Language
 import com.huskerdev.nativekt.plugin.NATIVE_TASK_GROUP
 import com.huskerdev.nativekt.plugin.NativeKtJvmInterface
 import com.huskerdev.nativekt.plugin.NativeProject
@@ -207,8 +208,8 @@ private abstract class PrepareNativesJvm: DefaultTask() {
         val nativesBuildOutDir = File(nativesBuildOutDir)
         val projectDir = File(projectDir)
 
-        val srcList = arrayListOf("api.c")
-        val includeList = arrayListOf<String>()
+        val sourceExtension = buildSystem.language.sourceExtension ?: "c"
+        val headerExtension = buildSystem.language.headerExtension ?: "h"
 
         // Generate all files
 
@@ -226,12 +227,12 @@ private abstract class PrepareNativesJvm: DefaultTask() {
         )
 
         if(useJNI) {
-            srcList += "jni_bindings.c"
-            includeList += listOf("include", "include/${jdkPlatformName()}")
+            val jniSourcesDir = File(nativesBuildSourcesDir, "jni")
+            jniSourcesDir.mkdirs()
 
             CJniUtilsPrinter(
                 idl = idl,
-                target = File(nativesBuildSourcesDir, "jni_utils.h"),
+                target = File(jniSourcesDir, "jni_utils.h"),
                 classPath = moduleClasspath,
                 moduleName = moduleName,
                 name = "${moduleName.capitalized()}JNI",
@@ -240,7 +241,7 @@ private abstract class PrepareNativesJvm: DefaultTask() {
 
             CJniPrinter(
                 idl = idl,
-                target = File(nativesBuildSourcesDir, "jni_bindings.c"),
+                target = File(jniSourcesDir, "jni_bindings.c"),
                 classPath = moduleClasspath,
                 moduleName = moduleName,
                 name = "${moduleName.capitalized()}JNI",
@@ -248,8 +249,17 @@ private abstract class PrepareNativesJvm: DefaultTask() {
                 isAndroidCriticalEnabled = false
             )
 
+            CApiHeaderPrinter(
+                idl = idl,
+                target = File(jniSourcesDir, "api.h"),
+                language = null,
+                classPath = moduleClasspath,
+                moduleName = moduleName,
+                isInternal = true,
+            )
+
             // unpack jni headers
-            val includeDir = File(nativesBuildSourcesDir, "include")
+            val includeDir = File(jniSourcesDir, "include")
             if(!includeDir.exists()) {
                 arrayOf(
                     "darwin/jawt_md.h",
@@ -279,23 +289,21 @@ private abstract class PrepareNativesJvm: DefaultTask() {
             }
         }
 
-        val useCFunctions = buildSystem is BuildSystem.CMake
-
         CApiHeaderPrinter(
             idl = idl,
-            target = File(nativesBuildSourcesDir, "api.h"),
+            target = File(nativesBuildSourcesDir, "api.$headerExtension"),
+            language = buildSystem.language,
             classPath = moduleClasspath,
             moduleName = moduleName,
             isInternal = true,
-            cFunctions = useCFunctions
         )
 
         CApiImplPrinter(
             idl = idl,
-            target = File(nativesBuildSourcesDir, "api.c"),
+            target = File(nativesBuildSourcesDir, "api.$sourceExtension"),
+            language = buildSystem.language,
             classPath = moduleClasspath,
-            moduleName = moduleName,
-            cFunctions = useCFunctions
+            moduleName = moduleName
         )
 
         when(buildSystem) {
@@ -305,15 +313,15 @@ private abstract class PrepareNativesJvm: DefaultTask() {
                 File(nativesBuildSourcesDir, "CMakeLists.txt").writeText($$"""
                     cmake_minimum_required(VERSION 3.15)
             
-                    project("$$moduleName")
+                    project("$$moduleName"$${if(buildSystem.language == Language.CPP) " LANGUAGES CXX" else ""})
             
                     add_subdirectory("$${projectDir.posixPath}" "$${File(platformBuildDir, "sub").posixPath}")
             
-                    add_library(lib_$$moduleName SHARED $${srcList.joinToString(" ")})
+                    add_library(lib_$$moduleName SHARED api.$$sourceExtension)
                     
                     target_link_libraries(lib_$$moduleName PRIVATE $$moduleName)
                     
-                    target_include_directories(lib_$$moduleName PRIVATE $${includeList.joinToString(" ") { "\"$it\"" }})
+                    $${if(!useJNI) "" else "target_link_libraries(lib_$moduleName PRIVATE -Wl,--whole-archive ${File(platformBuildDir, "libjni.a").posixPath} -Wl,--no-whole-archive)" }
                 """.trimIndent())
             }
             is BuildSystem.Cargo -> Unit
@@ -350,6 +358,24 @@ private abstract class CompileNativesJvm @Inject constructor(
         val nativesBuildOutDir = File(nativesBuildOutDir)
 
         val platformBuildDir = File(nativesBuildOutDir, "${platformName()}${libArch.capitalized()}")
+        platformBuildDir.mkdirs()
+
+        // Compile JNI if needed
+        if(useJNI) {
+            val jniSourcesDir = File(nativesBuildSourcesDir, "jni")
+
+            clangCompile(execOps,
+                sources = listOf(File(jniSourcesDir, "jni_bindings.c").posixPath),
+                includeDirs = listOf(
+                    File(jniSourcesDir, "include").posixPath,
+                    File(jniSourcesDir, "include/${jdkPlatformName()}").posixPath
+                ),
+                linkerArgs = emptyList(),
+                dynamicLib = false,
+                outputBaseName = "libjni",
+                workingDir = platformBuildDir
+            )
+        }
 
         when(val buildSystem = buildSystem) {
             is BuildSystem.CMake -> {
@@ -382,14 +408,6 @@ private abstract class CompileNativesJvm @Inject constructor(
             }
 
             is BuildSystem.Cargo -> {
-                val sources = nativesBuildSourcesDir
-                    .listFiles { it.extension == "c" }
-                    .map { it.posixPath }.toList()
-
-                val includeDirs = if(useJNI)
-                    listOf("include", "include/${jdkPlatformName()}").map { File(nativesBuildSourcesDir, it).posixPath }
-                else emptyList()
-
                 val rustBuildDir = cargoBuild(execOps,
                     project = File(projectDir),
                     buildType = buildSystem.buildType,
@@ -402,12 +420,13 @@ private abstract class CompileNativesJvm @Inject constructor(
                 )
 
                 clangCompile(execOps,
-                    sources = sources,
-                    includeDirs = includeDirs,
+                    sources = listOf(File(nativesBuildSourcesDir, "api.c").posixPath),
+                    includeDirs = emptyList(),
                     linkerArgs = listOfNotNull(
                         *rustLinkerFlags.toTypedArray(),
                         "-L$rustBuildDir",
                         "-l$moduleName",
+                        if(useJNI) "-Wl,--whole-archive ${File(platformBuildDir, "libjni.a").posixPath} -Wl,--no-whole-archive" else null,
                         if(Os.isFamily(Os.FAMILY_WINDOWS)) "-Wl,--export-all-symbols" else null
                     ),
                     dynamicLib = true,

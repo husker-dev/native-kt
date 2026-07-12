@@ -89,15 +89,14 @@ fun NativeKtPlugin.configureKotlin(
                 is SinglePlatform -> configureSinglePlatform(idl, nativesBuildDir, srcGenDir, module)
             }
 
-            when(module.buildSystem) {
+            when(val buildSystem = module.buildSystem) {
                 is BuildSystem.CMake -> {
                     CApiHeaderPrinter(
                         idl = idl,
                         target = module.getHeaderFile(project),
+                        language = buildSystem.language,
                         classPath = module.classPath,
-                        moduleName = module.name,
-                        guardName = module.name.uppercase(),
-                        cFunctions = true
+                        moduleName = module.name
                     )
                 }
                 is BuildSystem.Cargo -> {

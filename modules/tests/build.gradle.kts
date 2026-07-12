@@ -1,6 +1,7 @@
 @file:OptIn(ExperimentalWasmDsl::class, KotlinNativeCacheApi::class)
 @file:Suppress("UnstableApiUsage")
 
+import com.huskerdev.nativekt.plugin.Language
 import com.huskerdev.nativekt.plugin.currentNativeTargets
 import com.huskerdev.nativekt.plugin.webTargets
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
@@ -111,10 +112,16 @@ natives {
 
     val commonNdl = file("natives/api.ndl")
     create("test") {
-        //ndlFile = commonNdl
+        ndlFile = commonNdl
+    }
+    create("testcpp") {
+        ndlFile = commonNdl
+        cmake {
+            language = Language.CPP
+        }
     }
     create("testrs") {
-        //ndlFile = commonNdl
+        ndlFile = commonNdl
         cargo()
     }
 }

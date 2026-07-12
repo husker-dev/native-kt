@@ -7,6 +7,7 @@ import com.huskerdev.webidl.resolver.*
 import org.gradle.internal.extensions.stdlib.capitalized
 import org.gradle.kotlin.dsl.support.uppercaseFirstChar
 import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 
 fun asyncLoadFunctionName(moduleName: String) =
@@ -74,7 +75,7 @@ val ResolvedIdlOperation.cname: String
     get() = when {
         isInterfaceOperationFn() -> "_interface_${interfaceName().lowercase()}_fn_${interfaceFunctionName().snakeCase()}"
         isInterfaceOperationFree() -> "_interface_${interfaceName().lowercase()}_free"
-        isInterfaceOperationConstructor() -> "_interface_${interfaceName().lowercase()}_new${interfaceConstructorIndex()}"
+        isInterfaceOperationConstructor() -> "_interface_${interfaceName().lowercase()}_new_${interfaceConstructorIndex()}"
         else -> name.snakeCase()
     }
 
@@ -126,6 +127,9 @@ val ResolvedIdlInterface.kname: String
 // Types
 
 fun <T> ResolvedIdlType.Default.arrayType(block: (type: ResolvedIdlType.Default) -> T): T {
+    contract {
+        callsInPlace(block, InvocationKind.EXACTLY_ONCE)
+    }
     val param = parameters.firstOrNull()
         ?: throw UnsupportedOperationException("Array without type")
     val type = param as? ResolvedIdlType.Default
@@ -633,7 +637,7 @@ fun ResolvedIdlDictionary.allFields() = buildList {
 fun ResolvedIdlInterface.toOperations() = buildList {
     val interfaceType = ResolvedIdlType.Default(this@toOperations, emptyList(), false)
     val interfaceArg = ResolvedIdlField.Argument(
-        "ptr", interfaceType, null,
+        "_self", interfaceType, null,
         isOptional = false, isVariadic = false, attributes = emptyList()
     )
 

@@ -429,11 +429,11 @@ class RustPrinter(
 
                 val body = when {
                     operation.isInterfaceOperationFree() ->
-                        "unsafe { let _ = Arc::from_raw(ptr); }"
+                        "unsafe { let _ = Arc::from_raw(${operation.args[0].rustName}); }"
                     operation.isInterfaceOperationConstructor() ->
                         "Arc::into_raw(Arc::new(${inter.rustName}::$rustName(${rustArgs.joinToString()})))"
                     operation.isInterfaceOperationFn() ->
-                        toNativeType(operation.type, "clone_arc(ptr).$rustName(${rustArgs.drop(1).joinToString()})")
+                        toNativeType(operation.type, "clone_arc(${operation.args[0].rustName}).$rustName(${rustArgs.drop(1).joinToString()})")
                     else -> throw UnsupportedOperationException()
                 }
                 append("\n")

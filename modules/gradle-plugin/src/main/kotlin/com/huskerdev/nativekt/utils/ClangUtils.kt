@@ -1,6 +1,7 @@
 package com.huskerdev.nativekt.utils
 
 import com.huskerdev.nativekt.TargetType
+import com.huskerdev.nativekt.plugin.Language
 import com.huskerdev.nativekt.plugin.NativeKtInfo
 import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.process.ExecOperations
@@ -46,10 +47,15 @@ internal fun normalizeMinGWLibs(
 
     return linkerOpts.map {
         if(it.startsWith("-l")) {
-            val alternate = File(mingwLibs, "lib${it.substring(2)}.a")
-            if(alternate.exists())
-                alternate.posixPath
-            else it
+            val name = it.substring(2)
+            // WARNING: Vibecoded!
+            // Prefer .dll.a (import library) over .a (static library) to avoid
+            // locally defining symbols that should be imported from DLLs (e.g. std::cout)
+            File(mingwLibs, "lib$name.dll.a")
+                .run { if(exists()) posixPath else null }
+                ?: File(mingwLibs, "lib$name.a")
+                    .run { if(exists()) posixPath else null }
+                ?: it
         } else it
     }
 }
@@ -73,7 +79,7 @@ internal fun clangCompile(
     linkerArgs: List<String> = emptyList(),
     dynamicLib: Boolean,
     workingDir: File,
-    outputBaseName: String = "out" + if(dynamicLib) "" else "",
+    outputBaseName: String = "out",
     extension: String = systemExtension(dynamicLib)
 ): File {
     val sourcesObj = sources.map {
@@ -177,9 +183,23 @@ internal fun getClangTargetArgs(
             "-arch x86_64",
             "-target x86_64-apple-darwin"
         )
-        TargetType.MINGW_X64 -> listOf(
-            "-target x86_64-pc-windows-gnu"
-        )
+        TargetType.MINGW_X64 -> {
+            val konanDepsDir = File(System.getProperty("user.home"), ".konan/dependencies")
+            val konanMingw = konanDepsDir.listFiles()
+                ?.filter { it.name.startsWith("msys2-mingw-w64-x86_64-") }
+                ?.sorted()
+                ?.get(0)
+                ?: File(konanDepsDir, "msys2-mingw-w64-x86_64-2")
+
+            listOf(
+                "-Qunused-arguments",
+                "--rtlib=libgcc",
+                "--unwindlib=libgcc",
+                "--sysroot=$konanMingw",
+                "-stdlib=libstdc++",
+                "-target x86_64-w64-mingw32"
+            )
+        }
         TargetType.LINUX_X64 -> listOf(
             "-target x86_64-unknown-linux-gnu"
         )
@@ -194,7 +214,11 @@ internal fun localizeSymbols(
     execOps: ExecOperations,
     nativesRootBuildDir: File,
     lib: File,
-    symbols: List<String>
+    symbols: List<String>,
+    language: Language,
+    initSymbolName: String? = null,
+    clangPath: String? = null,
+    targetArgs: List<String> = emptyList(),
 ) {
     val libDir = lib.parentFile
     val tmpDir = File(libDir, "_tmp").fresh()
@@ -204,6 +228,7 @@ internal fun localizeSymbols(
     var ld = "ld"
     var objcopy = "objcopy"
     var ar = "ar"
+    var nm = "nm"
 
     // Unpack GNU tools on Windows (because clang64 tools in MinGW does not support COFF)
     if(Os.isFamily(Os.FAMILY_WINDOWS)) {
@@ -222,6 +247,12 @@ internal fun localizeSymbols(
         ld = unpack("ld.exe")
         ar = unpack("ar.exe")
         objcopy = unpack("objcopy.exe")
+        if(clangPath != null) {
+            val nmFile = File(clangPath).parentFile.let { p ->
+                if(Os.isFamily(Os.FAMILY_WINDOWS)) File(p, "llvm-nm.exe") else File(p, "llvm-nm")
+            }
+            if(nmFile.exists()) nm = "\"${nmFile.posixPath}\""
+        }
     }
 
 
@@ -265,10 +296,57 @@ internal fun localizeSymbols(
         )
     }
 
+    // Inject C++ static initializers init function
+    var finalObjFile = tmpObjFile
+    if(language == Language.CPP && initSymbolName != null && clangPath != null) {
+        val nmOutput = execOps.exec("$nm -a ${tmpObjFile.name}", workingDir = tmpDir, silent = true)
+        val ctorSymbols = nmOutput.lines()
+            .filter { it.contains("_GLOBAL__sub_I_") }
+            .map { it.trim().split(Regex("\\s+")).last() }
+
+        if(ctorSymbols.isNotEmpty()) {
+            // Globalize the ctor symbols so the init C file can reference them
+            val globalizeFile = File(tmpDir, "__globalize.txt")
+            globalizeFile.writeText(ctorSymbols.joinToString("\n"))
+            execOps.exec(
+                "$objcopy --globalize-symbols=__globalize.txt ${tmpObjFile.name}",
+                workingDir = tmpDir
+            )
+
+            // Generate C file with init function that calls each ctor
+            val initC = File(tmpDir, "__ctors_init.c")
+            val cBuilder = StringBuilder()
+            cBuilder.append("void $initSymbolName() {\n")
+            ctorSymbols.forEachIndexed { i, sym ->
+                cBuilder.append("    extern void _ctor_$i(void) __asm__(\"$sym\");\n")
+            }
+            ctorSymbols.forEachIndexed { i, _ ->
+                cBuilder.append("    _ctor_$i();\n")
+            }
+            cBuilder.append("}\n")
+            initC.writeText(cBuilder.toString())
+
+            // Compile C file
+            val clangCmd = if(Os.isFamily(Os.FAMILY_WINDOWS)) "\"$clangPath\"" else clangPath
+            execOps.exec(
+                "$clangCmd -c -o __ctors_init.o __ctors_init.c ${targetArgs.joinToString(" ")}",
+                workingDir = tmpDir,
+                silent = true
+            )
+
+            // Merge
+            finalObjFile = File(tmpDir, "__merged_final.o")
+            execOps.exec(
+                "$ld -r ${tmpObjFile.name} __ctors_init.o -o ${finalObjFile.name}",
+                workingDir = tmpDir
+            )
+        }
+    }
+
     // Archive into .a
     lib.delete()
     execOps.exec(
-        "$ar rcs ../${lib.name} ${tmpObjFile.name}",
+        "$ar rcs ../${lib.name} ${finalObjFile.name}",
         workingDir = tmpDir
     )
 

@@ -18,7 +18,7 @@ impl A {
         A {}
     }
     fn test(&self, _arg: Arc<B>) {
-        println!("Hello from interface!")
+        println!("Hello from Rust interface!")
     }
 }
 
@@ -30,16 +30,6 @@ fn f64_cmp(f1: f64, f2: f64) -> bool {
     (f1 - f2).abs() < 0.00001
 }
 
-pub fn test_func(
-    arg1: Option<KString>,
-    arg2: i32
-) -> KString {
-    let arg1 = arg1.unwrap_or(KString::from_str("null"));
-
-    println!("rust: {}, {}", arg1.as_str(), arg2);
-
-    KString::from_str("Bye! Пока!")
-}
 pub fn pass_void() -> bool {
     true
 }

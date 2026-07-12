@@ -138,14 +138,29 @@ interface NativeKtCommonInterface {
 // ==============
 
 sealed interface BuildSystem: Serializable {
+    val language: Language
 
     open class CMake: BuildSystem {
         /**
-         * Generated header file.
+         * CMake target language
          *
-         * Default value: `natives/[name]/include/api.h`
+         * Default value: C
          */
-        var headerFile: File? = null
+        override var language: Language = Language.C
+
+        /**
+         * Generated header file directory.
+         *
+         * Default value: `natives/[name]/include`
+         */
+        var headerDir: File? = null
+
+        /**
+         * Generated header file name (without extension).
+         *
+         * Default value: 'api`
+         */
+        var headerFileName: String = "api"
 
         /**
          * CMake build type.
@@ -161,6 +176,8 @@ sealed interface BuildSystem: Serializable {
     }
 
     open class Cargo: BuildSystem {
+        override val language: Language = Language.RUST
+
         var apiRsFile: File? = null
 
         var buildType: CargoBuildType = CargoBuildType.RELEASE
@@ -274,6 +291,17 @@ abstract class SinglePlatform @Inject constructor(
      * SourceSet with implementation
      */
     var targetSourceSet: String = "jvmMain"
+}
+
+@Suppress("unused")
+enum class Language(
+    val sourceExtension: String? = null,
+    val headerExtension: String? = null
+) {
+    C("c", "h"),
+    CPP("cpp", "hpp"),
+    RUST
+    // OBJ_C("m", "h")
 }
 
 @Suppress("unused")

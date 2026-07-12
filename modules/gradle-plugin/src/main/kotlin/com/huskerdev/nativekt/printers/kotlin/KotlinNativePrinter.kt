@@ -1,5 +1,6 @@
 package com.huskerdev.nativekt.printers.kotlin
 
+import com.huskerdev.nativekt.plugin.Language
 import com.huskerdev.nativekt.utils.*
 import com.huskerdev.webidl.resolver.*
 import org.gradle.internal.extensions.stdlib.capitalized
@@ -8,6 +9,7 @@ import java.io.File
 class KotlinNativePrinter(
     idl: IdlResolver,
     target: File,
+    language: Language,
     val classPath: String,
     val moduleName: String,
     useCoroutines: Boolean,
@@ -34,18 +36,26 @@ class KotlinNativePrinter(
             ${actual}val isLib${moduleName.capitalized()}Loaded: Boolean = true
             
             @Throws(UnsupportedOperationException::class)
-            ${actual}fun ${syncLoadFunctionName(moduleName)}() = Unit
-            ${actual}fun ${asyncLoadFunctionName(moduleName)}(onReady: () -> Unit) = onReady()
+            ${actual}fun ${syncLoadFunctionName(moduleName)}() {
+                ${if(language == Language.CPP) 
+                    "$cinteropPath.${mangle("init")}() // Init C++" 
+                else "// Do nothing (statically linked)"}
+            }
+            
+            ${actual}fun ${asyncLoadFunctionName(moduleName)}(onReady: () -> Unit) {
+                ${syncLoadFunctionName(moduleName)}()
+                onReady()
+            }
             
         """.trimIndent())
         if(useCoroutines)
-            builder.append("${actual}suspend fun ${asyncLoadFunctionName(moduleName)}() = Unit\n")
+            builder.append("${actual}suspend fun ${asyncLoadFunctionName(moduleName)}() = ${syncLoadFunctionName(moduleName)}()\n")
 
         builder.append("""
             
             private val _handleKStringFree = staticCFunction<COpaquePointer?, Unit> {
             	if(it == null) return@staticCFunction
-            	$cinteropPath.${mangle("_kstring_free")}(it.reinterpret())
+            	$cinteropPath.${mangle("kstring_free")}(it.reinterpret())
             }
             
         """.trimIndent())
@@ -76,7 +86,7 @@ class KotlinNativePrinter(
     }
 
     private fun mangle(name: String) =
-        mangle(classPath, moduleName, name)
+        mangle(classPath, moduleName, "_$name")
 
     private fun printInterface(builder: StringBuilder, inter: ResolvedIdlInterface) = builder.apply {
         val name = inter.name.upperCamelCase()
@@ -324,13 +334,13 @@ class KotlinNativePrinter(
     ): String? = when {
         type.isArray() -> type.arrayType { type ->
             when {
-                type.isPrimitive() -> "${cinteropPath}.${mangle("_${type.toCType().lowercase()}_array_free")}($content?.reinterpret())"
-                type.isEnum() -> "${cinteropPath}.${mangle("_kint_array_free")}($content?.reinterpret())"
-                else -> "${cinteropPath}.${mangle("_karray_free")}($content, _handle${type.toCType(ptr = false)}Free)"
+                type.isPrimitive() -> "${cinteropPath}.${mangle("${type.toCType().lowercase()}_array_free")}($content?.reinterpret())"
+                type.isEnum() -> "${cinteropPath}.${mangle("kint_array_free")}($content?.reinterpret())"
+                else -> "${cinteropPath}.${mangle("karray_free")}($content, _handle${type.toCType(ptr = false)}Free)"
             }
         }
         type.isCallback() -> "callbackFree($content?.reinterpret())"
-        type.isDictionary() -> "${cinteropPath}.${mangle("_${type.toCType(ptr = false).lowercase()}_free")}($content)"
+        type.isDictionary() -> "${cinteropPath}.${mangle("${type.toCType(ptr = false).lowercase()}_free")}($content)"
         else -> null
     }
 

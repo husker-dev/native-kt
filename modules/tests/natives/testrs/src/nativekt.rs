@@ -3302,24 +3302,24 @@ fn clone_arc<T>(arc: *const T) -> Arc<T> {
     }
 }
 
-#[no_mangle] extern "C" fn nativekt_natives_testrs_testrs__interface_b_new0() -> *const crate::B {
+#[no_mangle] extern "C" fn nativekt_natives_testrs_testrs__interface_b_new_0() -> *const crate::B {
     Arc::into_raw(Arc::new(crate::B::new()))
 }
 
-#[no_mangle] extern "C" fn nativekt_natives_testrs_testrs__interface_b_free(ptr: *const crate::B) {
-    unsafe { let _ = Arc::from_raw(ptr); }
+#[no_mangle] extern "C" fn nativekt_natives_testrs_testrs__interface_b_free(_self: *const crate::B) {
+    unsafe { let _ = Arc::from_raw(_self); }
 }
 
-#[no_mangle] extern "C" fn nativekt_natives_testrs_testrs__interface_a_new0() -> *const crate::A {
+#[no_mangle] extern "C" fn nativekt_natives_testrs_testrs__interface_a_new_0() -> *const crate::A {
     Arc::into_raw(Arc::new(crate::A::new()))
 }
 
-#[no_mangle] extern "C" fn nativekt_natives_testrs_testrs__interface_a_fn_test(ptr: *const crate::A, arg: *const crate::B) {
-    clone_arc(ptr).test(clone_arc(arg))
+#[no_mangle] extern "C" fn nativekt_natives_testrs_testrs__interface_a_fn_test(_self: *const crate::A, arg: *const crate::B) {
+    clone_arc(_self).test(clone_arc(arg))
 }
 
-#[no_mangle] extern "C" fn nativekt_natives_testrs_testrs__interface_a_free(ptr: *const crate::A) {
-    unsafe { let _ = Arc::from_raw(ptr); }
+#[no_mangle] extern "C" fn nativekt_natives_testrs_testrs__interface_a_free(_self: *const crate::A) {
+    unsafe { let _ = Arc::from_raw(_self); }
 }
 
 

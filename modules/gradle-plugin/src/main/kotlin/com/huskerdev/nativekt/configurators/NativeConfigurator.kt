@@ -16,7 +16,10 @@ import kotlinx.serialization.json.Json
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.tasks.*
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.TaskProvider
 import org.gradle.internal.extensions.stdlib.capitalized
 import org.gradle.kotlin.dsl.the
 import org.gradle.process.ExecOperations
@@ -27,7 +30,6 @@ import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinNativeLink
 import java.io.File
 import javax.inject.Inject
-import kotlin.collections.plusAssign
 
 @OptIn(KotlinNativeCacheApi::class)
 internal fun configureNative(
@@ -124,6 +126,7 @@ internal fun configureNative(
         it.idl                    = Json.encodeToString(idl)
 
         it.moduleName             = module.name
+        it.moduleClasspath        = module.classPath
         it.targetType             = targetType
 
         it.projectDir             = module.dir(project).posixPath
@@ -187,6 +190,9 @@ private abstract class PrepareNativesKn @Inject constructor(
         val nativesBuildSourcesDir = File(nativesBuildSourcesDir).fresh()
         val nativesBuildOutDir = File(nativesBuildOutDir)
 
+        val sourceExtension = buildSystem.language.sourceExtension ?: "c"
+        val headerExtension = buildSystem.language.headerExtension ?: "h"
+
         val headerFile = File(headerFile)
         headerFile.parentFile.mkdirs()
 
@@ -196,30 +202,28 @@ private abstract class PrepareNativesKn @Inject constructor(
         CApiHeaderPrinter(
             idl = idl,
             target = headerFile,
-            guardName = moduleName.uppercase(),
+            language = null,
             classPath = moduleClasspath,
             moduleName = moduleName,
             isInternal = true,
         )
 
         // Generate api sources
-        val useCFunctions = buildSystem is BuildSystem.CMake
-
         CApiHeaderPrinter(
             idl = idl,
-            target = File(nativesBuildSourcesDir, "api.h"),
+            target = File(nativesBuildSourcesDir, "api.$headerExtension"),
+            language = buildSystem.language,
             classPath = moduleClasspath,
             moduleName = moduleName,
-            isInternal = true,
-            cFunctions = useCFunctions
+            isInternal = true
         )
 
         CApiImplPrinter(
             idl = idl,
-            target = File(nativesBuildSourcesDir, "api.c"),
+            target = File(nativesBuildSourcesDir, "api.$sourceExtension"),
+            language = buildSystem.language,
             classPath = moduleClasspath,
-            moduleName = moduleName,
-            cFunctions = useCFunctions
+            moduleName = moduleName
         )
 
         when(val buildSystem = buildSystem) {
@@ -237,10 +241,10 @@ private abstract class PrepareNativesKn @Inject constructor(
             
                     add_subdirectory("$$projectDir" "$${File(nativesBuildOutDir, "common").posixPath}")
                         
-                    add_library(lib_$$moduleName SHARED api.c)
+                    add_library(lib_$$moduleName SHARED api.$$sourceExtension)
                     target_link_libraries(lib_$$moduleName PUBLIC $$moduleName)
                     
-                    add_library(libstatic_$$moduleName STATIC api.c)
+                    add_library(libstatic_$$moduleName STATIC api.$$sourceExtension)
                     target_link_libraries(libstatic_$$moduleName PUBLIC $$moduleName)
                 """.trimIndent())
 
@@ -295,6 +299,7 @@ private abstract class PrepareNativesKn @Inject constructor(
         KotlinNativePrinter(
             idl = idl,
             target = File(kotlinFile),
+            language = buildSystem.language,
             classPath = moduleClasspath,
             moduleName = moduleName,
             useCoroutines = useCoroutines,
@@ -308,6 +313,7 @@ private abstract class CompileNativesKn @Inject constructor(
 ): DefaultTask() {
     @get:Input abstract var idl: String
     @get:Input abstract var moduleName: String
+    @get:Input abstract var moduleClasspath: String
 
     @get:Input abstract var targetType: TargetType
 
@@ -335,7 +341,11 @@ private abstract class CompileNativesKn @Inject constructor(
                 localizeSymbols(execOps,
                     nativesBuildOutDir.parentFile,
                     File(nativesBuildOutDir, "liblibstatic_$moduleName.a"),
-                    symbols = idl.globalOperators().map { it.name.snakeCase() }
+                    symbols = idl.globalOperators().map { it.name.snakeCase() },
+                    language = buildSystem.language,
+                    initSymbolName = mangle(moduleClasspath, moduleName, "_init"),
+                    clangPath = locateClang(execOps).absolutePath,
+                    targetArgs = getClangTargetArgs(execOps, targetType)
                 )
             }
             is BuildSystem.Cargo -> {

@@ -48,9 +48,16 @@ fun NativeProject.dir(project: Project): File =
 fun NativeProject.getNDLFile(project: Project): File =
     ndlFile ?: File(dir(project), "api.ndl")
 
-fun NativeProject.getHeaderFile(project: Project): File =
-    (buildSystem as BuildSystem.CMake).headerFile
-        ?: File(dir(project), "include/api.h")
+fun NativeProject.getHeaderFile(project: Project): File {
+    val buildSystem = buildSystem as? BuildSystem.CMake
+        ?: throw UnsupportedOperationException("Not CMake module")
+
+    val dir = buildSystem.headerDir
+        ?: File(dir(project), "include")
+    val extension = buildSystem.language.headerExtension
+
+    return File(dir, "${buildSystem.headerFileName}.$extension")
+}
 
 fun NativeProject.getApiRsFile(project: Project): File =
     (buildSystem as BuildSystem.Cargo).apiRsFile

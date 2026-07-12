@@ -60,9 +60,9 @@ abstract class InitTask: DefaultTask() {
             CApiHeaderPrinter(
                 idl = idl,
                 target = File(dir, "include/api.h"),
+                language = Language.C,
                 classPath = moduleClasspath,
-                moduleName = moduleName,
-                guardName = moduleName.uppercase()
+                moduleName = moduleName
             )
         }
     }

@@ -42,7 +42,7 @@ internal fun configureAndroidSourceSet(
 
     // NDK
 
-    val ndkDir: File
+    var ndkDir: File
     if(extension.ndkVersion == NDK_LATEST) {
         ndkDir = androidComponents.sdkComponents.sdkDirectory.get().asFile
             .resolve("ndk").listFiles()
@@ -176,7 +176,11 @@ private abstract class PrepareNativesAndroid: DefaultTask() {
         val nativesBuildOutDir = File(nativesBuildOutDir)
         val projectDir = File(projectDir)
 
-        val srcList = arrayListOf("api.c", "jni_bindings.c")
+        val jniSourcesDir = File(nativesBuildSourcesDir, "jni")
+        jniSourcesDir.mkdirs()
+
+        val sourceExtension = buildSystem.language.sourceExtension ?: "c"
+        val headerExtension = buildSystem.language.headerExtension ?: "h"
 
         // Create Kotlin/Android bindings
         KotlinAndroidPrinter(
@@ -189,9 +193,11 @@ private abstract class PrepareNativesAndroid: DefaultTask() {
             isAndroidCriticalEnabled = useAndroidCriticalNative
         )
 
+        // JNI sources (jni_utils.h, jni_bindings.c, api.h)
+
         CJniUtilsPrinter(
             idl = idl,
-            target = File(nativesBuildSourcesDir, "jni_utils.h"),
+            target = File(jniSourcesDir, "jni_utils.h"),
             classPath = moduleClasspath,
             moduleName = moduleName,
             name = "${moduleName.capitalized()}JNI",
@@ -200,7 +206,7 @@ private abstract class PrepareNativesAndroid: DefaultTask() {
 
         CJniPrinter(
             idl = idl,
-            target = File(nativesBuildSourcesDir, "jni_bindings.c"),
+            target = File(jniSourcesDir, "jni_bindings.c"),
             classPath = moduleClasspath,
             moduleName = moduleName,
             name = "${moduleName.capitalized()}JNI",
@@ -208,23 +214,32 @@ private abstract class PrepareNativesAndroid: DefaultTask() {
             isAndroidCriticalEnabled = useAndroidCriticalNative
         )
 
-        val useCFunctions = buildSystem is BuildSystem.CMake
+        CApiHeaderPrinter(
+            idl = idl,
+            target = File(jniSourcesDir, "api.h"),
+            language = null,
+            classPath = moduleClasspath,
+            moduleName = moduleName,
+            isInternal = true
+        )
+
+        // Bindings (api.h, api.c)
 
         CApiHeaderPrinter(
             idl = idl,
-            target = File(nativesBuildSourcesDir, "api.h"),
+            target = File(nativesBuildSourcesDir, "api.$headerExtension"),
+            language = buildSystem.language,
             classPath = moduleClasspath,
             moduleName = moduleName,
-            isInternal = true,
-            cFunctions = useCFunctions
+            isInternal = true
         )
 
         CApiImplPrinter(
             idl = idl,
-            target = File(nativesBuildSourcesDir, "api.c"),
+            target = File(nativesBuildSourcesDir, "api.$sourceExtension"),
+            language = buildSystem.language,
             classPath = moduleClasspath,
-            moduleName = moduleName,
-            cFunctions = useCFunctions
+            moduleName = moduleName
         )
 
         when(buildSystem) {
@@ -232,11 +247,13 @@ private abstract class PrepareNativesAndroid: DefaultTask() {
                 File(nativesBuildSourcesDir, "CMakeLists.txt").writeText($$"""
                     cmake_minimum_required(VERSION 3.15)
             
-                    project("$$moduleName")
+                    project("$$moduleName"$${if (buildSystem.language == Language.CPP) " LANGUAGES CXX" else ""})
             
                     add_subdirectory("$${projectDir.posixPath}" "$${nativesBuildOutDir.posixPath}/sub/${ANDROID_ABI}")
                 
-                    add_library(lib$$moduleName SHARED $<TARGET_OBJECTS:$$moduleName> $${srcList.joinToString(" ")})
+                    add_library(lib$$moduleName SHARED $<TARGET_OBJECTS:$$moduleName> api.$$sourceExtension)
+                    
+                    target_link_libraries(lib$$moduleName PRIVATE -Wl,--whole-archive $${nativesBuildOutDir.posixPath}/${ANDROID_ABI}/libjni.a -Wl,--no-whole-archive)
                 """.trimIndent())
             }
             is BuildSystem.Cargo -> Unit
@@ -271,21 +288,65 @@ private abstract class CompileNativesAndroid @Inject constructor(
         val nativesBuildOutDir = File(nativesBuildOutDir)
         val projectDir = File(projectDir)
 
-        when(val buildSystem = buildSystem) {
-            is BuildSystem.CMake -> {
-                val toolchain = File(ndkDir, "build/cmake/android.toolchain.cmake")
+        // Find toolchain
+        val toolchainDir = File(ndkDir, "toolchains/llvm/prebuilt")
+            .listFiles().first { it.name != ".DS_Store" }
 
-                androidTargets.forEach { abi ->
-                    val targetBuildDir = File(nativesBuildOutDir, abi)
+        val toolchainBinDir = File(toolchainDir, "bin")
+        val toolchainIncludeDir = File(toolchainDir, "sysroot/usr/include")
+
+        // Compile each target
+        androidTargets.forEach { target ->
+
+            val targetBuildDir = File(nativesBuildOutDir, target)
+            targetBuildDir.mkdirs()
+
+            fun clangCompileAndroidTarget(
+                sources: List<String>,
+                linkerArgs: List<String> = emptyList(),
+                dynamicLib: Boolean = false,
+                extension: String = systemExtension(dynamicLib),
+                outputBaseName: String = "out"
+            ) = clangCompile(execOps,
+                clang = File(toolchainBinDir, "clang").posixPath,
+                sources = sources,
+                includeDirs = listOf(
+                    toolchainIncludeDir.posixPath,
+                    File(toolchainIncludeDir, toLlvmTarget(target)).posixPath
+                ),
+                linkerArgs = listOf(
+                    "--target=${toLlvmTarget(target)}$compileSdk",
+                    *linkerArgs.toTypedArray()
+                ),
+                dynamicLib = dynamicLib,
+                workingDir = targetBuildDir,
+                outputBaseName = outputBaseName,
+                extension = extension
+            )
+
+            // Compile jni bindings
+            val jniSourcesDir = File(nativesBuildSourcesDir, "jni")
+            val libjni = clangCompileAndroidTarget(
+                sources = listOf(File(jniSourcesDir, "jni_bindings.c").posixPath),
+                dynamicLib = false,
+                outputBaseName = "libjni"
+            )
+
+            // Compile and link language
+
+            when (val buildSystem = buildSystem) {
+                is BuildSystem.CMake -> {
+                    val cmakeToolchain = File(ndkDir, "build/cmake/android.toolchain.cmake")
 
                     // Generate CMake build
-                    cmakeGen(execOps,
+                    cmakeGen(
+                        execOps,
                         dir = nativesBuildSourcesDir,
                         buildDir = targetBuildDir,
                         buildType = buildSystem.buildType,
                         args = LinkedHashSet(buildSystem.args).apply {
-                            this += "-DCMAKE_TOOLCHAIN_FILE=\"$toolchain\""
-                            this += "-DANDROID_ABI=$abi"
+                            this += "-DCMAKE_TOOLCHAIN_FILE=\"$cmakeToolchain\""
+                            this += "-DANDROID_ABI=$target"
                             this += "-DANDROID_PLATFORM=android-$compileSdk"
                         }
                     )
@@ -295,44 +356,28 @@ private abstract class CompileNativesAndroid @Inject constructor(
 
                     // Copy library to jniLibs dir
                     File(targetBuildDir, "liblib$moduleName.so").copyTo(
-                        File(outputFolder.get().asFile, "$abi/lib$moduleName.so"),
+                        File(outputFolder.get().asFile, "$target/lib$moduleName.so"),
                         overwrite = true
                     )
                 }
-            }
-            is BuildSystem.Cargo -> {
-                val toolchainDir = File(ndkDir, "toolchains/llvm/prebuilt")
-                    .listFiles().first { it.name != ".DS_Store" }
-
-                val toolchainBinDir = File(toolchainDir, "bin")
-                val toolchainIncludeDir = File(toolchainDir, "sysroot/usr/include")
-
-                androidTargets.forEach { target ->
-                    val rustBuildDir = cargoBuild(execOps,
+                is BuildSystem.Cargo -> {
+                    val rustBuildDir = cargoBuild(
+                        execOps,
                         project = projectDir,
                         buildDir = File(nativesBuildOutDir, "rust"),
                         buildType = buildSystem.buildType,
                         target = toLlvmTarget(target, rustc = true)
                     )
 
-                    val targetBuildDir = File(nativesBuildOutDir, target)
-                    targetBuildDir.mkdirs()
-
-                    clangCompile(execOps,
-                        clang = File(toolchainBinDir, "clang").posixPath,
-                        sources = listOf(
-                            "api.c", "jni_bindings.c"
-                        ).map { File(nativesBuildSourcesDir, it).posixPath },
-                        includeDirs = listOf(
-                            toolchainIncludeDir.posixPath,
-                            File(toolchainIncludeDir, toLlvmTarget(target)).posixPath
-                        ),
+                    clangCompileAndroidTarget(
+                        sources = listOf(File(nativesBuildSourcesDir, "api.c").posixPath),
                         linkerArgs = listOf(
-                            "--target=${toLlvmTarget(target)}$compileSdk",
-                            "$rustBuildDir/lib$moduleName.a"
+                            "$rustBuildDir/lib$moduleName.a",
+                            "-Wl,--whole-archive",
+                            libjni.posixPath,
+                            "-Wl,--no-whole-archive"
                         ),
                         dynamicLib = true,
-                        workingDir = targetBuildDir,
                         extension = "so"
                     ).copyTo(
                         File(outputFolder.get().asFile, "$target/lib$moduleName.so"),
