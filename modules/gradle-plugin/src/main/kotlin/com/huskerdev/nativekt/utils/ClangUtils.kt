@@ -285,10 +285,12 @@ internal fun localizeSymbols(
 
     // Localize symbols
     if(Os.isFamily(Os.FAMILY_MAC)) {
-        execOps.exec(
-            command = "nmedit -R ${tmpSymbolsFile.name} ${tmpObjFile.name}",
-            workingDir = tmpDir
-        )
+        try {
+            execOps.exec(
+                command = "nmedit -R ${tmpSymbolsFile.name} ${tmpObjFile.name}",
+                workingDir = tmpDir
+            )
+        } catch (_: Throwable) {}
     } else {
         execOps.exec(
             command = "$objcopy --localize-symbols=${tmpSymbolsFile.name} ${tmpObjFile.name}",
@@ -296,6 +298,7 @@ internal fun localizeSymbols(
         )
     }
 
+    // WARNING: Vibecoded
     // Inject C++ static initializers init function
     var finalObjFile = tmpObjFile
     if(language == Language.CPP && initSymbolName != null && clangPath != null) {
