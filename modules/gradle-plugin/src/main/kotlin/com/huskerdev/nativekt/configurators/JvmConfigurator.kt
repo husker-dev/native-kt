@@ -318,6 +318,8 @@ private abstract class PrepareNativesJvm: DefaultTask() {
                     if(CMAKE_C_COMPILER)
                         set(DUMMY ${CMAKE_C_COMPILER})
                     endif()
+                    
+                    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
             
                     add_subdirectory("$${projectDir.posixPath}" "$${File(platformBuildDir, "sub").posixPath}")
             

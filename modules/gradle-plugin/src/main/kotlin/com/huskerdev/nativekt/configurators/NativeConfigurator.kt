@@ -242,7 +242,9 @@ private abstract class PrepareNativesKn @Inject constructor(
                     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY $${nativesBuildOutDir.posixPath})
                     set(CMAKE_LIBRARY_OUTPUT_DIRECTORY $${nativesBuildOutDir.posixPath})
                     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY $${nativesBuildOutDir.posixPath})
-            
+                    
+                    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+                    
                     add_subdirectory("$$projectDir" "$${File(nativesBuildOutDir, "common").posixPath}")
                         
                     add_library(lib_$$moduleName SHARED api.$$sourceExtension)

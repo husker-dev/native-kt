@@ -248,7 +248,9 @@ private abstract class PrepareNativesAndroid: DefaultTask() {
                     cmake_minimum_required(VERSION 3.15)
             
                     project("$$moduleName"$${if (buildSystem.language == Language.CPP) " LANGUAGES CXX" else ""})
-            
+                    
+                    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+                    
                     add_subdirectory("$${projectDir.posixPath}" "$${nativesBuildOutDir.posixPath}/sub/${ANDROID_ABI}")
                 
                     add_library(lib$$moduleName SHARED $<TARGET_OBJECTS:$$moduleName> api.$$sourceExtension)
