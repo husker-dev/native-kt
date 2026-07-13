@@ -262,7 +262,9 @@ internal fun prepareNativeLibraryForKN(
         workingDir = tmpDir
     )
 
-    val objFiles = tmpDir.listFiles { it.extension == "o" }.toMutableList()
+    val objFiles = tmpDir
+        .listFiles { it.extension == "o" || it.extension == "obj" }
+        .toMutableList()
 
     // Generate C file with init function that calls each ctor
     objFiles += createCppInitFunction(
@@ -347,15 +349,17 @@ private fun createCppInitFunction(
         .distinct()
         .toList()
 
-    if(Os.isFamily(Os.FAMILY_MAC)) {
-        objFiles.forEach { globalizeMachOSymbols(it, ctorSymbols) }
-    } else {
-        val tmpSymbolsFile = File(dir, "__symbols.txt")
-        tmpSymbolsFile.writeText(ctorSymbols.joinToString("\n"))
-        objFiles.forEach {
-            execOps.exec("$objcopy --globalize-symbols=${tmpSymbolsFile.name} ${it.name}", workingDir = dir)
+    if(ctorSymbols.isNotEmpty()) {
+        if (Os.isFamily(Os.FAMILY_MAC)) {
+            objFiles.forEach { globalizeMachOSymbols(it, ctorSymbols) }
+        } else {
+            val tmpSymbolsFile = File(dir, "__symbols.txt")
+            tmpSymbolsFile.writeText(ctorSymbols.joinToString("\n"))
+            objFiles.forEach {
+                execOps.exec("$objcopy --globalize-symbols=${tmpSymbolsFile.name} ${it.name}", workingDir = dir)
+            }
+            tmpSymbolsFile.delete()
         }
-        tmpSymbolsFile.delete()
     }
 
     // Generate C file with init function that calls each ctor
