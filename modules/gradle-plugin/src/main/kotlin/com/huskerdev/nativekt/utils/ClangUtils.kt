@@ -190,9 +190,8 @@ internal fun getClangTargetArgs(
         TargetType.MINGW_X64 -> {
             val konanDepsDir = File(System.getProperty("user.home"), ".konan/dependencies")
             val konanMingw = konanDepsDir.listFiles()
-                ?.filter { it.name.startsWith("msys2-mingw-w64-x86_64-") }
-                ?.sorted()
-                ?.get(0)
+                ?.filter { it.name.startsWith("msys2-mingw-w64-x86_64") }
+                ?.maxOf { it }
                 ?: File(konanDepsDir, "msys2-mingw-w64-x86_64-2")
 
             listOf(

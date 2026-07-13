@@ -107,6 +107,10 @@ internal fun configureNative(
     if(commonTask != null)
         prepareTask.dependsOn(commonTask)
 
+    project.tasks.matching { it.name == "downloadKotlinNativeDistribution" }.forEach {
+        prepareTask.get().dependsOn(it)
+    }
+
     // Add cinterop
     compilation.cinterops {
         create("nativekt${module.name.capitalized()}").definitionFile.set(prepareTask.flatMap { it.defFile })
