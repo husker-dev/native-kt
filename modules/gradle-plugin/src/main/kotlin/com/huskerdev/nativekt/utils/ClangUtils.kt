@@ -122,6 +122,12 @@ internal fun getClangTargetArgs(
         execOps.exec("xcrun --sdk $sdk --show-sdk-platform-version", silent = true)
     fun xcSdkSysroot(sdk: String) =
         execOps.exec("xcrun --sdk $sdk --show-sdk-path", silent = true)
+    fun konanSysroot(baseName: String): File {
+        return File(System.getProperty("user.home"), ".konan/dependencies")
+            .listFiles()
+            .filter { it.name.startsWith(baseName) }
+            .maxOf { it }
+    }
 
     return when(targetType) {
         TargetType.IOS_SIMULATOR_ARM64 -> listOf(
@@ -187,26 +193,22 @@ internal fun getClangTargetArgs(
             "-arch x86_64",
             "-target x86_64-apple-darwin"
         )
-        TargetType.MINGW_X64 -> {
-            val konanDepsDir = File(System.getProperty("user.home"), ".konan/dependencies")
-            val konanMingw = konanDepsDir.listFiles()
-                ?.filter { it.name.startsWith("msys2-mingw-w64-x86_64") }
-                ?.maxOf { it }
-                ?: File(konanDepsDir, "msys2-mingw-w64-x86_64-2")
-
-            listOf(
-                "-Qunused-arguments",
-                "--rtlib=libgcc",
-                "--unwindlib=libgcc",
-                "--sysroot=$konanMingw",
-                "-stdlib=libstdc++",
-                "-target x86_64-w64-mingw32"
-            )
-        }
+        TargetType.MINGW_X64 -> listOf(
+            "-Qunused-arguments",
+            "--rtlib=libgcc",
+            "--unwindlib=libgcc",
+            "--sysroot=${konanSysroot("msys2-mingw-w64-x86_64")}",
+            "-stdlib=libstdc++",
+            "-target x86_64-w64-mingw32"
+        )
         TargetType.LINUX_X64 -> listOf(
+            "--sysroot=${konanSysroot("x86_64-unknown-linux-gnu")}",
+            "-stdlib=libstdc++",
             "-target x86_64-unknown-linux-gnu"
         )
         TargetType.LINUX_ARM64 -> listOf(
+            "--sysroot=${konanSysroot("aarch64-unknown-linux-gnu")}",
+            "-stdlib=libstdc++",
             "-target aarch64-unknown-linux-gnu"
         )
         else -> emptyList()
