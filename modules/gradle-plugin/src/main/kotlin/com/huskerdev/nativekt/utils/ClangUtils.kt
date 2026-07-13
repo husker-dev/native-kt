@@ -203,10 +203,12 @@ internal fun getClangTargetArgs(
         )
         TargetType.LINUX_X64 -> listOf(
             "--sysroot=${konanSysroot("x86_64-unknown-linux-gnu")}/x86_64-unknown-linux-gnu/sysroot",
+            "--gcc-toolchain=${konanSysroot("x86_64-unknown-linux-gnu")}",
             "-target x86_64-unknown-linux-gnu"
         )
         TargetType.LINUX_ARM64 -> listOf(
             "--sysroot=${konanSysroot("aarch64-unknown-linux-gnu")}/aarch64-unknown-linux-gnu/sysroot",
+            "--gcc-toolchain=${konanSysroot("aarch64-unknown-linux-gnu")}",
             "-target aarch64-unknown-linux-gnu"
         )
         else -> emptyList()
