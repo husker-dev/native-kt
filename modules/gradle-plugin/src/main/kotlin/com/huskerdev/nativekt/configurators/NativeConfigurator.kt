@@ -338,13 +338,11 @@ private abstract class CompileNativesKn @Inject constructor(
             is BuildSystem.CMake -> {
                 cmakeBuild(execOps, File(nativesBuildSourcesDir, "cmake"))
 
-                localizeSymbols(execOps,
+                prepareNativeLibraryForKN(execOps,
                     nativesBuildOutDir.parentFile,
                     File(nativesBuildOutDir, "liblibstatic_$moduleName.a"),
                     symbols = idl.globalOperators().map { it.name.snakeCase() },
-                    language = buildSystem.language,
                     initSymbolName = mangle(moduleClasspath, moduleName, "_init"),
-                    clangPath = locateClang(execOps).absolutePath,
                     targetArgs = getClangTargetArgs(execOps, targetType)
                 )
             }

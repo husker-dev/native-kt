@@ -314,6 +314,10 @@ private abstract class PrepareNativesJvm: DefaultTask() {
                     cmake_minimum_required(VERSION 3.15)
             
                     project("$$moduleName"$${if(buildSystem.language == Language.CPP) " LANGUAGES CXX" else ""})
+                    
+                    if(CMAKE_C_COMPILER)
+                        set(DUMMY ${CMAKE_C_COMPILER})
+                    endif()
             
                     add_subdirectory("$${projectDir.posixPath}" "$${File(platformBuildDir, "sub").posixPath}")
             
@@ -321,7 +325,7 @@ private abstract class PrepareNativesJvm: DefaultTask() {
                     
                     target_link_libraries(lib_$$moduleName PRIVATE $$moduleName)
                     
-                    $${if(!useJNI) "" else "target_link_libraries(lib_$moduleName PRIVATE -Wl,--whole-archive ${File(platformBuildDir, "libjni.a").posixPath} -Wl,--no-whole-archive)" }
+                    $${if(!useJNI) "" else "target_link_libraries(lib_$moduleName PRIVATE ${wholeArchive(File(platformBuildDir, "libjni.a").posixPath)})" }
                 """.trimIndent())
             }
             is BuildSystem.Cargo -> Unit
@@ -426,7 +430,7 @@ private abstract class CompileNativesJvm @Inject constructor(
                         *rustLinkerFlags.toTypedArray(),
                         "-L$rustBuildDir",
                         "-l$moduleName",
-                        if(useJNI) "-Wl,--whole-archive ${File(platformBuildDir, "libjni.a").posixPath} -Wl,--no-whole-archive" else null,
+                        if(useJNI) wholeArchive(File(platformBuildDir, "libjni.a").posixPath) else null,
                         if(Os.isFamily(Os.FAMILY_WINDOWS)) "-Wl,--export-all-symbols" else null
                     ),
                     dynamicLib = true,

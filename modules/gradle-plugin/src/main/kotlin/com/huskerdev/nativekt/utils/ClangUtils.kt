@@ -1,7 +1,6 @@
 package com.huskerdev.nativekt.utils
 
 import com.huskerdev.nativekt.TargetType
-import com.huskerdev.nativekt.plugin.Language
 import com.huskerdev.nativekt.plugin.NativeKtInfo
 import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.process.ExecOperations
@@ -70,6 +69,11 @@ internal fun systemExtension(dynamicLib: Boolean): String {
         }
     } else "a"
 }
+
+internal fun wholeArchive(name: String) =
+    if(Os.isFamily(Os.FAMILY_MAC))
+        "-force_load $name"
+    else "-Wl,--whole-archive $name -Wl,--no-whole-archive"
 
 internal fun clangCompile(
     execOps: ExecOperations,
@@ -210,149 +214,168 @@ internal fun getClangTargetArgs(
     }
 }
 
-internal fun localizeSymbols(
+/**
+ * 1. Localizes C symbols
+ * 2. Adds C++ initialization function
+ */
+internal fun prepareNativeLibraryForKN(
     execOps: ExecOperations,
     nativesRootBuildDir: File,
     lib: File,
     symbols: List<String>,
-    language: Language,
-    initSymbolName: String? = null,
-    clangPath: String? = null,
+    initSymbolName: String,
     targetArgs: List<String> = emptyList(),
 ) {
+    fun unpack(path: String): String {
+        val file = File(nativesRootBuildDir, File(path).name)
+        if(!file.exists()) {
+            NativeKtInfo::class.java.getResourceAsStream("/com/huskerdev/nativekt/$path").use { ins ->
+                if (ins == null)
+                    throw NullPointerException("Can not find file in plugin resources: $path")
+                file.parentFile.mkdirs()
+                file.outputStream().use { ins.copyTo(it) }
+            }
+            if(!Os.isFamily(Os.FAMILY_WINDOWS))
+                execOps.exec("chmod +x \"${file.posixPath}\"")
+        }
+        return "\"${file.posixPath}\""
+    }
+
     val libDir = lib.parentFile
     val tmpDir = File(libDir, "_tmp").fresh()
     val tmpObjFile = File(tmpDir, "__merged.o")
-    val tmpSymbolsFile = File(tmpDir, "__symbols.txt")
 
     var ld = "ld"
     var objcopy = "objcopy"
     var ar = "ar"
-    var nm = "nm"
 
     // Unpack GNU tools on Windows (because clang64 tools in MinGW does not support COFF)
     if(Os.isFamily(Os.FAMILY_WINDOWS)) {
-        fun unpack(name: String): String {
-            val file = File(nativesRootBuildDir, name)
-            if(!file.exists()) {
-                NativeKtInfo::class.java.getResourceAsStream("/com/huskerdev/nativekt/mingw64/$name").use { ins ->
-                    if (ins == null)
-                        throw NullPointerException("Can not find file in plugin resources: $name")
-                    file.parentFile.mkdirs()
-                    file.outputStream().use { ins.copyTo(it) }
-                }
-            }
-            return "\"${file.posixPath}\""
-        }
-        ld = unpack("ld.exe")
-        ar = unpack("ar.exe")
-        objcopy = unpack("objcopy.exe")
-        if(clangPath != null) {
-            val nmFile = File(clangPath).parentFile.let { p ->
-                if(Os.isFamily(Os.FAMILY_WINDOWS)) File(p, "llvm-nm.exe") else File(p, "llvm-nm")
-            }
-            if(nmFile.exists()) nm = "\"${nmFile.posixPath}\""
-        }
+        ld = unpack("mingw64/ld.exe")
+        ar = unpack("mingw64/ar.exe")
+        objcopy = unpack("mingw64/objcopy.exe")
     }
 
+    // Unpack all .a into several .o
+    execOps.exec(
+        "$ar x ../${lib.name}",
+        workingDir = tmpDir
+    )
 
-    // Write all symbols into .txt
-    tmpSymbolsFile.writeText(symbols.joinToString("\n") {
-        if(Os.isFamily(Os.FAMILY_MAC))
-            "_$it"
-        else it
-    })
+    val objFiles = tmpDir.listFiles { it.extension == "o" }.toMutableList()
 
-    if(Os.isFamily(Os.FAMILY_WINDOWS)) {
-        // Unpack all .a into several .o + merge into one
-        execOps.exec(
-            "$ld -r -o ${tmpObjFile.name} --whole-archive ../${lib.name} --no-whole-archive",
-            workingDir = tmpDir
-        )
-    } else {
-        // Unpack all .a into several .o
-        execOps.exec(
-            "$ar x ../${lib.name}",
-            workingDir = tmpDir
-        )
+    // Generate C file with init function that calls each ctor
+    objFiles += createCppInitFunction(
+        execOps,
+        objcopy,
+        tmpDir,
+        objFiles,
+        initSymbolName,
+        targetArgs
+    )
 
-        // Merge several .o into one
-        execOps.exec(
-            "$ld -r *.o -o ${tmpObjFile.name}",
-            workingDir = tmpDir
-        )
-    }
+    // Merge several .o into one
+    execOps.exec(
+        "$ld -r ${objFiles.joinToString(" ") { it.name }} -o ${tmpObjFile.name}",
+        workingDir = tmpDir
+    )
 
-    // Localize symbols
-    if(Os.isFamily(Os.FAMILY_MAC)) {
-        try {
-            execOps.exec(
-                command = "nmedit -R ${tmpSymbolsFile.name} ${tmpObjFile.name}",
-                workingDir = tmpDir
-            )
-        } catch (_: Throwable) {}
-    } else {
-        execOps.exec(
-            command = "$objcopy --localize-symbols=${tmpSymbolsFile.name} ${tmpObjFile.name}",
-            workingDir = tmpDir
-        )
-    }
-
-    // WARNING: Vibecoded
-    // Inject C++ static initializers init function
-    var finalObjFile = tmpObjFile
-    if(language == Language.CPP && initSymbolName != null && clangPath != null) {
-        val nmOutput = execOps.exec("$nm -a ${tmpObjFile.name}", workingDir = tmpDir, silent = true)
-        val ctorSymbols = nmOutput.lines()
-            .filter { it.contains("_GLOBAL__sub_I_") }
-            .map { it.trim().split(Regex("\\s+")).last() }
-
-        if(ctorSymbols.isNotEmpty()) {
-            // Globalize the ctor symbols so the init C file can reference them
-            val globalizeFile = File(tmpDir, "__globalize.txt")
-            globalizeFile.writeText(ctorSymbols.joinToString("\n"))
-            execOps.exec(
-                "$objcopy --globalize-symbols=__globalize.txt ${tmpObjFile.name}",
-                workingDir = tmpDir
-            )
-
-            // Generate C file with init function that calls each ctor
-            val initC = File(tmpDir, "__ctors_init.c")
-            val cBuilder = StringBuilder()
-            cBuilder.append("void $initSymbolName() {\n")
-            ctorSymbols.forEachIndexed { i, sym ->
-                cBuilder.append("    extern void _ctor_$i(void) __asm__(\"$sym\");\n")
-            }
-            ctorSymbols.forEachIndexed { i, _ ->
-                cBuilder.append("    _ctor_$i();\n")
-            }
-            cBuilder.append("}\n")
-            initC.writeText(cBuilder.toString())
-
-            // Compile C file
-            val clangCmd = if(Os.isFamily(Os.FAMILY_WINDOWS)) "\"$clangPath\"" else clangPath
-            execOps.exec(
-                "$clangCmd -c -o __ctors_init.o __ctors_init.c ${targetArgs.joinToString(" ")}",
-                workingDir = tmpDir,
-                silent = true
-            )
-
-            // Merge
-            finalObjFile = File(tmpDir, "__merged_final.o")
-            execOps.exec(
-                "$ld -r ${tmpObjFile.name} __ctors_init.o -o ${finalObjFile.name}",
-                workingDir = tmpDir
-            )
-        }
-    }
+    // Localize С symbols
+    localizeSymbols(
+        execOps,
+        objcopy,
+        tmpObjFile,
+        symbols
+    )
 
     // Archive into .a
     lib.delete()
     execOps.exec(
-        "$ar rcs ../${lib.name} ${finalObjFile.name}",
+        "$ar rcs ../${lib.name} ${tmpObjFile.name}",
         workingDir = tmpDir
     )
 
     // Remove temporary dir
     tmpDir.deleteRecursively()
+}
+
+private fun localizeSymbols(
+    execOps: ExecOperations,
+    objcopy: String,
+    objFile: File,
+    symbols: List<String>
+) {
+    val dir = objFile.parentFile
+    val tmpSymbolsFile = File(dir, "__symbols.txt")
+
+    // Localize symbols
+    if(Os.isFamily(Os.FAMILY_MAC)) {
+        try {
+            tmpSymbolsFile.writeText(symbols.joinToString("\n") { "_$it" })
+            execOps.exec(
+                command = "nmedit -R ${tmpSymbolsFile.name} ${objFile.name}",
+                workingDir = dir,
+                silent = true
+            )
+        } catch (_: Throwable) {}
+    } else {
+        tmpSymbolsFile.writeText(symbols.joinToString("\n"))
+        execOps.exec(
+            command = "$objcopy --localize-symbols=${tmpSymbolsFile.name} ${objFile.name}",
+            workingDir = dir
+        )
+    }
+    tmpSymbolsFile.delete()
+}
+
+private fun createCppInitFunction(
+    execOps: ExecOperations,
+    objcopy: String,
+    dir: File,
+    objFiles: List<File>,
+    initSymbolName: String,
+    targetArgs: List<String>
+): File {
+
+    // Detect and globalize C++ ctor symbols in individual .o files
+    val ctorSymbols = objFiles
+        .asSequence()
+        .map { execOps.exec("nm -a ${it.name}", workingDir = dir, silent = true) }
+        .flatMap { it.split("\n") }
+        .filter { it.contains("_GLOBAL__sub_I_") }
+        .map { it.trim().split(Regex("\\s+")).last() }
+        .distinct()
+        .toList()
+
+    if(Os.isFamily(Os.FAMILY_MAC)) {
+        objFiles.forEach { globalizeMachOSymbols(it, ctorSymbols) }
+    } else {
+        val tmpSymbolsFile = File(dir, "__symbols.txt")
+        tmpSymbolsFile.writeText(ctorSymbols.joinToString("\n"))
+        objFiles.forEach {
+            execOps.exec("$objcopy --globalize-symbols=${tmpSymbolsFile.name} ${it.name}", workingDir = dir)
+        }
+        tmpSymbolsFile.delete()
+    }
+
+    // Generate C file with init function that calls each ctor
+    val initC = File(dir, "__init.c")
+    initC.writeText(buildString {
+        append("void $initSymbolName() {")
+        ctorSymbols.forEachIndexed { i, sym ->
+            append("\n\textern void _ctor_$i(void) __asm__(\"$sym\");")
+            append("\n\t_ctor_$i();")
+        }
+        append("\n}")
+    })
+
+    // Compile C file
+    val initO = File(dir, "${initC.nameWithoutExtension}.o")
+    execOps.exec(
+        "${locateClang(execOps)} -c -o ${initO.name} ${initC.name} ${targetArgs.joinToString(" ")}",
+        workingDir = dir,
+        silent = true
+    )
+
+    return initO
 }
