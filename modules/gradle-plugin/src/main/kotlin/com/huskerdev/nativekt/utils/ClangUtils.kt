@@ -197,18 +197,16 @@ internal fun getClangTargetArgs(
             "-Qunused-arguments",
             "--rtlib=libgcc",
             "--unwindlib=libgcc",
-            "--sysroot=${konanSysroot("msys2-mingw-w64-x86_64")}",
             "-stdlib=libstdc++",
+            "--sysroot=${konanSysroot("msys2-mingw-w64-x86_64")}",
             "-target x86_64-w64-mingw32"
         )
         TargetType.LINUX_X64 -> listOf(
-            "--sysroot=${konanSysroot("x86_64-unknown-linux-gnu")}",
-            "-stdlib=libstdc++",
+            "--sysroot=${konanSysroot("x86_64-unknown-linux-gnu")}/x86_64-unknown-linux-gnu/sysroot",
             "-target x86_64-unknown-linux-gnu"
         )
         TargetType.LINUX_ARM64 -> listOf(
-            "--sysroot=${konanSysroot("aarch64-unknown-linux-gnu")}",
-            "-stdlib=libstdc++",
+            "--sysroot=${konanSysroot("aarch64-unknown-linux-gnu")}/aarch64-unknown-linux-gnu/sysroot",
             "-target aarch64-unknown-linux-gnu"
         )
         else -> emptyList()
