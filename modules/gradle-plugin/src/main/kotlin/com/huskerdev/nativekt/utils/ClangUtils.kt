@@ -292,6 +292,9 @@ private fun localizeSymbols(
     objFile: File,
     symbols: List<String>
 ) {
+    if(symbols.isEmpty())
+        return
+
     val dir = objFile.parentFile
     val tmpSymbolsFile = File(dir, "__symbols.txt")
 
