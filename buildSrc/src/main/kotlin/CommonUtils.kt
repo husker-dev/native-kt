@@ -26,3 +26,5 @@ fun MavenPom.applyDefaultPomInfo() {
         url = "https://github.com/husker-dev/native-kt"
     }
 }
+
+class PluginStub

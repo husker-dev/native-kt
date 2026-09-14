@@ -10,5 +10,6 @@
 
 #include <memory>
 #include <string>
+#include <cstring>
 
 #include "api.tpp"
