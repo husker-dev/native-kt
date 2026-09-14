@@ -33,6 +33,11 @@ jobs:
             ~/.konan
             emsdk-cache
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts', '**/gradle-wrapper.properties') }}-emsdk-${{ env.EM_VERSION }}
+  
+      - name: Setup rust
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          targets: 'wasm32-unknown-unknown, x86_64-linux-android, i686-linux-android, armv7-linux-androideabi, aarch64-linux-android'
       
       - name: Setup MSYS2
         if: runner.os == 'Windows'
