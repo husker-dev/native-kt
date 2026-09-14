@@ -389,7 +389,7 @@ private abstract class CompileNativesJvm @Inject constructor(
                         linkerArgs = buildList {
                             addAll(rustLinkerFlags)
                             add("$rustBuildDir/lib${context.moduleName}.a")
-                            add(wholeArchive(File(platformBuildDir, "libjni.a").posixPath))
+                            add(wholeArchive(jniLib!!.posixPath))
                             if (OS.current == OS.WINDOWS)
                                 add("-Wl,--export-all-symbols")
                         },

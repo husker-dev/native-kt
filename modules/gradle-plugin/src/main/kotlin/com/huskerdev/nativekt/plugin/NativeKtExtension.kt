@@ -155,7 +155,8 @@ interface NativeKtCommonInterface {
 // ==============
 
 enum class DebugKind {
-    PRINT_EXEC
+    PRINT_EXEC,
+    PRINT_LINKER_OPTIONS
 }
 
 // ==============

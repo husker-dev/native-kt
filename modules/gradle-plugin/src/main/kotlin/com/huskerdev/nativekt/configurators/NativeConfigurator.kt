@@ -3,6 +3,7 @@ package com.huskerdev.nativekt.configurators
 import com.huskerdev.nativekt.NativeModuleContext
 import com.huskerdev.nativekt.TargetType
 import com.huskerdev.nativekt.plugin.BuildSystem
+import com.huskerdev.nativekt.plugin.DebugKind
 import com.huskerdev.nativekt.plugin.Language
 import com.huskerdev.nativekt.plugin.NATIVE_TASK_GROUP
 import com.huskerdev.nativekt.printers.DefPrinter
@@ -279,6 +280,9 @@ private abstract class PrepareNativesKn @Inject constructor(
                 }
             }
         }
+
+        if(DebugKind.PRINT_LINKER_OPTIONS in context.debug)
+            logger.error("[nativekt] Linker options for '$moduleName':\n\t${linkerOpts.joinToString("\n\t")}")
 
         // Create .def file
         DefPrinter(

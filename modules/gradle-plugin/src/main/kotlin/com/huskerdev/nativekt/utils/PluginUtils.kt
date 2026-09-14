@@ -59,7 +59,7 @@ fun ExecOperations.exec(
     env: Map<String, String>? = null
 ): String {
     if(DebugKind.PRINT_EXEC in context.debug)
-        println("[nativekt] $command\n    at: ${workingDir?.absolutePath ?: File("./").absolutePath}")
+        System.err.println("[nativekt] Executed command for '${context.moduleName}': \n\t$command\n\tat: ${workingDir?.absolutePath ?: File("./").absolutePath}")
 
     class StringOutputStream(
         private val delegate: OutputStream,

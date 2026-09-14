@@ -92,6 +92,11 @@ private fun NativeProject.configureNodeJsTests() {
 }
 
 natives {
+    debug += listOf(
+        DebugKind.PRINT_LINKER_OPTIONS,
+        DebugKind.PRINT_EXEC
+    )
+
     applyRuntime = false
     applyAndroidCriticalStub = false
 
