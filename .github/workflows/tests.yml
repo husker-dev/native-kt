@@ -97,51 +97,51 @@ jobs:
           api-level: 32
           arch: x86_64
           target: google_apis
-          script: ./gradlew :modules:tests:connectedAndroidTest
+          script: ./gradlew :modules:tests:connectedAndroidTest --stacktrace
           
       - name: Kotlin/Native tests (Linux x64)
         if: runner.os == 'Linux'
-        run: ./gradlew :modules:tests:linuxX64Test --continue
+        run: ./gradlew :modules:tests:linuxX64Test --continue --stacktrace
 
       - name: Kotlin/Native tests (macOS arm64)
         if: runner.os == 'macOS'
-        run: ./gradlew :modules:tests:macosArm64Test --continue
+        run: ./gradlew :modules:tests:macosArm64Test --continue --stacktrace
 
       - name: Kotlin/Native tests (Windows x64)
         if: runner.os == 'Windows'
-        run: ./gradlew :modules:tests:mingwX64Test --continue
+        run: ./gradlew :modules:tests:mingwX64Test --continue --stacktrace
 
       - name: Kotlin/JS tests
         if: runner.os == 'Linux'
-        run: ./gradlew :modules:tests:jsTest --continue
+        run: ./gradlew :modules:tests:jsTest --continue --stacktrace
 
       - name: Kotlin/Wasm tests
         if: runner.os == 'Linux'
-        run: ./gradlew :modules:tests:wasmJsTest --continue
+        run: ./gradlew :modules:tests:wasmJsTest --continue --stacktrace
 
       - name: Kotlin/JVM tests (Linux x64)
         if: runner.os == 'Linux'
         run: |
-          ./gradlew :modules:tests:jvmTest --continue
-          ./gradlew :modules:tests:jvmTest -DdisableForeign --continue
-          ./gradlew :modules:tests:jvmTest -DdisableJVMCI --continue
-          ./gradlew :modules:tests:jvmTest -DdisableJVMCI -DdisableForeign --continue
+          ./gradlew :modules:tests:jvmTest --continue --stacktrace
+          ./gradlew :modules:tests:jvmTest -DdisableForeign --continue --stacktrace
+          ./gradlew :modules:tests:jvmTest -DdisableJVMCI --continue --stacktrace
+          ./gradlew :modules:tests:jvmTest -DdisableJVMCI -DdisableForeign --continue --stacktrace
 
       - name: Kotlin/JVM tests (macOS arm64)
         if: runner.os == 'macOS'
         run: |
-          ./gradlew :modules:tests:jvmTest --continue
-          ./gradlew :modules:tests:jvmTest -DdisableForeign --continue
-          ./gradlew :modules:tests:jvmTest -DdisableJVMCI --continue
-          ./gradlew :modules:tests:jvmTest -DdisableJVMCI -DdisableForeign --continue
+          ./gradlew :modules:tests:jvmTest --continue --stacktrace
+          ./gradlew :modules:tests:jvmTest -DdisableForeign --continue --stacktrace
+          ./gradlew :modules:tests:jvmTest -DdisableJVMCI --continue --stacktrace
+          ./gradlew :modules:tests:jvmTest -DdisableJVMCI -DdisableForeign --continue --stacktrace
 
       - name: Kotlin/JVM tests (Windows x64)
         if: runner.os == 'Windows'
         run: |
-          ./gradlew :modules:tests:jvmTest --continue
-          ./gradlew :modules:tests:jvmTest -DdisableForeign --continue
-          ./gradlew :modules:tests:jvmTest -DdisableJVMCI --continue
-          ./gradlew :modules:tests:jvmTest -DdisableJVMCI -DdisableForeign --continue
+          ./gradlew :modules:tests:jvmTest --continue --stacktrace
+          ./gradlew :modules:tests:jvmTest -DdisableForeign --continue --stacktrace
+          ./gradlew :modules:tests:jvmTest -DdisableJVMCI --continue --stacktrace
+          ./gradlew :modules:tests:jvmTest -DdisableJVMCI -DdisableForeign --continue --stacktrace
 
       - name: Stop Gradle deamon
         run: ./gradlew --stop
