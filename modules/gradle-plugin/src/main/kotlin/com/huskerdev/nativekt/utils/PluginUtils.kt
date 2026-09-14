@@ -58,7 +58,8 @@ fun ExecOperations.exec(
     errAsStd: Boolean = false,
     env: Map<String, String>? = null
 ): String {
-    if(DebugKind.PRINT_EXEC in context.debug)
+    val printExec = DebugKind.PRINT_EXEC in context.debug
+    if(printExec)
         System.err.println("[nativekt] Executed command for '${context.moduleName}': \n\t$command\n\tat: ${workingDir?.absolutePath ?: File("./").absolutePath}")
 
     class StringOutputStream(
@@ -67,7 +68,7 @@ fun ExecOperations.exec(
     ): OutputStream() {
         override fun write(b: Int) {
             string.append(b.toChar())
-            if(!silent) delegate.write(b)
+            if(!silent || printExec) delegate.write(b)
         }
         override fun flush() = delegate.flush()
         override fun toString() = string.toString()
