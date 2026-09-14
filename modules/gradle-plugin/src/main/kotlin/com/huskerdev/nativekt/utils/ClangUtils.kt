@@ -31,17 +31,14 @@ internal fun normalizeMinGWLibs(
 ): List<String> {
     val mingwLibs = mingwLibsDir(execOps, context)
 
-    return linkerOpts.map {
+    return linkerOpts.mapNotNull {
         if(it.startsWith("-l")) {
             val name = it.substring(2)
-            // WARNING: Vibecoded!
-            // Prefer .dll.a (import library) over .a (static library) to avoid
-            // locally defining symbols that should be imported from DLLs (e.g. std::cout)
+
             File(mingwLibs, "lib$name.dll.a")
                 .run { if(exists()) posixPath else null }
                 ?: File(mingwLibs, "lib$name.a")
                     .run { if(exists()) posixPath else null }
-                ?: it
         } else it
     }
 }
