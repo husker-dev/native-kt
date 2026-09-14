@@ -29,7 +29,7 @@ Cases:
 - Pass string
 
 ```agsl
-Benchmark                                           Mode  Cnt     Score      Error  Units
+Benchmark                         Mode  Cnt     Score      Error  Units
 boltffi_empty                     avgt    5     2,245 ±    0,003  ns/op
 boltffi_add                       avgt    5     2,246 ±    0,007  ns/op
 boltffi_string                    avgt    5    77,523 ±    0,981  ns/op
