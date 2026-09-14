@@ -101,7 +101,18 @@ internal fun cargoLinkerFlags(
         silent = true,
         errAsStd = true,
         env = env
-    ).split("note: native-static-libs: ").getOrNull(1)
+    ).also {
+        println("<-- $it -->")
+        println(it.split("note: native-static-libs: ").getOrNull(1))
+        println(it.split("note: native-static-libs: ").getOrNull(1)
+            ?.split("\n")
+            ?.getOrNull(0))
+        println(it.split("note: native-static-libs: ").getOrNull(1)
+            ?.split("\n")
+            ?.getOrNull(0)
+            ?.trim()
+            ?.splitRespectingQuotes())
+    }.split("note: native-static-libs: ").getOrNull(1)
         ?.split("\n")
         ?.getOrNull(0)
         ?.trim()

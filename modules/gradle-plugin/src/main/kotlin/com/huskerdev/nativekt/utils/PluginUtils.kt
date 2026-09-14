@@ -68,7 +68,7 @@ fun ExecOperations.exec(
     ): OutputStream() {
         override fun write(b: Int) {
             string.append(b.toChar())
-            if(!silent || printExec) delegate.write(b)
+            if(!silent) delegate.write(b)
         }
         override fun flush() = delegate.flush()
         override fun toString() = string.toString()
@@ -90,18 +90,17 @@ fun ExecOperations.exec(
         errorOutput = if(errAsStd) stdOut else errOut
         env?.forEach(environment::put)
     }.run {
-        if(exitValue != 0)
-            throw Exception(buildString {
-                appendLine("Failed to execute command (code=${exitValue}): ")
-                appendLine(command)
-                if(env != null) {
-                    append("Environment:")
-                    env.forEach { (key, value) -> append("\n   $key = $value") }
-                    append("\n")
-                }
-                appendLine("Error:")
-                append(if(errAsStd) stdOut else errOut)
-            })
+        if(exitValue != 0) throw Exception(buildString {
+            appendLine("Failed to execute command (code=${exitValue}): ")
+            appendLine(command)
+            if(env != null) {
+                append("Environment:")
+                env.forEach { (key, value) -> append("\n   $key = $value") }
+                append("\n")
+            }
+            appendLine("Error:")
+            append(if(errAsStd) stdOut else errOut)
+        })
         stdOut.toString().trim()
     }
 }
