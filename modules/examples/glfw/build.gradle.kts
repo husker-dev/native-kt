@@ -1,6 +1,7 @@
 @file:OptIn(ExperimentalKotlinGradlePluginApi::class)
 
 import com.huskerdev.nativekt.plugin.currentNativeDesktopTargets
+import org.apache.tools.ant.taskdefs.condition.Os
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.konan.target.KonanTarget
 
@@ -17,6 +18,8 @@ kotlin {
         binaries {
             executable {
                 mainClass = "MainKt"
+                if(Os.isFamily(Os.FAMILY_MAC))
+                    applicationDefaultJvmArgs.add("-XstartOnFirstThread")
             }
         }
     }
@@ -24,9 +27,9 @@ kotlin {
     currentNativeDesktopTargets {
         binaries {
             executable {
+                entryPoint = "main"
                 if(this@currentNativeDesktopTargets.konanTarget == KonanTarget.MINGW_X64)
                     linkerOpts += "-mwindows"
-                entryPoint = "main"
             }
         }
     }

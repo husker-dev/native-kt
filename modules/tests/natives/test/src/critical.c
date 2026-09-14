@@ -2,13 +2,13 @@
 #include <stdio.h>
 #include <string.h>
 
-KBoolean critical_primitives(
-    KChar a1, KBoolean a2,
-    KByte a3, KUByte a4,
-    KShort a5, KUShort a6,
-    KInt a7, KUInt a8,
-    KLong a9, KULong a10,
-    KFloat a11, KDouble a12
+bool critical_primitives(
+    uint16_t a1, bool a2,
+    int8_t a3, uint8_t a4,
+    int16_t a5, uint16_t a6,
+    int32_t a7, uint32_t a8,
+    int64_t a9, uint64_t a10,
+    float a11, double a12
 ) {
     return a1 == 'a' &&
         a2 == true &&
@@ -24,19 +24,27 @@ KBoolean critical_primitives(
         a12 == 2.0;
 }
 
-KBoolean critical_enum(MyEnum a1) {
+bool critical_enum(MyEnum a1) {
     return a1 == MyEnum_CASE1;
 }
 
-KBoolean critical_string(KString* a1) {
+bool critical_string(KString* a1) {
     return a1->length == 11 && strncmp(a1->data, "test string", a1->length) == 0;
 }
 
-KBoolean critical_string_n(KString* a1) {
+bool critical_string_n(KString* a1) {
     return a1 == NULL;
 }
 
-KBoolean critical_primitives_array(
+bool critical_interface(RC_MyInterface* a1) {
+    return a1->pointed == (void*) 1;
+}
+
+bool critical_interface_n(RC_MyInterface* a1) {
+    return a1 == NULL;
+}
+
+bool critical_primitives_array(
     KCharArray* a1, KBooleanArray* a2,
     KByteArray* a3, KUByteArray* a4,
     KShortArray* a5, KUShortArray* a6,
@@ -82,7 +90,7 @@ KBoolean critical_primitives_array(
             a12->elements[1] == 2.2;
 }
 
-KBoolean critical_primitives_array_n(
+bool critical_primitives_array_n(
     KCharArray* a1, KBooleanArray* a2,
     KByteArray* a3, KUByteArray* a4,
     KShortArray* a5, KUShortArray* a6,
@@ -98,7 +106,7 @@ KBoolean critical_primitives_array_n(
         a11 == NULL && a12 == NULL;
 }
 
-KBoolean critical_enum_array(KIntArray* a1) {
+bool critical_enum_array(KIntArray* a1) {
     const MyEnum* elements = (MyEnum*)a1->elements;
 
     return a1->length == 2 &&
@@ -106,58 +114,62 @@ KBoolean critical_enum_array(KIntArray* a1) {
            elements[1] == MyEnum_CASE2;
 }
 
-KBoolean critical_enum_array_n(KIntArray* a1) {
+bool critical_enum_array_n(KIntArray* a1) {
     return a1 == NULL;
 }
 
-KChar critical_return_char() {
+uint16_t critical_return_char(void) {
     return 'a';
 }
 
-KBoolean critical_return_boolean() {
+bool critical_return_boolean(void) {
     return true;
 }
 
-KByte critical_return_byte() {
+int8_t critical_return_byte(void) {
     return 1;
 }
 
-KUByte critical_return_ubyte() {
+uint8_t critical_return_ubyte(void) {
     return 255u;
 }
 
-KShort critical_return_short() {
+int16_t critical_return_short(void) {
     return 1;
 }
 
-KUShort critical_return_ushort() {
+uint16_t critical_return_ushort(void) {
     return 65535u;
 }
 
-KInt critical_return_int() {
+int32_t critical_return_int(void) {
     return 1;
 }
 
-KUInt critical_return_uint() {
+uint32_t critical_return_uint(void) {
     return 4294967295u;
 }
 
-KLong critical_return_long() {
+int64_t critical_return_long(void) {
     return 1;
 }
 
-KULong critical_return_ulong() {
+uint64_t critical_return_ulong(void) {
     return 18446744073709551615u;
 }
 
-KFloat critical_return_float() {
+float critical_return_float(void) {
     return 1.0f;
 }
 
-KDouble critical_return_double() {
+double critical_return_double(void) {
     return 1.0;
 }
 
-MyEnum critical_return_enum() {
+MyEnum critical_return_enum(void) {
     return MyEnum_CASE1;
+}
+
+RC_MyInterface* critical_return_interface(void) {
+    return rc_myinterface_new((void*) 1);
 }

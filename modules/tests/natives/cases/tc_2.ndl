@@ -1,0 +1,7 @@
+namespace global {
+    void stub(MyEnum e);
+};
+
+enum MyEnum {
+    "A"
+};

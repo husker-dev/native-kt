@@ -1,4 +1,4 @@
-//rootProject.name = "native-kt-gradle-plugin"
+rootProject.name = "gradle-plugin"
 
 dependencyResolutionManagement {
     versionCatalogs {

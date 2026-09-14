@@ -1,377 +1,612 @@
 package com.huskerdev.nativekt.printers.kotlin
 
-import com.huskerdev.nativekt.plugin.Language
+import com.huskerdev.nativekt.NativeModuleContext
 import com.huskerdev.nativekt.utils.*
 import com.huskerdev.webidl.resolver.*
-import org.gradle.internal.extensions.stdlib.capitalized
 import java.io.File
 
-class KotlinNativePrinter(
-    idl: IdlResolver,
-    target: File,
-    language: Language,
-    val classPath: String,
-    val moduleName: String,
-    useCoroutines: Boolean,
-    val expectActual: Boolean
-) {
-    val cinteropPath = "cinterop.$classPath"
 
+class KotlinNativePrinter(
+    private val context: NativeModuleContext,
+    target: File,
+    private val expectActual: Boolean
+) {
     init {
+        target.parentFile.mkdirs()
+        target.writeText(buildString {
+            printHeader()
+            printBasicCasts()
+            printDictionariesCasts()
+            printCallbacks()
+            printFunctions()
+            printInterfaces()
+        })
+    }
+
+    private fun StringBuilder.printHeader() {
         val actual = if(expectActual) "actual " else ""
 
-        val builder = StringBuilder()
-        builder.append("""
-            @file:OptIn(ExperimentalForeignApi::class, ExperimentalContracts::class, ExperimentalExtendedContracts::class)
-            @file:Suppress("unused", "UNNECESSARY_SAFE_CALL")
+        append("""
+            @file:OptIn(ExperimentalForeignApi::class, ExperimentalNativeApi::class)
+            @file:Suppress("SpellCheckingInspection", "LocalVariableName", "FunctionName", "PropertyName")
             
-            package $classPath
+            package ${context.classPath}
             
+            import cinterop.${context.classPath}.*
             import kotlinx.cinterop.*
-            import kotlin.contracts.*
+            import kotlin.enums.enumEntries
+            import kotlin.experimental.ExperimentalNativeApi
+            import kotlin.native.ref.createCleaner
             import com.huskerdev.nativekt.*
-            import com.huskerdev.nativekt.kn.*
             import platform.posix.*
             
-            ${actual}val isLib${moduleName.capitalized()}Loaded: Boolean = true
+            ${actual}val ${loadFieldName(context)}: Boolean = true
             
             @Throws(UnsupportedOperationException::class)
-            ${actual}fun ${syncLoadFunctionName(moduleName)}() {
-                ${if(language == Language.CPP) 
-                    "$cinteropPath.${mangle("init")}() // Init C++" 
-                else "// Do nothing (statically linked)"}
-            }
+            ${actual}fun ${syncLoadFunctionName(context)}() =
+                ${context.mangle("init")}()
             
-            ${actual}fun ${asyncLoadFunctionName(moduleName)}(onReady: () -> Unit) {
-                ${syncLoadFunctionName(moduleName)}()
+            ${actual}fun ${asyncLoadFunctionName(context)}(onReady: () -> Unit) {
+                ${syncLoadFunctionName(context)}()
                 onReady()
             }
             
         """.trimIndent())
-        if(useCoroutines)
-            builder.append("${actual}suspend fun ${asyncLoadFunctionName(moduleName)}() = ${syncLoadFunctionName(moduleName)}()\n")
+        if(context.extension.useCoroutines)
+            append("\n${actual}suspend fun ${asyncLoadFunctionName(context)}() = ${syncLoadFunctionName(context)}()\n")
+    }
 
-        builder.append("""
+    private fun StringBuilder.printBasicCasts() {
+        if(context.hasString) {
+            printLabel("String")
+            if(context.hasStringToNativeCast) appendLine("""
+                
+                private fun toNativeString(str: String?): COpaquePointer? = str?.encodeToByteArray()?.usePinned {
+                    ${context.mangle("string_new")}(it.addressOf(0), str.length, it.get().size.convert(), true)
+                }
+            """.trimIndent())
+            if(context.hasStringToKotlinCast) appendLine("""
+                
+                private fun toKotlinString(str: COpaquePointer?, free: Boolean): String? {
+                    if(str == null) return null
+                    val data = ${context.mangle("string_data")}(str)!!
+                    val size = ${context.mangle("string_size")}(str).toInt()
+                    return data.readBytes(size).decodeToString()
+                        .also { if(free) ${context.mangle("string_free")}(str) }
+                }
+            """.trimIndent())
+        }
+
+        if(context.hasPrimitiveArray || context.hasEnumArray) {
+            printLabel("Primitive arrays")
+
+            if (context.hasCharArray) {
+                appendLine("\n// Char")
+                if (context.hasCharArrayToNativeCast) appendLine("""
+                    
+                    private fun toNativeCharArray(arr: CharArray?): COpaquePointer? = arr?.usePinned {
+                        ${context.mangle("chararray_new")}(it.addressOf(0).reinterpret(), arr.size, true)
+                    }
+                """.trimIndent())
+                if (context.hasCharArrayToKotlinCast) appendLine("""
+                    
+                    private fun toKotlinCharArray(arr: COpaquePointer?, free: Boolean): CharArray? {
+                        if(arr == null) return null
+                        val elements = ${context.mangle("chararray_elements")}(arr)
+                        val length = ${context.mangle("chararray_length")}(arr)
+                        return CharArray(length) { elements!![it].toInt().toChar() }
+                            .also { if(free) ${context.mangle("chararray_free")}(arr) }
+                    }
+                """.trimIndent())
+            }
+            if (context.hasBooleanArray) {
+                appendLine("\n// Boolean")
+                if (context.hasBooleanArrayToNativeCast) appendLine("""
+                    
+                    private fun toNativeBooleanArray(arr: BooleanArray?): COpaquePointer? {
+                        if(arr == null) return null
+                        return ByteArray(arr.size) { arr[it].toByte() }.usePinned {
+                            ${context.mangle("booleanarray_new")}(it.addressOf(0).reinterpret(), arr.size, true)
+                        }
+                    }
+                """.trimIndent())
+                if (context.hasBooleanArrayToKotlinCast) appendLine("""
+                    
+                    private fun toKotlinBooleanArray(arr: COpaquePointer?, free: Boolean): BooleanArray? {
+                        if(arr == null) return null
+                        val elements = ${context.mangle("booleanarray_elements")}(arr)
+                        val length = ${context.mangle("booleanarray_length")}(arr)
+                        return BooleanArray(length) { elements!![it].value }
+                            .also { if(free) ${context.mangle("booleanarray_free")}(arr) }
+                    }
+                """.trimIndent())
+            }
+
+            if (context.hasByteArray || context.hasUByteArray) {
+                appendLine("\n// Byte")
+                if (context.hasByteArrayToNativeCast || context.hasUByteArrayToNativeCast) appendLine("""
+                    
+                    private fun toNativeByteArray(arr: ByteArray?): COpaquePointer? = arr?.usePinned {
+                        ${context.mangle("bytearray_new")}(it.addressOf(0).reinterpret(), arr.size, true)
+                    }
+                """.trimIndent())
+                if (context.hasByteArrayToKotlinCast || context.hasUByteArrayToKotlinCast) appendLine("""
+                    
+                    private fun toKotlinByteArray(arr: COpaquePointer?, free: Boolean): ByteArray? {
+                        if(arr == null) return null
+                        val elements = ${context.mangle("bytearray_elements")}(arr)
+                        val length = ${context.mangle("bytearray_length")}(arr)
+                        return ByteArray(length) { elements!![it] }
+                            .also { if(free) ${context.mangle("bytearray_free")}(arr) }
+                    }
+                """.trimIndent())
+            }
+
+            if (context.hasShortArray || context.hasUShortArray) {
+                appendLine("\n// Short")
+                if (context.hasShortArrayToNativeCast || context.hasUShortArrayToNativeCast) appendLine("""
+                    
+                    private fun toNativeShortArray(arr: ShortArray?): COpaquePointer? = arr?.usePinned {
+                        ${context.mangle("shortarray_new")}(it.addressOf(0).reinterpret(), arr.size, true)
+                    }
+                """.trimIndent())
+                if (context.hasShortArrayToKotlinCast || context.hasUShortArrayToKotlinCast) appendLine("""
+                    
+                    private fun toKotlinShortArray(arr: COpaquePointer?, free: Boolean): ShortArray? {
+                        if(arr == null) return null
+                        val elements = ${context.mangle("shortarray_elements")}(arr)
+                        val length = ${context.mangle("shortarray_length")}(arr)
+                        return ShortArray(length) { elements!![it] }
+                            .also { if(free) ${context.mangle("shortarray_free")}(arr) }
+                    }
+                """.trimIndent())
+            }
+
+            if (context.hasIntArray || context.hasUIntArray || context.hasEnumArray) {
+                appendLine("\n// Int")
+                if (context.hasIntArrayToNativeCast || context.hasUIntArrayToNativeCast || context.hasEnumArrayToNativeCast) appendLine("""
+                    
+                    private fun toNativeIntArray(arr: IntArray?): COpaquePointer? = arr?.usePinned {
+                        ${context.mangle("intarray_new")}(it.addressOf(0).reinterpret(), arr.size, true)
+                    }
+                """.trimIndent())
+                if (context.hasIntArrayToKotlinCast || context.hasUIntArrayToKotlinCast || context.hasEnumArrayToKotlinCast) appendLine("""
+                    
+                    private fun toKotlinIntArray(arr: COpaquePointer?, free: Boolean): IntArray? {
+                        if(arr == null) return null
+                        val elements = ${context.mangle("intarray_elements")}(arr)
+                        val length = ${context.mangle("intarray_length")}(arr)
+                        return IntArray(length) { elements!![it] }
+                            .also { if(free) ${context.mangle("intarray_free")}(arr) }
+                    }
+                """.trimIndent())
+            }
+
+            if (context.hasLongArray || context.hasULongArray) {
+                appendLine("\n// Long")
+                if (context.hasLongArrayToNativeCast || context.hasULongArrayToNativeCast) appendLine("""
+                    
+                    private fun toNativeLongArray(arr: LongArray?): COpaquePointer? = arr?.usePinned {
+                        ${context.mangle("longarray_new")}(it.addressOf(0).reinterpret(), arr.size, true)
+                    }
+                """.trimIndent())
+                if (context.hasLongArrayToKotlinCast || context.hasULongArrayToKotlinCast) appendLine("""
+                    
+                    private fun toKotlinLongArray(arr: COpaquePointer?, free: Boolean): LongArray? {
+                        if(arr == null) return null
+                        val elements = ${context.mangle("longarray_elements")}(arr)
+                        val length = ${context.mangle("longarray_length")}(arr)
+                        return LongArray(length) { elements!![it] }
+                            .also { if(free) ${context.mangle("longarray_free")}(arr) }
+                    }
+                """.trimIndent())
+            }
+
+            if (context.hasFloatArray) {
+                appendLine("\n// Float")
+                if (context.hasFloatArrayToNativeCast) appendLine("""
+                    
+                    private fun toNativeFloatArray(arr: FloatArray?): COpaquePointer? = arr?.usePinned {
+                        ${context.mangle("floatarray_new")}(it.addressOf(0).reinterpret(), arr.size, true)
+                    }
+                """.trimIndent())
+                if (context.hasFloatArrayToKotlinCast) appendLine("""
+                    
+                    private fun toKotlinFloatArray(arr: COpaquePointer?, free: Boolean): FloatArray? {
+                        if(arr == null) return null
+                        val elements = ${context.mangle("floatarray_elements")}(arr)
+                        val length = ${context.mangle("floatarray_length")}(arr)
+                        return FloatArray(length) { elements!![it] }
+                            .also { if(free) ${context.mangle("floatarray_free")}(arr) }
+                    }
+                """.trimIndent())
+            }
+
+            if (context.hasDoubleArray) {
+                appendLine("\n// Double")
+                if (context.hasDoubleArrayToNativeCast) appendLine("""
+                    
+                    private fun toNativeDoubleArray(arr: DoubleArray?): COpaquePointer? = arr?.usePinned {
+                        ${context.mangle("doublearray_new")}(it.addressOf(0).reinterpret(), arr.size, true)
+                    }
+                """.trimIndent())
+                if (context.hasDoubleArrayToKotlinCast) appendLine("""
+                    
+                    private fun toKotlinDoubleArray(arr: COpaquePointer?, free: Boolean): DoubleArray? {
+                        if(arr == null) return null
+                        val elements = ${context.mangle("doublearray_elements")}(arr)
+                        val length = ${context.mangle("doublearray_length")}(arr)
+                        return DoubleArray(length) { elements!![it] }
+                            .also { if(free) ${context.mangle("doublearray_free")}(arr) }
+                    }
+                """.trimIndent())
+            }
+
+            if (context.hasEnumArray) {
+                printLabel("Enum array")
+                if (context.hasEnumArrayToNativeCast) appendLine("""
+                    
+                    fun <T: Enum<T>> toNativeEnumArray(arr: Array<T>?): COpaquePointer? =
+                        arr?.run { toNativeIntArray(IntArray(arr.size) { arr[it].ordinal }) }
+                """.trimIndent())
+                if (context.hasEnumArrayToKotlinCast) appendLine("""
+                    
+                    private inline fun <reified T: Enum<T>> toKotlinEnumArray(arr: COpaquePointer?, free: Boolean): Array<T>? {
+                        if(arr == null) return null
+                        val entries = enumEntries<T>()
+                        val ints = toKotlinIntArray(arr, free)!!
+                        return Array(ints.size) { entries[ints[it]] }
+                    }
+                """.trimIndent())
+            }
+        }
+
+        if(context.hasObjectArrays) {
+            printLabel("Object arrays")
+
+            buildList {
+                context.usedDictionaries.mapTo(this) { dictionary ->
+                    Triple(dictionary.kname to dictionary.cname.lowercase(),
+                        dictionary in context.usedObjectArrayToNativeCast,
+                        dictionary in context.usedObjectArrayToKotlinCast)
+                }
+                context.usedInterfaces.mapTo(this) { inter ->
+                    Triple(inter.kname to inter.cname.lowercase(),
+                        inter in context.usedObjectArrayToNativeCast,
+                        inter in context.usedObjectArrayToKotlinCast)
+                }
+                if (context.hasStringArray) {
+                    add(Triple("String" to "string",
+                        context.hasStringArrayToNativeCast,
+                        context.hasStringArrayToKotlinCast))
+                }
+            }.forEach { (names, hasToNativeCast, hasToKotlinCast) ->
+                val name = names.first
+                val lower = names.second
+
+                appendLine("\n// $name")
+                if (hasToNativeCast) appendLine("""
+                    
+                    private fun toNative${name}Array(
+                        arr: Array<$name?>?,
+                        nullableElements: Boolean
+                    ): COpaquePointer? {
+                        if(arr == null) return null
+                        val array = ${context.mangle("array_${lower}_new")}(arr.size, nullableElements)
+                        arr.forEach {
+                            ${context.mangle("array_${lower}_push")}(array, toNative$name(it), nullableElements)
+                        }
+                        return array
+                    }
+                    
+                    @Suppress("unchecked_cast") private fun toNative${name}Array(arr: Array<$name>?) = 
+                        toNative${name}Array(arr as Array<$name?>?, false)
+                """.trimIndent())
+                if (hasToKotlinCast) appendLine("""
+                    
+                    private fun toKotlin${name}Array(
+                        arr: COpaquePointer?,
+                        nullableElements: Boolean,
+                        free: Boolean
+                    ): Array<$name?>? {
+                        if(arr == null) return null
+                        return Array(${context.mangle("array_${lower}_length")}(arr, nullableElements)) {
+                            toKotlin$name(${context.mangle("array_${lower}_get")}(arr, it, nullableElements), false)
+                        }.also { if(free) ${context.mangle("array_${lower}_free")}(arr, nullableElements) }
+                    }
+                    
+                    @Suppress("unchecked_cast") private fun toKotlin${name}Array(arr: COpaquePointer?, free: Boolean) = 
+                        toKotlin${name}Array(arr, false, free) as Array<$name>?
+                """.trimIndent())
+            }
+        }
+    }
+
+    private fun StringBuilder.printDictionariesCasts() {
+        if(!context.hasDictionaries)
+            return
+        printLabel("Dictionary")
+
+        context.usedDictionaries.forEach { dictionary ->
+            val name = dictionary.kname
+            val funcNew = dictionary.subCFunc(context, "new")
+            val fields = context.allFields[dictionary]!!
+
+            appendLine("\n// $name")
+
+            // to native
+            if(dictionary in context.toNativeDeclarations) {
+                append($$"""
+                    
+                    private fun toNative$$name(of: $$name?): COpaquePointer? {
+                        if(of == null) return null
+                        return $$funcNew(
+                """.trimIndent())
+
+                fields.joinTo(this) {
+                    val value = castToNative(
+                        type = it.type,
+                        content = "of.${it.kname}"
+                    )
+                    "\n\t\t${it.cname} = $value"
+                }
+                append("\n\t)\n}\n")
+            }
+
+            // to kotlin
+            if(dictionary in context.toKotlinDeclarations) {
+                append($$"""
+                    
+                    private fun toKotlin$$name(of: COpaquePointer?, free: Boolean): $$name? {
+                        if(of == null) return null
+                        return $$name(
+                """.trimIndent())
+
+                fields.joinTo(this) {
+                    val func = "${dictionary.subFieldCFunc(context, it)}(of)"
+                    "\n\t\t${it.kname} = ${castToKotlin(it.type, func, false)}"
+                }
+                append("\n\t).also { if(free) ${dictionary.subCFunc(context, "free")}(of) }")
+                append("\n}\n")
+            }
+        }
+    }
+
+    private fun StringBuilder.printCallbacks() {
+        if(!context.hasCallbacks)
+            return
+        printLabel("Callbacks")
+
+        append("""
             
-            private val _handleKStringFree = staticCFunction<COpaquePointer?, Unit> {
-            	if(it == null) return@staticCFunction
-            	$cinteropPath.${mangle("kstring_free")}(it.reinterpret())
+            @Suppress("unchecked_cast")
+            private fun <T> getCallback(id: size_t): T =
+                (id.toLong().toCPointer<CPointed>()!!.asStableRef<Any>().get() as T?)!!
+
+            private val callbackEquals = staticCFunction { self: size_t, obj: size_t ->
+            	getCallback<Any>(self) == getCallback<Any>(obj)
+            }
+
+            private val callbackFree = staticCFunction { id: size_t ->
+            	id.toLong().toCPointer<CPointed>()!!.asStableRef<Any>().dispose()
             }
             
         """.trimIndent())
 
+        context.usedCallbacks.forEach { callback ->
+            val name = callback.kname
+            val lower = callback.name.camelCase().lowercase()
+            val invokeFunc = "invoke$name"
 
-        if(idl.dictionaries.isNotEmpty()) {
-            printLabel(builder, "Dictionary")
-            idl.dictionaries.values.forEach { printDictionaryCasts(builder, it) }
+            val invokeArgs = buildList {
+                add("_id: size_t")
+                callback.args.mapTo(this) {
+                    "${it.kname}: ${it.type.toKnType()}"
+                }
+            }.joinToString()
+
+            val castedArgs = callback.args.joinToString {
+                castToKotlin(it.type, it.kname, true)
+            }
+
+            appendLine("\n// $name")
+
+            if(callback in context.toNativeDeclarations) appendLine("""
+                
+                private val $invokeFunc = staticCFunction { $invokeArgs ->
+                    ${castToNative(callback.type, "getCallback<$name>(_id)($castedArgs)")}
+                }
+                
+                private fun toNative$name(self: $name?): COpaquePointer? {
+                	if(self == null) return null
+                    val id = StableRef.create(self).asCPointer().toLong().convert<size_t>()
+                	return ${context.mangle("${lower}_new")}(
+                		id, self.hashCode(), $invokeFunc, callbackEquals, callbackFree,
+                	)
+                }
+            """.trimIndent())
+            if(callback in context.toKotlinDeclarations) appendLine("""
+                
+                private fun toKotlin$name(self: COpaquePointer?, free: Boolean): $name? {
+                	if(self == null) return null
+                    return getCallback<$name>(${context.mangle("${lower}_id")}(self))
+                        .also { if(free) ${context.mangle("${lower}_free")}(self) }
+                }
+            """.trimIndent())
         }
-
-        if(idl.callbacks.isNotEmpty()) {
-            printLabel(builder, "Callbacks")
-            idl.callbacks.values.forEach { printCallbackWrap(builder, it) }
-        }
-
-        if(idl.allOperators().isNotEmpty()) {
-            printLabel(builder, "Functions")
-            idl.allOperators().forEach { printFunction(builder, it) }
-        }
-
-        if(idl.interfaces.isNotEmpty()) {
-            printLabel(builder, "Interfaces")
-            idl.interfaces.values.forEach { printInterface(builder, it) }
-        }
-
-        target.parentFile.mkdirs()
-        target.writeText(builder.toString())
     }
 
-    private fun mangle(name: String) =
-        mangle(classPath, moduleName, "_$name")
+    private fun StringBuilder.printFunctions(){
+        if(context.allOperations.isEmpty())
+            return
 
-    private fun printInterface(builder: StringBuilder, inter: ResolvedIdlInterface) = builder.apply {
-        val name = inter.name.upperCamelCase()
-        append("""
-            
-            actual class $name(val _ptr: COpaquePointer): NativeKtResource() {
-                companion object {
-                    internal fun _wrap(ptr: COpaquePointer?): $name? = 
-                        ptr?.run { $name(this) }
-                }
-        """.trimIndent())
+        printLabel("Functions")
+        context.allOperations.forEach { function ->
+            val critical = function.isCritical()
+            val isInterface = function.isInterfaceOperation()
 
-        inter.toOperations().forEach { operation ->
-            val args = operation.args.map {
+            val args = function.args.joinToString {
                 "${it.kname}: ${it.type.toKotlinType()}"
             }
-            val argNames = operation.args.map { it.kname }
 
-            append("\n\t")
-            append(when {
-                operation.isInterfaceOperationConstructor() ->
-                    "actual constructor(${args.joinToString()}): this(${operation.kname}(${argNames.joinToString()}))"
-                operation.isInterfaceOperationFn() -> {
-                    val args = args.drop(1).joinToString()
-                    val argNames = argNames.toMutableList()
-                        .apply { set(0, "this") }
-                        .joinToString()
-                    val name = operation.interfaceFunctionName().camelCase()
-                    "actual fun ${name}($args) = ${operation.kname}($argNames)"
-                }
-                operation.isInterfaceOperationFree() ->
-                    "override fun _close(): Unit = ${operation.kname}(this)"
-                else -> throw UnsupportedOperationException()
-            })
-        }
-        append("\n}\n")
-    }
-
-    private fun printDictionaryCasts(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
-        val name = dictionary.kname
-        val cname = "$cinteropPath.${dictionary.cname}"
-
-        // free handle
-        append($$"""
-            
-            private val _handle$${name}Free = staticCFunction<COpaquePointer?, Unit> {
-                if(it == null) return@staticCFunction
-                $$cinteropPath.$${dictionary.subCFunc(classPath, moduleName, "free")}(it.reinterpret())
+            val type = when {
+                function.type.isVoid() -> ""
+                else -> ": ${function.type.toKotlinType()}"
             }
-            
-        """.trimIndent())
 
-        // native (arena)
-
-        append($$"""
-            
-            private fun MemScope.toNative$${name}OnArena(of: $$name?): CPointer<$$cname>? {
-                contract {
-                    (of != null).implies(returnsNotNull())
-                }
-                if(of == null) return null
-                val mem = alloc<$$cname>()
-        """.trimIndent())
-
-        dictionary.allFields().forEach {
-            val value = castToNative(
-                type = it.type,
-                content = "of.${it.kname}",
-                useArena = true,
-                pin = false
-            )
-            append("\n\tmem.${it.cname} = $value")
-        }
-        append("""
-            
-                mem.__flags = 0
-                return mem.ptr
-            }
-            
-        """.trimIndent())
-
-        // native
-
-        append($$"""
-            
-            private fun toNative$$name(of: $$name?): CPointer<$$cname>? {
-                contract {
-                    (of != null).implies(returnsNotNull())
-                }
-                if(of == null) return null
-                val mem = malloc(sizeOf<$$cname>().convert())!!.reinterpret<$$cname>().pointed
-        """.trimIndent())
-
-        dictionary.allFields().forEach {
-            val value = castToNative(
-                type = it.type,
-                content = "of.${it.kname}",
-                useArena = false,
-                pin = false
-            )
-            append("\n\tmem.${it.cname} = $value")
-        }
-        append("""
-            
-                mem.__flags = FLAG_RELEASABLE.toByte()
-                return mem.ptr
-            }
-            
-        """.trimIndent())
-
-        // kotlin
-
-        append($$"""
-            
-            private fun toKotlin$$name(of: CPointer<$$cname>?): $$name? {
-                contract {
-                    (of != null).implies(returnsNotNull())
-                }
-                if(of == null) return null
-                val mem = of.pointed
-                return $$name(
-        """.trimIndent())
-
-        dictionary.allFields().forEach {
-            append("\n\t\t${it.kname} = ${castFromNative(it.type, "mem.${it.cname}")},")
-        }
-        append("\n\t)\n}\n")
-
-        // kotlin (not-null)
-
-        append($$"""
-            
-            private fun toKotlin$$name(of: CPointer<$$cname>): $$name =
-                toKotlin$$name(of as CPointer<$$cname>?)
-            
-        """.trimIndent())
-    }
-
-    private fun printCallbackWrap(builder: StringBuilder, callback: ResolvedIdlCallbackFunction) = builder.apply {
-        val name = callback.kname
-        val cname = "$cinteropPath.${callback.cname}"
-
-        // Header
-        append("\nprivate val _invoke$name: CPointer<CFunction<(")
-        buildList {
-            add("CPointer<$cname>")
-            callback.args.mapTo(this) { it.type.toKnType() }
-        }.joinTo(builder)
-        append(") -> ${callback.type.toKnType()}>> =")
-
-        // staticCFunction
-        append("\n\tstaticCFunction { ")
-        buildList {
-            add("_callback")
-            callback.args.mapTo(this) { it.kname }
-        }.joinTo(builder)
-        append(" ->")
-
-        // Call
-        val args = callback.args.joinToString {
-            castFromNative(it.type, it.kname)
-        }
-        val call = "toKotlinCallback<$name>(_callback)($args)"
-        append("\n\t\t${castToNative(callback.type, call, useArena = false, pin = false)}")
-
-        // End
-        append("\n\t}\n")
-    }
-
-    private fun printFunction(
-        builder: StringBuilder,
-        function: ResolvedIdlOperation
-    ) = builder.apply {
-
-        val isInterfaceFunction = function.isInterfaceOperation()
-        val isInterfaceConstructor = function.isInterfaceOperationConstructor()
-
-        val useArena = function.args.any {
-            it.type.isString() ||
-            it.type.isArray() ||
-            it.type.isDictionary() ||
-            it.type.isCallback()
-        }
-
-        val args = function.args.joinToString {
-            castToNative(
-                it.type,
-                it.kname,
-                useArena = useArena,
-                pin = function.isCritical()
-            )
-        }
-
-        val deallocFunc = if(function.type.isReleasable())
-            freeFuncFor(function.type, "_result_native")
-        else null
-
-        val call = "$cinteropPath.${function.cnameMangled(classPath, moduleName)}($args)"
-
-        // === Print ===
-
-        append('\n')
-        printFunctionHeader(builder, function,
-            name = function.kname,
-            printType = !isInterfaceConstructor,
-            isActual = expectActual && !isInterfaceFunction,
-            isPrivate = isInterfaceFunction
-        )
-        if(isInterfaceConstructor)
-            append(": COpaquePointer")
-
-        append(when {
-            useArena -> " = memScoped {"
-            deallocFunc != null -> " {"
-            else -> " = "
-        })
-
-        append("\n\t")
-        if(deallocFunc != null) {
-            append("val _result_native = $call")
-            append("\n\t")
-            append("val _result_kt = ${castFromNative(function.type, "_result_native")}")
-            append("\n\t")
-            append(deallocFunc)
-
-            if(function.type !is ResolvedIdlType.Void) {
-                append("\n\t")
-                if(!useArena)
-                    append("return ")
-                append("_result_kt")
-            }
-        } else if(isInterfaceConstructor)
-            append("$call!!")
-        else
-            append(castFromNative(function.type, call))
-
-        if(useArena || deallocFunc != null)
-            append("\n}")
-        append("\n")
-    }
-
-    private fun freeFuncFor(
-        type: ResolvedIdlType,
-        content: String
-    ): String? = when {
-        type.isArray() -> type.arrayType { type ->
-            when {
-                type.isPrimitive() -> "${cinteropPath}.${mangle("${type.toCType().lowercase()}_array_free")}($content?.reinterpret())"
-                type.isEnum() -> "${cinteropPath}.${mangle("kint_array_free")}($content?.reinterpret())"
-                else -> "${cinteropPath}.${mangle("karray_free")}($content, _handle${type.toCType(ptr = false)}Free)"
-            }
-        }
-        type.isCallback() -> "callbackFree($content?.reinterpret())"
-        type.isDictionary() -> "${cinteropPath}.${mangle("${type.toCType(ptr = false).lowercase()}_free")}($content)"
-        else -> null
-    }
-
-    private fun castFromNative(
-        type: ResolvedIdlType,
-        content: String
-    ): String {
-        val nullable = if(type.isNullable) "?" else "!!"
-        val nullable1 = if(type.isNullable) "" else "!!"
-        return when {
-            type.isArray() && type.isUnsigned() -> castToUnsigned(type, castFromNative(type.toSignedType(), content))
-            type.isChar() -> "$content.toInt().toChar()"
-            type.isString() -> "toKotlinKString($content$nullable.reinterpret())"
-            type.isCallback() -> "toKotlinCallback<${type.toKotlinType()}>($content$nullable1)"
-            type.isEnum() -> "${type.declaration.kname}.entries[${content}.ordinal]"
-            type.isDictionary() -> "toKotlin${type.declaration.kname}($content$nullable1)"
-            type.isInterface() -> "${type.declaration.kname}._wrap($content)$nullable1"
-            type.isArray() -> type.arrayType { type ->
+            val castedArgs = function.args.joinToString {
+                val name = it.kname
                 when {
-                    type.isPrimitive() -> "toKotlin${type.toCType()}Array($content$nullable.reinterpret())"
-                    type.isEnum() -> "toKotlinEnumArray<${type.declaration.name}>($content$nullable.reinterpret())"
-                    else -> {
-                        val fn = castFromNative(type, "").split("(")[0]
-                        if(type.isNullable) {
-                            val nType = if(type.isString())
-                                 "nativekt.internals.KString"
-                            else "$cinteropPath.${type.toCType(ptr = false)}"
+                    critical && it.type.isString() ->
+                        if(it.type.isNullable) "_${name}_pinned?.addressOf(0), $name?.length ?: -1, _${name}_bytes?.size ?: -1"
+                        else "_${name}_pinned.addressOf(0), $name.length, _${name}_bytes.size"
+                    critical && (it.type.isCharArray() || it.type.isBooleanArray()) ->
+                        if(it.type.isNullable) "_${name}_pinned?.addressOf(0)?.reinterpret(), $name?.size ?: -1"
+                        else "_${name}_pinned.addressOf(0).reinterpret(), $name.size"
+                    critical && it.type.isArray() ->
+                        if(it.type.isNullable) "_${name}_pinned?.addressOf(0), $name?.size ?: -1"
+                        else "_${name}_pinned.addressOf(0), $name.size"
+                    else -> castToNative(it.type, name)
+                }
+            }
 
-                            "toKotlinKArray<${type.toKotlinType()}, CPointer<$nType>>($content?.reinterpret(), ::$fn)"
-                        } else "toKotlinKArray($content!!.reinterpret(), ::$fn)"
+            val call = "${function.cnameMangled(context)}($castedArgs)"
+
+            val casts = arrayListOf<String>()
+            val releases = arrayListOf<String>()
+
+            if(critical) {
+                function.args.forEach {
+                    val name = it.kname
+                    val pinned = "_${name}_pinned"
+
+                    if(it.type.isString() || it.type.isArray())
+                        releases += "\n\t_${it.kname}_pinned${if(it.type.isNullable) "?" else ""}.unpin()"
+
+                    when {
+                        it.type.isString() ->
+                            casts += if(it.type.isNullable) """
+                                
+                                val _${name}_bytes = $name?.encodeToByteArray()
+                                val $pinned = _${name}_bytes?.pin()
+                            """.replaceIndent("\t")
+                            else """
+                                
+                                val _${name}_bytes = $name.encodeToByteArray()
+                                val $pinned = _${name}_bytes.pin()
+                            """.replaceIndent("\t")
+                        it.type.isBooleanArray() ->
+                            casts += if(it.type.isNullable) "\n\tval $pinned = $name?.run { ByteArray($name.size) { if($name[it]) 1 else 0 }.pin() }"
+                            else "\n\tval $pinned = ByteArray($name.size) { if($name[it]) 1 else 0 }.pin()"
+                        it.type.isEnumArray() ->
+                            casts += if(it.type.isNullable) "\n\tval $pinned = $name?.run { IntArray($name.size) { $name[it].ordinal }.pin() }"
+                            else "\n\tval $pinned = IntArray($name.size) { $name[it].ordinal }.pin()"
+                        it.type.isArray() ->
+                            casts += if(it.type.isNullable) "\n\tval $pinned = $name?.pin()"
+                            else "\n\tval $pinned = $name.pin()"
                     }
+                }
+            }
+
+            // === Print ===
+
+            append('\n')
+            if(expectActual && !isInterface)
+                append("actual ")
+            if(isInterface)
+                append("private ")
+
+            append("fun ${function.kname}(${args})$type ")
+            append(if(casts.isNotEmpty()) "{" else "=")
+            casts.forEach { append(it) }
+
+            append(if(releases.isNotEmpty()) "\n\tval result = " else "\n\t")
+            append(castToKotlin(function.type, call, free = true))
+
+            releases.forEach { append(it) }
+
+            append(if(releases.isNotEmpty()) "\n\treturn result\n}\n" else "\n")
+        }
+    }
+
+    private fun StringBuilder.printInterfaces() {
+        if(!context.hasInterfaces)
+            return
+        printLabel("Interfaces")
+
+        context.usedInterfaces.forEach { inter ->
+            val name = inter.kname
+            val lower = inter.kname.lowercase()
+
+            if(inter in context.toKotlinDeclarations) appendLine("""
+                
+                private fun toKotlin$name(ptr: COpaquePointer?, free: Boolean): $name? {
+                    if(ptr == null) return null
+                	return $name(Unit, _interface${name}Clone(ptr.toLong()))
+                        .also { if(free) ${context.mangle("interface_${lower}_free")}(ptr) }
+                }
+            """.trimIndent())
+            if(inter in context.toNativeDeclarations) appendLine("""
+                
+                private fun toNative$name(obj: $name?): COpaquePointer? {
+                    if(obj == null) return null
+                	return _interface${name}Clone(obj.rcPtr).toCPointer()
+                }
+            """.trimIndent())
+            append("""
+
+                actual class $name(m: Unit, rcPtr: Long): NativeKtRcObject(rcPtr, ::_interface${name}Free) {
+                    @Suppress("unused") private val cleaner = createCleaner(releaser) { it.release() }
+                    override fun _address(): Long = _interface${name}Address(rcPtr)
+                    
+            """.trimIndent())
+
+            inter.toOperations().forEach { operation ->
+                val args = operation.args.map {
+                    "${it.kname}: ${it.type.toKotlinType()}"
+                }
+                val argNames = operation.args.map { it.kname }
+
+                append(when {
+                    operation.isInterfaceOperationConstructor() ->
+                        "\n\tactual constructor(${args.joinToString()}): this(Unit, ${operation.kname}(${argNames.joinToString()}))"
+                    operation.isInterfaceOperationFn() -> {
+                        val args = args.drop(1).joinToString()
+                        val argNames = argNames.toMutableList()
+                            .apply { set(0, "rcPtr") }
+                            .joinToString()
+                        val name = operation.interfaceFunctionName().camelCase()
+                        "\n\tactual fun ${name}($args) = ${operation.kname}($argNames)"
+                    }
+                    else -> return@forEach
+                })
+            }
+            append("\n}")
+        }
+    }
+
+    private fun castToKotlin(
+        type: ResolvedIdlType,
+        content: String,
+        free: Boolean
+    ): String {
+        val nullable1 = if(type.isNullable) "" else "!!"
+        val freeArg = if(free) ", free = true" else ", free = false"
+        return when {
+            type.isArray() && type.isUnsigned() -> castToUnsigned(type, castToKotlin(type.toSignedType(), content, free))
+            type.isChar() -> "$content.toInt().toChar()"
+            type.isEnum() -> "${type.declaration.kname}.entries[$content]"
+            type.isString() -> "toKotlinString($content$freeArg)$nullable1"
+            type.isCallback() -> "toKotlin${type.declaration.kname}($content$freeArg)$nullable1"
+            type.isRawInterface() -> "$content!!.toLong()"
+            type.isDictionary() || type.isInterface() -> "toKotlin${type.declaration.kname}($content$freeArg)$nullable1"
+            type.isArray() -> type.arrayType { type ->
+                val nullableElements = if(type.isNullable) ", nullableElements = true" else ""
+                when {
+                    type.isPrimitive() -> "toKotlin${type.toKotlinType()}Array($content$freeArg)$nullable1"
+                    type.isEnum() -> "toKotlinEnumArray<${type.declaration.name}>($content$freeArg)$nullable1"
+                    type.isString() -> "toKotlinStringArray($content$nullableElements$freeArg)$nullable1"
+                    else -> "toKotlin${type.declaration.kname}Array($content$nullableElements$freeArg)$nullable1"
                 }
             }
             else -> content
@@ -380,50 +615,32 @@ class KotlinNativePrinter(
 
     private fun castToNative(
         type: ResolvedIdlType,
-        content: String,
-        useArena: Boolean,
-        pin: Boolean
-    ): String {
-        val nullable = if(type.isNullable) "?" else ""
-        return when {
-            type.isArray() && type.isUnsigned() -> castToNative(type.toSignedType(), castToSigned(type, content), useArena, pin)
-            type.isChar() -> "$content.code.toUShort()"
-            type.isEnum() -> "${cinteropPath}.${type.declaration.cname}.entries[$content.ordinal]"
-            type.isString() ->
-                if(useArena) "toNativeKStringOnArena($content, $pin)$nullable.reinterpret()"
-                else "toNativeKString($content)$nullable.reinterpret()"
-            type.isCallback() ->
-                if(useArena) "toNativeCallbackOnArena($content, _invoke${type.declaration.kname})$nullable.reinterpret()"
-                else "toNativeCallback($content, _invoke${type.declaration.kname})$nullable.reinterpret()"
-            type.isDictionary() ->
-                if (useArena) "toNative${type.declaration.kname}OnArena($content)"
-                else "toNative${type.declaration.kname}($content)"
-            type.isInterface() -> "$content._ptr"
-            type.isArray() -> type.arrayType { type ->
-                when {
-                    type.isPrimitive() ->
-                        if (useArena) "toNative${type.toCType()}ArrayOnArena($content, $pin)$nullable.reinterpret()"
-                        else "toNative${type.toCType()}Array($content)$nullable.reinterpret()"
-                    type.isEnum() ->
-                        if (useArena) "toNativeEnumArrayOnArena($content, $pin)$nullable.reinterpret()"
-                        else "toNativeEnumArray($content)$nullable.reinterpret()"
-                    else -> {
-                        val fn = castToNative(type, "", useArena, false).split("(")[0]
-                        if (useArena) "toNativeKArrayOnArena($content, ::$fn)$nullable.reinterpret()"
-                        else "toNativeKArray($content, ::$fn)$nullable.reinterpret()"
-                    }
-                }
+        content: String
+    ): String = when {
+        type.isArray() && type.isUnsigned() -> castToNative(type.toSignedType(), castToSigned(type, content))
+        type.isChar() -> "$content.code.toUShort()"
+        type.isEnum() -> "$content.ordinal"
+        type.isString() -> "toNativeString($content)"
+        type.isCallback() -> "toNative${type.declaration.kname}($content)"
+        type.isRawInterface() -> "$content.toCPointer<CPointed>()"
+        type.isDictionary() || type.isInterface() -> "toNative${type.declaration.kname}($content)"
+        type.isArray() -> type.arrayType { type ->
+            val nullableElements = if(type.isNullable) ", true" else ""
+            when {
+                type.isPrimitive() -> "toNative${type.toKotlinType()}Array($content)"
+                type.isEnum() -> "toNativeEnumArray($content)"
+                type.isString() -> "toNativeStringArray($content$nullableElements)"
+                else -> "toNative${type.declaration.kname}Array($content$nullableElements)"
             }
-            else -> content
         }
+        else -> content
     }
 
     private fun ResolvedIdlType.toKnType(): String = when {
         isVoid() -> "Unit"
-        else -> {
-            val ref = "${cinteropPath}.${toCType(ptr = false)}"
-            if(isString() || isArray() || isCallback() || isDictionary())
-                "CPointer<$ref>?" else ref
-        }
+        isChar() -> "UShort"
+        isEnum() -> "Int"
+        isReleasable() -> "COpaquePointer?"
+        else -> toKotlinType()
     }
 }

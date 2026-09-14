@@ -1,70 +1,79 @@
 package com.huskerdev.nativekt.plugin
 
 import com.huskerdev.nativekt.TargetType
-import com.huskerdev.nativekt.utils.Arch
-import com.huskerdev.nativekt.utils.dir
-import org.apache.tools.ant.taskdefs.condition.Os
+import com.huskerdev.osutils.Arch
+import com.huskerdev.osutils.OS
 import org.gradle.api.ExtensiblePolymorphicDomainObjectContainer
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.kotlin.dsl.the
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
-import org.jetbrains.kotlin.gradle.dsl.KotlinProjectExtension
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.targets.js.dsl.KotlinJsTargetDsl
 import java.io.File
 
 internal const val NATIVE_TASK_GROUP = "natives"
+internal const val RUNTIME_DEPENDENCY = "com.huskerdev:native-kt-runtime:${NativeKtInfo.VERSION}"
 
+@Suppress("unused")
 class NativeKtPlugin: Plugin<Project> {
-    lateinit var project: Project
-    lateinit var extension: ExtensiblePolymorphicDomainObjectContainer<*>
 
-    val kotlin: KotlinProjectExtension
-        get() = project.the<KotlinProjectExtension>()
-
+    /**
+     * Here we wait for various plugins to load.
+     * The Android plugin is expected to load after Kotlin,
+     * so it uses the existing 'extension'.
+     */
     override fun apply(project: Project) {
-        this.project = project
+        var extension: ExtensiblePolymorphicDomainObjectContainer<*>? = null
 
-        val buildDir = project.layout.buildDirectory.get().asFile
-        val nativesBuildDir = File(buildDir, "nativekt")
-        val srcGenDir = File(buildDir, "generated/natives")
-
+        // Android (9.0.0+)
         project.plugins.withId("com.android.kotlin.multiplatform.library") {
-            configureAndroid(nativesBuildDir, srcGenDir)
+            configureAndroid(project) { extension }
         }
 
+        // Kotlin/Multiplatform
         project.plugins.withId("org.jetbrains.kotlin.multiplatform") {
-            extension = project.extensions.create("natives", NativeKtMultiplatformExtension::class.java)
-            configureKotlin(nativesBuildDir, srcGenDir)
+            extension = project.extensions.create("natives", NativeKtMultiplatformExtension::class.java, project.projectDir)
+            configureKotlin(project, extension!!)
         }
 
+        // Kotlin/JVM
         project.plugins.withId("org.jetbrains.kotlin.jvm") {
-            extension = project.extensions.create("natives", NativeKtJvmExtension::class.java)
-            configureKotlin(nativesBuildDir, srcGenDir)
+            extension = project.extensions.create("natives", NativeKtJvmExtension::class.java, project.projectDir)
+            configureKotlin(project, extension!!)
         }
 
+        // Kotlin/JS (Legacy)
         project.plugins.withId("org.jetbrains.kotlin.js") {
-            extension = project.extensions.create("natives", NativeKtJsExtension::class.java)
-            configureKotlin(nativesBuildDir, srcGenDir)
+            extension = project.extensions.create("natives", NativeKtJsExtension::class.java, project.projectDir)
+            configureKotlin(project, extension!!)
         }
 
+        /**
+         * This block is required for the native-kt IDEA plugin.
+         * It's an easy way to let the plugin know which
+         * native modules are loaded in the Gradle project.
+         */
         project.afterEvaluate {
-            val content = extension.joinToString(separator = "\n") {
-                (it as NativeProject).dir(project).absolutePath
-            }
-            val file = File(project.layout.buildDirectory.get().asFile, "nativekt.txt")
+            File(project.layout.buildDirectory.get().asFile, "nativekt.txt").apply {
+                val content = extension?.joinToString(separator = "\n") {
+                    (it as NativeProject).projectDir.absolutePath
+                } ?: ""
 
-            if(content.isNotEmpty()) {
-                file.parentFile.mkdirs()
-                file.writeText(content)
-            } else if(file.exists())
-                file.delete()
+                if(content.isNotEmpty()) {
+                    parentFile.mkdirs()
+                    writeText(content)
+                } else if(exists())
+                    delete()
+            }
         }
     }
 }
 
+
+/**
+ * Loads JS and WASM (web)
+ */
 @OptIn(ExperimentalWasmDsl::class)
 @Suppress("unused")
 fun KotlinMultiplatformExtension.webTargets(
@@ -74,6 +83,11 @@ fun KotlinMultiplatformExtension.webTargets(
     js(configure)
 }
 
+
+/**
+ * Loads Kotlin/Native desktop target for
+ * the current platform: MinGW, Linux or macOS.
+ */
 @Suppress("unused")
 fun KotlinMultiplatformExtension.currentNativeDesktopTargets(
     configure: KotlinNativeTarget.() -> Unit = {}
@@ -84,7 +98,10 @@ fun KotlinMultiplatformExtension.currentNativeDesktopTargets(
     TargetType.LINUX_ARM64
 ), configure)
 
-
+/**
+ * Loads all Kotlin/Native targets supported by
+ * the current platform (except Android native).
+ */
 fun KotlinMultiplatformExtension.currentNativeTargets(
     available: List<TargetType> = listOf(
         TargetType.MINGW_X64,
@@ -102,11 +119,11 @@ fun KotlinMultiplatformExtension.currentNativeTargets(
     ),
     configure: KotlinNativeTarget.() -> Unit = {}
 ) {
-    when {
-        Os.isFamily(Os.FAMILY_WINDOWS) -> when {
+    when(OS.current) {
+        OS.WINDOWS -> when {
             TargetType.MINGW_X64 in available -> mingwX64(configure)
         }
-        Os.isFamily(Os.FAMILY_MAC) -> {
+        OS.MACOS -> {
             if(TargetType.MACOS_ARM64 in available)             macosArm64(configure)
             if(TargetType.IOS_ARM64 in available)               iosArm64(configure)
             if(TargetType.IOS_SIMULATOR_ARM64 in available)     iosSimulatorArm64(configure)
@@ -117,9 +134,11 @@ fun KotlinMultiplatformExtension.currentNativeTargets(
             if(TargetType.TVOS_ARM64 in available)              tvosArm64(configure)
             if(TargetType.TVOS_SIMULATOR_ARM64 in available)    tvosSimulatorArm64(configure)
         }
-        Os.isFamily(Os.FAMILY_UNIX) -> when {
-            Arch.current() == Arch.X64 && TargetType.LINUX_X64 in available     -> linuxX64(configure)
-            Arch.current() == Arch.ARM64 && TargetType.LINUX_ARM64 in available -> linuxArm64(configure)
+        OS.LINUX -> when (Arch.current) {
+            Arch.X64 if TargetType.LINUX_X64 in available -> linuxX64(configure)
+            Arch.ARM64 if TargetType.LINUX_ARM64 in available -> linuxArm64(configure)
+            else -> Unit
         }
+        else -> throw UnsupportedOperationException()
     }
 }

@@ -4,7 +4,7 @@ plugins {
     id("java")
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.intellij.platform)
-    alias(libs.plugins.grammarkit)
+    alias(libs.plugins.intellij.platform.grammarkit)
 }
 
 group = "com.huskerdev"
@@ -56,6 +56,6 @@ tasks {
 
     generateLexer {
         sourceFile = File("src/main/kotlin/com/huskerdev/nativekt/intellij/lexer/ndl.flex")
-        targetOutputDir = File("src/main/gen/com/huskerdev/nativekt/intellij/lexer")
+        targetRootOutputDir = File("src/main/gen/com/huskerdev/nativekt/intellij/lexer")
     }
 }

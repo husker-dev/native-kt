@@ -24,7 +24,6 @@ kotlin {
 
 mavenPublishing {
     publishToMavenCentral()
-
     signAllPublications()
 
     coordinates(group.toString(), "native-kt-android-critical-stub", version.toString())
@@ -32,25 +31,7 @@ mavenPublishing {
     pom {
         name = "native-kt-android-critical-stub"
         description = "Critical stub for Android"
-        url = "https://github.com/husker-dev/native-kt"
 
-        licenses {
-            license {
-                name = "The Apache License, Version 2.0"
-                url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
-            }
-        }
-        developers {
-            developer {
-                id = "husker-dev"
-                name = "Nikita Shtengauer"
-                email = "redfancoestar@gmail.com"
-            }
-        }
-        scm {
-            connection = "https://github.com/husker-dev/native-kt.git"
-            developerConnection = "https://github.com/husker-dev/native-kt.git"
-            url = "https://github.com/husker-dev/native-kt"
-        }
+        applyDefaultPomInfo()
     }
 }

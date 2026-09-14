@@ -1,786 +1,626 @@
 package com.huskerdev.nativekt.printers.c
 
-import com.huskerdev.nativekt.plugin.Language
+import com.huskerdev.nativekt.NativeModuleContext
 import com.huskerdev.nativekt.utils.*
-import com.huskerdev.webidl.resolver.IdlResolver
-import com.huskerdev.webidl.resolver.ResolvedIdlDictionary
-import com.huskerdev.webidl.resolver.ResolvedIdlOperation
+import com.huskerdev.webidl.resolver.ResolvedIdlInterface
 import com.huskerdev.webidl.resolver.ResolvedIdlType
 import java.io.File
 
 class CApiImplPrinter(
-    idl: IdlResolver,
-    target: File,
-    val language: Language,
-    val classPath: String,
-    val moduleName: String
+    val context: NativeModuleContext,
+    target: File
 ) {
     init {
         target.parentFile.mkdirs()
-        val builder = StringBuilder()
+        target.writeText(buildString {
+            printHeader()
+            printStdLib()
+            printStructs()
+            printCallbacks()
+            printFunctions()
+        }.replace("\n", System.lineSeparator()))
+    }
 
-        val headerExtension = language.headerExtension ?: "h"
-
-        builder.append("""
-            #include "api.$headerExtension"
+    private fun StringBuilder.printHeader() {
+        append("""
+            #include "api.h"
+            
             
         """.trimIndent())
-        printStdLib(builder)
-
-        if(idl.dictionaries.isNotEmpty()) {
-            printLabel(builder, "Struct functions")
-            idl.dictionaries.values.forEach {
-                printStructNew(builder, it)
-                printStructClone(builder, it)
-                printStructFree(builder, it)
+        if(context.needsAllocFunctions) append("""
+            
+            LIB_EXPORT void* ${context.mangle("alloc")}(size_t size) {
+                return malloc(size);
             }
-        }
+            LIB_EXPORT void ${context.mangle("dealloc")}(void* ptr, size_t size) {
+                free(ptr);
+            }
+        """.trimIndent())
+    }
 
-        if(idl.callbacks.isNotEmpty()) {
-            printLabel(builder, "Callback free")
-            builder.append("""
+    private fun StringBuilder.printStdLib() {
+        if(context.hasCallbacks || context.hasInterfaces) {
+            printLabel("RefCounted")
+            append("""
                 
-                void ${mangle("abstract_callback_free")}(_AbstractCallback* self) {
-                    if(self == NULL) return;
-                    self->free(self);
+                typedef struct RC__Abstract {
+                    void* clone;
+                    void* free;
+                    void (* _Nonnull free_pointed)(void* _Nonnull);
+                    void* pointed;
+                    int32_t refs;
+                } RC__Abstract;
+    
+                static void* _rc_clone(void* self) {
+                    ((RC__Abstract*) self)->refs++;
+                    return self;
                 }
-                
-                void ${mangle("abstract_callback_free_forced")}(_AbstractCallback* self) {
-                    if(self == NULL) return;
-                    self->__flags |= K_FLAG_RELEASABLE;
-                    self->free(self);
+    
+                static void _rc_free(void* self) {
+                    RC__Abstract* _self = (RC__Abstract*) self;
+                    if (self != NULL && --_self->refs == 0) {
+                        _self->free_pointed(_self->pointed);
+                        free(_self);
+                    }
                 }
                 
             """.trimIndent())
-        }
 
-        printLabel(builder, "Functions")
-        idl.allOperators().forEach {
-            printFunctionProxy(builder, it)
-
-            // Critical wrappers
-            if(it.isCriticalCapable() && (it.hasString() || it.hasArray())) {
-                builder.append("\n")
-                printCriticalNativeFunctionContent(
-                    builder, language, classPath, moduleName,
-                    name = "c_${it.cnameMangled(classPath, moduleName)}",
-                    function = it
-                )
-            }
-        }
-
-        target.writeText(builder.toString().replace("\n", System.lineSeparator()))
-    }
-
-    private fun mangle(name: String) =
-        mangle(classPath, moduleName, "_$name")
-
-    private fun printFunctionProxy(
-        builder: StringBuilder,
-        function: ResolvedIdlOperation
-    ) = builder.apply {
-        val name = function.cname
-        val mangledName = function.cnameMangled(classPath, moduleName)
-        val type = function.type.toCType(printNullable = true)
-        val args = function.args.joinToString {
-            "${it.type.toCType(printNullable = true)} ${it.cname}"
-        }
-        val argNames = function.args.map { it.cname }
-        val ret = if(function.type.isVoid()) "" else "return "
-
-        if(language == Language.CPP || language == Language.C) {
-            append("\n")
-            if(function.isInterfaceOperation()) {
-                when (language) {
-                    Language.CPP -> {
-                        val interName = "I" + function.interfaceName().upperCamelCase()
-                        append(when {
-                            function.isInterfaceOperationConstructor() -> """
-                                void* ${mangledName}($args) {
-                                    return new std::shared_ptr<$interName>($interName::_create(${argNames.joinToString()}));
-                                }
-                            """.trimIndent()
-                            function.isInterfaceOperationFn() -> {
-                                val funcName = function.interfaceFunctionName().snakeCase()
-                                val self = argNames[0]
-                                val argNames = argNames.drop(1).joinToString()
-                                """
-                                    $type ${mangledName}($args) {
-                                        (*static_cast<std::shared_ptr<$interName>*>($self))->$funcName($argNames);
-                                    }
-                                """.trimIndent()
-                            }
-                            function.isInterfaceOperationFree() -> """
-                                void ${mangledName}($args) {
-                                    delete static_cast<std::shared_ptr<$interName>*>(${argNames.joinToString()});
-                                }
-                            """.trimIndent()
-                            else -> throw UnsupportedOperationException()
-                        })
-                    }
-                    Language.C -> {
-                        append("""
-                            $type $mangledName($args) {
-                                $ret$name(${argNames.joinToString()});
-                            }
-                        """.trimIndent())
-                    }
-                    else -> Unit
-                }
-            } else {
-                append("""
-                    $type $mangledName($args) {
-                        $ret$name(${argNames.joinToString()});
-                    }
-                """.trimIndent())
-            }
-            append("\n")
-        }
-    }
-
-    private fun printStructNew(
-        builder: StringBuilder,
-        dictionary: ResolvedIdlDictionary
-    ) = builder.apply {
-        val name = dictionary.cname
-        val fields = dictionary.allFields()
-        val args = fields.map { field ->
-            val const = if(field.type.isPrimitive())
-                "const " else ""
-            "$const${field.type.toCType()} ${field.cname}"
-        }
-        val structFields = buildMap {
-            putAll(fields.map { it.cname to it.cname })
-            this["__flags"] = "K_FLAG_RELEASABLE"
-        }
-
-        val funcNew = dictionary.subCFunc(classPath, moduleName, "new")
-
-        when (language) {
-            Language.CPP -> {
-                // c++ func
-
-                append("\n$name::$name(")
-                args.joinTo(builder, separator = ",") { "\n\t$it" }
-                append("\n): ")
-                structFields
-                    .map { "${it.key}(${it.value})" }
-                    .joinTo(builder)
-                append(" {}\n")
-
-                // mangled func
+            context.usedInterfaces.forEach { inter ->
+                val name = inter.cname
+                val lower = inter.name.lowercase()
                 append("""
                     
-                    $name* $funcNew(${args.joinToString()}) {
-                        return new $name(${fields.joinToString { it.cname }});
-                    }
-                    
-                """.trimIndent())
-            }
-            else -> {
-                append("""
-            
-                    $name* $funcNew(${args.joinToString()}) {
-                        $name* result = ($name*) malloc(sizeof($name));
-                        *result = ($name) { ${structFields.map { it.value }.joinToString()} };
-                        return result;
-                    }
-                    
-                """.trimIndent())
-                if(language == Language.C) append("""
-                    
-                    $name* ${name}_new(${args.joinToString()}) {
-                        return $funcNew(${fields.joinToString { it.cname }});
-                    }
-                    
-                """.trimIndent())
-            }
-        }
-    }
-
-    private fun printStructClone(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
-        val name = dictionary.cname
-        val fields = dictionary.allFields()
-        val structFields = fields.joinToString { field ->
-            cloneFuncFor(field.type, "self->${field.cname}")
-        }
-
-        val funcClone = dictionary.subCFunc(classPath, moduleName, "clone")
-        val funcNew = dictionary.subCFunc(classPath, moduleName, "new")
-
-        when (language) {
-            Language.CPP -> append("""
-                
-                $name* $name::clone() const {
-                    return $funcClone(this);
-                }
-                
-                template <> auto _clone_ptr<$name> = (void*)($funcClone);
-                
-                $name* $funcClone(const $name* self) {
-                    if(self == nullptr) 
-                        return nullptr;
-                    return $funcNew($structFields);
-                }
-                
-            """.trimIndent())
-            else -> {
-                append("""
-                    
-                    $name* $funcClone(const $name* self) {
-                        if(self == NULL) return NULL;
-                        return $funcNew($structFields);
-                    }
-                    
-                """.trimIndent())
-                if(language == Language.C) append("""
-                    
-                    $name* ${name}_clone(const $name* self) {
-                        return $funcClone(self);
-                    }
-                    
-                """.trimIndent())
-            }
-        }
-    }
-
-    private fun printStructFree(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
-        val name = dictionary.cname
-        val fields = dictionary.allFields()
-        val funcFree = dictionary.subCFunc(classPath, moduleName, "free")
-        val funcFreeForced = dictionary.subCFunc(classPath, moduleName, "free_forced")
-
-        val freeFunctions = fields.mapNotNull { field ->
-            freeFuncFor(
-                classPath, moduleName,
-                field.type,
-                "self->${field.cname}"
-            )
-        }
-        val forceFreeFunctions = fields.mapNotNull { field ->
-            forceFreeFuncFor(
-                classPath, moduleName,
-                field.type,
-                "self->${field.cname}"
-            )
-        }
-
-        when (language) {
-            Language.CPP -> {
-
-                // c++ function
-                append("""
-                    
-                    void $name::destroy() {
-                        $funcFree(this);
-                    }
-                    
-                    template <> auto _free_ptr<$name> = (void*)($funcFree);
-                    
-                """.trimIndent())
-
-                // mangled function
-                // free
-                append("""
-                    
-                    void $funcFree($name* self) {
-                        if (self == nullptr)
-                            return;
-                """.trimIndent())
-                freeFunctions.joinTo(builder, separator = "") { "\n\t$it;" }
-                append("""
-            
-                        if(K_OBJECT_IS_RELEASABLE(self->__flags))
-                            free(self);
-                    }
-                    
-                """.trimIndent())
-
-                // force free
-                append("""
-                    
-                    void $funcFreeForced($name* self) {
-                        if (self == nullptr)
-                            return;
-                """.trimIndent())
-                forceFreeFunctions.joinTo(builder, separator = "") { "\n\t$it;" }
-                append("""
-            
-                        if(K_OBJECT_IS_RELEASABLE(self->__flags))
-                            free(self);
-                    }
-                    
-                """.trimIndent())
-            }
-            else -> {
-                // free
-                append("""
-                    
-                    void $funcFree($name* self) {
-                        if (self == NULL)
-                            return;
-                """.trimIndent())
-                freeFunctions.joinTo(builder, separator = "") { "\n\t$it;" }
-                append("""
-            
-                        if(K_OBJECT_IS_RELEASABLE(self->__flags))
-                            free((void*) self);
-                    }
-                """.trimIndent())
-
-                // force free
-                append("""
-                    
-                    void $funcFreeForced($name* self) {
-                        if (self == NULL)
-                            return;
-                """.trimIndent())
-                forceFreeFunctions.joinTo(builder, separator = "") { "\n\t$it;" }
-                append("""
-            
-                        if(K_OBJECT_IS_RELEASABLE(self->__flags))
-                            free(self);
-                    }
-                """.trimIndent())
-
-                if (language == Language.C) append("""
-                
-                    void ${name}_free($name* self) {
-                        $funcFree(self);
-                    }
-                    
-                    void ${name}_free_forced($name* self) {
-                        $funcFreeForced(self);
-                    }
-                    
-                """.trimIndent())
-            }
-        }
-    }
-
-    private fun printStdLib(builder: StringBuilder) = builder.apply {
-        printLabel(builder, "stdlib")
-
-        append("\n// String\n")
-
-        when (language) {
-            Language.CPP -> append("""
-                
-                template <typename T> constexpr void (*_free_ptr)(void*) = nullptr;
-                template <typename T> constexpr void* (*_clone_ptr)(void*) = nullptr;
-                
-                KString::KString(
-                    const char* data,
-                    const KInt length,
-                    const size_t size,
-                    const bool is_data_owner
-                ): data(data), size(size), length(length), __flags(K_FLAG_RELEASABLE | (is_data_owner ? K_FLAG_DATA_OWNER : 0)) {}
-
-                KString* KString::clone() const {
-                    return nativekt_natives_testcpp_testcpp__kstring_clone(this);
-                }
-
-                void KString::destroy() {
-                    ${mangle("kstring_free")}(this);
-                }
-                
-                template <> auto _free_ptr<KString> = (void*)(${mangle("kstring_free")});
-                template <> auto _clone_ptr<KString> = (void*)(${mangle("kstring_clone")});
-                
-                KString* ${mangle("kstring_new")}(const char* data, const KInt length, const size_t size, const bool is_data_owner) {
-                    return new KString(data, length, size, is_data_owner);
-                }
-
-                KString* ${mangle("kstring_clone")}(const KString* self) {
-                    if (self == nullptr) return nullptr;
-                    const KInt size = self->size;
-                    void* data = malloc(size);
-                    memcpy(data, self->data, size);
-                    return ${mangle("kstring_new")}(static_cast<const char*>(data), size, self->length, true);
-                }
-
-                void ${mangle("kstring_free")}(KString* self) {
-                    if (self == nullptr)
-                        return;
-                    if (K_OBJECT_IS_DATA_OWNER(self->__flags))
-                        free(const_cast<char*>(self->data));
-                    if (K_OBJECT_IS_RELEASABLE(self->__flags))
-                        free(self);
-                }
-
-                void ${mangle("kstring_free_forced")}(KString* self) {
-                    if (self == nullptr) return;
-                    self->__flags |= K_FLAG_RELEASABLE;
-                    ${mangle("kstring_free")}(self);
-                }
-                
-            """.trimIndent())
-            else -> {
-                append("""
-                    
-                    KString* ${mangle("kstring_new")}(const char* data, const KInt length, const size_t size, const bool is_data_owner) {
-                        KString* result = (KString*) malloc(sizeof(KString));
-                        *result = (KString) { data, size, length, K_FLAG_RELEASABLE | (is_data_owner ? K_FLAG_DATA_OWNER : 0) };
-                        return result;
-                    }
-                    
-                    KString* ${mangle("kstring_clone")}(const KString* of) {
-                        if (of == NULL) return NULL;
-                        const KInt size = of->size;
-                        void* data = malloc(size);
-                        memcpy(data, of->data, size);
-                        return ${mangle("kstring_new")}((const char*) data, size, of->length, true);
-                    }
-                    
-                    void ${mangle("kstring_free")}(KString* self) {
-                        if (self == NULL)
-                            return;
-                        if (K_OBJECT_IS_DATA_OWNER(self->__flags))
-                            free((void*) self->data);
-                        if (K_OBJECT_IS_RELEASABLE(self->__flags))
-                            free((void*) self);
-                    }
-                    
-                    void ${mangle("kstring_free_forced")}(KString* self) {
-                        if (self == NULL) return;
-                        self->__flags |= K_FLAG_RELEASABLE;
-                        ${mangle("kstring_free")}(self);
-                    }
-                    
-                """.trimIndent())
-                if(language == Language.C) append("""
-                    KString* KString_new(const char* data, const KInt length, const size_t size, const bool is_data_owner) {
-                        return ${mangle("kstring_new")}(data, length, size, is_data_owner);
-                    }
-                    
-                    KString* KString_clone(const KString* of) {
-                        return ${mangle("kstring_clone")}(of);
-                    }
-                    
-                    void KString_free(KString* self) {
-                        ${mangle("kstring_free")}(self);
-                    }
-                """.trimIndent())
-            }
-        }
-
-        // Primitive arrays
-
-        listOf(
-            Triple("KCharArray", "KChar", "int32_t"),
-            Triple("KBooleanArray", "KBoolean", "int32_t"),
-            Triple("KByteArray", "KByte", "int32_t"),
-            Triple("KUByteArray", "KUByte", "int32_t"),
-            Triple("KShortArray", "KShort", "int32_t"),
-            Triple("KUShortArray", "KUShort", "int32_t"),
-            Triple("KIntArray", "KInt", "int32_t"),
-            Triple("KUIntArray", "KUInt", "int32_t"),
-            Triple("KLongArray", "KLong", "int64_t"),
-            Triple("KULongArray", "KULong", "int64_t"),
-            Triple("KFloatArray", "KFloat",  "double"),
-            Triple("KDoubleArray", "KDouble", "double")
-        ).forEach {
-            val name = it.first
-            val type = it.second
-            val varargType = it.third
-            val lowerName = name.snakeCase()
-
-            when (language) {
-                Language.CPP -> append("""
-                    
-                    // $name
-                    
-                    $name::$name(
-                        const $type* elements,
-                        const KInt length,
-                        const bool is_data_owner
-                    ): elements(elements), size(length * sizeof($type)), length(length), __flags(K_FLAG_RELEASABLE | (is_data_owner ? K_FLAG_DATA_OWNER : 0)) {}
-
-                    $name* $name::clone() const {
-                        return ${mangle("${lowerName}_clone")}(this);
-                    }
-
-                    $name* $name::of(const std::initializer_list<$type> elements) {
-                        const size_t size = elements.size() * sizeof($type);
-                        const auto data = malloc(size);
-                        memcpy(data, elements.begin(), size);
-                        return ${mangle("${lowerName}_new")}(static_cast<$type*>(data), elements.size(), true);
-                    }
-
-                    void $name::destroy() {
-                        ${mangle("${lowerName}_free")}(this);
-                    }
-                    
-                    $name* ${mangle("${lowerName}_new")}(
-                        const $type* elements,
-                        const KInt length,
-                        const bool is_data_owner
-                    ) {
-                        return new $name(elements, length, is_data_owner);
-                    }
-
-                    $name* ${mangle("${lowerName}_clone")}(const $name* self) {
-                        if(self == nullptr) return nullptr;
-                        const KInt size = self->size;
-                        void* elements = malloc(size);
-                        memcpy(elements, self->elements, size);
-                        return ${mangle("${lowerName}_new")}(static_cast<$type*>(elements), self->length, true);
-                    }
-
-                    void ${mangle("${lowerName}_free")}($name* self) {
-                        if (self == nullptr)
-                            return;
-                        if (K_OBJECT_IS_DATA_OWNER(self->__flags))
-                            free(const_cast<$type*>(self->elements));
-                        if (K_OBJECT_IS_RELEASABLE(self->__flags))
-                            free(self);
-                    }
-
-                    void ${mangle("${lowerName}_free_forced")}($name* self) {
-                        if (self == nullptr) return;
-                        self->__flags |= K_FLAG_RELEASABLE;
-                        ${mangle("${lowerName}_free")}(self);
-                    }
-                    
-                """.trimIndent())
-                else -> {
-                    append("""
-                        
-                        // $name
-                
-                        $name* ${mangle("${lowerName}_new")}(
-                            const $type* elements,
-                            const KInt length,
-                            const bool is_data_owner
-                        ) {
-                            $name* result = ($name*) malloc(sizeof($name));
-                            *result = ($name){
-                                elements,
-                                length * sizeof($type),
-                                length,
-                                K_FLAG_RELEASABLE | (is_data_owner ? K_FLAG_DATA_OWNER : 0)
-                            };
-                            return result;
-                        }
-                        
-                        $name* ${mangle("${lowerName}_clone")}(const $name* of) {
-                            if(of == NULL) return NULL;
-                            const KInt size = of->size;
-                            void** elements = malloc(size);
-                            memcpy(elements, (void*) of->elements, size);
-                            return ${mangle("${lowerName}_new")}(($type*) elements, of->length, true);
-                        }
-                        
-                        void ${mangle("${lowerName}_free")}($name* self) {
-                            if (self == NULL)
-                                return;
-                            if (K_OBJECT_IS_DATA_OWNER(self->__flags))
-                                free((void*) self->elements);
-                            if (K_OBJECT_IS_RELEASABLE(self->__flags))
-                                free((void*) self);
-                        }
-                        
-                        void ${mangle("${lowerName}_free_forced")}($name* self) {
-                            if (self == NULL) return;
-                            self->__flags |= K_FLAG_RELEASABLE;
-                            ${mangle("${lowerName}_free")}(self);
-                        }
-                        
-                    """.trimIndent())
-                    if(language == Language.C) append("""
-                        
-                        $name* ${name}_new(const $type* elements, const KInt length, const bool is_data_owner) {
-                            return ${mangle("${lowerName}_new")}(elements, length, is_data_owner);
-                        }
-                        
-                        $name* ${name}_of_n(const int n, ...) {
-                            va_list args;
-                            va_start(args, n);
-                            $type* elements = ($type*) malloc(n * sizeof($type));
-                            for (int i = 0; i < n; i++)
-                                elements[i] = ($type) va_arg(args, $varargType);
-                            va_end(args);
-                            return ${mangle("${lowerName}_new")}((const $type*) elements, (KInt) n, true);
-                        }
-                        
-                        $name* ${name}_clone(const $name* of) {
-                            return ${mangle("${lowerName}_clone")}(of);
-                        }
-                        
-                        void ${name}_free($name* self) {
-                            ${mangle("${lowerName}_free")}(self);
-                        }
-                        
-                        void ${name}_free_forced($name* self) {
-                            ${mangle("${lowerName}_free_forced")}(self);
-                        }
-                        
-                    """.trimIndent())
-                }
-            }
-        }
-
-        // Object array
-        when (language) {
-            Language.CPP -> append("""
-                
-                KArray::KArray(
-                    const void** elements,
-                    const KInt length,
-                    const bool is_data_owner
-                ): elements(elements), size(length * sizeof(void*)), length(length), __flags(K_FLAG_RELEASABLE | (is_data_owner ? K_FLAG_DATA_OWNER : 0)) {}
-
-                KArray* KArray::of(const std::initializer_list<void*> elements) {
-                    const size_t size = elements.size() * sizeof(void*);
-                    const auto data = static_cast<const void**>(malloc(size));
-                    memcpy(data, elements.begin(), size);
-                    return ${mangle("karray_new")}(data, elements.size(), true);
-                }
-
-                template <typename T>
-                KArray* KArray::clone() const {
-                    return ${mangle("karray_clone")}(this, _clone_ptr<T>);
-                }
-
-                template <typename T> 
-                void KArray::destroy() {
-                    return ${mangle("karray_free")}(this, _free_ptr<T>);
-                }
-                
-                KArray* ${mangle("karray_new")}(
-                    const void** elements,
-                    const KInt length,
-                    const bool is_data_owner
-                ) {
-                    return new KArray(elements, length, is_data_owner);
-                }
-
-                KArray* ${mangle("karray_clone")}(
-                    const KArray* _Nullable self,
-                    void* _Nullable (* _Nullable clone_op)(void* _Nullable)
-                ) {
-                    if(self == nullptr) 
-                        return nullptr;
-                    const auto elements = static_cast<const void**>(malloc(self->size));
-                    for (int i = 0; i < self->length; i++) {
-                        const auto element = const_cast<void*>(self->elements[i]);
-                        elements[i] = element == nullptr ? nullptr : clone_op(element);
-                    }
-                    return ${mangle("karray_new")}(elements, self->length, true);
-                }
-
-                void ${mangle("karray_free")}(
-                    KArray* _Nullable self,
-                    void (* _Nonnull free_op)(void* _Nonnull)
-                ) {
-                    if (self == nullptr)
-                        return;
-                    if (K_OBJECT_IS_DATA_OWNER(self->__flags)) {
-                        const void** elements = self->elements;
-                        for (int i = 0; i < self->length; i++) {
-                            const auto element = const_cast<void*>(elements[i]);
-                            if(element == nullptr)
-                                continue;
-                            free_op(element);
-                        }
-                        free(elements);
-                    }
-                    if (K_OBJECT_IS_RELEASABLE(self->__flags))
-                        free(self);
-                }
-
-                void ${mangle("karray_free_forced")}(
-                    KArray* self, 
-                    void (*free_op)(void*)
-                ) {
-                    if(self == nullptr) 
-                        return;
-                    self->__flags |= K_FLAG_RELEASABLE;
-                    ${mangle("karray_free")}(self, free_op);
-                }
-                
-            """.trimIndent())
-            else -> {
-                append("""
-                    
-                    KArray* ${mangle("karray_new")}(
-                        const void** elements,
-                        const KInt length,
-                        const bool is_data_owner
-                    ) {
-                        KArray* result = (KArray*) malloc(sizeof(KArray));
-                        *result = (KArray){
-                            elements,
-                            length * sizeof(KArray),
-                            length,
-                            K_FLAG_RELEASABLE | (is_data_owner ? K_FLAG_DATA_OWNER : 0)
+                    RC_$name* rc_${lower}_new(void* ptr) {
+                        RC_$name* result = malloc(sizeof(RC_$name));
+                        *result = (RC_$name) {
+                            .clone = (RC_$name* (*)(RC_$name*)) _rc_clone,
+                            .free = (void (*)(RC_$name*)) _rc_free,
+                            .free_pointed = _interface_${lower}_free,
+                            .pointed = ptr, 
+                            .refs = 1
                         };
                         return result;
                     }
                     
-                    KArray* ${mangle("karray_clone")}(const KArray* _Nullable self, void* _Nullable (* _Nullable clone_op)(void* _Nullable)) {
-                        if(self == NULL) return NULL;
-                        const KInt size = self->size;
-                        void** elements = malloc(size);
-                        for (int i = 0; i < self->length; i++) {
-                            void* element = (void*) self->elements[i];
-                            elements[i] = element == NULL ? NULL : clone_op(element);
-                        }
-                        return ${mangle("karray_new")}((const void**) elements, self->length, true);
-                    }
-        
-                    void ${mangle("karray_free")}(KArray* _Nullable self, void (* _Nonnull free_op)(void* _Nonnull)) {
-                        if (self == NULL)
-                            return;
-                        if (K_OBJECT_IS_DATA_OWNER(self->__flags)) {
-                            const void** elements = self->elements;
-                            for (int i = 0; i < self->length; i++) {
-                                void* element = (void*) elements[i];
-                                if(element == NULL) continue;
-                                free_op(element);
-                            }
-                            free((void*) elements);
-                        }
-                        if (K_OBJECT_IS_RELEASABLE(self->__flags))
-                            free((void*) self);
-                    }
+                """.trimIndent())
+            }
+
+            context.usedCallbacks.forEach { inter ->
+                val name = inter.cname
+                val lower = inter.name.lowercase()
+                append("""
                     
-                    void ${mangle("karray_free_forced")}(KArray* self, void (*free_op)(void*)) {
-                        if(self == NULL) return;
-                        self->__flags |= K_FLAG_RELEASABLE;
-                        ${mangle("karray_free")}(self, free_op);
+                    RC_$name* rc_${lower}_new($name* ptr) {
+                        RC_$name* result = malloc(sizeof(RC_$name));
+                        *result = (RC_$name) {
+                            .clone = (RC_$name* (*)(RC_$name*)) _rc_clone,
+                            .free = (void (*)(RC_$name*)) _rc_free,
+                            .free_pointed = ${lower}_free,
+                            .pointed = ptr, 
+                            .refs = 1
+                        };
+                        return result;
                     }
                     
                 """.trimIndent())
-                if(language == Language.C) append("""
-                    KArray* KArray_new(const void** elements, const KInt length, const bool is_data_owner) {
-                        return ${mangle("karray_new")}(elements, length, is_data_owner);
+            }
+        }
+
+        if(context.hasString) {
+            printLabel("String")
+            append("""
+                    
+                // String
+                
+                static size_t utf8_strlen(const char *s) {
+                    size_t count = 0;
+                    while (*s) {
+                        if ((*s & 0xC0) != 0x80)
+                            count++;
+                        s++;
+                    }
+                    return count;
+                }
+                
+                KString* _kstring_new(const char* data, _KStringNewArgs args) {
+                    const int32_t size = args.size != -1 ? args.size : strlen(data);
+                    const int32_t length = args.length != -1 ? args.length : utf8_strlen(data);
+                    const char* actual_data = data;
+                    if (args.make_copy) {
+                        actual_data = (const char*) malloc(size);
+                        memcpy((void*) actual_data, data, size);
+                    }
+                    KString* result = (KString*) malloc(sizeof(KString));
+                    *result = (KString) { kstring_clone, kstring_free, actual_data, length, size };
+                    return result;
+                }
+                
+                KString* kstring_clone(const KString* of) {
+                    const size_t size = of->size;
+                    void* data = malloc(size);
+                    memcpy(data, of->data, size);
+                    return kstring_new((const char*) data, .length = of->length, .size = size, .make_copy = false);
+                }
+                
+                void kstring_free(KString* self) {
+                    if(self == NULL) return;
+                    free((void*) self->data);
+                    free((void*) self);
+                }
+                
+            """.trimIndent())
+            if(context.hasStringToNativeCast) append("""
+                
+                KString* ${context.mangle("string_new")}(const char* data, const int32_t length, const int32_t size, bool make_copy) {
+                    return kstring_new(data, .length = length, .size = size, .make_copy = make_copy);
+                }
+            """.trimIndent())
+            if(context.hasStringToKotlinCast) append("""
+                
+                const char* ${context.mangle("string_data")}(const KString* self) {
+                    return self->data;
+                }
+                int32_t ${context.mangle("string_length")}(const KString* self) {
+                    return self->length;
+                }
+                size_t ${context.mangle("string_size")}(const KString* self) {
+                    return self->size;
+                }
+                
+            """.trimIndent())
+            append("""
+                
+                void ${context.mangle("string_free")}(KString* self) {
+                    kstring_free(self);
+                }
+            """.trimIndent())
+            append("\n")
+        }
+
+        if(context.hasPrimitiveArray) {
+            printLabel("Primitive arrays")
+            listOf(
+                Triple(Triple("Char", "uint16_t", "int32_t"),
+                    context.hasCharArrayToNativeCast,
+                    context.hasCharArrayToKotlinCast),
+                Triple(Triple("Boolean", "bool", "int32_t"),
+                    context.hasBooleanArrayToNativeCast,
+                    context.hasBooleanArrayToKotlinCast),
+                Triple(Triple("Byte", "int8_t", "int32_t"),
+                    context.hasByteArrayToNativeCast || context.hasUByteArrayToNativeCast,
+                    context.hasByteArrayToKotlinCast || context.hasUByteArrayToKotlinCast),
+                Triple(Triple("UByte", "uint8_t", "int32_t"),
+                    context.hasUByteArrayToNativeCast,
+                    context.hasUByteArrayToKotlinCast),
+                Triple(Triple("Short", "int16_t", "int32_t"),
+                    context.hasShortArrayToNativeCast || context.hasUShortArrayToNativeCast,
+                    context.hasShortArrayToKotlinCast || context.hasUShortArrayToKotlinCast),
+                Triple(Triple("UShort", "uint16_t", "int32_t"),
+                    context.hasUShortArrayToNativeCast,
+                    context.hasUShortArrayToKotlinCast),
+                Triple(Triple("Int", "int32_t", "int32_t"),
+                    context.hasIntArrayToNativeCast || context.hasEnumArrayToNativeCast || context.hasUIntArrayToNativeCast,
+                    context.hasIntArrayToKotlinCast || context.hasEnumArrayToKotlinCast || context.hasUIntArrayToKotlinCast),
+                Triple(Triple("UInt", "uint32_t", "int32_t"),
+                    context.hasUIntArrayToNativeCast,
+                    context.hasUIntArrayToKotlinCast),
+                Triple(Triple("Long", "int64_t", "int64_t"),
+                    context.hasLongArrayToNativeCast || context.hasULongArrayToNativeCast,
+                    context.hasLongArrayToKotlinCast || context.hasULongArrayToKotlinCast),
+                Triple(Triple("ULong", "uint64_t", "int64_t"),
+                    context.hasULongArrayToNativeCast,
+                    context.hasULongArrayToKotlinCast),
+                Triple(Triple("Float", "float", "double"),
+                    context.hasFloatArrayToNativeCast,
+                    context.hasFloatArrayToKotlinCast),
+                Triple(Triple("Double", "double", "double"),
+                    context.hasDoubleArrayToNativeCast,
+                    context.hasDoubleArrayToKotlinCast),
+            ).forEach { (desc, hasToNativeCast, hasToKotlinCast) ->
+                if(!hasToNativeCast && !hasToKotlinCast)
+                    return@forEach
+
+                val name = "K${desc.first}Array"
+                val type = desc.second
+                val varargType = desc.third
+                val funcName = name.snakeCase()
+                val lowerName = name.lowercase().drop(1)
+
+                append("""
+                    
+                    // $name
+                    
+                    $name* ${funcName}_new(const $type* elements, const int32_t length, bool make_copy) {
+                        $name* result = ($name*) malloc(sizeof($name));
+                        const $type* actual_elements = elements;
+                        if (make_copy) {
+                            size_t size = sizeof($type) * length;
+                            actual_elements = (const $type*) malloc(size);
+                            memcpy((void*) actual_elements, (void*) elements, size);
+                        }
+                        *result = ($name) { ${funcName}_clone, ${funcName}_free, actual_elements, length };
+                        return result;
                     }
                     
-                    KArray* KArray_of_n(const int n, ...) {
+                    $name* ${funcName}_of_n(const int n, ...) {
                         va_list args;
                         va_start(args, n);
-                        void** elements = (void**) malloc(n * sizeof(void*));
+                        $type* elements = ($type*) malloc(n * sizeof($type));
                         for (int i = 0; i < n; i++)
-                            elements[i] = (void*) va_arg(args, void*);
+                            elements[i] = ($type) va_arg(args, $varargType);
                         va_end(args);
-                        return ${mangle("karray_new")}((const void**) elements, (KInt) n, true);
+                        return ${funcName}_new((const $type*) elements, (int32_t) n, false);
                     }
                     
-                    KArray* KArray_clone(const KArray* _Nullable self, void* _Nullable (* _Nullable clone_op)(void* _Nullable)) {
-                        return ${mangle("karray_clone")}(self, clone_op);
+                    $name* ${funcName}_clone(const $name* of) {
+                        if(of == NULL) return NULL;
+                        return ${funcName}_new(of->elements, of->length, true);
                     }
                     
-                    void KArray_free(KArray* _Nullable self, void (* _Nonnull free_op)(void* _Nonnull)) {
-                        ${mangle("karray_free")}(self, free_op);
+                    void ${funcName}_free($name* self) {
+                        if(self == NULL) return;
+                        free((void*) self->elements);
+                        free((void*) self);
                     }
                     
-                    void KArray_free_forced(KArray* self, void (*free_op)(void*)) {
-                        ${mangle("karray_free_forced")}(self, free_op);
+                """.trimIndent())
+
+                // Skip for unsigned types
+                if(desc.first in setOf("UByte", "UShort", "UInt", "ULong"))
+                    return@forEach
+
+                if(hasToNativeCast) append("""
+                    
+                    $name* ${context.mangle("${lowerName}_new")}(const $type* elements, const int32_t length, const bool make_copy) {
+                        return ${funcName}_new(elements, length, make_copy);
+                    }
+                """.trimIndent())
+                if(hasToKotlinCast) append("""
+                    
+                    const $type* ${context.mangle("${lowerName}_elements")}(const $name* self) {
+                        return self->elements;
+                    }
+                    int32_t ${context.mangle("${lowerName}_length")}(const $name* self) {
+                        return self->length;
+                    }
+                """.trimIndent())
+                appendLine("""
+                    
+                    void ${context.mangle("${lowerName}_free")}($name* self) {
+                        ${funcName}_free(self);
                     }
                 """.trimIndent())
             }
         }
+
+        if(context.hasObjectArrays) {
+            printLabel("Object array")
+            append("""
+                
+                typedef struct ArrayElement ArrayElement;
+                struct ArrayElement {
+                    void* _Nullable (* _Nullable clone)(ArrayElement* _Nullable);
+                    void (* _Nullable free)(ArrayElement* _Nullable);
+                };
+                
+                KArray* karray_with_capacity(const int32_t capacity) {
+                    KArray* result = (KArray*) malloc(sizeof(KArray));
+                    *result = (KArray) { karray_clone, karray_free, malloc(capacity * sizeof(void*)), 0, capacity };
+                    return result;
+                }
+                
+                KArray* karray_new(const void** elements, const int32_t length) {
+                    KArray* result = (KArray*) malloc(sizeof(KArray));
+                    *result = (KArray) { karray_clone, karray_free, elements, length, length };
+                    return result;
+                }
+                
+                KArray* karray_of_n(const int n, ...) {
+                    va_list args;
+                    va_start(args, n);
+                    void** elements = (void**) malloc(n * sizeof(void*));
+                    for (int i = 0; i < n; i++)
+                        elements[i] = (void*) va_arg(args, void*);
+                    va_end(args);
+                    return karray_new((const void**) elements, (int32_t) n);
+                }
+                
+                void karray_push(KArray* _Nullable self, const void* element) {
+                    if(self == NULL) return;
+                    if (self->length >= self->capacity) {
+                        self->capacity = self->capacity == 0 ? 4 : self->capacity * 2;
+                        self->elements = realloc(self->elements, self->capacity * sizeof(void*));
+                    }
+                    self->elements[self->length++] = element;
+                }
+                
+                KArray* karray_clone(const KArray* _Nullable self) {
+                    if(self == NULL) return NULL;
+                    const int32_t size = self->length * sizeof(void*);
+                    void** elements = malloc(size);
+                    for (int i = 0; i < self->length; i++) {
+                        ArrayElement* element = (ArrayElement*) self->elements[i];
+                        elements[i] = element == NULL ? NULL : element->clone(element);
+                    }
+                    return karray_new((const void**) elements, self->length);
+                }
+                
+                void karray_free(KArray* _Nullable self) {
+                    if(self == NULL) return;
+                    const void** elements = self->elements;
+                    for (int i = 0; i < self->length; i++) {
+                        ArrayElement* element = (ArrayElement*) elements[i];
+                        if(element == NULL) continue;
+                        element->free(element);
+                    }
+                    free((void*) elements);
+                    free((void*) self);
+                }
+                
+                #define IMPL_OBJECT_ARRAY(T, FUNC_NEW, FUNC_LENGTH, FUNC_PUSH, FUNC_GET, FUNC_FREE) \
+                LIB_EXPORT KArray* FUNC_NEW(int32_t capacity, bool ne) {                     \
+                    return karray_with_capacity(capacity);                                \
+                }                                                                         \
+                LIB_EXPORT int32_t FUNC_LENGTH(KArray* self, bool ne) {                      \
+                    return ((KArray*) self)->length;                                      \
+                }                                                                         \
+                LIB_EXPORT void FUNC_PUSH(KArray* self, void* element, bool ne) {         \
+                    karray_push((KArray*) self, element);                                 \
+                }                                                                         \
+                LIB_EXPORT T* FUNC_GET(KArray* self, int32_t index, bool ne) {               \
+                    return (void*) ((KArray*) self)->elements[index];                     \
+                }                                                                         \
+                LIB_EXPORT void FUNC_FREE(KArray* self, bool ne) {                        \
+                    karray_free((KArray*) self);                                          \
+                }
+                
+            """.trimIndent())
+
+            buildList {
+                context.usedDictionaries.mapTo(this) {
+                    Triple(it.cname, it.cname.lowercase(), it in context.usedObjectArrayCast)
+                }
+                context.usedInterfaces.mapTo(this) {
+                    Triple("void", it.cname.lowercase(), it in context.usedObjectArrayCast)
+                }
+                add(Triple("KString", "string", context.hasStringArray))
+            }.filter { it.third }.joinTo(this, separator = "") {
+                """
+        
+                    IMPL_OBJECT_ARRAY(${it.first},
+                        ${context.mangle("array_${it.second}_new")},
+                        ${context.mangle("array_${it.second}_length")},
+                        ${context.mangle("array_${it.second}_push")},
+                        ${context.mangle("array_${it.second}_get")},
+                        ${context.mangle("array_${it.second}_free")}
+                    )
+                """.trimIndent()
+            }
+            append("\n")
+        }
+    }
+
+    private fun StringBuilder.printStructs() {
+        if(!context.hasDictionaries)
+            return
+
+        printLabel("Struct functions")
+        context.usedDictionaries.forEach { dictionary ->
+            val name = dictionary.cname
+            val fields = dictionary.allFields()
+
+            val argNames = fields.map { it.cname }
+            val args = fields.map {
+                "${it.type.toCType(printNullable = true)} ${it.cname}"
+            }
+
+            val fieldsClone = fields.joinToString { field ->
+                cloneFuncFor(field.type, "self->${field.cname}")
+            }
+            val fieldsFree = fields.mapNotNull { field ->
+                freeFuncFor(context, field.type, "self->${field.cname}")
+            }
+
+            val funcNew = dictionary.subCFunc(context, "new")
+            val funcFree = dictionary.subCFunc(context, "free")
+
+            append("""
+                
+                $name* ${name}_clone(const $name* self) {
+                    if(self == NULL) return NULL;
+                    return ${name}_new($fieldsClone);
+                }
+                
+                $name* ${name}_new(${args.joinToString()}) {
+                    $name* result = ($name*) malloc(sizeof($name));
+                    *result = ($name) { ${name}_clone, ${name}_free, ${argNames.joinToString()} };
+                    return result;
+                }
+            
+                void ${name}_free($name* self) {
+                    if (self == NULL) return;
+            """.trimIndent())
+            fieldsFree.joinTo(this, separator = "") { "\n\t$it;" }
+            append("""
+        
+                    free((void*) self);
+                }
+                
+            """.trimIndent())
+
+            if(dictionary in context.toNativeDeclarations) append("""
+                
+                LIB_EXPORT $name* $funcNew(${args.joinToString()}) {
+                    return ${name}_new(${argNames.joinToString()});
+                }
+            """.trimIndent())
+            if(dictionary in context.usedDeclarations) append("""
+                
+                LIB_EXPORT void $funcFree($name* self) {
+                    ${name}_free(self);
+                }
+            """.trimIndent())
+            if(dictionary in context.toKotlinDeclarations) {
+                fields.forEach { field ->
+                    val type = field.type.toCType(printNullable = true)
+                    val func = dictionary.subFieldCFunc(context, field)
+                    append("""
+                        
+                        LIB_EXPORT $type $func(const $name* self) {
+                            return (($name*) self)->${field.cname};
+                        }
+                    """.trimIndent())
+                }
+            }
+        }
+    }
+
+    private fun StringBuilder.printCallbacks() {
+        if(!context.hasCallbacks)
+            return
+
+        printLabel("Callbacks")
+
+        append("""
+            
+            #define KCallbackImpl(Name, Lower, FUNC_NEW, FUNC_ID, FUNC_FREE, FuncHeader) \
+            LIB_EXPORT RC_##Name* FUNC_NEW(                                     \
+                const size_t id,                                                \
+                const int32_t hash_code,                                        \
+                void* invoke,                                                   \
+                void* equals,                                                   \
+                void *free                                                      \
+            ) {                                                                 \
+                Name* callback = (Name*) malloc(sizeof(Name));                  \
+            	*callback = (Name) { id, hash_code, invoke, equals, free };     \
+            	return rc_##Lower##_new(callback);                              \
+            }                                                                   \
+            LIB_EXPORT size_t FUNC_ID(RC_##Name* _self) {                       \
+                return _self->pointed->id;                                      \
+            }                                                                   \
+            LIB_EXPORT void FUNC_FREE(RC_##Name* _self) {                       \
+                _self->free(_self);                                             \
+            }                                                                   \
+            FuncHeader
+            
+            
+        """.trimIndent())
+
+        context.usedCallbacks.forEach { callback ->
+            val name = callback.cname
+            val lower = callback.name.camelCase().lowercase()
+            append("KCallbackImpl(")
+            append("\n\t$name, $lower,")
+            append("\n\t${context.mangle("${lower}_new")},")
+            append("\n\t${context.mangle("${lower}_id")},")
+            append("\n\t${context.mangle("${lower}_free")},\n\t")
+
+            // func
+            append("${callback.type.toCType()} ${lower}_invoke")
+            buildList {
+                add("RC_$name* self")
+                callback.args.mapTo(this) {
+                    "${it.type.toCType()} ${it.cname}"
+                }
+            }.joinTo(this, prefix = "(", postfix = ") {")
+            append("\n\t\t")
+            if(!callback.type.isVoid())
+                append("return ")
+            append("self->pointed->invoke(")
+            buildList {
+                add("self->pointed->id")
+                callback.args.mapTo(this) { it.cname }
+            }.joinTo(this)
+            append(");\n\t}\n)\n")
+        }
+    }
+
+    private fun StringBuilder.printFunctions() {
+        if(context.allOperations.isEmpty())
+            return
+
+        printLabel("Functions")
+        context.allOperations.forEach { function ->
+            val critical = function.isCritical()
+            val name = function.cname
+            val mangledName = function.cnameMangled(context)
+            val type = function.type.toCType(printNullable = true)
+
+            val args = function.args.joinToString {
+                val name = it.cname
+                when {
+                    critical && it.type.isString() ->
+                        "const char* _Nullable $name, int32_t _${name}_length, int32_t _${name}_size"
+                    critical && it.type.isArray() ->
+                        "const ${it.type.arrayTypeOrNull()!!.toCType()}* _Nullable $name, int32_t _${name}_length"
+                    else -> "${it.type.toCType(printNullable = true)} ${it.cname}"
+                }
+            }.ifEmpty { "void" }
+
+            val argNames = function.args.map {
+                val name = it.cname
+                when {
+                    it.type.isRawInterface() ->
+                        "$name->pointed"
+                    critical && it.type.isString() ->
+                        if(it.type.isNullable) "_${name}_length == -1 ? NULL : &(KString){ kstring_clone, kstring_free, $name, _${name}_length, _${name}_size }"
+                        else "&(KString){ kstring_clone, kstring_free, $name, _${name}_length, _${name}_size }"
+                    critical && it.type.isArray() -> {
+                        val type = it.type.toCType(ptr = false)
+                        val lower = type.snakeCase()
+                        val cast = when {
+                            it.type.isEnumArray() -> "(const int32_t*) "
+                            else -> ""
+                        }
+                        if (it.type.isNullable) "_${name}_length == -1 ? NULL : &($type){ ${lower}_clone, ${lower}_free, $cast$name, _${name}_length }"
+                        else "&($type){ ${lower}_clone, ${lower}_free, $cast$name, _${name}_length }"
+                    }
+                    else -> name
+                }
+            }
+
+            val releases = function.args.mapNotNull {
+                when {
+                    it.type.isRawInterface() -> null
+                    critical -> null
+                    else -> freeFuncFor(context, it.type, it.cname)
+                }
+            }
+
+            // Print
+
+            var call = "$name(${argNames.joinToString()});"
+
+            call = when {
+                function.isInterfaceOperationConstructor() ->
+                    "rc_${function.interfaceName().lowercase()}_new(${call.dropLast(1)});"
+                function.isInterfaceOperationFree() ->
+                    "if(_self != NULL) _self->free(_self);"
+                function.isInterfaceOperationClone() ->
+                    "_self->clone(_self);"
+                function.isInterfaceOperationAddress() ->
+                    "(int64_t) _self->pointed;"
+                else -> call
+            }
+
+            append("\nLIB_EXPORT $type $mangledName($args) {")
+            append("\n\t")
+            if(releases.isNotEmpty()) {
+                if(!function.type.isVoid())
+                    append("${function.type.toCType()} _result = ")
+                append(call)
+                releases.joinTo(this, separator = "") { "\n\t$it;" }
+                if(!function.type.isVoid())
+                    append("\n\treturn _result;")
+            } else {
+                if(!function.type.isVoid())
+                    append("return ")
+                append(call)
+            }
+            append("\n}")
+        }
+        append("\n")
     }
 
     private fun cloneFuncFor(
@@ -789,144 +629,46 @@ class CApiImplPrinter(
     ): String = when {
         type.isArray() -> type.arrayType { type ->
             when {
-                type.isPrimitive() -> "${mangle("${type.toCType(ptr = false).lowercase()}_array_clone")}($content)"
-                type.isEnum() -> "${mangle("kint_array_clone")}($content)"
-                else -> "${mangle("karray_clone")}($content, (void*(*)(void*)) ${cloneFuncFor(type, "").dropLast(2)})"
+                type.isPrimitive() -> "k${type.toKotlinType().lowercase()}_array_clone($content)"
+                type.isEnum() -> "kint_array_clone($content)"
+                else -> "karray_clone($content)"
             }
         }
         type.isCallback() -> "$content->clone($content)"
-        type.isDictionary() || type.isString() -> "${mangle("${type.toCType(ptr = false).lowercase()}_clone")}($content)"
+        type.isString() -> "kstring_clone($content)"
+        type.isDictionary() -> "${type.declaration.cname}_clone($content)"
+        type.isInterface() ->
+            (type.declaration as ResolvedIdlInterface)
+                .toOperations()
+                .first { it.isInterfaceOperationClone() }
+                .cnameMangled(context) + "($content)"
         else -> content
     }
 }
 
 internal fun freeFuncFor(
-    classPath: String,
-    moduleName: String,
+    context: NativeModuleContext,
     type: ResolvedIdlType,
     content: String
 ): String? {
-    fun mangle(name: String) = mangle(classPath, moduleName, "_$name")
     return when {
-        type.isArray() -> type.arrayType { type ->
+        type.isArray() -> type.arrayType { arrType ->
             when {
-                type.isPrimitive() -> "${mangle("${type.toCType(ptr = false).lowercase()}_array_free")}($content)"
-                type.isEnum() -> "${mangle("kint_array_free")}($content)"
-                else -> "${mangle("karray_free")}($content, (void(*)(void*)) ${freeFuncFor(classPath, moduleName, type, "")!!.dropLast(2)})"
+                arrType.isPrimitive() -> {
+                    val cast = if(arrType.isUnsigned())
+                        "(${type.toSignedType().toCType()}) " else ""
+                    "${context.mangle("${arrType.toSignedType().toKotlinType().lowercase()}array_free")}($cast$content)"
+                }
+                arrType.isEnum() -> "${context.mangle("intarray_free")}($content)"
+                else -> "${context.mangle("array_${arrType.declaration.name.camelCase().lowercase()}_free")}($content, ${arrType.isNullable})"
             }
         }
-        type.isCallback() -> "${mangle("abstract_callback_free")}((_AbstractCallback*) $content)"
-        type.isDictionary() || type.isString() -> "${mangle("${type.toCType(ptr = false).lowercase()}_free")}($content)"
+        type.isCallback() -> "if($content != NULL) $content->free($content)"
+        type.isDictionary() || type.isString() -> "${context.mangle("${type.toKotlinType(printNullable = false).lowercase()}_free")}($content)"
+        type.isInterface() -> (type.declaration as ResolvedIdlInterface)
+            .toOperations()
+            .first { it.isInterfaceOperationFree() }
+            .cnameMangled(context) + "($content)"
         else -> null
     }
-}
-
-internal fun forceFreeFuncFor(
-    classPath: String,
-    moduleName: String,
-    type: ResolvedIdlType,
-    content: String
-): String? {
-    fun mangle(name: String) = mangle(classPath, moduleName, "_$name")
-    return when {
-        type.isArray() -> type.arrayType { type ->
-            when {
-                type.isPrimitive() -> "${mangle("${type.toCType().lowercase()}_array_free_forced")}($content)"
-                type.isEnum() -> "${mangle("kint_array_free_forced")}($content)"
-                else -> "${mangle("karray_free_forced")}($content, (void(*)(void*)) ${forceFreeFuncFor(classPath, moduleName, type, "")!!.dropLast(2)})"
-            }
-        }
-        type.isCallback() -> "${mangle("abstract_callback_free_forced")}((_AbstractCallback*) $content)"
-        type.isDictionary() || type.isString() -> "${mangle("${type.toCType(ptr = false).lowercase()}_free_forced")}($content)"
-        else -> null
-    }
-}
-
-internal fun printCriticalNativeFunctionContent(
-    builder: StringBuilder,
-    language: Language,
-    classPath: String,
-    moduleName: String,
-    name: String,
-    function: ResolvedIdlOperation
-) = builder.apply {
-    // == Type and name ==
-    append(function.type.toCType(enumAsInt = true))
-    append(" ")
-    append(name)
-
-    // == Function args ==
-    function.args.flatMap {
-        val name = it.cname
-        when {
-            it.type.isString() -> listOf("const char* _arr_$name", "KInt _length_$name, KLong _size_$name")
-            it.type.isArray() -> {
-                val type = (it.type as ResolvedIdlType.Default).arrayType { type -> type.toCType(enumAsInt = true) }
-                listOf("$type* _arr_$name", "KInt _length_$name")
-            }
-            else -> listOf("${it.type.toCType(enumAsInt = true)} _arg_$name")
-        }
-    }.joinTo(this, prefix = "(", postfix = ") {")
-
-    // == Casts ==
-    function.args.forEach {
-        val name = it.cname
-        when {
-            it.type.isString() -> append(when (language) {
-                Language.CPP -> """
-                    
-                    const auto _arg_$name = static_cast<KString*>(alloca(sizeof(KString)));
-                    _arg_$name->data = _arr_$name;
-                    _arg_$name->size = _size_$name;
-                    _arg_$name->length = _length_$name;
-                    _arg_$name->__flags = 0;
-                """.replaceIndent("\t")
-                else -> """
-                    
-                    KString* _arg_$name = (KString*) alloca(sizeof(KString));
-                    *_arg_$name = (KString) { _arr_$name, _size_$name, _length_$name, 0 };
-                """.replaceIndent("\t")
-            })
-            it.type.isArray() -> {
-                val type = it.type.toCType(enumAsInt = true, ptr = false)
-                append(when (language) {
-                    Language.CPP -> """
-                        
-                        const auto _arg_$name = static_cast<$type*>(alloca(sizeof($type)));
-                        _arg_$name->elements = _arr_$name;
-                        _arg_$name->size = sizeof(_arr_$name[0]) * _length_$name;
-                        _arg_$name->length = _length_$name;
-                        _arg_$name->__flags = 0;
-                    """.replaceIndent("\t")
-                    else -> """
-                        
-                        $type* _arg_$name = ($type*) alloca(sizeof($type));
-                        *_arg_$name = ($type) { _arr_$name, sizeof(_arr_$name[0]) * _length_$name, _length_$name, 0 };
-                    """.replaceIndent("\t")
-                })
-            }
-        }
-    }
-
-    // == Call args ==
-    val args = function.args.joinToString {
-        val name = it.cname
-        val type = it.type
-        when {
-            type.isNullable && (type.isString() || type.isArray()) ->
-                "_length_$name == -1 ? 0 : _arg_$name"
-            type.isEnum() && language == Language.CPP ->
-                "static_cast<${type.declaration.cname}>(_arg_$name)"
-            else -> "_arg_$name"
-        }
-    }
-
-    // == Function call ==
-    append("\n\t")
-    if(function.type !is ResolvedIdlType.Void)
-        append("return ")
-
-    val call = "${function.cnameMangled(classPath, moduleName)}($args)"
-    append(call)
-    append(";\n}\n")
 }

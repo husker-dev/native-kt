@@ -1,76 +1,39 @@
 package com.huskerdev.nativekt.printers.rust
 
+import com.huskerdev.nativekt.NativeModuleContext
+import com.huskerdev.nativekt.plugin.BuildSystem
 import com.huskerdev.nativekt.utils.*
-import com.huskerdev.webidl.resolver.*
+import com.huskerdev.webidl.resolver.ResolvedIdlType
 import java.io.File
 
 class RustPrinter(
-    val idl: IdlResolver,
+    val context: NativeModuleContext,
     target: File,
-    val classPath: String,
-    val moduleName: String
 ) {
     init {
         target.parentFile.mkdirs()
-
-        val builder = StringBuilder()
-        fun mangle(name: String) = mangle(classPath, moduleName, "_$name")
-
-        builder.printApi()
-        builder.printHeaderDef()
-        builder.printStringDef(::mangle)
-        builder.printArraysDef(::mangle)
-        builder.printStructs()
-        builder.printCallbacks()
-        builder.printEnums()
-        builder.printInterfaces()
-
-        builder.append("\n")
-        printLabel(builder, "Functions")
-        idl.globalOperators().forEach {
-            builder.printFunction(it)
-        }
-
-        target.writeText(builder.toString().replace("\n", System.lineSeparator()))
+        target.writeText(buildString {
+            if((context.buildSystem as BuildSystem.Cargo).printApi)
+                printApi()
+            printHeaderDef(context)
+            printStringDef(context)
+            printArraysDef(context)
+            printCriticalFuncDef(context)
+            printStructs()
+            printCallbacks()
+            printEnums()
+            printFunctions()
+        }.replace("\n", System.lineSeparator()))
     }
 
-    private val ResolvedIdlDeclaration.rustName: String
-        get() = when (this) {
-            is ResolvedIdlEnum -> rustName
-            is ResolvedIdlDictionary -> rustName
-            is ResolvedIdlCallbackFunction -> rustName
-            is ResolvedIdlInterface -> rustName
-            else -> throw UnsupportedOperationException("${(this as BuiltinIdlDeclaration).kind}")
-        }
-
-    private val ResolvedIdlOperation.rustName: String
-        get() = when {
-            isInterfaceOperationConstructor() -> "new"
-            isInterfaceOperationFn() -> interfaceFunctionName().snakeCase()
-            else -> name.snakeCase()
-        }
-
-    private val ResolvedIdlDictionary.rustName: String
-        get() = name.upperCamelCase()
-
-    private val ResolvedIdlField.rustName: String
-        get() = name.snakeCase()
-
-    private val ResolvedIdlEnum.rustName: String
-        get() = name.upperCamelCase()
-
-    private val ResolvedIdlCallbackFunction.rustName: String
-        get() = name.upperCamelCase()
-
-    private val ResolvedIdlInterface.rustName: String
-        get() = "crate::${name.upperCamelCase()}"
-
     private fun StringBuilder.printApi() {
-        printLabel(this, "API")
-        append("/*\n=============================================================== *\\")
+        printLabel("API")
 
-        idl.interfaces.values.forEach { inter ->
-            val name = inter.rustName
+        if(context.interfaces.isNotEmpty())
+            append("/*\n======================= Interfaces ========================= *\\")
+
+        context.interfaces.forEach { inter ->
+            val name = inter.rustName.replace("crate::", "")
 
             append("\n\npub struct $name")
             if(inter.fields.isEmpty())
@@ -80,8 +43,10 @@ class RustPrinter(
                 append("\n\nimpl $name {")
 
                 inter.toOperations().forEach { operation ->
-                    val args = operation.args
-                        .map { it.type.toRustType() }
+                    val args = operation.args.map {
+                        val ref = if(it.type.isReleasable()) "&" else ""
+                        "${it.rustName}: $ref${it.type.toRustType()}"
+                    }
                     val type = if(!operation.type.isVoid())
                         " -> ${operation.type.toRustType()}"
                     else ""
@@ -102,14 +67,16 @@ class RustPrinter(
                 }
                 append("\n}")
             }
-
-            append("\n\n=============================================================== *\\")
         }
 
-        idl.globalOperators().forEach { operation ->
+        if(context.globalOperations.isNotEmpty())
+            append("\n\n======================= Functions =========================== *\\")
+
+        context.globalOperations.forEach { operation ->
             append("\n\npub fn ${operation.rustName}(")
             operation.args.joinTo(this, ",") {
-                "\n\t${it.rustName}: ${it.type.toRustType()}"
+                val ref = if(it.type.isReleasable()) "&" else ""
+                "\n\t${it.rustName}: $ref${it.type.toRustType()}"
             }
             if(operation.args.isNotEmpty())
                 append("\n")
@@ -122,205 +89,150 @@ class RustPrinter(
         append("\n\n=============================================================== */\n\n")
     }
 
-    private fun StringBuilder.printFunction(operation: ResolvedIdlOperation) {
-        append("\n#[no_mangle]")
-
-        // Header
-        append("\nextern \"C\" fn ${operation.cnameMangled(classPath, moduleName)}(")
-        operation.args.joinTo(this, ", ") {
-            "${it.rustName}: ${it.type.toNativeRustType()}"
-        }
-        append(") ")
-        if(!operation.type.isVoid())
-            append("-> ${operation.type.toNativeRustType()} ")
-        append("{\n\t")
-
-        // Call
-        val call = buildString {
-            append("crate::${operation.rustName}")
-            operation.args.joinTo(this, prefix = "(", postfix = ")") {
-                toRustType(it.type, it.rustName)
-            }
-        }
-        append(toNativeType(operation.type, call))
-        append("\n}\n")
-    }
-
     private fun StringBuilder.printStructs() {
-        if(idl.dictionaries.isEmpty())
+        if(!context.hasDictionaries)
             return
 
-        printLabel(this, "Structs")
-
-        append("\nextern \"C\" {")
-        idl.dictionaries.values.forEach { dictionary ->
+        printLabel("Structs")
+        context.usedDictionaries.forEach { dictionary ->
             val name = dictionary.rustName
-            val args = dictionary.allFields().joinToString {
-                "${it.rustName}: ${it.type.toNativeRustType()}"
-            }
+            val fields = context.allFields[dictionary]!!
+
+            val funcNew = dictionary.subCFunc(context, "new")
+            val funcFree = dictionary.subCFunc(context, "free")
+            val funcNewJs = context.jsMangle["${name.camelCase().lowercase()}_new"]
+            val funcFreeJs = context.jsMangle["${name.camelCase().lowercase()}_free"]
+
+            // Struct
             append("""
                 
-                fn ${dictionary.subCFunc(classPath, moduleName, "new")}($args) -> *const _$name;
-                fn ${dictionary.subCFunc(classPath, moduleName, "clone")}(self_: *const _$name) -> *const _$name;
-                fn ${dictionary.subCFunc(classPath, moduleName, "free")}(self_: *const _$name);
-            """.replaceIndent("\t"))
-        }
-        append("\n}\n")
-
-        idl.dictionaries.values.forEach { dictionary ->
-            val name = dictionary.rustName
-            val fields = dictionary.allFields()
-
-            val funcCNew = dictionary.subCFunc(classPath, moduleName, "new")
-            val funcCClone = dictionary.subCFunc(classPath, moduleName, "clone")
-            val funcCFree = dictionary.subCFunc(classPath, moduleName, "free")
-
-            // Native struct
-            append("""
-                
-                #[repr(C)]
-                #[derive(Debug)]
-                struct _$name {
-            """.trimIndent())
-            fields.forEach {
-                append("\n\t${it.rustName}: ${it.type.toNativeRustType()},")
-            }
-            append("\n\t__flags: i8\n}\n\n")
-
-            // Wrapper struct
-            append("""
+                #[derive(Clone)]
                 pub struct $name {
-                    ptr: *const _$name,
             """.trimIndent())
-            fields.forEach {
-                append("\n\tpub ${it.rustName}: ${it.type.toRustType()},")
-            }
-            append("\n}\n\n")
-
-            // Impl
-            append("""
-                impl $name {
-            """.trimIndent())
-
-            // new
-            append("\n\tpub fn new(")
             fields.joinTo(this) {
-                "${it.rustName}: ${it.type.toRustType()}"
+                "\n\tpub ${it.rustName}: ${it.type.toRustType()}"
             }
-            append(") -> Self {")
-            append("\n\t\tSelf::wrap(unsafe { $funcCNew(")
-            fields.joinTo(this) {
-                toNativeType(it.type, it.rustName)
-            }
-            append(") })\n\t}\n")
+            append("\n}\n")
 
-            // wraps
-            append("""
-                fn wrap(ptr: *const _$name) -> Self {
-                    let r = unsafe { &*ptr };
-                    Self { 
-            """.replaceIndent("\t"))
-            buildList {
-                add("ptr" to "ptr")
-                fields.mapTo(this) {
-                    toRustType(it.type, "r.${it.rustName}") to it.rustName
+            append("export_fn! {")
+
+            if(dictionary in context.toNativeDeclarations) {
+                // new
+                append("\n\tfn $funcNew(")
+                fields.joinTo(this) {
+                    "${it.rustName}: ${it.type.toNativeRustType()}"
                 }
-            }.joinTo(this) {
-                if(it.first != it.second)
-                    "${it.second}: ${it.first}"
-                else it.first
-            }
-            append(" }\n\t}\n}\n")
 
-            append("""
-                
-                impl_wrapper!($name, _$name);
-                impl_drop_clone!($name, $funcCFree, $funcCClone);
-                impl_ptr_holder!($name, _$name, $funcCFree, $funcCClone);
-                
-            """.trimIndent())
+                append(") -> *mut $name as $funcNewJs {")
+                append("\n\t\tinto_raw($name { ")
+
+                fields.joinTo(this) {
+                    val key = it.rustName
+                    val value = toRustType(it.type, it.rustName)
+                    if (key != value)
+                        "$key: $value"
+                    else value
+                }
+                append(" })\n\t}")
+            }
+            if(dictionary in context.toKotlinDeclarations) {
+                // free
+                append("\n\tfn $funcFree(of: *mut $name) -> () as $funcFreeJs { from_raw(of); }")
+
+                // field getters
+                fields.joinTo(this, separator = "") {
+                    val funcName = dictionary.subFieldCFunc(context, it)
+                    val funcNameJs = context.jsMangle["${name.camelCase().lowercase()}__${it.name.camelCase().lowercase()}"]
+
+                    val type = it.type.toNativeRustType(ptrType = "const")
+                    val call = "(*of).${it.rustName}"
+                    val castedCall = when {
+                        it.type.isEnum() -> "$call.clone()"
+                        it.type.isReleasable() -> "&$call"
+                        else -> call
+                    }
+                    "\n\tfn $funcName(of: *mut $name) -> $type as $funcNameJs { unsafe { $castedCall } }"
+                }
+            }
+            append("\n}\n")
         }
     }
 
     private fun StringBuilder.printCallbacks() {
-        if(idl.callbacks.isEmpty())
+        if(!context.hasCallbacks)
             return
 
-        printLabel(this, "Callbacks")
+        printLabel("Callbacks")
         append($$"""
             
-            macro_rules! impl_callback_base {
-                ($name:ident, $inner:ident) => {
-                    impl $name {
-                        fn wrap(ptr: *const $inner) -> Self {
-                            $name { ptr }
-                        }
-                        pub fn equals(&self, other: Self) -> bool {
-                            unsafe { ((&*self.ptr).equals)(self.ptr, other.ptr) }
-                        }
-                        pub fn hash_code(&self) -> i32 {
-                            unsafe { ((&*self.ptr).hash_code)(self.ptr) }
-                        }
+            macro_rules! impl_callback {
+                ($name:ident, $invoke_type:ty, $invoke_body:item, 
+            	$funcNew:ident, $funcNewJs:ident, 
+            	$funcId:ident, $funcIdJs:ident,
+            	$funcFree:ident, $funcFreeJs:ident) => {
+                    pub struct $name {
+            			id: isize,
+            			invoke: $invoke_type,
+            			equals: external_fn_type!(bool; isize, isize),
+            			hash_code: i32,
+            			free: external_fn_type!((); isize)
+            		}
+            		impl $name {
+            			$invoke_body
+            		}
+            		impl Drop for $name {
+                        fn drop(&mut self) { external_fn_call!((); self.free; self.id) }
                     }
-                    
-                    impl_wrapper!($name, $inner);
-                    
-                    impl Drop for $name {
-                        fn drop(&mut self) {
-                            unsafe { ((&*self.ptr).free)(self.ptr) }
-                        }
+                    impl Hash for $name {
+                        fn hash<H: Hasher>(&self, state: &mut H) { self.hash_code.hash(state); }
                     }
-                    
-                    impl Clone for $name {
-                        fn clone(&self) -> Self {
-                            unsafe { $name::wrap(((&*self.ptr).clone)(self.ptr)) }
-                        }
+                    impl PartialEq for $name {
+                        fn eq(&self, other: &Self) -> bool { external_fn_call!(bool; self.equals; self.id, other.id) }
                     }
+                    impl Eq for $name {}
+            		
+            		export_fn! {
+            			fn $funcNew(
+            				id: isize,
+            				hash_code: i32,
+            				invoke: $invoke_type,
+            				equals: external_fn_type!(bool; isize, isize),
+            				free: external_fn_type!((); isize)
+            			) -> *mut Arc<$name> as $funcNewJs {
+            				into_raw(Arc::new($name { id, invoke, equals, hash_code, free }))
+            			}
+            			fn $funcId(_self: *mut Arc<$name>) -> isize as $funcIdJs {
+            				unsafe { (&*_self).id }
+            			}
+            			fn $funcFree(_self: *mut Arc<$name>) -> () as $funcFreeJs {
+            				from_raw(_self);
+            			}
+            		}
                 };
             }
             
         """.trimIndent())
 
-        idl.callbacks.values.forEach { callback ->
+        context.usedCallbacks.forEach { callback ->
             val name = callback.rustName
+            val lower = callback.name.camelCase().lowercase()
+            val returnType = callback.type.toNativeRustType()
 
-            // Struct
             append("""
-                
-                #[repr(C)]
-                #[derive(Debug)]
-                struct _$name {
-                    __flags: i8,
-                
+                impl_callback!(
+                    $name,
             """.trimIndent())
-            append("\tinvoke: extern \"C\" fn")
+
+            // Invoke type
             buildList {
-                add("*const Self")
+                add("isize")
                 callback.args.mapTo(this) {
                     it.type.toNativeRustType()
                 }
-            }.joinTo(this, prefix = "(", postfix = ")")
-            if(!callback.type.isVoid())
-                append(" -> ${callback.type.toNativeRustType()}")
-            append(",")
-            append("""
-                
-                    clone: extern "C" fn(*const Self) -> *const Self,
-                    equals: extern "C" fn(*const Self, *const Self) -> bool,
-                    hash_code: extern "C" fn(*const Self) -> i32,
-                    free: extern "C" fn(*const Self),
-                }
-                
-                pub struct $name {
-                    ptr: *const _$name
-                }
-                
-                impl $name {
-                
-            """.trimIndent())
+            }.joinTo(this, prefix = "\n\texternal_fn_type!($returnType; ", postfix = "),")
 
-            // invoke
-            append("\tpub fn invoke")
+            // Invoke function head
+            append("\n\tpub fn invoke")
             buildList {
                 add("&self")
                 callback.args.mapTo(this) {
@@ -330,40 +242,41 @@ class RustPrinter(
             if(!callback.type.isVoid())
                 append(" -> ${callback.type.toRustType()}")
 
-            val call = buildString {
-                append("((&*self.ptr).invoke)")
-                buildList {
-                    add("self.ptr")
+            // Invoke function body
+            val call = buildList {
+                add(if(callback.type.isEnum()) "enum $returnType" else returnType)
+                add("self.invoke")
+                add(buildList {
+                    add("self.id")
                     callback.args.mapTo(this) {
                         toNativeType(it.type, it.rustName)
                     }
-                }.joinTo(this, prefix = "(", postfix = ")")
-            }
-            append(" {\n\t\tunsafe { ${toRustType(callback.type, call)} }\n\t}")
+                }.joinToString())
+            }.joinToString("; ", prefix = "external_fn_call!(", postfix = ")")
+            append(" { ${toRustType(callback.type, call)} },")
 
-            // Other
-            append("""
-                
-                }
-                
-                impl_callback_base!($name, _$name);
-                
-            """.trimIndent())
+            // func new/free
+            append("\n\t${context.mangle("${lower}_new")}, ${context.jsMangle["${lower}_new"]},")
+            append("\n\t${context.mangle("${lower}_id")}, ${context.jsMangle["${lower}_id"]},")
+            append("\n\t${context.mangle("${lower}_free")}, ${context.jsMangle["${lower}_free"]}")
+
+            append("\n);\n")
         }
     }
 
     private fun StringBuilder.printEnums() {
-        if(idl.enums.isEmpty())
+        if(!context.hasEnums)
             return
+        printLabel("Enums")
 
-        printLabel(this, "Enums")
-
-        idl.enums.values.forEach { enum ->
+        context.usedEnums.forEach { enum ->
             val name = enum.rustName
 
             append("""
                 
-                #[derive(PartialEq, Eq)]
+                #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+                #[repr(C)]
+                #[derive(PartialEq, Eq, Clone)]
                 pub enum $name {
             """.trimIndent())
 
@@ -386,8 +299,8 @@ class RustPrinter(
                         _ => panic!()
                     }
                 }
-                pub fn to_int(self) -> i32 {
-                    self as i32
+                pub fn to_int(&self) -> i32 {
+                    self.clone() as i32
                 }
             }
             
@@ -395,135 +308,81 @@ class RustPrinter(
         }
     }
 
-    private fun StringBuilder.printInterfaces() {
-        if(idl.interfaces.isEmpty())
+    private fun StringBuilder.printFunctions() {
+        if(context.allOperations.isEmpty())
             return
 
-        printLabel(this, "Interfaces")
+        printLabel("Functions")
+        context.allOperations.forEach { operation ->
+            val critical = operation.isCritical()
+            val cname = operation.cnameMangled(context)
+            val jsName = context.jsMangle[operation.cname]
+            val rustName = operation.rustName
+            val type = if(operation.isInterfaceOperationAddress())
+                " -> usize"
+            else " -> ${operation.type.toNativeRustType()}"
 
-        append("""
-
-            fn clone_arc<T>(arc: *const T) -> Arc<T> {
-                unsafe {
-                    let _self = Arc::from_raw(arc);
-                    let result = _self.clone();
-                    std::mem::forget(_self);
-                    result
+            val args = operation.args.joinToString {
+                val name = it.rustName
+                when {
+                    critical && it.type.isString() -> "$name: *mut u8, _${name}_length: i32, _${name}_size: i32"
+                    critical && it.type.isArray() -> "$name: *mut ${it.type.arrayTypeOrNull()!!.toRustType()}, _${name}_length: i32"
+                    else -> "$name: ${it.type.toNativeRustType()}"
                 }
             }
-            
-        """.trimIndent())
 
-        idl.interfaces.values.forEach { inter ->
-            inter.toOperations().forEach { operation ->
-                val rustName = operation.rustName
-                val cArgs = operation.args.joinToString {
-                    "${it.rustName}: ${it.type.toNativeRustType()}"
+            val castedArgs = operation.args.map {
+                val name = it.rustName
+                (if (it.type.isReleasable()) "&" else "") + when {
+                    critical && it.type.isString() ->
+                        if(it.type.isNullable) "critical_string_opt($name, _${name}_length, _${name}_size)"
+                        else "critical_string($name, _${name}_size)"
+                    critical && it.type.isArray() ->
+                        if(it.type.isNullable) "critical_array_opt($name, _${name}_length)"
+                        else "critical_array($name, _${name}_length)"
+                    else -> toRustType(it.type, name)
                 }
-                val rustArgs = operation.args.map {
-                    toRustType(it.type, it.rustName)
-                }
-                val type = if(!operation.type.isVoid())
-                    " -> ${operation.type.toNativeRustType()}"
-                else ""
+            }
 
-                val body = when {
-                    operation.isInterfaceOperationFree() ->
-                        "unsafe { let _ = Arc::from_raw(${operation.args[0].rustName}); }"
+            val call = if (operation.isInterfaceOperation()) {
+                val inter = operation.getInterface(context)!!
+                val interName = inter.rustName
+                val self = operation.args.getOrNull(0)?.rustName
+                when {
                     operation.isInterfaceOperationConstructor() ->
-                        "Arc::into_raw(Arc::new(${inter.rustName}::$rustName(${rustArgs.joinToString()})))"
+                        "into_raw(Arc::new($interName::$rustName(${castedArgs.joinToString()})))"
                     operation.isInterfaceOperationFn() ->
-                        toNativeType(operation.type, "clone_arc(${operation.args[0].rustName}).$rustName(${rustArgs.drop(1).joinToString()})")
+                        toNativeType(operation.type, "unsafe { &*$self }.$rustName(${castedArgs.drop(1).joinToString()})")
+                    operation.isInterfaceOperationFree() ->
+                        "from_raw($self);"
+                    operation.isInterfaceOperationClone() ->
+                        "into_raw(unsafe { &*$self }.clone())"
+                    operation.isInterfaceOperationAddress() ->
+                        "Arc::as_ptr(unsafe { &*$self }) as usize"
                     else -> throw UnsupportedOperationException()
                 }
-                append("\n")
-                append("""
-                    #[no_mangle] extern "C" fn ${operation.cnameMangled(classPath, moduleName)}(${cArgs})$type {
-                        $body
-                    }
-                    
-                """.trimIndent())
-            }
+            } else toNativeType(operation.type, "crate::$rustName(${castedArgs.joinToString()})")
+
+            // Print
+            append("""
+                
+                export_fn!{ fn $cname($args)$type as $jsName {
+                    $call
+                }}
+            """.trimIndent())
         }
     }
 
-    private fun toNativeType(type: ResolvedIdlType, content: String): String {
-        val nullable = if(type.isNullable) "_nullable" else ""
-        return when {
-            type.isVoid() || type.isPrimitive() -> content
-            type.isEnum() -> "${type.declaration.rustName}::to_int($content)"
-            type.isArray() && type.arrayTypeOrNull()!!.isNullable -> "KArrayOpt::unwrap$nullable($content)"
-            type.isInterface() -> "Arc::into_raw($content)"
-            type.isPrimitive() -> content
-            type is ResolvedIdlType.Default -> "${type.toCType(ptr = false)}::unwrap$nullable($content)"
-            else -> throw UnsupportedOperationException()
-        }
+    private fun toNativeType(type: ResolvedIdlType, content: String): String = when {
+        type.isVoid() || type.isPrimitive() || type.isEnum() -> content
+        type.isPrimitive() -> content
+        else -> if (type.isNullable) "obj_opt($content, into_raw)"
+                else "into_raw($content)"
     }
 
-    private fun toRustType(type: ResolvedIdlType, content: String): String {
-        val nullable = if(type.isNullable) "_nullable" else ""
-        return when {
-            type.isVoid() || type.isPrimitive() -> content
-            type.isEnum() -> "${type.declaration.rustName}::from_int($content)"
-            type.isArray() && type.arrayTypeOrNull()!!.isNullable -> "KArrayOpt::wrap$nullable($content)"
-            type.isInterface() -> "clone_arc($content)"
-            type is ResolvedIdlType.Default -> "${type.toCType(ptr = false)}::wrap$nullable($content)"
-            else -> throw UnsupportedOperationException()
-        }
+    private fun toRustType(type: ResolvedIdlType, content: String): String = when {
+        type.isVoid() || type.isPrimitive() || type.isEnum() -> content
+        else -> if (type.isNullable) "ptr_opt($content, from_raw)"
+                else "from_raw($content)"
     }
-
-    private fun ResolvedIdlType.toNativeRustType(): String = when {
-        isChar() -> "u16"
-        isBoolean() -> "bool"
-        isByte() -> "i8"
-        isUByte() -> "u8"
-        isShort() -> "i16"
-        isUShort() -> "u16"
-        isInt() -> "i32"
-        isUInt() -> "u32"
-        isLong() -> "i64"
-        isULong() -> "u64"
-        isFloat() -> "f32"
-        isDouble() -> "f64"
-        isArray() -> "*const _KArray"
-        isEnum() -> "i32"
-        isString() -> "*const _KString"
-        isCallback() || isDictionary() -> "*const _${declaration.rustName}"
-        isInterface() -> "*const ${declaration.rustName}"
-        else -> "UNKNOWN"
-    }
-
-    private fun ResolvedIdlType.toRustType(): String {
-        val result = when {
-            isChar() -> "u16"
-            isBoolean() -> "bool"
-            isByte() -> "i8"
-            isUByte() -> "u8"
-            isShort() -> "i16"
-            isUShort() -> "u16"
-            isInt() -> "i32"
-            isUInt() -> "u32"
-            isLong() -> "i64"
-            isULong() -> "u64"
-            isFloat() -> "f32"
-            isDouble() -> "f64"
-            isEnum() -> declaration.rustName
-            isString() -> "KString"
-            isCallback() || isDictionary() -> declaration.rustName
-            isInterface() -> "Arc<${declaration.rustName}>"
-            isArray() -> arrayType { type ->
-                when {
-                    type.isPrimitive() -> "${type.toCType(ptr = false)}Array"
-                    type.isEnum() -> "KIntArray"
-                    else -> if(type.isNullable) "KArrayOpt<${type.toCType(ptr = false)}>"
-                    else "KArray<${type.toRustType()}>"
-                }
-            }
-            else -> "UNKNOWN"
-        }
-        return if(isNullable)
-            "Option<$result>"
-        else result
-    }
-
 }

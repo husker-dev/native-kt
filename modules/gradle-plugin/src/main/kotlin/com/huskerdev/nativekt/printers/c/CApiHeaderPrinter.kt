@@ -1,319 +1,32 @@
 package com.huskerdev.nativekt.printers.c
 
+import com.huskerdev.nativekt.NativeModuleContext
 import com.huskerdev.nativekt.plugin.Language
 import com.huskerdev.nativekt.utils.*
-import com.huskerdev.webidl.resolver.*
+import com.huskerdev.webidl.resolver.ResolvedIdlType
 import java.io.File
-import kotlin.math.max
 
 class CApiHeaderPrinter(
-    val idl: IdlResolver,
+    val context: NativeModuleContext,
     target: File,
-    val language: Language?,
-    val classPath: String,
-    val moduleName: String,
+    val language: Language? = context.language,
     val isInternal: Boolean = false
 ) {
     init {
         target.parentFile.mkdirs()
-
-        val builder = StringBuilder()
-        printHeader(builder)
-
-        printLabel(builder, "Types")
-        printStdLib(builder)
-
-        if(idl.callbacks.isNotEmpty() || idl.dictionaries.isNotEmpty() || idl.interfaces.isNotEmpty()) {
-            builder.append("\n")
-            printLabel(builder, "Type definitions")
-            printTypeDefs(builder)
-        }
-
-        if(idl.enums.isNotEmpty()) {
-            builder.append("\n")
-            printLabel(builder, "Enums")
-            idl.enums.values.forEach { printEnum(builder, it) }
-        }
-
-        if(idl.interfaces.isNotEmpty()) {
-            builder.append("\n")
-            printLabel(builder, "Interfaces")
-            idl.interfaces.values.forEach { printInterface(builder, it) }
-        }
-
-        if(idl.dictionaries.isNotEmpty()) {
-            builder.append("\n")
-            printLabel(builder, "Structs")
-            idl.dictionaries.values.forEach { printStruct(builder, it) }
-        }
-
-        if(idl.allOperators().isNotEmpty()) {
-            builder.append("\n")
-            printLabel(builder, "Functions")
-            idl.allOperators().forEach {
-                printFunction(builder, it)
-
-                // Critical wrappers
-                if (isInternal && it.isCriticalCapable() && (it.hasString() || it.hasArray()))
-                    printCriticalFunction(builder, it)
-            }
-        }
-
-        if(idl.callbacks.isNotEmpty()) {
-            builder.append("\n")
-            printLabel(builder, "Callbacks")
-            printCallbacks(builder, idl.callbacks.values)
-        }
-
-        target.writeText(builder.toString().replace("\n", System.lineSeparator()))
+        target.writeText(buildString {
+            printHeader()
+            printTypeDefs()
+            printStdLib()
+            printEnums()
+            printDictionaries()
+            printCallbacks()
+            printFunctions()
+        }.replace("\n", System.lineSeparator()))
     }
 
-    private fun mangle(name: String) =
-        mangle(classPath, moduleName, "_$name")
-
-    private fun printTypeDefs(builder: StringBuilder) = builder.apply {
-        buildList {
-            idl.dictionaries.values.mapTo(this) { it.cname }
-            idl.callbacks.values.mapTo(this) { it.cname }
-            if(isInternal)
-                add("_AbstractCallback")
-            if(language == Language.CPP)
-                idl.interfaces.values.mapTo(this) { "I${it.cname}" }
-        }.joinTo(builder, separator = "") {
-            when(language) {
-                Language.CPP -> "\nstruct $it;"
-                else -> "\ntypedef struct $it $it;"
-            }
-        }
-        builder.append("\n")
-    }
-
-    private fun printInterface(builder: StringBuilder, inter: ResolvedIdlInterface) = builder.apply {
-        when (language) {
-            Language.CPP -> {
-                val name = "I${inter.cname}"
-
-                append("\nstruct $name {")
-                inter.toOperations().forEach { operation ->
-                    val args = operation.args.map {
-                        "${it.type.toLangType()} ${it.cname}"
-                    }
-                    val type = operation.type.toLangType()
-
-                    append("\n\t")
-                    append(when {
-                        operation.isInterfaceOperationConstructor() ->
-                            "static $name* _Nonnull _create(${args.joinToString()});"
-                        operation.isInterfaceOperationFn() -> {
-                            val funcName = operation.interfaceFunctionName().snakeCase()
-                            val args = args.drop(1).joinToString()
-                            "virtual $type $funcName($args) = 0;"
-                        }
-                        operation.isInterfaceOperationFree() ->
-                            "virtual ~$name() = default;"
-                        else -> throw UnsupportedOperationException()
-                    })
-                }
-                append("\n};\n")
-            }
-            Language.C -> Unit
-            else -> Unit
-        }
-    }
-
-    private fun printFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
-        val name = function.cname
-        val mangledName = function.cnameMangled(classPath, moduleName)
-        val type = function.type.toLangType()
-        val args = function.args.joinToString {
-            "${it.type.toLangType()} ${it.cname}"
-        }
-
-        if(language == Language.C || language == Language.CPP) {
-            if(language == Language.C || !function.isInterfaceOperation())
-                append("\n$type $name($args);")
-        }
-        if (isInternal)
-            append("\nEXTERN_C DLL_EXPORT $type $mangledName($args);")
-    }
-
-    private fun printCriticalFunction(builder: StringBuilder, function: ResolvedIdlOperation) = builder.apply {
-        val name = function.cnameMangled(classPath, moduleName)
-        val type = function.type.toLangType()
-        val args = function.args.flatMap {
-            val name = it.cname
-            val type = it.type
-            when {
-                type.isString() ->
-                    listOf("const char* _Nonnull _arr_$name", "KInt _length_$name, KLong _size_$name")
-                type.isArray() -> {
-                    val type = type.arrayTypeOrNull()!!.toCType(enumAsInt = true)
-                    listOf("$type* _Nonnull _arr_$name", "KInt _length_$name")
-                }
-                else -> listOf("${type.toCType(enumAsInt = true)} _arg_$name")
-            }
-        }.joinToString()
-
-        append("\nEXTERN_C DLL_EXPORT $type c_$name($args);")
-    }
-
-    private fun printEnum(builder: StringBuilder, enum: ResolvedIdlEnum) = builder.apply {
-        append("\n")
-        when (language) {
-            Language.CPP -> {
-                append("enum ${enum.cname} {\n\t")
-                enum.elements.joinTo(builder, separator = ",\n\t")
-                append("\n};\n")
-            }
-            else -> {
-                append("typedef enum {\n\t")
-                enum.elements.joinTo(builder, separator = ",\n\t") {
-                    "${enum.cname}_${it}"
-                }
-                append("\n} ${enum.cname};\n")
-            }
-        }
-    }
-
-    private fun printStruct(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
-        val name = dictionary.cname
-        val fields = dictionary.allFields()
-        val args = fields.map { field ->
-            "${field.type.toLangType()} ${field.cname}"
-        }
-
-        when (language) {
-            Language.CPP -> {
-
-                append("\nstruct $name {")
-                if(dictionary.implements != null)
-                    append(" // : ").append(dictionary.implements!!.cname)
-                append("\n\t")
-
-                // Fields
-                buildList {
-                    args.mapTo(this) { "$it;" }
-                    add("char __flags;")
-                }.joinTo(builder, separator = "\n\t")
-
-                // Methods
-                append("\n\n")
-                append("""
-                        $name(${args.joinToString()});
-                        $name* _Nullable clone() const;
-                        void destroy();
-                    };
-                    
-                """.trimIndent())
-            }
-            else -> {
-                append("\nstruct $name {")
-                if(dictionary.implements != null)
-                    append(" // : ").append(dictionary.implements!!.cname)
-                append("\n\t")
-
-                // Fields
-                buildList {
-                    args.mapTo(this) { "$it;" }
-                    add("char __flags;")
-                }.joinTo(builder, separator = "\n\t")
-                append("\n};\n")
-
-                // Methods
-                if(language == Language.C) append("""
-                    
-                    $name* _Nonnull ${name}_new(${args.joinToString()});
-                    $name* _Nullable ${name}_clone(const $name* _Nullable self);
-                    void ${name}_free($name* _Nullable self);
-                    
-                """.trimIndent())
-            }
-        }
-
-        if(isInternal) {
-            val funcNew = dictionary.subCFunc(classPath, moduleName, "new")
-            val funcClone = dictionary.subCFunc(classPath, moduleName, "clone")
-            val funcFree = dictionary.subCFunc(classPath, moduleName, "free")
-            val funcFreeForced = dictionary.subCFunc(classPath, moduleName, "free_forced")
-            append("""
-                
-                EXTERN_C DLL_EXPORT $name* _Nonnull $funcNew(${args.joinToString()});
-                EXTERN_C DLL_EXPORT $name* _Nullable $funcClone(const $name* _Nullable self);
-                EXTERN_C DLL_EXPORT void $funcFree($name* _Nullable self);
-                EXTERN_C DLL_EXPORT void $funcFreeForced($name* _Nullable self);
-                
-            """.trimIndent())
-        }
-    }
-
-    private fun printCallbacks(builder: StringBuilder, callbacks: Collection<ResolvedIdlCallbackFunction>) = builder.apply {
-        val column1 = "Name"
-        val column2 = "Type"
-        val column3 = "Args"
-
-        val names = arrayListOf<String>()
-        val types = arrayListOf<String>()
-        val args = arrayListOf<String>()
-
-        callbacks.forEach { callback ->
-            names += callback.cname + ","
-            types += callback.type.toLangType() + if(callback.args.isNotEmpty()) "," else ""
-            args += callback.args.joinToString { "${it.type.toLangType()} ${it.cname}" }
-        }
-
-        val width1 = max(column1.length, names.maxOf { it.length })
-        val width2 = max(column2.length, types.maxOf { it.length })
-        val width3 = max(column3.length, args.maxOf { it.length })
-
-        // ┌───────┬─────────────────────┬────────────────┬─────────────────────────┐
-        // │       │ Name                │ Type           │ Args                    │
-        // └───────┴─────────────────────┴────────────────┴─────────────────────────┘
-        // table
-        append("// ┌───────┬")
-        append("─".repeat(width1)).append("┬")
-        append("─".repeat(width2)).append("┬")
-        append("─".repeat(width3+1)).append("┐\n")
-        append("// │  ...  │ ")
-        append(column1).append(" ".repeat(width1 - column1.length - 1)).append("│ ")
-        append(column2).append(" ".repeat(width2 - column2.length - 1)).append("│ ")
-        append(column3).append(" ".repeat(width3 - column3.length)).append("│\n")
-        append("// └───────┴")
-        append("─".repeat(width1)).append("┴")
-        append("─".repeat(width2)).append("┴")
-        append("─".repeat(width3+1)).append("┘\n")
-
-        for(i in callbacks.indices) {
-            append("KCallbackDef(")
-
-            // name
-            append(names[i])
-            append(" ".repeat(width1 - names[i].length))
-
-            // type
-            append(" ")
-            append(types[i])
-            append(" ".repeat(width2 - types[i].length ))
-
-            // args
-            if(args.isNotEmpty()) {
-                append(" ")
-                append(args[i])
-                append(" ".repeat(width3 - args[i].length))
-            }
-            append(")\n")
-        }
-        if(isInternal)
-            append("KCallbackDef(_AbstractCallback, void)\n")
-        append("#undef KCallbackDef\n")
-
-        if(isInternal) {
-            append("\nEXTERN_C DLL_EXPORT void ${mangle("abstract_callback_free")}(_AbstractCallback* _Nullable self);")
-            append("\nEXTERN_C DLL_EXPORT void ${mangle("abstract_callback_free_forced")}(_AbstractCallback* _Nullable self);")
-        }
-    }
-
-    private fun printHeader(builder: StringBuilder){
-        builder.append("""
+    private fun StringBuilder.printHeader(){
+        appendLine("""
             /*
              * This file was automatically generated by Gradle.
              *
@@ -323,20 +36,19 @@ class CApiHeaderPrinter(
              */
             
             #pragma once
-
             
+            #include <stdlib.h>
+            #include <stdint.h>
+            #include <stdbool.h>
         """.trimIndent())
 
-        builder.append(when (language) {
-            Language.CPP -> """
-                #include <initializer_list>
-                #include <cstdint>
-                #include <memory>
-            """.trimIndent()
-            else -> """
-                #include <stdlib.h>
-                #include <stdint.h>
-                #include <stdbool.h>
+        if(isInternal) appendLine("""
+            #include <string.h>
+            #include <stdarg.h>
+        """.trimIndent())
+
+        if(language == Language.C && (context.hasObjectArrays || context.hasPrimitiveArray)) {
+            appendLine("""
                 
                 #define ARG_LENGTH(...) ARG_LENGTH__(__VA_ARGS__)
                 #define ARG_LENGTH__(...) ARG_LENGTH_(,##__VA_ARGS__,                          \
@@ -349,247 +61,507 @@ class CApiHeaderPrinter(
                     _37, _36, _35, _34, _33, _32, _31, _30, _29, _28, _27, _26, _25, _24, _23, \
                     _22, _21, _20, _19, _18, _17, _16, _15, _14, _13, _12, _11, _10, _9, _8,   \
                     _7, _6, _5, _4, _3, _2, _1, Count, ...) Count
-            """.trimIndent()
-        })
-        builder.append("\n\n")
-
+            """.trimIndent())
+        }
         if(isInternal) {
-            builder.append(when (language) {
-                Language.CPP -> """
-                    #include <cstdlib>
-                    #include <cstring>
-                    
-                    #define EXTERN_C extern "C"
-                    
-                """.trimIndent()
-                else -> """
-                    #include <string.h>
-                    #include <stdarg.h>
-                    
-                    #define EXTERN_C
-                """.trimIndent()
-            })
-            builder.append("""
+            appendLine("""
                 
-                
-                #ifndef DLL_EXPORT
+                #ifndef LIB_EXPORT
                     #if defined(_WIN32) || defined(__CYGWIN__)
-                        #define DLL_EXPORT __declspec(dllexport)
+                        #define LIB_EXPORT __declspec(dllexport)
                     #else
-                        #define DLL_EXPORT __attribute__((visibility("default")))
+                        #define LIB_EXPORT __attribute__((visibility("default")))
                     #endif
                 #endif
                 
-                #define K_FLAG_RELEASABLE 1
-                #define K_FLAG_DATA_OWNER 2
-                
-                #define K_OBJECT_IS_RELEASABLE(flags) ((flags) & K_FLAG_RELEASABLE)
-                #define K_OBJECT_IS_DATA_OWNER(flags) ((flags) & K_FLAG_DATA_OWNER)
-                
-                EXTERN_C DLL_EXPORT void ${mangle("init")}();
-                
+                LIB_EXPORT void ${context.mangle("init")}(void);
+            """.trimIndent())
+            if(context.needsAllocFunctions) appendLine("""
+                LIB_EXPORT void* _Nullable ${context.mangle("alloc")}(size_t size);
+                LIB_EXPORT void ${context.mangle("dealloc")}(void* _Nullable ptr, size_t size);
             """.trimIndent())
         }
     }
 
-    private fun printStdLib(builder: StringBuilder) = builder.apply {
-        append("""
-            
-            typedef int32_t  KInt;
-            typedef uint32_t KUInt;
-            typedef int64_t  KLong;
-            typedef uint64_t KULong;
-            typedef float    KFloat;
-            typedef double   KDouble;
-            typedef int8_t   KByte;
-            typedef uint8_t  KUByte;
-            typedef int16_t  KShort;
-            typedef uint16_t KUShort;
-            typedef bool     KBoolean;
-            typedef uint16_t KChar;
-            
-            
-        """.trimIndent())
+    private fun StringBuilder.printTypeDefs() {
+        if(language != Language.C || (
+            !context.hasCallbacks &&
+            !context.hasDictionaries &&
+            !context.hasInterfaces
+        )) return
 
-        // String
+        printLabel("Type definitions")
 
-        when (language) {
-            Language.CPP -> append("""
-                struct KString {
-                    const char* _Nonnull data;
-                    size_t size;
-                    KInt length;
-                    char __flags;
-                    
-                    KString(const char* _Nonnull data, KInt length, size_t size, bool is_data_owner);
-                	KString* _Nonnull clone() const;
-                	void destroy();
-                };
+        context.usedInterfaces.forEach {
+            append("""
+                
+                #ifndef NATIVEKT_${it.cname}
+                #define NATIVEKT_${it.cname} void
+                #endif
                 
             """.trimIndent())
-            else -> {
+        }
+
+        buildList {
+            addAll(context.usedDictionaries)
+            addAll(context.usedCallbacks)
+        }.joinTo(this, separator = "") {
+            "\ntypedef struct ${it.cname} ${it.cname};"
+        }
+        append("\n")
+    }
+
+    private fun StringBuilder.printStdLib() {
+        if(!context.hasCallbacks &&
+            !context.hasInterfaces &&
+            !context.hasString &&
+            !context.hasPrimitiveArray &&
+            !context.hasObjectArrays
+        ) return
+
+        printLabel("Types")
+
+        if(language == Language.C && (context.hasCallbacks || context.hasInterfaces)) {
+            append("""
+                
+                #define RC(Name, Type, Lower)                                    \
+                typedef struct RC_##Name RC_##Name;                              \
+                struct RC_##Name {                                               \
+                    RC_##Name* _Nonnull (* _Nonnull clone)(RC_##Name* _Nonnull); \
+                    void (* _Nonnull free)(RC_##Name* _Nonnull);                 \
+                    void (* _Nonnull free_pointed)(Type* _Nonnull);              \
+                    Type* _Nonnull pointed;                                      \
+                    int32_t refs;                                                \
+                };                                                               \
+                RC_##Name* _Nullable rc_##Lower##_new(Type* _Nullable ptr);
+                
+                
+            """.trimIndent())
+
+            buildList {
+                context.usedCallbacks.mapTo(this) { Triple(it.cname, it.cname, it.name.lowercase()) }
+                context.usedInterfaces.mapTo(this) { Triple(it.cname, "NATIVEKT_${it.cname}", it.name.lowercase()) }
+            }.forEach {
+                append("RC(${it.first}, ${it.second}, ${it.third})\n")
+            }
+            append("#undef RC\n")
+        }
+
+        // String
+        if(context.hasString) {
+            if (language == Language.C) {
                 append("""
-                    typedef struct KString {
+                    
+                    typedef struct KString KString;
+                    struct KString {
+                        KString* _Nullable (* _Nullable clone)(const KString* _Nullable);
+                        void (* _Nullable free)(KString* _Nullable);
                         const char* _Nonnull data;
-                        size_t size;
-                        KInt length;
-                        char __flags;
-                    } KString;
+                        int32_t length;
+                        int32_t size;
+                    };
                     
-                """.trimIndent())
-                if(language == Language.C) append("""
+                    typedef struct _KStringNewArgs {
+                        const int32_t length;
+                        const int32_t size;
+                        bool make_copy;
+                    } _KStringNewArgs;
                     
-                    KString* _Nonnull KString_new(const char* _Nonnull data, KInt length, size_t size, bool is_data_owner);
-                    KString* _Nullable KString_clone(const KString* _Nullable self);
-                    void KString_free(KString* _Nullable self);
+                    #define kstring_new(data, ...) \
+                        _kstring_new(data, (_KStringNewArgs){ .length = -1, .size = -1, .make_copy = true, __VA_ARGS__ })
+                    
+                    KString* _Nonnull _kstring_new(const char* _Nonnull data, _KStringNewArgs args);
+                    KString* _Nonnull kstring_clone(const KString* _Nonnull self);
+                    void kstring_free(KString* _Nonnull self);
                     
                 """.trimIndent())
             }
+            if (isInternal) {
+                val typeName = if (language == Language.C) "KString" else "void"
+                if (context.hasStringToNativeCast) append("""
+                    
+                    LIB_EXPORT $typeName* _Nonnull ${context.mangle("string_new")}(const char* _Nonnull data, int32_t length, int32_t size, bool make_copy);
+                """.trimIndent())
+                if (context.hasStringToKotlinCast) append("""
+                    
+                    LIB_EXPORT const char* _Nonnull ${context.mangle("string_data")}(const $typeName* _Nonnull self);
+                    LIB_EXPORT size_t ${context.mangle("string_size")}(const $typeName* _Nonnull self);
+                    LIB_EXPORT int32_t ${context.mangle("string_length")}(const $typeName* _Nonnull self);
+                    LIB_EXPORT void ${context.mangle("string_free")}($typeName* _Nonnull self);
+                """.trimIndent())
+                append("\n")
+            }
         }
-        if(isInternal) {
-            append("""
-                
-                EXTERN_C DLL_EXPORT KString* _Nonnull ${mangle("kstring_new")}(const char* _Nonnull data, KInt length, size_t size, bool is_data_owner);
-                EXTERN_C DLL_EXPORT KString* _Nullable ${mangle("kstring_clone")}(const KString* _Nullable self);
-                EXTERN_C DLL_EXPORT void ${mangle("kstring_free")}(KString* _Nullable self);
-                
-            """.trimIndent())
-        }
-        append("\n")
 
         // Primitive arrays
+        if(context.hasPrimitiveArray) {
+            if (language == Language.C) {
+                listOf(
+                    Triple("Char" to "uint16_t", context.hasCharArrayToNativeCast, context.hasCharArrayToKotlinCast),
+                    Triple("Boolean" to "bool", context.hasBooleanArrayToNativeCast, context.hasBooleanArrayToKotlinCast),
+                    Triple("Byte" to "int8_t",
+                        context.hasByteArrayToNativeCast || (isInternal && context.hasUByteArrayToNativeCast),
+                        context.hasByteArrayToKotlinCast || (isInternal && context.hasUByteArrayToKotlinCast)),
+                    Triple("UByte" to "uint8_t",
+                        context.hasUByteArrayToNativeCast,
+                        context.hasUByteArrayToKotlinCast),
+                    Triple("Short" to "int16_t",
+                        context.hasShortArrayToNativeCast || (isInternal && context.hasUShortArrayToNativeCast),
+                        context.hasShortArrayToKotlinCast || (isInternal && context.hasUShortArrayToKotlinCast)),
+                    Triple("UShort" to "uint16_t",
+                        context.hasUShortArrayToNativeCast,
+                        context.hasUShortArrayToKotlinCast),
+                    Triple("Int" to "int32_t",
+                        context.hasIntArrayToNativeCast || context.hasEnumArrayToNativeCast || (isInternal && context.hasUIntArrayToNativeCast),
+                        context.hasIntArrayToKotlinCast || context.hasEnumArrayToKotlinCast || (isInternal && context.hasUIntArrayToKotlinCast)
+                    ),
+                    Triple("UInt" to "uint32_t",
+                        context.hasUIntArrayToNativeCast,
+                        context.hasUIntArrayToKotlinCast),
+                    Triple("Long" to "int64_t",
+                        context.hasLongArrayToNativeCast || (isInternal && context.hasULongArrayToNativeCast),
+                        context.hasLongArrayToKotlinCast || (isInternal && context.hasULongArrayToKotlinCast)),
+                    Triple("ULong" to "uint64_t",
+                        context.hasULongArrayToNativeCast,
+                        context.hasULongArrayToKotlinCast),
+                    Triple("Float" to "float", context.hasFloatArrayToNativeCast, context.hasFloatArrayToKotlinCast),
+                    Triple("Double" to "double", context.hasDoubleArrayToNativeCast, context.hasDoubleArrayToKotlinCast)
+                ).forEach { (names, hasToNativeCast, hasToKotlinCast) ->
+                    if (!hasToNativeCast && !hasToKotlinCast)
+                        return@forEach
 
-        mapOf(
-            "KCharArray" to "KChar",
-            "KBooleanArray" to "KBoolean",
-            "KByteArray" to	"KByte",
-            "KUByteArray" to "KUByte",
-            "KShortArray" to "KShort",
-            "KUShortArray" to "KUShort",
-            "KIntArray" to "KInt",
-            "KUIntArray" to "KUInt",
-            "KLongArray" to "KLong",
-            "KULongArray" to "KULong",
-            "KFloatArray" to "KFloat",
-            "KDoubleArray" to "KDouble"
-        ).forEach {
-            val name = it.key
-            val type = it.value
-            val lowerName = name.snakeCase()
+                    val name = "K${names.first}Array"
+                    val type = names.second
+                    val funcName = name.snakeCase()
 
-            when (language) {
-                Language.CPP -> append("""
-                    struct $name {
-                        const $type* _Nonnull elements;
-                        size_t size;
-                        KInt length;
-                        char __flags;
-                        
-                        $name(const $type* _Nonnull elements, KInt length, bool is_data_owner);
-                        static $name* _Nonnull of(std::initializer_list<$type> elements);
-                        $name* _Nonnull clone() const;
-                        void destroy();
-                    };
-                    
-                """.trimIndent())
-                else -> {
                     append("""
-                        typedef struct $name {
+                        
+                        typedef struct $name $name;
+                        struct $name {
+                            $name* _Nonnull (* _Nonnull clone)(const $name* _Nonnull);
+                            void (* _Nonnull free)($name* _Nonnull);
                             const $type* _Nonnull elements;
-                            size_t size;
-                            KInt length;
-                            char __flags;
-                        } $name;
+                            int32_t length;
+                        };
                         
-                    """.trimIndent())
-                    if(language == Language.C) append("""
-                        
-                        $name* _Nonnull ${name}_new(const $type* _Nonnull elements, KInt length, bool is_data_owner);
-                        $name* _Nonnull ${name}_of_n(int n, ...);
-                        #define ${name}_of(...) ${name}_of_n(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
-                        $name* _Nullable ${name}_clone(const $name* _Nullable self);
-                        void ${name}_free($name* _Nullable self);
+                        $name* _Nonnull ${funcName}_new(const $type* _Nonnull elements, int32_t length, bool make_copy);
+                        $name* _Nonnull ${funcName}_of_n(int n, ...);
+                        #define ${funcName}_of(...) ${funcName}_of_n(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
+                        $name* _Nullable ${funcName}_clone(const $name* _Nullable self);
+                        void ${funcName}_free($name* _Nullable self);
                         
                     """.trimIndent())
                 }
             }
-            if(isInternal) append("""
-                
-                EXTERN_C DLL_EXPORT $name* _Nonnull ${mangle("${lowerName}_new")}(const $type* _Nonnull elements, KInt length, bool is_data_owner);
-                EXTERN_C DLL_EXPORT $name* _Nonnull ${mangle("${lowerName}_of_n")}(int n, ...);
-                EXTERN_C DLL_EXPORT $name* _Nullable ${mangle("${lowerName}_clone")}(const $name* _Nullable self);
-                EXTERN_C DLL_EXPORT void ${mangle("${lowerName}_free")}($name* _Nullable self);
-                EXTERN_C DLL_EXPORT void ${mangle("${lowerName}_free_forced")}($name* _Nullable self);
+            if(isInternal) {
+                listOf(
+                    Triple("Char" to "uint16_t", context.hasCharArrayToNativeCast, context.hasCharArrayToKotlinCast),
+                    Triple("Boolean" to "bool", context.hasBooleanArrayToNativeCast, context.hasBooleanArrayToKotlinCast),
+                    Triple("Byte" to "int8_t",
+                        context.hasByteArrayToNativeCast || context.hasUByteArrayToNativeCast,
+                        context.hasByteArrayToKotlinCast || context.hasUByteArrayToKotlinCast),
+                    Triple("Short" to "int16_t",
+                        context.hasShortArrayToNativeCast || context.hasUShortArrayToNativeCast,
+                        context.hasShortArrayToKotlinCast || context.hasUShortArrayToKotlinCast),
+                    Triple("Int" to "int32_t",
+                        context.hasIntArrayToNativeCast || context.hasEnumArrayToNativeCast || context.hasUIntArrayToNativeCast,
+                        context.hasIntArrayToKotlinCast || context.hasEnumArrayToKotlinCast || context.hasUIntArrayToKotlinCast
+                    ),
+                    Triple("Long" to "int64_t",
+                        context.hasLongArrayToNativeCast || context.hasULongArrayToNativeCast,
+                        context.hasLongArrayToKotlinCast || context.hasULongArrayToKotlinCast),
+                    Triple("Float" to "float", context.hasFloatArrayToNativeCast, context.hasFloatArrayToKotlinCast),
+                    Triple("Double" to "double", context.hasDoubleArrayToNativeCast, context.hasDoubleArrayToKotlinCast)
+                ).forEach { (names, hasToNativeCast, hasToKotlinCast) ->
+                    if(!hasToNativeCast && !hasToKotlinCast)
+                        return@forEach
 
-            """.trimIndent())
+                    val name = "K${names.first}Array"
+                    val type = names.second
+                    val lowerName = name.lowercase().drop(1)
+                    val typeName = if (language == Language.C) name else "void"
 
-            append("\n")
+                    if (hasToNativeCast) append("""
+                        
+                        LIB_EXPORT $typeName* _Nonnull ${context.mangle("${lowerName}_new")}(const $type* _Nonnull elements, int32_t length, bool make_copy);
+                    """.trimIndent())
+                    if (hasToKotlinCast) append("""
+                        
+                        LIB_EXPORT const $type* _Nonnull ${context.mangle("${lowerName}_elements")}(const $typeName* _Nonnull self);
+                        LIB_EXPORT int32_t ${context.mangle("${lowerName}_length")}(const $typeName* _Nonnull self);
+                    """.trimIndent())
+                    appendLine("""
+                        
+                        LIB_EXPORT void ${context.mangle("${lowerName}_free")}($typeName* _Nonnull self);
+                        
+                    """.trimIndent())
+                }
+            }
         }
 
         // Object array
-
-        when (language) {
-            Language.CPP -> append("""
-                struct KArray {
-                    const void* _Nullable * _Nonnull elements;
-                    size_t size;
-                    KInt length;
-                    char __flags;
-                    
-                    KArray(const void* _Nullable * _Nonnull elements, KInt length, bool is_data_owner);
-                    static KArray* _Nonnull of(std::initializer_list<void* _Nullable> elements);
-                    template <typename T> KArray* _Nullable clone() const;
-                    template <typename T> void destroy();
-                };
-                
-            """.trimIndent())
-            else -> {
+        if(context.hasObjectArrays) {
+            if (language == Language.C) {
                 append("""
-                    typedef struct KArray {
-                        const void* _Nullable* _Nonnull elements;
-                        size_t size;
-                        KInt length;
-                        char __flags;
-                    } KArray;
                     
-                """.trimIndent())
-                if(language == Language.C) append("""
+                    typedef struct KArray KArray;
+                    struct KArray {
+                        KArray* _Nonnull (* _Nonnull clone)(const KArray* _Nonnull);
+                        void (* _Nonnull free)(KArray* _Nonnull);
+                        const void *_Nullable *_Nonnull elements;
+                        int32_t length;
+                        int32_t capacity;
+                    };
                     
-                    KArray* _Nonnull KArray_new(const void* _Nullable * _Nonnull elements, KInt length, bool is_data_owner);
-                    KArray* _Nonnull KArray_of_n(int n, ...);
-                    #define KArray_of(...) KArray_of_n(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
-                    KArray* _Nullable KArray_clone(const KArray* _Nullable self, void* _Nullable (* _Nullable clone_op)(void* _Nullable));
-                    void KArray_free(KArray* _Nullable self, void (* _Nonnull free_op)(void* _Nonnull));
-                
+                    KArray* _Nonnull karray_with_capacity(int32_t capacity);
+                    KArray* _Nonnull karray_new(const void* _Nullable * _Nonnull elements, int32_t length);
+                    KArray* _Nonnull karray_of_n(int n, ...);
+                    #define karray_of(...) karray_of_n(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
+                    void karray_push(KArray* _Nullable self, const void* _Nullable element);
+                    KArray* _Nullable karray_clone(const KArray* _Nullable self);
+                    void karray_free(KArray* _Nullable self);
+                    
                 """.trimIndent())
             }
+            if (isInternal) {
+                val arrayType = if (language == Language.C) "KArray*" else "void*"
+                buildList {
+                    context.usedDictionaries.mapTo(this) {
+                        Triple(it.cname to it.cname.lowercase(),
+                            it in context.usedObjectArrayToNativeCast,
+                            it in context.usedObjectArrayToKotlinCast)
+                    }
+                    context.usedInterfaces.mapTo(this) {
+                        Triple("void" to it.cname.lowercase(),
+                            it in context.usedObjectArrayToNativeCast,
+                            it in context.usedObjectArrayToKotlinCast)
+                    }
+                    add(Triple("KString" to "string",
+                        context.hasStringArrayToNativeCast,
+                        context.hasStringArrayToKotlinCast
+                    ))
+                }.forEach { (names, hasToNativeCast, hasToKotlinCast) ->
+                    val typeName = if (language == Language.C) names.first else "void"
+                    val name = names.second
+
+                    if (hasToNativeCast) append("""
+                        
+                        LIB_EXPORT $arrayType _Nonnull ${context.mangle("array_${name}_new")}(int32_t capacity, bool nullable_elements);
+                    """.trimIndent())
+                    if (hasToKotlinCast) append("""
+                        
+                        LIB_EXPORT int32_t ${context.mangle("array_${name}_length")}($arrayType _Nonnull self, bool nullable_elements);
+                        LIB_EXPORT void ${context.mangle("array_${name}_push")}($arrayType _Nonnull self, void* _Nullable element, bool nullable_elements);
+                        LIB_EXPORT $typeName* _Nullable ${context.mangle("array_${name}_get")}($arrayType _Nonnull self, int32_t index, bool nullable_elements);
+                        LIB_EXPORT void ${context.mangle("array_${name}_free")}($arrayType _Nonnull self, bool nullable_elements);
+                    """.trimIndent())
+                    append("\n")
+                }
+            }
         }
-        if(isInternal) append("""
-            
-            EXTERN_C DLL_EXPORT KArray* _Nonnull ${mangle("karray_new")}(const void* _Nullable * _Nonnull elements, KInt length, bool is_data_owner);
-            EXTERN_C DLL_EXPORT KArray* _Nonnull ${mangle("karray_of_n")}(int n, ...);
-            EXTERN_C DLL_EXPORT KArray* _Nullable ${mangle("karray_clone")}(const KArray* _Nullable self, void* _Nullable (* _Nullable clone_op)(void* _Nullable));
-            EXTERN_C DLL_EXPORT void ${mangle("karray_free")}(KArray* _Nullable self, void (* _Nonnull free_op)(void* _Nonnull));
-            EXTERN_C DLL_EXPORT void ${mangle("karray_free_forced")}(KArray* _Nullable self, void (* _Nonnull free_op)(void* _Nullable));
-        
-        """.trimIndent())
-
-        append("""
-
-            #define KCallbackDef(Name, Type, ...)                                       \
-            struct Name {                                                               \
-                char __flags;                                                           \
-                Type (* _Nonnull invoke)(Name* _Nonnull self, ##__VA_ARGS__);           \
-                Name* _Nonnull (* _Nonnull clone)(Name* _Nonnull self);                 \
-                KBoolean (* _Nonnull equals)(Name* _Nonnull self, Name* _Nullable obj); \
-                KInt (* _Nonnull hash_code)(Name* _Nonnull self);                       \
-                void (* _Nonnull free)(Name* _Nullable self);                           \
-            };
-            
-        """.trimIndent())
     }
 
-    private fun ResolvedIdlType.toLangType() =
-        toCType(printNullable = true)
+    private fun StringBuilder.printEnums() {
+        if(!context.hasEnums || language != Language.C)
+            return
+        printLabel("Enums")
+
+        context.usedEnums.forEach { enum ->
+            append("\ntypedef enum {")
+            enum.elements.joinTo(this, separator = ",") {
+                "\n\t${enum.cname}_${it}"
+            }
+            append("\n} ${enum.cname};\n")
+        }
+    }
+
+    private fun StringBuilder.printDictionaries() {
+        if(!context.hasDictionaries)
+            return
+        printLabel("Structs")
+
+        context.usedDictionaries.forEach { dictionary ->
+            val name = dictionary.cname
+            val fields = context.allFields[dictionary]!!
+            val args = fields.map { field ->
+                "${field.type.toLangType()} ${field.cname}"
+            }
+
+            if(language == Language.C) {
+                append("\nstruct $name {")
+                if (dictionary.implements != null)
+                    append(" // : ").append(dictionary.implements!!.cname)
+                append("""
+                    
+                    $name* _Nullable (* _Nullable clone)(const $name* _Nullable);
+                    void (* _Nullable free)($name* _Nullable);
+                """.replaceIndent("\t"))
+                args.joinTo(this, separator = "") { "\n\t$it;" }
+                append("\n};\n")
+
+                // Methods
+                append("""
+                    
+                    $name* _Nonnull ${name}_new(${args.joinToString()});
+                    $name* _Nullable ${name}_clone(const $name* _Nullable self);
+                    void ${name}_free($name* _Nullable self);
+                    
+                """.trimIndent())
+            }
+            if (isInternal) {
+                val structTypeName = if(language == Language.C) name else "void"
+                val args = fields.map { field ->
+                    "${field.type.toLangType()} ${field.cname}"
+                }
+                if(dictionary in context.toNativeDeclarations) append("""
+                    
+                    LIB_EXPORT $structTypeName* _Nonnull ${dictionary.subCFunc(context, "new")}(${args.joinToString()});
+                """.trimIndent())
+
+                if(dictionary in context.toKotlinDeclarations) {
+                    append("""
+                        
+                        LIB_EXPORT void ${dictionary.subCFunc(context, "free")}($structTypeName* _Nonnull self);
+                    """.trimIndent())
+                    fields.joinTo(this, separator = "") { field ->
+                        val func = dictionary.subFieldCFunc(context, field)
+                        val type = field.type.toLangType()
+                        "\nLIB_EXPORT $type $func(const $structTypeName* _Nonnull self);"
+                    }
+                }
+                append("\n")
+            }
+        }
+    }
+
+    private fun StringBuilder.printCallbacks(){
+        if(!context.hasCallbacks)
+            return
+        printLabel("Callbacks")
+
+        if(language == Language.C) {
+            if(isInternal) appendLine("""
+                
+                #define KCallbackDef(Name, Lower, FUNC_NEW, FUNC_ID, FUNC_FREE, Type, ...)  \
+                struct Name {                                                               \
+                    size_t id;                                                              \
+                    int32_t hash_code;                                                      \
+                    Type (* _Nonnull invoke)(size_t id, ##__VA_ARGS__);                     \
+                    bool (* _Nonnull equals)(size_t id, size_t other);                      \
+                    void (* _Nonnull _free)(size_t id);                                     \
+                };                                                                          \
+                Type Lower##_invoke(RC_##Name* _Nonnull, ##__VA_ARGS__);                    \
+                static void Lower##_free(Name* _Nonnull self) {                             \
+                    self->_free(self->id);                                                  \
+                    free((void*) self);                                                     \
+                }                                                                           \
+                LIB_EXPORT RC_##Name* _Nonnull FUNC_NEW(                                    \
+                    size_t id,                                                              \
+                    int32_t hash_code,                                                      \
+                    void* _Nonnull invoke,                                                  \
+                    void* _Nonnull equals,                                                  \
+                    void* _Nonnull free);                                                   \
+                LIB_EXPORT size_t FUNC_ID(RC_##Name* _Nonnull _self);                       \
+                LIB_EXPORT void FUNC_FREE(RC_##Name* _Nonnull _self);
+            """.trimIndent()) else appendLine("""
+            
+                #define KCallbackDef(Name, Lower, Type, ...)                                \
+                struct Name {                                                               \
+                    size_t id;                                                              \
+                    int32_t hash_code;                                                      \
+                    Type (* _Nonnull invoke)(size_t id, ##__VA_ARGS__);                     \
+                    bool (* _Nonnull equals)(size_t id, size_t other);                      \
+                    void (* _Nonnull _free)(size_t id);                                     \
+                };                                                                          \
+                Type Lower##_invoke(RC_##Name* _Nonnull, ##__VA_ARGS__);
+            """.trimIndent())
+
+            context.usedCallbacks.forEach { callback ->
+                val args = buildList {
+                    val lower = callback.name.camelCase().lowercase()
+                    add(callback.cname)
+                    add(lower)
+                    if(isInternal) {
+                        add(context.mangle("${lower}_new"))
+                        add(context.mangle("${lower}_id"))
+                        add(context.mangle("${lower}_free"))
+                    }
+                    add(callback.type.toLangType())
+                    callback.args.mapTo(this) {
+                        "${it.type.toLangType()} ${it.cname}"
+                    }
+                }.joinToString()
+                append("\nKCallbackDef($args)")
+            }
+            append("\n#undef KCallbackDef\n")
+        } else {
+            append("""
+                #define KCallbackFunc(FUNC_NEW, FUNC_ID, FUNC_FREE) \
+                LIB_EXPORT void* _Nonnull FUNC_NEW(size_t id, int32_t hash_code, void* _Nonnull invoke, void* _Nonnull equals, void* _Nonnull free); \
+                LIB_EXPORT size_t FUNC_ID(void* _Nonnull _self); \
+                LIB_EXPORT void FUNC_FREE(void* _Nonnull _self);
+                
+                
+            """.trimIndent())
+            context.usedCallbacks.forEach { callback ->
+                val lower = callback.name.camelCase().lowercase()
+                append("KCallbackFunc(${context.mangle("${lower}_new")}, ${context.mangle("${lower}_id")}, ${context.mangle("${lower}_free")})\n")
+            }
+            append("\n#undef KCallbackFunc\n")
+        }
+    }
+
+    private fun StringBuilder.printFunctions() {
+        if (context.allOperations.isEmpty())
+            return
+
+        printLabel("Functions")
+
+        context.allOperations.forEach { function ->
+            val critical = function.isCritical()
+            val name = function.cname
+            val mangledName = function.cnameMangled(context)
+
+            // C-API
+            if (language == Language.C && (!function.isInterfaceOperationAddress() && !function.isInterfaceOperationClone())) {
+                val type = function.type.toLangType(rcAsVoid = true)
+                val args = function.args.joinToString {
+                    "${it.type.toLangType(rcAsVoid = true)} ${it.cname}"
+                }.ifEmpty { "void" }
+
+                append("\n$type $name(${args});")
+            }
+
+            // Mangled API
+            if (isInternal) {
+                val type = function.type.toLangType()
+                val args = function.args.flatMap {
+                    val name = it.cname
+                    when {
+                        critical && it.type.isString() -> listOf(
+                            "const char* _Nullable $name",
+                            "int32_t _${name}_length",
+                            "int32_t _${name}_size"
+                        )
+                        critical && it.type.isArray() -> listOf(
+                            "const ${it.type.arrayTypeOrNull()!!.toLangType()}* _Nullable $name",
+                            "int32_t _${name}_length"
+                        )
+                        else -> listOf("${it.type.toLangType()} $name")
+                    }
+                }.joinToString().ifEmpty { "void" }
+                append("\nLIB_EXPORT $type $mangledName($args);")
+            }
+        }
+        append("\n")
+    }
+
+    private fun ResolvedIdlType.toLangType(
+        enumAsInt: Boolean = false,
+        rcAsVoid: Boolean = false
+    ): String = when (language) {
+        Language.C -> toCType(printNullable = true, enumAsInt = enumAsInt, rcAsVoid = rcAsVoid)
+        else -> toCommonNativeType(printNullable = true)
+    }
 }
 

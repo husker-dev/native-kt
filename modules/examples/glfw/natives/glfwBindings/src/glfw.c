@@ -3,10 +3,11 @@
 
 
 void run() {
+    glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 
-    GLFWwindow* glfw_window = glfwCreateWindow(800, 600, "OpenGL experiment", NULL, NULL);
+    GLFWwindow* glfw_window = glfwCreateWindow(800, 600, "OpenGL window", NULL, NULL);
     glfwMakeContextCurrent(glfw_window);
     gladLoadGL();
     glfwSwapInterval(1);

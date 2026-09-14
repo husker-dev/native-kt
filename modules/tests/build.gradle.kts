@@ -1,13 +1,8 @@
-@file:OptIn(ExperimentalWasmDsl::class, KotlinNativeCacheApi::class)
 @file:Suppress("UnstableApiUsage")
 
-import com.huskerdev.nativekt.plugin.Language
-import com.huskerdev.nativekt.plugin.currentNativeTargets
-import com.huskerdev.nativekt.plugin.webTargets
-import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
-import org.jetbrains.kotlin.gradle.dsl.JsMainFunctionExecutionMode
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeCacheApi
+import com.huskerdev.nativekt.plugin.*
+import org.jetbrains.kotlin.gradle.dsl.*
+import org.jetbrains.kotlin.gradle.tasks.KotlinNativeLink
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -44,15 +39,10 @@ kotlin {
         }
     }
 
-    targets
-    currentNativeTargets {
-        compilerOptions {
-            freeCompilerArgs.addAll("-Xexpect-actual-classes")
-        }
-    }
+    currentNativeTargets()
 
     android {
-        namespace = group.toString()
+        namespace = "$group.tests"
         minSdk = 32
         compileSdk {
             version = release(32)
@@ -61,7 +51,6 @@ kotlin {
             sourceSetTreeName = "test"
         }.configure {
             instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
             managedDevices {
                 localDevices {
                     create("api32") {
@@ -93,6 +82,15 @@ kotlin {
     }
 }
 
+private fun NativeProject.configureNodeJsTests() {
+    gradle.taskGraph.whenReady {
+        gradle.taskGraph.allTasks.forEach {
+            if(it.name == "jsNodeTest" || it.name == "wasmJsNodeTest")
+                jsTarget = JsTarget.NODE
+        }
+    }
+}
+
 natives {
     applyRuntime = false
     applyAndroidCriticalStub = false
@@ -110,19 +108,43 @@ natives {
         useJVMCI = false
     }
 
+    // Configure modules
     val commonNdl = file("natives/api.ndl")
     create("test") {
+        cmake(Language.C)
         ndlFile = commonNdl
+        configureNodeJsTests()
     }
     create("testcpp") {
+        cmake(Language.CPP)
         ndlFile = commonNdl
-        cmake {
-            language = Language.CPP
-        }
+        configureNodeJsTests()
     }
     create("testrs") {
-        ndlFile = commonNdl
         cargo()
+        ndlFile = commonNdl
+        configureNodeJsTests()
+    }
+
+    // Test cases
+    val casesDir = file("natives/cases")
+    for(i in 0 until 7) {
+        val ndl = File(casesDir, "tc_$i.ndl")
+        create("tc_${i}_rust") {
+            ndlFile = ndl
+            projectDir = File(casesDir, "rust/tc_$i")
+            cargo()
+        }
+        create("tc_${i}_c") {
+            ndlFile = ndl
+            projectDir = File(casesDir, "c/tc_$i")
+            cmake()
+        }
+        create("tc_${i}_cpp") {
+            ndlFile = ndl
+            projectDir = File(casesDir, "cpp/tc_$i")
+            cmake(Language.CPP)
+        }
     }
 }
 
@@ -137,6 +159,11 @@ tasks.withType<Test>().configureEach {
 }
 
 tasks.withType<AbstractTestTask>().configureEach {
+    outputs.cacheIf { false }
+    outputs.upToDateWhen { false }
+}
+
+tasks.withType<KotlinNativeLink>().configureEach {
     outputs.cacheIf { false }
     outputs.upToDateWhen { false }
 }

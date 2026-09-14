@@ -1,73 +1,81 @@
 #include <api.hpp>
 
-KCharArray* ping_char_array(KCharArray* arg) {
+KArray<uint16_t> ping_char_array(const KArray<uint16_t>& arg) {
     return arg;
 }
 
-KCharArray* ping_char_array_n(KCharArray* arg) {
+KOptional<KArray<uint16_t>> ping_char_array_n(const KOptional<KArray<uint16_t>>& arg) {
     return arg;
 }
 
-KBooleanArray* ping_boolean_array(KBooleanArray* arg) {
+KArray<bool> ping_boolean_array(const KArray<bool>& arg) {
     return arg;
 }
 
-KByteArray* ping_byte_array(KByteArray* arg) {
+KArray<int8_t> ping_byte_array(const KArray<int8_t>& arg) {
     return arg;
 }
 
-KUByteArray* ping_ubyte_array(KUByteArray* arg) {
+KArray<uint8_t> ping_ubyte_array(const KArray<uint8_t>& arg) {
     return arg;
 }
 
-KShortArray* ping_short_array(KShortArray* arg) {
+KArray<int16_t> ping_short_array(const KArray<int16_t>& arg) {
     return arg;
 }
 
-KUShortArray* ping_ushort_array(KUShortArray* arg) {
+KArray<uint16_t> ping_ushort_array(const KArray<uint16_t>& arg) {
     return arg;
 }
 
-KIntArray* ping_int_array(KIntArray* arg) {
+KArray<int32_t> ping_int_array(const KArray<int32_t>& arg) {
     return arg;
 }
 
-KUIntArray* ping_uint_array(KUIntArray* arg) {
+KArray<uint32_t> ping_uint_array(const KArray<uint32_t>& arg) {
     return arg;
 }
 
-KLongArray* ping_long_array(KLongArray* arg) {
+KArray<int64_t> ping_long_array(const KArray<int64_t>& arg) {
     return arg;
 }
 
-KULongArray* ping_ulong_array(KULongArray* arg) {
+KArray<uint64_t> ping_ulong_array(const KArray<uint64_t>& arg) {
     return arg;
 }
 
-KFloatArray* ping_float_array(KFloatArray* arg) {
+KArray<float> ping_float_array(const KArray<float>& arg) {
     return arg;
 }
 
-KDoubleArray* ping_double_array(KDoubleArray* arg) {
+KArray<double> ping_double_array(const KArray<double>& arg) {
     return arg;
 }
 
-KArray* ping_string_array(KArray* arg) {
+KArray<KString> ping_string_array(const KArray<KString>& arg) {
     return arg;
 }
 
-KArray* ping_string_array_n(KArray* arg) {
+KArray<KOptional<KString>> ping_string_array_n(const KArray<KOptional<KString>>& arg) {
     return arg;
 }
 
-KIntArray* ping_enum_array(KIntArray* arg) {
+KArray<MyEnum> ping_enum_array(const KArray<MyEnum>& arg) {
     return arg;
 }
 
-KArray* ping_dictionary_array(KArray* arg) {
+KArray<MyDictionary> ping_dictionary_array(const KArray<MyDictionary>& arg) {
     return arg;
 }
 
-KArray* ping_dictionary_array_n(KArray* arg) {
+KArray<KOptional<MyDictionary>> ping_dictionary_array_n(const KArray<KOptional<MyDictionary>>& arg) {
+    return arg;
+}
+
+KArray<std::shared_ptr<IMyInterface>> ping_interface_array(const KArray<std::shared_ptr<IMyInterface>>& arg) {
+    return arg;
+}
+
+KArray<KOptional<std::shared_ptr<IMyInterface>>> ping_interface_array_n(const KArray<KOptional<std::shared_ptr<IMyInterface>>>& arg) {
     return arg;
 }

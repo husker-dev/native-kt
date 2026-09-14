@@ -1,0 +1,8 @@
+namespace global {
+    void stub1(Array<long> e);
+    void stub2(Array<MyEnum> e);
+};
+
+enum MyEnum {
+    "A"
+};

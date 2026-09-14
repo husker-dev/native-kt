@@ -20,6 +20,8 @@ namespace global {
     boolean passEnum(MyEnum arg);
     boolean passDictionary(MyDictionary arg);
     boolean passDictionaryN(MyDictionary? arg);
+    boolean passInterface(MyInterface arg);
+    boolean passInterfaceN(MyInterface? arg);
 
     // Primitives: return
     void returnVoid();
@@ -59,6 +61,8 @@ namespace global {
     MyEnum pingEnum(MyEnum arg);
     MyDictionary pingDictionary(MyDictionary arg);
     MyDictionary? pingDictionaryN(MyDictionary? arg);
+    MyInterface pingInterface(MyInterface arg);
+    MyInterface? pingInterfaceN(MyInterface? arg);
 
     // Primitives: callback arg
     void callbackVoid(VoidCallback arg);
@@ -82,6 +86,8 @@ namespace global {
     boolean callbackArgEnum(CallbackPassEnum arg);
     boolean callbackArgDictionary(CallbackPassDictionary arg);
     boolean callbackArgDictionaryN(CallbackPassDictionaryN arg);
+    boolean callbackArgInterface(MyInterface pass, CallbackPassInterface arg);
+    boolean callbackArgInterfaceN(CallbackPassInterfaceN arg);
 
     // Primitives: callback return
     boolean callbackReturnChar(CallbackReturnChar arg);
@@ -103,6 +109,8 @@ namespace global {
     boolean callbackReturnEnum(CallbackReturnEnum arg);
     boolean callbackReturnDictionary(CallbackReturnDictionary arg);
     boolean callbackReturnDictionaryN(CallbackReturnDictionaryN arg);
+    boolean callbackReturnInterface(CallbackReturnInterface arg);
+    boolean callbackReturnInterfaceN(CallbackReturnInterfaceN arg);
 
     // Arrays: pass
     boolean passCharArray(Array<char> arg);
@@ -123,6 +131,8 @@ namespace global {
     boolean passEnumArray(Array<MyEnum> arg);
     boolean passDictionaryArray(Array<MyDictionary> arg);
     boolean passDictionaryArrayN(Array<MyDictionary?> arg);
+    boolean passInterfaceArray(Array<MyInterface> arg);
+    boolean passInterfaceArrayN(Array<MyInterface?> arg);
 
     // Arrays: return
     Array<char> returnCharArray();
@@ -163,6 +173,8 @@ namespace global {
     Array<MyEnum> pingEnumArray(Array<MyEnum> arg);
     Array<MyDictionary> pingDictionaryArray(Array<MyDictionary> arg);
     Array<MyDictionary?> pingDictionaryArrayN(Array<MyDictionary?> arg);
+    Array<MyInterface> pingInterfaceArray(Array<MyInterface> arg);
+    Array<MyInterface?> pingInterfaceArrayN(Array<MyInterface?> arg);
 
      // Arrays: callback arg
     boolean callbackArgCharArray(CallbackPassCharArray arg);
@@ -183,6 +195,8 @@ namespace global {
     boolean callbackArgEnumArray(CallbackPassEnumArray arg);
     boolean callbackArgDictionaryArray(CallbackPassDictionaryArray arg);
     boolean callbackArgDictionaryArrayN(CallbackPassDictionaryArrayN arg);
+    boolean callbackArgInterfaceArray(CallbackPassInterfaceArray arg);
+    boolean callbackArgInterfaceArrayN(CallbackPassInterfaceArrayN arg);
 
     // Arrays: callback arg
     boolean callbackReturnCharArray(CallbackReturnCharArray arg);
@@ -203,10 +217,12 @@ namespace global {
     boolean callbackReturnEnumArray(CallbackReturnEnumArray arg);
     boolean callbackReturnDictionaryArray(CallbackReturnDictionaryArray arg);
     boolean callbackReturnDictionaryArrayN(CallbackReturnDictionaryArrayN arg);
+    boolean callbackReturnInterfaceArray(CallbackReturnInterfaceArray arg);
+    boolean callbackReturnInterfaceArrayN(CallbackReturnInterfaceArrayN arg);
 
     // Dictionary
     boolean passBigDictionary(TypeDictionary arg);
-    TypeDictionary returnBigDictionary(VoidCallback callback);
+    TypeDictionary returnBigDictionary(VoidCallback callback, MyInterface inter);
     TypeDictionary pingBigDictionary(TypeDictionary arg);
 
     boolean passBigDictionaryN(TypeDictionary? arg);
@@ -218,6 +234,8 @@ namespace global {
     [Critical] boolean criticalEnum(MyEnum a1);
     [Critical] boolean criticalString(string a1);
     [Critical] boolean criticalStringN(string? a1);
+    [Critical] boolean criticalInterface(MyInterface a1);
+    [Critical] boolean criticalInterfaceN(MyInterface? a1);
 
     [Critical] boolean criticalPrimitivesArray(Array<char> a1, Array<boolean> a2, Array<byte> a3, Array<ubyte> a4, Array<short> a5, Array<ushort> a6, Array<int> a7, Array<uint> a8, Array<long> a9, Array<ulong> a10, Array<float> a11, Array<double> a12);
     [Critical] boolean criticalEnumArray(Array<MyEnum> a1);
@@ -238,6 +256,7 @@ namespace global {
     [Critical] float criticalReturnFloat();
     [Critical] double criticalReturnDouble();
     [Critical] MyEnum criticalReturnEnum();
+    [Critical] MyInterface criticalReturnInterface();
 
     // JVMCI
     [Critical] boolean jvmci1();
@@ -283,6 +302,8 @@ callback CallbackPassCallbackN = boolean (VoidCallback? arg);
 callback CallbackPassEnum = boolean (MyEnum arg);
 callback CallbackPassDictionary = boolean (MyDictionary arg);
 callback CallbackPassDictionaryN = boolean (MyDictionary? arg);
+callback CallbackPassInterface = boolean (MyInterface arg);
+callback CallbackPassInterfaceN = boolean (MyInterface? arg);
 
 callback CallbackReturnChar = char ();
 callback CallbackReturnBoolean = boolean ();
@@ -303,6 +324,8 @@ callback CallbackReturnCallbackN = VoidCallback? ();
 callback CallbackReturnEnum = MyEnum ();
 callback CallbackReturnDictionary = MyDictionary ();
 callback CallbackReturnDictionaryN = MyDictionary? ();
+callback CallbackReturnInterface = MyInterface ();
+callback CallbackReturnInterfaceN = MyInterface? ();
 
 // arrays
 
@@ -324,6 +347,8 @@ callback CallbackPassStringArrayN = boolean (Array<string?> arg);
 callback CallbackPassEnumArray = boolean (Array<MyEnum> arg);
 callback CallbackPassDictionaryArray = boolean (Array<MyDictionary> arg);
 callback CallbackPassDictionaryArrayN = boolean (Array<MyDictionary?> arg);
+callback CallbackPassInterfaceArray = boolean (Array<MyInterface> arg);
+callback CallbackPassInterfaceArrayN = boolean (Array<MyInterface?> arg);
 
 callback CallbackReturnCharArray = Array<char> ();
 callback CallbackReturnCharArrayN = Array<char>? ();
@@ -343,6 +368,8 @@ callback CallbackReturnStringArrayN = Array<string?> ();
 callback CallbackReturnEnumArray = Array<MyEnum> ();
 callback CallbackReturnDictionaryArray = Array<MyDictionary> ();
 callback CallbackReturnDictionaryArrayN = Array<MyDictionary?> ();
+callback CallbackReturnInterfaceArray = Array<MyInterface> ();
+callback CallbackReturnInterfaceArrayN = Array<MyInterface?> ();
 
 // enum
 
@@ -379,30 +406,33 @@ dictionary TypeDictionary {
     string a13;
     MyEnum a14;
     MyDictionary a15;
-    VoidCallback a16;
+    MyInterface a16;
 
-    Array<char> a17;
-    Array<boolean> a18;
-    Array<byte> a19;
-    Array<ubyte> a20;
-    Array<short> a21;
-    Array<ushort> a22;
-    Array<int> a23;
-    Array<uint> a24;
-    Array<long> a25;
-    Array<ulong> a26;
-    Array<float> a27;
-    Array<double> a28;
-    Array<string> a29;
-    Array<MyEnum> a30;
-    Array<MyDictionary> a31;
+    VoidCallback a17;
+
+    Array<char> a18;
+    Array<boolean> a19;
+    Array<byte> a20;
+    Array<ubyte> a21;
+    Array<short> a22;
+    Array<ushort> a23;
+    Array<int> a24;
+    Array<uint> a25;
+    Array<long> a26;
+    Array<ulong> a27;
+    Array<float> a28;
+    Array<double> a29;
+    Array<string> a30;
+    Array<MyEnum> a31;
+    Array<MyDictionary> a32;
+    Array<MyInterface> a33;
 };
 
-interface B {
+interface MyInterface {
     constructor();
-};
-
-interface A {
-    constructor();
-    void test(B arg);
+    [critical, name=newCritical] constructor(int a);
+    boolean test();
+    [critical] boolean testCritical();
+    [critical] void passInterface(MyInterface a1);
+    [critical] MyInterface returnInterface();
 };

@@ -1,14 +1,16 @@
 package com.huskerdev.nativekt.utils
 
+import com.huskerdev.nativekt.NativeModuleContext
 import com.huskerdev.nativekt.TargetType
 import com.huskerdev.nativekt.plugin.CargoBuildType
-import org.apache.tools.ant.taskdefs.condition.Os
+import com.huskerdev.osutils.Arch
+import com.huskerdev.osutils.OS
 import org.gradle.process.ExecOperations
 import java.io.File
 
 private val rustcCurrentTaget: String
     get() {
-        val arch = when(Arch.current()) {
+        val arch = when(Arch.current) {
             Arch.X86 -> "i686"
             Arch.X64 -> "x86_64"
             Arch.ARM32 -> "armv7"
@@ -17,10 +19,10 @@ private val rustcCurrentTaget: String
             Arch.RISCV64 -> "riscv64gc"
             Arch.UNKNOWN -> throw UnsupportedOperationException()
         }
-        val os = when {
-            Os.isFamily(Os.FAMILY_WINDOWS) -> "pc-windows-gnu"
-            Os.isFamily(Os.FAMILY_MAC) -> "apple-darwin"
-            Os.isFamily(Os.FAMILY_UNIX) -> "unknown-linux-gnu"
+        val os = when(OS.current) {
+            OS.WINDOWS -> "pc-windows-gnu"
+            OS.MACOS -> "apple-darwin"
+            OS.LINUX -> "unknown-linux-gnu"
             else -> throw UnsupportedOperationException()
         }
         return "$arch-$os"
@@ -28,18 +30,49 @@ private val rustcCurrentTaget: String
 
 internal fun ensureTargetInstalled(
     execOps: ExecOperations,
+    context: NativeModuleContext,
     target: String
 ) {
-    execOps.exec("rustup target list", silent = true)
+    execOps.exec(context, "rustup target list", silent = true)
         .split("\n")
         .firstOrNull {
             it.startsWith(target)
         }?.run {
             if(!endsWith("(installed)")) {
                 println("Installing rust target: $target...")
-                execOps.exec("rustup target add $target")
+                execOps.exec(context, "rustup target add $target")
             }
         } ?: throw Exception("The $target is not supported on the current system (maybe try the nightly build?).")
+}
+
+internal fun ensureWasmBindgenInstalled(execOps: ExecOperations, context: NativeModuleContext) {
+    try {
+        execOps.exec(context,
+            command = "wasm-bindgen --version",
+            silent = true
+        )
+    } catch (_: Exception) {
+        println("Installing wasm-bindgen...")
+        execOps.exec(context,
+            command = "cargo install wasm-bindgen-cli",
+            silent = true
+        )
+    }
+}
+
+internal fun ensureWasmOptInstalled(execOps: ExecOperations, context: NativeModuleContext) {
+    try {
+        execOps.exec(context,
+            command = "wasm-opt --version",
+            silent = true
+        )
+    } catch (_: Exception) {
+        println("Installing wasm-opt...")
+        execOps.exec(context,
+            command = "cargo install wasm-opt",
+            silent = true
+        )
+    }
 }
 
 internal fun cargoTargetDir(
@@ -50,43 +83,89 @@ internal fun cargoTargetDir(
 
 internal fun cargoLinkerFlags(
     execOps: ExecOperations,
+    context: NativeModuleContext,
     project: File,
     buildDir: File,
     buildType: CargoBuildType,
-    target: String = rustcCurrentTaget
+    target: String = rustcCurrentTaget,
+    env: Map<String, String>? = null
 ): List<String> {
     val buildDirClean = buildDir.posixPath
 
-    ensureTargetInstalled(execOps, target)
+    ensureTargetInstalled(execOps, context, target)
+
     val flags = execOps.exec(
-        command =  "cargo rustc --target=$target --target-dir=$buildDirClean --lib --${buildType.cargoName} -- --print=native-static-libs",
+        context,
+        command = "cargo rustc --target=$target --target-dir=$buildDirClean --lib --${buildType.cargoName} -- --print=native-static-libs",
         workingDir = project,
         silent = true,
-        errAsStd = true
+        errAsStd = true,
+        env = env
     ).split("note: native-static-libs: ")[1]
         .split("\n")[0]
         .trim()
         .splitRespectingQuotes()
 
-    return normalizeMinGWLibs(execOps, flags)
+    return normalizeMinGWLibs(execOps, context, flags)
 }
 
 internal fun cargoBuild(
     execOps: ExecOperations,
+    context: NativeModuleContext,
     project: File,
     buildDir: File,
     buildType: CargoBuildType,
     target: String = rustcCurrentTaget,
+    additionalArgs: String = "",
+    env: Map<String, String>? = null
 ): String {
     val buildDirClean = buildDir.posixPath
 
-    ensureTargetInstalled(execOps, target)
-    execOps.exec(
-        command = "cargo build --target=$target --target-dir=$buildDirClean --lib --${buildType.cargoName}",
+    ensureTargetInstalled(execOps, context, target)
+
+    execOps.exec(context,
+        command = "cargo build --target=$target --target-dir=$buildDirClean --lib --${buildType.cargoName} $additionalArgs",
+        workingDir = project,
+        errAsStd = true,
+        env = env
+    )
+    return cargoTargetDir(buildDir, buildType, target)
+}
+
+internal fun wasmBindgenBuild(
+    execOps: ExecOperations,
+    context: NativeModuleContext,
+    project: File,
+    buildType: CargoBuildType,
+    buildDir: File
+): String {
+    val buildDirClean = buildDir.posixPath
+    val pkgDir = File(buildDir, "pkg").posixPath
+
+    val target = "wasm32-unknown-unknown"
+    val wasmFilePath = "${cargoTargetDir(buildDir, buildType, target)}/${context.moduleName}.wasm"
+    val pkgWasmFilePath = File(pkgDir, "${context.moduleName}_bg.wasm").posixPath
+
+    ensureTargetInstalled(execOps, context, target)
+    ensureWasmBindgenInstalled(execOps, context)
+    ensureWasmOptInstalled(execOps, context)
+
+    execOps.exec(context,
+        command = "cargo build --target $target --target-dir=$buildDirClean --lib --${buildType.cargoName}",
         workingDir = project,
         errAsStd = true
     )
-    return cargoTargetDir(buildDir, buildType, target)
+    execOps.exec(context,
+        command = "wasm-bindgen --target web --out-dir $pkgDir $wasmFilePath",
+        workingDir = project,
+        errAsStd = true
+    )
+    execOps.exec(context,
+        command = "wasm-opt $pkgWasmFilePath -o $pkgWasmFilePath -O --enable-bulk-memory -O --enable-nontrapping-float-to-int",
+        workingDir = project,
+        errAsStd = true
+    )
+    return pkgDir
 }
 
 internal fun getCargoTarget(

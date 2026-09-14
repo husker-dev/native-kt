@@ -3,22 +3,33 @@ use crate::nativekt::*;
 
 mod nativekt;
 
-pub struct B;
+pub struct MyInterface;
 
-impl B {
-    fn new() -> Self { 
-        B {}
+impl MyInterface {
+    fn new() -> Self {
+        MyInterface {}
+    }
+    fn new_critical(_: i32) -> Self {
+        MyInterface {}
+    }
+    fn test(&self) -> bool {
+        println!("Hello from Rust interface!");
+        true
+    }
+    fn test_critical(&self) -> bool {
+        println!("Hello from Rust interface!");
+        true
+    }
+    fn pass_interface(&self, _: &Arc<MyInterface>) {
+    }
+    fn return_interface(&self) -> Arc<MyInterface> {
+        Arc::new(MyInterface::new())
     }
 }
 
-pub struct A;
-
-impl A {
-    fn new() -> Self {
-        A {}
-    }
-    fn test(&self, _arg: Arc<B>) {
-        println!("Hello from Rust interface!")
+impl Drop for MyInterface {
+    fn drop(&mut self) {
+        println!("Drop MyInterface")
     }
 }
 
@@ -107,13 +118,13 @@ pub fn pass_double(
 }
 
 pub fn pass_string(
-    arg: KString
+    arg: &String
 ) -> bool {
-    arg.as_str() == "test string"
+    arg == "test string"
 }
 
 pub fn pass_string_n(
-    arg: Option<KString>
+    arg: &Option<String>
 ) -> bool {
     arg.is_none()
 }
@@ -125,7 +136,7 @@ pub fn pass_enum(
 }
 
 pub fn pass_dictionary(
-    arg: MyDictionary
+    arg: &MyDictionary
 ) -> bool {
     arg.a == 1 &&
     arg.b == 2 &&
@@ -134,7 +145,19 @@ pub fn pass_dictionary(
 }
 
 pub fn pass_dictionary_n(
-    arg: Option<MyDictionary>
+    arg: &Option<MyDictionary>
+) -> bool {
+    arg.is_none()
+}
+
+pub fn pass_interface(
+    arg: &Arc<MyInterface>
+) -> bool {
+    arg.test()
+}
+
+pub fn pass_interface_n(
+    arg: &Option<Arc<MyInterface>>
 ) -> bool {
     arg.is_none()
 }
@@ -189,11 +212,11 @@ pub fn return_double() -> f64 {
     99.0
 }
 
-pub fn return_string() -> KString {
-    k_string!("test string".to_string())
+pub fn return_string() -> String {
+    "test string".to_string()
 }
 
-pub fn return_string_n() -> Option<KString> {
+pub fn return_string_n() -> Option<String> {
     None
 }
 
@@ -202,7 +225,7 @@ pub fn return_enum() -> MyEnum {
 }
 
 pub fn return_dictionary() -> MyDictionary {
-    MyDictionary::new(1, 2, 3, 4)
+    MyDictionary { a: 1, b: 2, c: 3, d: 4 }
 }
 
 pub fn return_dictionary_n() -> Option<MyDictionary> {
@@ -282,15 +305,15 @@ pub fn ping_double(
 }
 
 pub fn ping_string(
-    arg: KString
-) -> KString {
-    arg
+    arg: &String
+) -> String {
+    arg.clone()
 }
 
 pub fn ping_string_n(
-    arg: Option<KString>
-) -> Option<KString> {
-    arg
+    arg: &Option<String>
+) -> Option<String> {
+    arg.clone()
 }
 
 pub fn ping_enum(
@@ -300,248 +323,273 @@ pub fn ping_enum(
 }
 
 pub fn ping_dictionary(
-    arg: MyDictionary
+    arg: &MyDictionary
 ) -> MyDictionary {
-    arg
+    arg.clone()
 }
 
 pub fn ping_dictionary_n(
-    arg: Option<MyDictionary>
+    arg: &Option<MyDictionary>
 ) -> Option<MyDictionary> {
-    arg
+    arg.clone()
+}
+
+pub fn ping_interface(
+    arg: &Arc<MyInterface>
+) -> Arc<MyInterface> {
+    arg.clone()
+}
+
+pub fn ping_interface_n(
+    arg: &Option<Arc<MyInterface>>
+) -> Option<Arc<MyInterface>> {
+    arg.clone()
 }
 
 pub fn callback_void(
-    arg: VoidCallback
+    arg: &Arc<VoidCallback>
 ) {
     arg.invoke()
 }
 
 pub fn callback_void_n(
-    arg: Option<VoidCallback>
+    arg: &Option<Arc<VoidCallback>>
 ) -> bool {
     arg.is_none()
 }
 
 pub fn callback_arg_char(
-    arg: CallbackPassChar
+    arg: &Arc<CallbackPassChar>
 ) -> bool {
     arg.invoke('a' as u16)
 }
 
 pub fn callback_arg_boolean(
-    arg: CallbackPassBoolean
+    arg: &Arc<CallbackPassBoolean>
 ) -> bool {
     arg.invoke(true)
 }
 
 pub fn callback_arg_byte(
-    arg: CallbackPassByte
+    arg: &Arc<CallbackPassByte>
 ) -> bool {
     arg.invoke(1)
 }
 
 pub fn callback_arg_ubyte(
-    arg: CallbackPassUByte
+    arg: &Arc<CallbackPassUByte>
 ) -> bool {
     arg.invoke(255)
 }
 
 pub fn callback_arg_short(
-    arg: CallbackPassShort
+    arg: &Arc<CallbackPassShort>
 ) -> bool {
     arg.invoke(1)
 }
 
 pub fn callback_arg_ushort(
-    arg: CallbackPassUShort
+    arg: &Arc<CallbackPassUShort>
 ) -> bool {
     arg.invoke(65535)
 }
 
 pub fn callback_arg_int(
-    arg: CallbackPassInt
+    arg: &Arc<CallbackPassInt>
 ) -> bool {
     arg.invoke(1)
 }
 
 pub fn callback_arg_uint(
-    arg: CallbackPassUInt
+    arg: &Arc<CallbackPassUInt>
 ) -> bool {
     arg.invoke(4294967295)
 }
 
 pub fn callback_arg_long(
-    arg: CallbackPassLong
+    arg: &Arc<CallbackPassLong>
 ) -> bool {
     arg.invoke(1)
 }
 
 pub fn callback_arg_ulong(
-    arg: CallbackPassULong
+    arg: &Arc<CallbackPassULong>
 ) -> bool {
     arg.invoke(18446744073709551615)
 }
 
 pub fn callback_arg_float(
-    arg: CallbackPassFloat
+    arg: &Arc<CallbackPassFloat>
 ) -> bool {
     arg.invoke(1.1)
 }
 
 pub fn callback_arg_double(
-    arg: CallbackPassDouble
+    arg: &Arc<CallbackPassDouble>
 ) -> bool {
     arg.invoke(1.1)
 }
 
 pub fn callback_arg_string(
-    arg: CallbackPassString
+    arg: &Arc<CallbackPassString>
 ) -> bool {
-    arg.invoke(k_string!("test string".to_string()))
+    arg.invoke("test string".to_string())
 }
 
 pub fn callback_arg_string_n(
-    arg: CallbackPassStringN
+    arg: &Arc<CallbackPassStringN>
 ) -> bool {
     arg.invoke(None)
 }
 
 pub fn callback_arg_callback(
-    pass: VoidCallback,
-    arg: CallbackPassCallback
+    pass: &Arc<VoidCallback>,
+    arg: &Arc<CallbackPassCallback>
 ) -> bool {
-    arg.invoke(pass)
+    arg.invoke(pass.clone())
 }
 
 pub fn callback_arg_callback_n(
-    arg: CallbackPassCallbackN
+    arg: &Arc<CallbackPassCallbackN>
 ) -> bool {
     arg.invoke(None)
 }
 
 pub fn callback_arg_enum(
-    arg: CallbackPassEnum
+    arg: &Arc<CallbackPassEnum>
 ) -> bool {
     arg.invoke(MyEnum::CASE2)
 }
 
 pub fn callback_arg_dictionary(
-    arg: CallbackPassDictionary
+    arg: &Arc<CallbackPassDictionary>
 ) -> bool {
-    arg.invoke(MyDictionary::new(1, 2, 3, 4))
+    arg.invoke(MyDictionary { a: 1, b: 2, c: 3, d: 4 })
 }
 
 pub fn callback_arg_dictionary_n(
-    arg: CallbackPassDictionaryN
+    arg: &Arc<CallbackPassDictionaryN>
+) -> bool {
+    arg.invoke(None)
+}
+
+pub fn callback_arg_interface(
+    pass: &Arc<MyInterface>,
+    arg: &Arc<CallbackPassInterface>
+) -> bool {
+    arg.invoke(pass.clone())
+}
+
+pub fn callback_arg_interface_n(
+    arg: &Arc<CallbackPassInterfaceN>
 ) -> bool {
     arg.invoke(None)
 }
 
 pub fn callback_return_char(
-    arg: CallbackReturnChar
+    arg: &Arc<CallbackReturnChar>
 ) -> bool {
     arg.invoke() == 'a' as u16
 }
 
 pub fn callback_return_boolean(
-    arg: CallbackReturnBoolean
+    arg: &Arc<CallbackReturnBoolean>
 ) -> bool {
     arg.invoke() == true
 }
 
 pub fn callback_return_byte(
-    arg: CallbackReturnByte
+    arg: &Arc<CallbackReturnByte>
 ) -> bool {
     arg.invoke() == 1
 }
 
 pub fn callback_return_ubyte(
-    arg: CallbackReturnUByte
+    arg: &Arc<CallbackReturnUByte>
 ) -> bool {
     arg.invoke() == 255
 }
 
 pub fn callback_return_short(
-    arg: CallbackReturnShort
+    arg: &Arc<CallbackReturnShort>
 ) -> bool {
     arg.invoke() == 1
 }
 
 pub fn callback_return_ushort(
-    arg: CallbackReturnUShort
+    arg: &Arc<CallbackReturnUShort>
 ) -> bool {
     arg.invoke() == 65535
 }
 
 pub fn callback_return_int(
-    arg: CallbackReturnInt
+    arg: &Arc<CallbackReturnInt>
 ) -> bool {
     arg.invoke() == 1
 }
 
 pub fn callback_return_uint(
-    arg: CallbackReturnUInt
+    arg: &Arc<CallbackReturnUInt>
 ) -> bool {
     arg.invoke() == 4294967295
 }
 
 pub fn callback_return_long(
-    arg: CallbackReturnLong
+    arg: &Arc<CallbackReturnLong>
 ) -> bool {
     arg.invoke() == 1
 }
 
 pub fn callback_return_ulong(
-    arg: CallbackReturnULong
+    arg: &Arc<CallbackReturnULong>
 ) -> bool {
     arg.invoke() == 18446744073709551615
 }
 
 pub fn callback_return_float(
-    arg: CallbackReturnFloat
+    arg: &Arc<CallbackReturnFloat>
 ) -> bool {
     arg.invoke() == 1.1
 }
 
 pub fn callback_return_double(
-    arg: CallbackReturnDouble
+    arg: &Arc<CallbackReturnDouble>
 ) -> bool {
     arg.invoke() == 1.1
 }
 
 pub fn callback_return_string(
-    arg: CallbackReturnString
+    arg: &Arc<CallbackReturnString>
 ) -> bool {
     arg.invoke().as_str() == "test string"
 }
 
 pub fn callback_return_string_n(
-    arg: CallbackReturnStringN
+    arg: &Arc<CallbackReturnStringN>
 ) -> bool {
     arg.invoke().is_none()
 }
 
 pub fn callback_return_callback(
-    arg: CallbackReturnCallback
-) -> VoidCallback {
+    arg: &Arc<CallbackReturnCallback>
+) -> Arc<VoidCallback> {
     arg.invoke()
 }
 
 pub fn callback_return_callback_n(
-    arg: CallbackReturnCallbackN
+    arg: &Arc<CallbackReturnCallbackN>
 ) -> bool {
     arg.invoke().is_none()
 }
 
 pub fn callback_return_enum(
-    arg: CallbackReturnEnum
+    arg: &Arc<CallbackReturnEnum>
 ) -> bool {
     arg.invoke() == MyEnum::CASE2
 }
 
 pub fn callback_return_dictionary(
-    arg: CallbackReturnDictionary
+    arg: &Arc<CallbackReturnDictionary>
 ) -> bool {
     let result = arg.invoke();
     result.a == 1 &&
@@ -551,112 +599,124 @@ pub fn callback_return_dictionary(
 }
 
 pub fn callback_return_dictionary_n(
-    arg: CallbackReturnDictionaryN
+    arg: &Arc<CallbackReturnDictionaryN>
+) -> bool {
+    arg.invoke().is_none()
+}
+
+pub fn callback_return_interface(
+    arg: &Arc<CallbackReturnInterface>
+) -> bool {
+    arg.invoke().test()
+}
+
+pub fn callback_return_interface_n(
+    arg: &Arc<CallbackReturnInterfaceN>
 ) -> bool {
     arg.invoke().is_none()
 }
 
 pub fn pass_char_array(
-    arg: KCharArray
+    arg: &Vec<u16>
 ) -> bool {
     arg.as_slice() == ['a' as u16, 'b' as u16]
 }
 
 pub fn pass_char_array_n(
-    arg: Option<KCharArray>
+    arg: &Option<Vec<u16>>
 ) -> bool {
     arg.is_none()
 }
 
 pub fn pass_boolean_array(
-    arg: KBooleanArray
+    arg: &Vec<bool>
 ) -> bool {
     arg.as_slice() == [true, false]
 }
 
 pub fn pass_byte_array(
-    arg: KByteArray
+    arg: &Vec<i8>
 ) -> bool {
     arg.as_slice() == [1, 2]
 }
 
 pub fn pass_ubyte_array(
-    arg: KUByteArray
+    arg: &Vec<u8>
 ) -> bool {
     arg.as_slice() == [1, 255]
 }
 
 pub fn pass_short_array(
-    arg: KShortArray
+    arg: &Vec<i16>
 ) -> bool {
     arg.as_slice() == [1, 2]
 }
 
 pub fn pass_ushort_array(
-    arg: KUShortArray
+    arg: &Vec<u16>
 ) -> bool {
     arg.as_slice() == [1, 65535]
 }
 
 pub fn pass_int_array(
-    arg: KIntArray
+    arg: &Vec<i32>
 ) -> bool {
     arg.as_slice() == [1, 2]
 }
 
 pub fn pass_uint_array(
-    arg: KUIntArray
+    arg: &Vec<u32>
 ) -> bool {
     arg.as_slice() == [1, 4294967295]
 }
 
 pub fn pass_long_array(
-    arg: KLongArray
+    arg: &Vec<i64>
 ) -> bool {
     arg.as_slice() == [1, 2]
 }
 
 pub fn pass_ulong_array(
-    arg: KULongArray
+    arg: &Vec<u64>
 ) -> bool {
     arg.as_slice() == [1, 18446744073709551615]
 }
 
 pub fn pass_float_array(
-    arg: KFloatArray
+    arg: &Vec<f32>
 ) -> bool {
     arg.as_slice() == [1.1, 2.2]
 }
 
 pub fn pass_double_array(
-    arg: KDoubleArray
+    arg: &Vec<f64>
 ) -> bool {
     arg.as_slice() == [1.1, 2.2]
 }
 
 pub fn pass_string_array(
-    arg: KArray<KString>
+    arg: &Vec<String>
 ) -> bool {
     arg.as_slice()[0].as_str() == "string1" &&
     arg.as_slice()[1].as_str() == "string2"
 }
 
 pub fn pass_string_array_n(
-    arg: KArrayOpt<KString>
+    arg: &Vec<Option<String>>
 ) -> bool {
     arg.as_slice()[0].is_none() &&
     arg.as_slice()[1].is_none()
 }
 
 pub fn pass_enum_array(
-    arg: KIntArray
+    arg: &Vec<MyEnum>
 ) -> bool {
-    arg.as_slice()[0] == MyEnum::CASE1.to_int() &&
-    arg.as_slice()[1] == MyEnum::CASE2.to_int()
+    arg.as_slice()[0] == MyEnum::CASE1 &&
+    arg.as_slice()[1] == MyEnum::CASE2
 }
 
 pub fn pass_dictionary_array(
-    arg: KArray<MyDictionary>
+    arg: &Vec<MyDictionary>
 ) -> bool {
     let elements = arg.as_slice();
     elements[0].a == 1 &&
@@ -670,328 +730,367 @@ pub fn pass_dictionary_array(
 }
 
 pub fn pass_dictionary_array_n(
-    arg: KArrayOpt<MyDictionary>
+    arg: &Vec<Option<MyDictionary>>
 ) -> bool {
     arg.as_slice()[0].is_none() && arg.as_slice()[1].is_none()
 }
 
-pub fn return_char_array() -> KCharArray {
-    k_char_array!('a' as u16, 'b' as u16)
+pub fn pass_interface_array(
+    arg: &Vec<Arc<MyInterface>>
+) -> bool {
+    let elements = arg.as_slice();
+    elements[0].test() && elements[1].test()
 }
 
-pub fn return_char_array_n() -> Option<KCharArray> {
+pub fn pass_interface_array_n(
+    arg: &Vec<Option<Arc<MyInterface>>>
+) -> bool {
+    arg.as_slice()[0].is_none() && arg.as_slice()[1].is_none()
+}
+
+pub fn return_char_array() -> Vec<u16> {
+    vec!('a' as u16, 'b' as u16)
+}
+
+pub fn return_char_array_n() -> Option<Vec<u16>> {
     None
 }
 
-pub fn return_boolean_array() -> KBooleanArray {
-    k_boolean_array!(true, false)
+pub fn return_boolean_array() -> Vec<bool> {
+    vec!(true, false)
 }
 
-pub fn return_byte_array() -> KByteArray {
-    k_byte_array!(1, 2)
+pub fn return_byte_array() -> Vec<i8> {
+    vec!(1, 2)
 }
 
-pub fn return_ubyte_array() -> KUByteArray {
-    k_ubyte_array!(1, 255)
+pub fn return_ubyte_array() -> Vec<u8> {
+    vec!(1, 255)
 }
 
-pub fn return_short_array() -> KShortArray {
-    k_short_array!(1, 2)
+pub fn return_short_array() -> Vec<i16> {
+    vec!(1, 2)
 }
 
-pub fn return_ushort_array() -> KUShortArray {
-    k_ushort_array!(1, 65535)
+pub fn return_ushort_array() -> Vec<u16> {
+    vec!(1, 65535)
 }
 
-pub fn return_int_array() -> KIntArray {
-    k_int_array!(1, 2)
+pub fn return_int_array() -> Vec<i32> {
+    vec!(1, 2)
 }
 
-pub fn return_uint_array() -> KUIntArray {
-    k_uint_array!(1, 4294967295)
+pub fn return_uint_array() -> Vec<u32> {
+    vec!(1, 4294967295)
 }
 
-pub fn return_long_array() -> KLongArray {
-    k_long_array!(1, 2)
+pub fn return_long_array() -> Vec<i64> {
+    vec!(1, 2)
 }
 
-pub fn return_ulong_array() -> KULongArray {
-    k_ulong_array!(1, 18446744073709551615)
+pub fn return_ulong_array() -> Vec<u64> {
+    vec!(1, 18446744073709551615)
 }
 
-pub fn return_float_array() -> KFloatArray {
-    k_float_array!(1.1, 2.2)
+pub fn return_float_array() -> Vec<f32> {
+    vec!(1.1, 2.2)
 }
 
-pub fn return_double_array() -> KDoubleArray {
-    k_double_array!(1.1, 2.2)
+pub fn return_double_array() -> Vec<f64> {
+    vec!(1.1, 2.2)
 }
 
-pub fn return_string_array() -> KArray<KString> {
-    k_array!(KString::from_str("string1"), KString::from_str("string2"))
+pub fn return_string_array() -> Vec<String> {
+    vec!("string1".to_string(), "string2".to_string())
 }
 
-pub fn return_string_array_n() -> KArrayOpt<KString> {
-    k_array_opt!(None, None)
+pub fn return_string_array_n() -> Vec<Option<String>> {
+    vec!(None, None)
 }
 
-pub fn return_enum_array() -> KIntArray {
-    k_int_array!(MyEnum::CASE1.to_int(), MyEnum::CASE2.to_int())
+pub fn return_enum_array() -> Vec<MyEnum> {
+    vec!(MyEnum::CASE1, MyEnum::CASE2)
 }
 
-pub fn return_dictionary_array() -> KArray<MyDictionary> {
-    k_array!(
-        MyDictionary::new(1, 2, 3, 4),
-        MyDictionary::new(5, 6, 7, 8)
+pub fn return_dictionary_array() -> Vec<MyDictionary> {
+    vec!(
+        MyDictionary { a: 1, b: 2, c: 3, d: 4 },
+        MyDictionary { a: 5, b: 6, c: 7, d: 8 }
     )
 }
 
-pub fn return_dictionary_array_n() -> KArrayOpt<MyDictionary> {
-    k_array_opt!(None, None)
+pub fn return_dictionary_array_n() -> Vec<Option<MyDictionary>> {
+    vec!(None, None)
 }
 
 pub fn ping_char_array(
-    arg: KCharArray
-) -> KCharArray {
-    arg
+    arg: &Vec<u16>
+) -> Vec<u16> {
+    arg.clone()
 }
 
 pub fn ping_char_array_n(
-    arg: Option<KCharArray>
-) -> Option<KCharArray> {
-    arg
+    arg: &Option<Vec<u16>>
+) -> Option<Vec<u16>> {
+    arg.clone()
 }
 
 pub fn ping_boolean_array(
-    arg: KBooleanArray
-) -> KBooleanArray {
-    arg
+    arg: &Vec<bool>
+) -> Vec<bool> {
+    arg.clone()
 }
 
 pub fn ping_byte_array(
-    arg: KByteArray
-) -> KByteArray {
-    arg
+    arg: &Vec<i8>
+) -> Vec<i8> {
+    arg.clone()
 }
 
 pub fn ping_ubyte_array(
-    arg: KUByteArray
-) -> KUByteArray {
-    arg
+    arg: &Vec<u8>
+) -> Vec<u8> {
+    arg.clone()
 }
 
 pub fn ping_short_array(
-    arg: KShortArray
-) -> KShortArray {
-    arg
+    arg: &Vec<i16>
+) -> Vec<i16> {
+    arg.clone()
 }
 
 pub fn ping_ushort_array(
-    arg: KUShortArray
-) -> KUShortArray {
-    arg
+    arg: &Vec<u16>
+) -> Vec<u16> {
+    arg.clone()
 }
 
 pub fn ping_int_array(
-    arg: KIntArray
-) -> KIntArray {
-    arg
+    arg: &Vec<i32>
+) -> Vec<i32> {
+    arg.clone()
 }
 
 pub fn ping_uint_array(
-    arg: KUIntArray
-) -> KUIntArray {
-    arg
+    arg: &Vec<u32>
+) -> Vec<u32> {
+    arg.clone()
 }
 
 pub fn ping_long_array(
-    arg: KLongArray
-) -> KLongArray {
-    arg
+    arg: &Vec<i64>
+) -> Vec<i64> {
+    arg.clone()
 }
 
 pub fn ping_ulong_array(
-    arg: KULongArray
-) -> KULongArray {
-    arg
+    arg: &Vec<u64>
+) -> Vec<u64> {
+    arg.clone()
 }
 
 pub fn ping_float_array(
-    arg: KFloatArray
-) -> KFloatArray {
-    arg
+    arg: &Vec<f32>
+) -> Vec<f32> {
+    arg.clone()
 }
 
 pub fn ping_double_array(
-    arg: KDoubleArray
-) -> KDoubleArray {
-    arg
+    arg: &Vec<f64>
+) -> Vec<f64> {
+    arg.clone()
 }
 
 pub fn ping_string_array(
-    arg: KArray<KString>
-) -> KArray<KString> {
-    arg
+    arg: &Vec<String>
+) -> Vec<String> {
+    arg.clone()
 }
 
 pub fn ping_string_array_n(
-    arg: KArrayOpt<KString>
-) -> KArrayOpt<KString> {
-    arg
+    arg: &Vec<Option<String>>
+) -> Vec<Option<String>> {
+    arg.clone()
 }
 
 pub fn ping_enum_array(
-    arg: KIntArray
-) -> KIntArray {
-    arg
+    arg: &Vec<MyEnum>
+) -> Vec<MyEnum> {
+    arg.clone()
 }
 
 pub fn ping_dictionary_array(
-    arg: KArray<MyDictionary>
-) -> KArray<MyDictionary> {
-    arg
+    arg: &Vec<MyDictionary>
+) -> Vec<MyDictionary> {
+    arg.clone()
 }
 
 pub fn ping_dictionary_array_n(
-    arg: KArrayOpt<MyDictionary>
-) -> KArrayOpt<MyDictionary> {
-    arg
+    arg: &Vec<Option<MyDictionary>>
+) -> Vec<Option<MyDictionary>> {
+    arg.clone()
+}
+
+pub fn ping_interface_array(
+    arg: &Vec<Arc<MyInterface>>
+) -> Vec<Arc<MyInterface>> {
+    arg.clone()
+}
+
+pub fn ping_interface_array_n(
+    arg: &Vec<Option<Arc<MyInterface>>>
+) -> Vec<Option<Arc<MyInterface>>> {
+    arg.clone()
 }
 
 pub fn callback_arg_char_array(
-    arg: CallbackPassCharArray
+    arg: &Arc<CallbackPassCharArray>
 ) -> bool {
-    arg.invoke(k_char_array!('a' as u16, 'b' as u16))
+    arg.invoke(vec!('a' as u16, 'b' as u16))
 }
 
 pub fn callback_arg_char_array_n(
-    arg: CallbackPassCharArrayN
+    arg: &Arc<CallbackPassCharArrayN>
 ) -> bool {
     arg.invoke(None)
 }
 
 pub fn callback_arg_boolean_array(
-    arg: CallbackPassBooleanArray
+    arg: &Arc<CallbackPassBooleanArray>
 ) -> bool {
-    arg.invoke(k_boolean_array!(true, false))
+    arg.invoke(vec!(true, false))
 }
 
 pub fn callback_arg_byte_array(
-    arg: CallbackPassByteArray
+    arg: &Arc<CallbackPassByteArray>
 ) -> bool {
-    arg.invoke(k_byte_array!(1, 2))
+    arg.invoke(vec!(1, 2))
 }
 
 pub fn callback_arg_ubyte_array(
-    arg: CallbackPassUByteArray
+    arg: &Arc<CallbackPassUByteArray>
 ) -> bool {
-    arg.invoke(k_ubyte_array!(1, 255))
+    arg.invoke(vec!(1, 255))
 }
 
 pub fn callback_arg_short_array(
-    arg: CallbackPassShortArray
+    arg: &Arc<CallbackPassShortArray>
 ) -> bool {
-    arg.invoke(k_short_array!(1, 2))
+    arg.invoke(vec!(1, 2))
 }
 
 pub fn callback_arg_ushort_array(
-    arg: CallbackPassUShortArray
+    arg: &Arc<CallbackPassUShortArray>
 ) -> bool {
-    arg.invoke(k_ushort_array!(1, 65535))
+    arg.invoke(vec!(1, 65535))
 }
 
 pub fn callback_arg_int_array(
-    arg: CallbackPassIntArray
+    arg: &Arc<CallbackPassIntArray>
 ) -> bool {
-    arg.invoke(k_int_array!(1, 2))
+    arg.invoke(vec!(1, 2))
 }
 
 pub fn callback_arg_uint_array(
-    arg: CallbackPassUIntArray
+    arg: &Arc<CallbackPassUIntArray>
 ) -> bool {
-    arg.invoke(k_uint_array!(1, 4294967295))
+    arg.invoke(vec!(1, 4294967295))
 }
 
 pub fn callback_arg_long_array(
-    arg: CallbackPassLongArray
+    arg: &Arc<CallbackPassLongArray>
 ) -> bool {
-    arg.invoke(k_long_array!(1, 2))
+    arg.invoke(vec!(1, 2))
 }
 
 pub fn callback_arg_ulong_array(
-    arg: CallbackPassULongArray
+    arg: &Arc<CallbackPassULongArray>
 ) -> bool {
-    arg.invoke(k_ulong_array!(1, 18446744073709551615))
+    arg.invoke(vec!(1, 18446744073709551615))
 }
 
 pub fn callback_arg_float_array(
-    arg: CallbackPassFloatArray
+    arg: &Arc<CallbackPassFloatArray>
 ) -> bool {
-    arg.invoke(k_float_array!(1.1, 2.2))
+    arg.invoke(vec!(1.1, 2.2))
 }
 
 pub fn callback_arg_double_array(
-    arg: CallbackPassDoubleArray
+    arg: &Arc<CallbackPassDoubleArray>
 ) -> bool {
-    arg.invoke(k_double_array!(1.1, 2.2))
+    arg.invoke(vec!(1.1, 2.2))
 }
 
 pub fn callback_arg_string_array(
-    arg: CallbackPassStringArray
+    arg: &Arc<CallbackPassStringArray>
 ) -> bool {
-    arg.invoke(k_array!(
-        KString::from_str("string1"),
-        KString::from_str("string2")
+    arg.invoke(vec!(
+        "string1".to_string(),
+        "string2".to_string()
     ))
 }
 
 pub fn callback_arg_string_array_n(
-    arg: CallbackPassStringArrayN
+    arg: &Arc<CallbackPassStringArrayN>
 ) -> bool {
-    arg.invoke(k_array_opt!(None, None))
+    arg.invoke(vec!(None, None))
 }
 
 pub fn callback_arg_enum_array(
-    arg: CallbackPassEnumArray
+    arg: &Arc<CallbackPassEnumArray>
 ) -> bool {
-    arg.invoke(k_int_array!(
-        MyEnum::CASE1.to_int(),
-        MyEnum::CASE2.to_int()
+    arg.invoke(vec!(
+        MyEnum::CASE1,
+        MyEnum::CASE2
     ))
 }
 
 pub fn callback_arg_dictionary_array(
-    arg: CallbackPassDictionaryArray
+    arg: &Arc<CallbackPassDictionaryArray>
 ) -> bool {
-    arg.invoke(k_array!(
-        MyDictionary::new(1, 2, 3, 4),
-        MyDictionary::new(5, 6, 7, 8)
+    arg.invoke(vec!(
+        MyDictionary { a: 1, b: 2, c: 3, d: 4 },
+        MyDictionary { a: 5, b: 6, c: 7, d: 8 }
     ))
 }
 
 pub fn callback_arg_dictionary_array_n(
-    arg: CallbackPassDictionaryArrayN
+    arg: &Arc<CallbackPassDictionaryArrayN>
 ) -> bool {
-    arg.invoke(k_array_opt!(None, None))
+    arg.invoke(vec!(None, None))
+}
+
+pub fn callback_arg_interface_array(
+    arg: &Arc<CallbackPassInterfaceArray>
+) -> bool {
+    arg.invoke(vec!(
+        Arc::new(MyInterface::new()),
+        Arc::new(MyInterface::new())
+    ))
+}
+
+pub fn callback_arg_interface_array_n(
+    arg: &Arc<CallbackPassInterfaceArrayN>
+) -> bool {
+    arg.invoke(vec!(None, None))
 }
 
 pub fn callback_return_char_array(
-    arg: CallbackReturnCharArray
+    arg: &Arc<CallbackReturnCharArray>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
-    arr[0] == 'a' as u16 &&
-        arr[1] == 'b' as u16
+    arr[0] == 'a' as u16 && arr[1] == 'b' as u16
 }
 
 pub fn callback_return_char_array_n(
-    arg: CallbackReturnCharArrayN
+    arg: &Arc<CallbackReturnCharArrayN>
 ) -> bool {
     arg.invoke().is_none()
 }
 
 pub fn callback_return_boolean_array(
-    arg: CallbackReturnBooleanArray
+    arg: &Arc<CallbackReturnBooleanArray>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1000,7 +1099,7 @@ pub fn callback_return_boolean_array(
 }
 
 pub fn callback_return_byte_array(
-    arg: CallbackReturnByteArray
+    arg: &Arc<CallbackReturnByteArray>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1009,7 +1108,7 @@ pub fn callback_return_byte_array(
 }
 
 pub fn callback_return_ubyte_array(
-    arg: CallbackReturnUByteArray
+    arg: &Arc<CallbackReturnUByteArray>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1018,7 +1117,7 @@ pub fn callback_return_ubyte_array(
 }
 
 pub fn callback_return_short_array(
-    arg: CallbackReturnShortArray
+    arg: &Arc<CallbackReturnShortArray>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1027,7 +1126,7 @@ pub fn callback_return_short_array(
 }
 
 pub fn callback_return_ushort_array(
-    arg: CallbackReturnUShortArray
+    arg: &Arc<CallbackReturnUShortArray>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1036,7 +1135,7 @@ pub fn callback_return_ushort_array(
 }
 
 pub fn callback_return_int_array(
-    arg: CallbackReturnIntArray
+    arg: &Arc<CallbackReturnIntArray>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1045,7 +1144,7 @@ pub fn callback_return_int_array(
 }
 
 pub fn callback_return_uint_array(
-    arg: CallbackReturnUIntArray
+    arg: &Arc<CallbackReturnUIntArray>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1054,7 +1153,7 @@ pub fn callback_return_uint_array(
 }
 
 pub fn callback_return_long_array(
-    arg: CallbackReturnLongArray
+    arg: &Arc<CallbackReturnLongArray>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1063,7 +1162,7 @@ pub fn callback_return_long_array(
 }
 
 pub fn callback_return_ulong_array(
-    arg: CallbackReturnULongArray
+    arg: &Arc<CallbackReturnULongArray>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1072,7 +1171,7 @@ pub fn callback_return_ulong_array(
 }
 
 pub fn callback_return_float_array(
-    arg: CallbackReturnFloatArray
+    arg: &Arc<CallbackReturnFloatArray>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1081,7 +1180,7 @@ pub fn callback_return_float_array(
 }
 
 pub fn callback_return_double_array(
-    arg: CallbackReturnDoubleArray
+    arg: &Arc<CallbackReturnDoubleArray>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1090,7 +1189,7 @@ pub fn callback_return_double_array(
 }
 
 pub fn callback_return_string_array(
-    arg: CallbackReturnStringArray
+    arg: &Arc<CallbackReturnStringArray>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1099,7 +1198,7 @@ pub fn callback_return_string_array(
 }
 
 pub fn callback_return_string_array_n(
-    arg: CallbackReturnStringArrayN
+    arg: &Arc<CallbackReturnStringArrayN>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1108,16 +1207,16 @@ pub fn callback_return_string_array_n(
 }
 
 pub fn callback_return_enum_array(
-    arg: CallbackReturnEnumArray
+    arg: &Arc<CallbackReturnEnumArray>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
-    arr[0] == MyEnum::CASE1.to_int() &&
-        arr[1] == MyEnum::CASE2.to_int()
+    arr[0] == MyEnum::CASE1 &&
+        arr[1] == MyEnum::CASE2
 }
 
 pub fn callback_return_dictionary_array(
-    arg: CallbackReturnDictionaryArray
+    arg: &Arc<CallbackReturnDictionaryArray>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1132,7 +1231,7 @@ pub fn callback_return_dictionary_array(
 }
 
 pub fn callback_return_dictionary_array_n(
-    arg: CallbackReturnDictionaryArrayN
+    arg: &Arc<CallbackReturnDictionaryArrayN>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1140,8 +1239,24 @@ pub fn callback_return_dictionary_array_n(
         arr[1].is_none()
 }
 
+pub fn callback_return_interface_array(
+    arg: &Arc<CallbackReturnInterfaceArray>
+) -> bool {
+    let result = arg.invoke();
+    let arr = result.as_slice();
+    arr[0].test() && arr[1].test()
+}
+
+pub fn callback_return_interface_array_n(
+    arg: &Arc<CallbackReturnInterfaceArrayN>
+) -> bool {
+    let result = arg.invoke();
+    let arr = result.as_slice();
+    arr[0].is_none() && arr[1].is_none()
+}
+
 pub fn pass_big_dictionary(
-    arg: TypeDictionary
+    arg: &TypeDictionary
 ) -> bool {
     arg.a1 == 'a' as u16 &&
         arg.a2 == true &&
@@ -1158,10 +1273,10 @@ pub fn pass_big_dictionary(
         arg.a13.as_str() == "test string" &&
         arg.a14 == MyEnum::CASE2 &&
         arg.a15.a == 1 && arg.a15.b == 2 && arg.a15.c == 3 && arg.a15.d == 4 &&
+        arg.a16.test() &&
         // callback (a16) is skipped
-        arg.a17.as_slice() == ['a' as u16, 'b' as u16] &&
-        arg.a18.as_slice() == [true, false] &&
-        arg.a19.as_slice() == [1, 2] &&
+        arg.a18.as_slice() == ['a' as u16, 'b' as u16] &&
+        arg.a19.as_slice() == [true, false] &&
         arg.a20.as_slice() == [1, 2] &&
         arg.a21.as_slice() == [1, 2] &&
         arg.a22.as_slice() == [1, 2] &&
@@ -1169,73 +1284,82 @@ pub fn pass_big_dictionary(
         arg.a24.as_slice() == [1, 2] &&
         arg.a25.as_slice() == [1, 2] &&
         arg.a26.as_slice() == [1, 2] &&
-        arg.a27.as_slice() == [1.2, 3.4] &&
+        arg.a27.as_slice() == [1, 2] &&
         arg.a28.as_slice() == [1.2, 3.4] &&
-        arg.a29.as_slice()[0].as_str() == "string1" &&
-        arg.a29.as_slice()[1].as_str() == "string2" &&
-        arg.a30.as_slice() == [MyEnum::CASE1.to_int(), MyEnum::CASE2.to_int()] &&
-        arg.a31.as_slice()[0].a == 1 &&
-        arg.a31.as_slice()[0].b == 2 &&
-        arg.a31.as_slice()[0].c == 3 &&
-        arg.a31.as_slice()[0].d == 4 &&
-        arg.a31.as_slice()[1].a == 5 &&
-        arg.a31.as_slice()[1].b == 6 &&
-        arg.a31.as_slice()[1].c == 7 &&
-        arg.a31.as_slice()[1].d == 8
+        arg.a29.as_slice() == [1.2, 3.4] &&
+        arg.a30.as_slice()[0].as_str() == "string1" &&
+        arg.a30.as_slice()[1].as_str() == "string2" &&
+        arg.a31.as_slice() == [MyEnum::CASE1, MyEnum::CASE2] &&
+        arg.a32.as_slice()[0].a == 1 &&
+        arg.a32.as_slice()[0].b == 2 &&
+        arg.a32.as_slice()[0].c == 3 &&
+        arg.a32.as_slice()[0].d == 4 &&
+        arg.a32.as_slice()[1].a == 5 &&
+        arg.a32.as_slice()[1].b == 6 &&
+        arg.a32.as_slice()[1].c == 7 &&
+        arg.a32.as_slice()[1].d == 8 &&
+        arg.a33.as_slice()[0].test() &&
+        arg.a33.as_slice()[1].test()
 }
 
 pub fn return_big_dictionary(
-    callback: VoidCallback
+    callback: &Arc<VoidCallback>,
+    inter: &Arc<MyInterface>
 ) -> TypeDictionary {
-    TypeDictionary::new(
-        'a' as u16,
-        true,
-        123,
-        123,
-        123,
-        123,
-        123,
-        123,
-        9223372036854775807,
-        9223372036854775807,
-        123.0,
-        123.4,
-        KString::from_str("test string"),
-        MyEnum::CASE2,
-        MyDictionary::new(1, 2, 3, 4),
-        callback,
-        k_char_array!('a' as u16, 'b' as u16),
-        k_boolean_array!(true, false),
-        k_byte_array!(1, 2),
-        k_ubyte_array!(1, 2),
-        k_short_array!(1, 2),
-        k_ushort_array!(1, 2),
-        k_int_array!(1, 2),
-        k_uint_array!(1, 2),
-        k_long_array!(1, 2),
-        k_ulong_array!(1, 2),
-        k_float_array!(1.2, 3.4),
-        k_double_array!(1.2, 3.4),
-        k_array!(
-            KString::from_str("string1"),
-            KString::from_str("string2")
+    TypeDictionary {
+        a1: 'a' as u16,
+        a2: true,
+        a3: 123,
+        a4: 123,
+        a5: 123,
+        a6: 123,
+        a7: 123,
+        a8: 123,
+        a9: 9223372036854775807,
+        a10: 9223372036854775807,
+        a11: 123.0,
+        a12: 123.4,
+        a13: "test string".to_string(),
+        a14: MyEnum::CASE2,
+        a15: MyDictionary { a: 1, b: 2, c: 3, d: 4 },
+        a16: inter.clone(),
+        a17: callback.clone(),
+        a18: vec!('a' as u16, 'b' as u16),
+        a19: vec!(true, false),
+        a20: vec!(1, 2),
+        a21: vec!(1, 2),
+        a22: vec!(1, 2),
+        a23: vec!(1, 2),
+        a24: vec!(1, 2),
+        a25: vec!(1, 2),
+        a26: vec!(1, 2),
+        a27: vec!(1, 2),
+        a28: vec!(1.2, 3.4),
+        a29: vec!(1.2, 3.4),
+        a30: vec!(
+            "string1".to_string(),
+            "string2".to_string()
         ),
-        k_int_array!(MyEnum::CASE1.to_int(), MyEnum::CASE2.to_int()),
-        k_array!(
-            MyDictionary::new(1, 2, 3, 4),
-            MyDictionary::new(5, 6, 7, 8)
+        a31: vec!(MyEnum::CASE1, MyEnum::CASE2),
+        a32: vec!(
+            MyDictionary { a: 1, b: 2, c: 3, d: 4 },
+            MyDictionary { a: 5, b: 6, c: 7, d: 8 }
+        ),
+        a33: vec!(
+            inter.clone(),
+            inter.clone()
         )
-    )
+    }
 }
 
 pub fn ping_big_dictionary(
-    arg: TypeDictionary
+    arg: &TypeDictionary
 ) -> TypeDictionary {
-    arg
+    arg.clone()
 }
 
 pub fn pass_big_dictionary_n(
-    arg: Option<TypeDictionary>
+    arg: &Option<TypeDictionary>
 ) -> bool {
     arg.is_none()
 }
@@ -1245,9 +1369,9 @@ pub fn return_big_dictionary_n() -> Option<TypeDictionary> {
 }
 
 pub fn ping_big_dictionary_n(
-    arg: Option<TypeDictionary>
+    arg: &Option<TypeDictionary>
 ) -> Option<TypeDictionary> {
-    arg
+    arg.clone()
 }
 
 pub fn critical_primitives(
@@ -1286,30 +1410,42 @@ pub fn critical_enum(
 }
 
 pub fn critical_string(
-    a1: KString
+    a1: &String
 ) -> bool {
     a1.as_str() == "test string"
 }
 
 pub fn critical_string_n(
-    a1: Option<KString>
+    a1: &Option<String>
+) -> bool {
+    a1.is_none()
+}
+
+pub fn critical_interface(
+    a1: &Arc<MyInterface>
+) -> bool {
+    a1.test()
+}
+
+pub fn critical_interface_n(
+    a1: &Option<Arc<MyInterface>>
 ) -> bool {
     a1.is_none()
 }
 
 pub fn critical_primitives_array(
-    a1: KCharArray,
-    a2: KBooleanArray,
-    a3: KByteArray,
-    a4: KUByteArray,
-    a5: KShortArray,
-    a6: KUShortArray,
-    a7: KIntArray,
-    a8: KUIntArray,
-    a9: KLongArray,
-    a10: KULongArray,
-    a11: KFloatArray,
-    a12: KDoubleArray
+    a1: &Vec<u16>,
+    a2: &Vec<bool>,
+    a3: &Vec<i8>,
+    a4: &Vec<u8>,
+    a5: &Vec<i16>,
+    a6: &Vec<u16>,
+    a7: &Vec<i32>,
+    a8: &Vec<u32>,
+    a9: &Vec<i64>,
+    a10: &Vec<u64>,
+    a11: &Vec<f32>,
+    a12: &Vec<f64>
 ) -> bool {
     a1.as_slice() == ['a' as u16, 'b' as u16] &&
         a2.as_slice() == [true, false] &&
@@ -1326,24 +1462,24 @@ pub fn critical_primitives_array(
 }
 
 pub fn critical_enum_array(
-    a1: KIntArray
+    a1: &Vec<MyEnum>
 ) -> bool {
-    a1.as_slice() == [MyEnum::CASE1.to_int(), MyEnum::CASE2.to_int()]
+    a1.as_slice() == [MyEnum::CASE1, MyEnum::CASE2]
 }
 
 pub fn critical_primitives_array_n(
-    a1: Option<KCharArray>,
-    a2: Option<KBooleanArray>,
-    a3: Option<KByteArray>,
-    a4: Option<KUByteArray>,
-    a5: Option<KShortArray>,
-    a6: Option<KUShortArray>,
-    a7: Option<KIntArray>,
-    a8: Option<KUIntArray>,
-    a9: Option<KLongArray>,
-    a10: Option<KULongArray>,
-    a11: Option<KFloatArray>,
-    a12: Option<KDoubleArray>
+    a1: &Option<Vec<u16>>,
+    a2: &Option<Vec<bool>>,
+    a3: &Option<Vec<i8>>,
+    a4: &Option<Vec<u8>>,
+    a5: &Option<Vec<i16>>,
+    a6: &Option<Vec<u16>>,
+    a7: &Option<Vec<i32>>,
+    a8: &Option<Vec<u32>>,
+    a9: &Option<Vec<i64>>,
+    a10: &Option<Vec<u64>>,
+    a11: &Option<Vec<f32>>,
+    a12: &Option<Vec<f64>>
 ) -> bool {
     a1.is_none() && a2.is_none() && a3.is_none() &&
         a4.is_none() && a5.is_none() && a6.is_none() &&
@@ -1352,7 +1488,7 @@ pub fn critical_primitives_array_n(
 }
 
 pub fn critical_enum_array_n(
-    a1: Option<KIntArray>
+    a1: &Option<Vec<MyEnum>>
 ) -> bool {
     a1.is_none()
 }
@@ -1407,6 +1543,10 @@ pub fn critical_return_double() -> f64 {
 
 pub fn critical_return_enum() -> MyEnum {
     MyEnum::CASE1
+}
+
+pub fn critical_return_interface() -> Arc<MyInterface> {
+    Arc::new(MyInterface::new())
 }
 
 pub fn jvmci1() -> bool {
@@ -1522,13 +1662,13 @@ pub fn jvmci9(
 }
 
 pub fn jvmci10(
-    a1: KString,
+    a1: &String,
     a2: f64,
     a3: f32,
     a4: i64,
     a5: i64,
     a6: f64,
-    a7: KString,
+    a7: &String,
     a8: f32,
     a9: i32
 ) -> bool {
@@ -1581,15 +1721,15 @@ pub fn jvmci15() -> f64 {
 }
 
 pub fn jvmci_array(
-    array: KIntArray
+    array: &Vec<i32>
 ) -> bool {
     array.as_slice() == [1, 2, 3]
 }
 
 pub fn jvmci_some_arrays(
-    array1: KIntArray,
-    array2: KFloatArray,
-    array3: KDoubleArray
+    array1: &Vec<i32>,
+    array2: &Vec<f32>,
+    array3: &Vec<f64>
 ) -> bool {
     array1.as_slice() == [1, 2, 3] &&
         array2.as_slice() == [4.0, 5.0, 6.0] &&
@@ -1599,9 +1739,9 @@ pub fn jvmci_some_arrays(
 pub fn jvmci_enum(
     enum1: MyEnum,
     enum2: MyEnum,
-    enum_array: KIntArray
+    enum_array: &Vec<MyEnum>
 ) -> bool {
     enum1 == MyEnum::CASE1 &&
         enum2 == MyEnum::CASE2 &&
-        enum_array.as_slice() == [MyEnum::CASE1.to_int(), MyEnum::CASE2.to_int(), MyEnum::CASE1.to_int()]
+        enum_array.as_slice() == [MyEnum::CASE1, MyEnum::CASE2, MyEnum::CASE1]
 }

@@ -1,52 +1,56 @@
 package com.huskerdev.nativekt.printers.kotlin
 
+import com.huskerdev.nativekt.NativeModuleContext
+import com.huskerdev.nativekt.plugin.NativeKtAndroidInterface
 import com.huskerdev.nativekt.printers.kotlin.jvm.KotlinJvmJniPrinter
-import com.huskerdev.nativekt.printers.kotlin.jvm.toKotlinCriticalType
-import com.huskerdev.nativekt.printers.kotlin.jvm.toNativeCriticalType
 import com.huskerdev.nativekt.utils.*
-import com.huskerdev.webidl.resolver.IdlResolver
-import com.huskerdev.webidl.resolver.ResolvedIdlOperation
-import org.gradle.internal.extensions.stdlib.capitalized
+import com.huskerdev.webidl.resolver.ResolvedIdlType
 import java.io.File
 
+
 class KotlinAndroidPrinter(
-    idl: IdlResolver,
+    val context: NativeModuleContext,
     target: File,
-    classPath: String,
-    moduleName: String,
-    useCoroutines: Boolean,
-    val expectActual: Boolean,
-    val isAndroidCriticalEnabled: Boolean
+    val expectActual: Boolean
 ) {
-    val jniClassName = "${moduleName.capitalized()}JNI"
+    private val extension = context.extension as NativeKtAndroidInterface
+    private val criticalEnabled = extension.useAndroidCriticalNative
+
+    private val jniClassName = "${context.moduleName.upperCamelCase()}JNI"
+    private val actual = if(expectActual) "actual " else ""
 
     init {
-        val actual = if(expectActual) "actual " else ""
+        target.parentFile.mkdirs()
+        target.writeText(buildString {
+            printHeader()
+            printJvmInterfaces(context)
+            printFunction()
 
-        val builder = StringBuilder()
-        builder.append("""
+            append("\n")
+            KotlinJvmJniPrinter(context, this,
+                name = jniClassName,
+                parentClass = null,
+                isAndroid = true
+            )
+        })
+    }
+
+    private fun StringBuilder.printHeader() {
+        val isLibLoadedField = loadFieldName(context)
+
+        appendLine("""
             @file:OptIn(ExperimentalUnsignedTypes::class)
-            @file:Suppress("unchecked_cast")
             
-            package $classPath
+            package ${context.classPath}
             
+            import com.huskerdev.nativekt.*
+            import com.huskerdev.nativekt.jvm.*
         """.trimIndent())
 
-        if(isAndroidCriticalEnabled)
-            builder.append("""
-                
-                import android.os.Build
-                import com.huskerdev.nativekt.jvm.*
-                import dalvik.annotation.optimization.*
-                
-                
-                private val supportsCritical = Build.VERSION.SDK_INT >= 26
-                
-            """.trimIndent())
+        if(extension.useAndroidCriticalNative)
+            appendLine("import dalvik.annotation.optimization.*")
 
-        val isLibLoadedField = "isLib${moduleName.capitalized()}Loaded"
-
-        builder.append("""
+        appendLine("""
             
             private var _$isLibLoadedField = false
 
@@ -54,88 +58,62 @@ class KotlinAndroidPrinter(
                 get() = _$isLibLoadedField
             
             @Throws(UnsupportedOperationException::class)
-            ${actual}fun ${syncLoadFunctionName(moduleName)}() {
+            ${actual}fun ${syncLoadFunctionName(context)}() {
                 if(_$isLibLoadedField) return
                 _$isLibLoadedField = true
                 
-                $jniClassName("$moduleName")
+                $jniClassName("${context.moduleName}")
             }
             
-            ${actual}fun ${asyncLoadFunctionName(moduleName)}(onReady: () -> Unit) {
-                ${syncLoadFunctionName(moduleName)}()
+            ${actual}fun ${asyncLoadFunctionName(context)}(onReady: () -> Unit) {
+                ${syncLoadFunctionName(context)}()
                 onReady()
             }
-            
         """.trimIndent())
 
-        if(useCoroutines) {
-            builder.append("""
-                
-                ${actual}suspend fun ${asyncLoadFunctionName(moduleName)}() =
-                    ${syncLoadFunctionName(moduleName)}()
-                
-            """.trimIndent())
-        }
-
-        idl.allOperators().forEach {
-            printFunction(builder, it)
-        }
-
-        builder.append("\n\n")
-        KotlinJvmJniPrinter(idl, builder,
-            name = jniClassName,
-            parentClass = null,
-            isAndroid = true,
-            isAndroidCriticalEnabled = isAndroidCriticalEnabled
-        )
-
-        if(idl.interfaces.isNotEmpty()) {
-            printLabel(builder, "Interfaces")
-            idl.interfaces.values.forEach {
-                printJvmInterface(builder, it)
-            }
-        }
-
-        target.parentFile.mkdirs()
-        target.writeText(builder.toString())
+        if(context.extension.useCoroutines) appendLine("""
+            
+            ${actual}suspend fun ${asyncLoadFunctionName(context)}() =
+                ${syncLoadFunctionName(context)}()
+        """.trimIndent())
     }
 
-    private fun printFunction(
-        builder: StringBuilder,
-        function: ResolvedIdlOperation
-    ) = builder.apply {
-        val isInterfaceFunction = function.isInterfaceOperation()
-        val isInterfaceConstructor = function.isInterfaceOperationConstructor()
+    private fun StringBuilder.printFunction() {
+        if(context.allOperations.isEmpty())
+            return
+        printLabel("Functions")
 
-        append('\n')
-        if(expectActual && !isInterfaceFunction)
-            append("actual ")
-        if(isInterfaceFunction)
-            append("private ")
-        val kArgs = function.args.joinToString {
-            "${it.kname}: ${it.type.toKotlinType()}"
-        }
-        val type = if(!function.type.isVoid()) {
-            ": " + if(isInterfaceConstructor)
-                "Long"
-            else function.type.toKotlinType()
-        } else ""
+        context.allOperations.forEach { operation ->
+            val isCritical = criticalEnabled && operation.isCritical() && operation.isAndroidCriticalCapable()
 
-        append("fun ${function.kname}($kArgs)$type = \n\t")
-
-        if(isAndroidCriticalEnabled && function.isCritical() && function.isAndroidCriticalCapable()) {
-            val args = function.args.joinToString {
-                toNativeCriticalType(it.type, it.kname, ignoreUnsigned = true)
+            val name = operation.kname
+            val args = operation.args.joinToString {
+                "${it.kname}: ${it.type.toKotlinType()}"
             }
-            val call = "$jniClassName.c_${function.kname}($args)"
+            val argNames = operation.args.joinToString {
+                when {
+                    isCritical && it.type.isInterface() && !it.type.isRawInterface() ->
+                        if(it.type.isNullable) "${it.kname}?.rcPtr ?: 0"
+                        else "${it.kname}.rcPtr"
+                    isCritical && it.type.isEnum() -> "${it.kname}.ordinal"
+                    else -> it.kname
+                }
+            }
 
-            val castedCall = toKotlinCriticalType(function.type, call, ignoreUnsigned = true)
-            append("if(supportsCritical) $castedCall\n\telse ")
+            val modifiers = if(operation.isInterfaceOperation())
+                "private " else actual
+
+            val call = "$jniClassName.$name($argNames)"
+            val casted = when {
+                isCritical && operation.type.isEnum() ->
+                    "${(operation.type as ResolvedIdlType.Default).declaration.kname}.entries[$call]"
+                isCritical && operation.type.isInterface() && !operation.isInterfaceOperationConstructor() ->
+                    "${(operation.type as ResolvedIdlType.Default).declaration.kname}(Unit, $call)"
+                else -> call
+            }
+
+            append("\n${modifiers}fun $name($args) = $casted")
         }
-
-        val args = function.args.joinToString { it.kname }
-
-        append("$jniClassName.${function.kname}($args)")
         append("\n")
     }
 }

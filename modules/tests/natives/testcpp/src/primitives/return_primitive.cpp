@@ -3,70 +3,70 @@
 void return_void() {
 }
 
-KChar return_char() {
+uint16_t return_char() {
     return 'a';
 }
 
-KBoolean return_boolean() {
+bool return_boolean() {
     return true;
 }
 
-KByte return_byte() {
+int8_t return_byte() {
     return 99;
 }
 
-KUByte return_ubyte() {
+uint8_t return_ubyte() {
     return 255u;
 }
 
-KShort return_short() {
+int16_t return_short() {
     return 99;
 }
 
-KUShort return_ushort() {
+uint16_t return_ushort() {
     return 65535u;
 }
 
-KInt return_int() {
+int32_t return_int() {
     return 99;
 }
 
-KUInt return_uint() {
+uint32_t return_uint() {
     return 4294967295u;
 }
 
-KLong return_long() {
+int64_t return_long() {
     return 9223372036854775805;
 }
 
-KULong return_ulong() {
+uint64_t return_ulong() {
     return 18446744073709551615u;
 }
 
-KFloat return_float() {
+float return_float() {
     return 99;
 }
 
-KDouble return_double() {
+double return_double() {
     return 99.0;
 }
 
-KString* return_string() {
-    return new KString("test string", 11, 11, false);
+KString return_string() {
+    return KString("test string");
 }
 
-KString* return_string_n() {
-    return nullptr;
+KOptional<KString> return_string_n() {
+    return KOptional<KString>();
 }
 
 MyEnum return_enum() {
     return CASE2;
 }
 
-MyDictionary* return_dictionary() {
-    return new MyDictionary(1, 2, 3, 4);
+MyDictionary return_dictionary() {
+    return MyDictionary(1, 2, 3, 4);
 }
 
-MyDictionary* return_dictionary_n() {
-    return nullptr;
+KOptional<MyDictionary> return_dictionary_n() {
+    return KOptional<MyDictionary>();
 }

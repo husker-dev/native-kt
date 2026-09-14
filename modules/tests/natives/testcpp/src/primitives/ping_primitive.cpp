@@ -1,69 +1,77 @@
 #include <api.hpp>
 
-KChar ping_char(const KChar arg) {
+uint16_t ping_char(uint16_t arg) {
     return arg;
 }
 
-KBoolean ping_boolean(const KBoolean arg) {
+bool ping_boolean(bool arg) {
     return arg;
 }
 
-KByte ping_byte(const KByte arg) {
+int8_t ping_byte(int8_t arg) {
     return arg;
 }
 
-KUByte ping_ubyte(const KUByte arg) {
+uint8_t ping_ubyte(uint8_t arg) {
     return arg;
 }
 
-KShort ping_short(const KShort arg) {
+int16_t ping_short(int16_t arg) {
     return arg;
 }
 
-KUShort ping_ushort(const KUShort arg) {
+uint16_t ping_ushort(uint16_t arg) {
     return arg;
 }
 
-KInt ping_int(const KInt arg) {
+int32_t ping_int(int32_t arg) {
     return arg;
 }
 
-KUInt ping_uint(const KUInt arg) {
+uint32_t ping_uint(uint32_t arg) {
     return arg;
 }
 
-KLong ping_long(const KLong arg) {
+int64_t ping_long(int64_t arg) {
     return arg;
 }
 
-KULong ping_ulong(const KULong arg) {
+uint64_t ping_ulong(uint64_t arg) {
     return arg;
 }
 
-KFloat ping_float(const KFloat arg) {
+float ping_float(float arg) {
     return arg;
 }
 
-KDouble ping_double(const KDouble arg) {
+double ping_double(double arg) {
     return arg;
 }
 
-KString* ping_string(KString* arg) {
+KString ping_string(const KString& arg) {
     return arg;
 }
 
-KString* ping_string_n(KString* arg) {
+KOptional<KString> ping_string_n(const KOptional<KString>& arg) {
     return arg;
 }
 
-MyEnum ping_enum(const MyEnum arg) {
+MyEnum ping_enum(MyEnum arg) {
     return arg;
 }
 
-MyDictionary* ping_dictionary(MyDictionary* arg) {
+MyDictionary ping_dictionary(const MyDictionary& arg) {
     return arg;
 }
 
-MyDictionary* ping_dictionary_n(MyDictionary* arg) {
+KOptional<MyDictionary> ping_dictionary_n(const KOptional<MyDictionary>& arg) {
+    return arg;
+}
+
+std::shared_ptr<IMyInterface> ping_interface(const std::shared_ptr<IMyInterface>& arg) {
+    return arg;
+}
+
+KOptional<std::shared_ptr<IMyInterface>> ping_interface_n(const KOptional<std::shared_ptr<IMyInterface>>& arg) {
     return arg;
 }

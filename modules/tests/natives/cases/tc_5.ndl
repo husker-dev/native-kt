@@ -1,0 +1,5 @@
+namespace global {
+    void stub(VoidCallback e);
+};
+
+callback VoidCallback = void ();

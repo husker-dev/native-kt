@@ -1,0 +1,5 @@
+namespace gobley {
+    void empty();
+    i32 add_numbers(i32 a, i32 b);
+    void pass_string(string a);
+};

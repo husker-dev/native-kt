@@ -1,72 +1,72 @@
 #include <api.h>
 
-void return_void() {
+void return_void(void) {
 }
 
-KChar return_char() {
+uint16_t return_char(void) {
     return 'a';
 }
 
-KBoolean return_boolean() {
+bool return_boolean(void) {
     return true;
 }
 
-KByte return_byte() {
+int8_t return_byte(void) {
     return 99;
 }
 
-KUByte return_ubyte() {
+uint8_t return_ubyte(void) {
     return 255u;
 }
 
-KShort return_short() {
+int16_t return_short(void) {
     return 99;
 }
 
-KUShort return_ushort() {
+uint16_t return_ushort(void) {
     return 65535u;
 }
 
-KInt return_int() {
+int32_t return_int(void) {
     return 99;
 }
 
-KUInt return_uint() {
+uint32_t return_uint(void) {
     return 4294967295u;
 }
 
-KLong return_long() {
+int64_t return_long(void) {
     return 9223372036854775805;
 }
 
-KULong return_ulong() {
+uint64_t return_ulong(void) {
     return 18446744073709551615u;
 }
 
-KFloat return_float() {
+float return_float(void) {
     return 99;
 }
 
-KDouble return_double() {
+double return_double(void) {
     return 99.0;
 }
 
-KString* return_string() {
-    return KString_new("test string", 11, 11, false);
+KString* return_string(void) {
+    return kstring_new("test string");
 }
 
-KString* return_string_n() {
+KString* return_string_n(void) {
     return NULL;
 }
 
-MyEnum return_enum() {
+MyEnum return_enum(void) {
     return MyEnum_CASE2;
 }
 
-MyDictionary* return_dictionary() {
+MyDictionary* return_dictionary(void) {
     return MyDictionary_new(1, 2, 3, 4);
 }
 
-MyDictionary* return_dictionary_n() {
+MyDictionary* return_dictionary_n(void) {
     return NULL;
 }

@@ -1,0 +1,11 @@
+namespace global {
+    void stub1(EmptyInterface e);
+    void stub2(MyInterface e);
+};
+
+interface EmptyInterface {
+};
+
+interface MyInterface {
+    void func();
+};

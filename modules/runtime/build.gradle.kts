@@ -1,9 +1,10 @@
-@file:OptIn(ExperimentalWasmDsl::class)
+@file:OptIn(ExperimentalWasmDsl::class, ExperimentalKotlinGradlePluginApi::class)
+@file:Suppress("UnstableApiUsage")
 
+import com.android.build.api.withAndroid
 import org.apache.tools.ant.taskdefs.condition.Os
-import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
+import org.jetbrains.kotlin.gradle.*
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 plugins {
@@ -13,9 +14,18 @@ plugins {
 }
 
 group = "com.huskerdev"
-version = projectDir.parentFile.parentFile.resolve("VERSION").readText()
+version = projectDir.parentFile.parentFile.resolve("VERSION").readText().trim()
 
 kotlin {
+    applyDefaultHierarchyTemplate {
+        common {
+            group("commonJvm") {
+                withJvm()
+                withAndroid()
+            }
+        }
+    }
+
     jvmToolchain {
         vendor = JvmVendorSpec.GRAAL_VM
         languageVersion = JavaLanguageVersion.of(23)
@@ -39,7 +49,7 @@ kotlin {
     }
 
     android {
-        namespace = group.toString()
+        namespace = "$group.runtime"
         minSdk = 5
         compileSdk {
             version = release(5)
@@ -74,10 +84,8 @@ kotlin {
     androidNativeArm64()
     */
 
-    targets.withType<KotlinNativeTarget>().configureEach {
-        compilations.getByName("main") {
-            cinterops.register("api")
-        }
+    sourceSets.commonMain.dependencies {
+        implementation(libs.osutils)
     }
 }
 
@@ -94,7 +102,6 @@ tasks.withType<KotlinJvmCompile>().configureEach {
 
 mavenPublishing {
     publishToMavenCentral()
-
     signAllPublications()
 
     coordinates(group.toString(), "native-kt-runtime", version.toString())
@@ -102,25 +109,7 @@ mavenPublishing {
     pom {
         name = "native-kt-runtime"
         description = "Runtime for native-kt Gradle plugin"
-        url = "https://github.com/husker-dev/native-kt"
 
-        licenses {
-            license {
-                name = "The Apache License, Version 2.0"
-                url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
-            }
-        }
-        developers {
-            developer {
-                id = "husker-dev"
-                name = "Nikita Shtengauer"
-                email = "redfancoestar@gmail.com"
-            }
-        }
-        scm {
-            connection = "https://github.com/husker-dev/native-kt.git"
-            developerConnection = "https://github.com/husker-dev/native-kt.git"
-            url = "https://github.com/husker-dev/native-kt"
-        }
+        applyDefaultPomInfo()
     }
 }

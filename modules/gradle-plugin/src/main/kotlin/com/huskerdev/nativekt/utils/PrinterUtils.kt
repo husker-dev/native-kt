@@ -2,19 +2,22 @@
 
 package com.huskerdev.nativekt.utils
 
+import com.huskerdev.nativekt.NativeModuleContext
 import com.huskerdev.webidl.parser.IdlExtendedAttribute
 import com.huskerdev.webidl.resolver.*
-import org.gradle.internal.extensions.stdlib.capitalized
 import org.gradle.kotlin.dsl.support.uppercaseFirstChar
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 
-fun asyncLoadFunctionName(moduleName: String) =
-    "loadLib${moduleName.capitalized()}"
+fun asyncLoadFunctionName(context: NativeModuleContext) =
+    "loadLib${context.moduleName.upperCamelCase()}"
 
-fun syncLoadFunctionName(moduleName: String) =
-    "loadLib${moduleName.capitalized()}Sync"
+fun syncLoadFunctionName(context: NativeModuleContext) =
+    "loadLib${context.moduleName.upperCamelCase()}Sync"
+
+fun loadFieldName(context: NativeModuleContext) =
+    "isLib${context.moduleName.upperCamelCase()}Loaded"
 
 fun String.snakeCase(): String = buildString {
     this@snakeCase.forEachIndexed { index, c ->
@@ -46,12 +49,40 @@ fun mangle(
         "_${moduleName.snakeCase()}" +
         "_$content"
 
+fun <T> Iterable<T>.joinListToString(
+    separator: String = ",",
+    prefix: String = "",
+    postfix: String = "",
+    baseIndent: String = "",
+    transform: ((T) -> CharSequence) = { it.toString() }
+) = buildString {
+    joinListTo(this, separator, prefix, postfix, baseIndent, transform)
+}
+
+fun <T, A : Appendable> Iterable<T>.joinListTo(
+    buffer: A,
+    separator: String = ",",
+    prefix: String = "",
+    postfix: String = "",
+    baseIndent: String = "",
+    transform: ((T) -> CharSequence) = { it.toString() }
+) {
+    buffer.append(prefix)
+    val iterator = iterator()
+    while(iterator.hasNext()) {
+        buffer.append('\n').append(baseIndent).append('\t').append(transform(iterator.next()))
+        if(iterator.hasNext())
+            buffer.append(separator)
+        else buffer.append('\n').append(baseIndent)
+    }
+    buffer.append(postfix)
+}
+
 // Names
 
 fun ResolvedIdlOperation.cnameMangled(
-    classPath: String,
-    moduleName: String
-) = mangle(classPath, moduleName, cname)
+    context: NativeModuleContext
+) = mangle(context.classPath, context.moduleName, cname)
 
 val ResolvedIdlDeclaration.kname: String
     get() = when (this) {
@@ -74,16 +105,20 @@ val ResolvedIdlDeclaration.cname: String
 val ResolvedIdlOperation.cname: String
     get() = when {
         isInterfaceOperationFn() -> "_interface_${interfaceName().lowercase()}_fn_${interfaceFunctionName().snakeCase()}"
-        isInterfaceOperationFree() -> "_interface_${interfaceName().lowercase()}_free"
         isInterfaceOperationConstructor() -> "_interface_${interfaceName().lowercase()}_new_${interfaceConstructorIndex()}"
+        isInterfaceOperationFree() -> "_interface_${interfaceName().lowercase()}_free"
+        isInterfaceOperationClone() -> "_interface_${interfaceName().lowercase()}_clone"
+        isInterfaceOperationAddress() -> "_interface_${interfaceName().lowercase()}_address"
         else -> name.snakeCase()
     }
 
 val ResolvedIdlOperation.kname: String
     get() = when {
         isInterfaceOperationFn() -> "_interface${interfaceName().upperCamelCase()}Fn${interfaceFunctionName().upperCamelCase()}"
-        isInterfaceOperationFree() -> "_interface${interfaceName().upperCamelCase()}Free"
         isInterfaceOperationConstructor() -> "_interface${interfaceName().upperCamelCase()}New${interfaceConstructorIndex()}"
+        isInterfaceOperationFree() -> "_interface${interfaceName().upperCamelCase()}Free"
+        isInterfaceOperationClone() -> "_interface${interfaceName().upperCamelCase()}Clone"
+        isInterfaceOperationAddress() -> "_interface${interfaceName().upperCamelCase()}Address"
         else -> name.camelCase()
     }
 
@@ -100,10 +135,14 @@ val ResolvedIdlDictionary.kname: String
     get() = name.upperCamelCase()
 
 fun ResolvedIdlDictionary.subCFunc(
-    classPath: String,
-    moduleName: String,
+    context: NativeModuleContext,
     func: String
-): String = mangle(classPath, moduleName, "_${name.lowercase()}_$func")
+): String = mangle(context.classPath, context.moduleName, "_${name.camelCase().lowercase()}_$func")
+
+fun ResolvedIdlDictionary.subFieldCFunc(
+    context: NativeModuleContext,
+    field: ResolvedIdlField.Declaration
+): String = mangle(context.classPath, context.moduleName, "_${name.camelCase().lowercase()}__${field.cname}")
 
 val ResolvedIdlEnum.cname: String
     get() = name.upperCamelCase()
@@ -141,7 +180,8 @@ fun ResolvedIdlType.arrayTypeOrNull(): ResolvedIdlType.Default? {
     contract {
         returnsNotNull() implies(this@arrayTypeOrNull is ResolvedIdlType.Default)
     }
-    return (this as? ResolvedIdlType.Default)?.parameters?.firstOrNull() as? ResolvedIdlType.Default
+    if(!isArray()) return null
+    return parameters.firstOrNull() as? ResolvedIdlType.Default
 }
 
 fun ResolvedIdlType.builtinOrNull(): BuiltinIdlDeclaration? {
@@ -158,7 +198,9 @@ internal fun ResolvedIdlType.toKotlinType(
     enumAsInt: Boolean = false,
     printNullable: Boolean = true,
     ignoreUnsigned: Boolean = false,
-    smallUnsignedTypesAsInt: Boolean = false
+    smallUnsignedTypesAsInt: Boolean = false,
+    interfaceAsLong: Boolean = false,
+    rawInterfaceAsInt: Boolean = false
 ): String {
     val nullable = if(isNullable && printNullable) "?" else ""
     return when {
@@ -176,15 +218,18 @@ internal fun ResolvedIdlType.toKotlinType(
         isFloat() -> "Float"
         isDouble() -> "Double"
         isString() -> if(stringAsBytes) "ByteArray$nullable" else "String$nullable"
-        isEnum() -> if(enumAsInt) "Int" else declaration.name
+        isEnum() -> if(enumAsInt) "Int" else declaration.kname
+        isRawInterface() -> if(rawInterfaceAsInt) "Int" else "Long"
+        isInterface() -> if(interfaceAsLong) "Long" else "${declaration.kname}$nullable"
         isArray() -> arrayType { type ->
             when {
                 type.isPrimitive() -> "${type.toKotlinType(ignoreUnsigned = ignoreUnsigned)}Array$nullable"
                 type.isEnum() && enumAsInt -> "IntArray$nullable"
-                else -> "Array<${type.toKotlinType(stringAsBytes, enumAsInt)}>$nullable"
+                type.isInterface() && interfaceAsLong -> "LongArray"
+                else -> "Array<${type.toKotlinType(stringAsBytes, enumAsInt, printNullable, interfaceAsLong = interfaceAsLong)}>$nullable"
             }
         }
-        else -> "${(this as ResolvedIdlType.Default).declaration.name.upperCamelCase()}$nullable"
+        else -> "${(this as ResolvedIdlType.Default).declaration.kname}$nullable"
     }
 }
 
@@ -193,38 +238,68 @@ fun ResolvedIdlType.toCType(
     ptr: Boolean = true,
     printNullable: Boolean = false,
     ignoreUnsigned: Boolean = false,
+    rcAsVoid: Boolean = false
 ): String {
+    val nullable = if(ptr && printNullable) {
+        if (isNullable) " _Nullable" else " _Nonnull"
+    } else ""
     val ptr = if(ptr) "*" else ""
+    return when {
+        isVoid() -> "void"
+        isChar() -> "uint16_t"
+        isBoolean() -> "bool"
+        isByte() -> "int8_t"
+        isUByte() -> if(ignoreUnsigned) "int8_t" else "uint8_t"
+        isShort() -> "int16_t"
+        isUShort() -> if(ignoreUnsigned) "int16_t" else "uint16_t"
+        isInt() -> "int32_t"
+        isUInt() -> if(ignoreUnsigned) "int32_t" else "uint32_t"
+        isLong() -> "int64_t"
+        isULong() -> if(ignoreUnsigned) "int64_t" else "uint64_t"
+        isFloat() -> "float"
+        isDouble() -> "double"
+        isEnum() -> if(enumAsInt) "int32_t" else declaration.name
+        isString() -> "KString$ptr$nullable"
+        isArray() -> arrayType { type ->
+            when {
+                type.isPrimitive() -> "K${type.toKotlinType(ignoreUnsigned = ignoreUnsigned)}Array$ptr$nullable"
+                type.isEnum() -> "KIntArray$ptr$nullable"
+                else -> "KArray$ptr$nullable"
+            }
+        }
+        isInterface() || isCallback() ->
+            if(rcAsVoid && isRawInterface()) "void*$nullable"
+            else "RC_${declaration.cname}*$nullable"
+        else -> "${(this as ResolvedIdlType.Default).declaration.name.upperCamelCase()}$ptr$nullable"
+    }
+}
+
+fun ResolvedIdlType.toCommonNativeType(
+    printNullable: Boolean = false,
+    ignoreUnsigned: Boolean = false,
+): String {
     val nullable = if(printNullable) {
         if (isNullable) " _Nullable" else " _Nonnull"
     } else ""
     return when {
         isVoid() -> "void"
-        isChar() -> "KChar"
-        isBoolean() -> "KBoolean"
-        isByte() -> "KByte"
-        isUByte() -> if(ignoreUnsigned) "KByte" else "KUByte"
-        isShort() -> "KShort"
-        isUShort() -> if(ignoreUnsigned) "KShort" else "KUShort"
-        isInt() -> "KInt"
-        isUInt() -> if(ignoreUnsigned) "KInt" else "KUInt"
-        isLong() -> "KLong"
-        isULong() -> if(ignoreUnsigned) "KLong" else "KULong"
-        isFloat() -> "KFloat"
-        isDouble() -> "KDouble"
-        isEnum() -> if(enumAsInt) "KInt" else declaration.name
-        isString() -> "KString$ptr$nullable"
-        isArray() -> arrayType { type ->
-            when {
-                type.isPrimitive() -> "${type.toCType(ignoreUnsigned = ignoreUnsigned)}Array$ptr$nullable"
-                type.isEnum() -> "KIntArray$ptr$nullable"
-                else -> "KArray$ptr$nullable"
-            }
-        }
-        isInterface() -> "void*$nullable"
-        else -> "${(this as ResolvedIdlType.Default).declaration.name.upperCamelCase()}$ptr$nullable"
+        isChar() -> "uint16_t"
+        isBoolean() -> "bool"
+        isByte() -> "int8_t"
+        isUByte() -> if(ignoreUnsigned) "int8_t" else "uint8_t"
+        isShort() -> "int16_t"
+        isUShort() -> if(ignoreUnsigned) "int16_t" else "uint16_t"
+        isInt() -> "int32_t"
+        isUInt() -> if(ignoreUnsigned) "int32_t" else "uint32_t"
+        isLong() -> "int64_t"
+        isULong() -> if(ignoreUnsigned) "int64_t" else "uint64_t"
+        isFloat() -> "float"
+        isDouble() -> "double"
+        isEnum() -> "int32_t"
+        else -> "void*$nullable"
     }
 }
+
 
 internal fun castToSigned(
     type: ResolvedIdlType,
@@ -269,41 +344,6 @@ internal fun castToUnsigned(type: ResolvedIdlType, content: String): String {
         else -> content
     }
 }
-
-internal fun castToSignedC(type: ResolvedIdlType, content: String): String = when {
-    type.isUByte() -> "(KByte) $content"
-    type.isUShort() -> "(KShort) $content"
-    type.isUInt() -> "(KInt) $content"
-    type.isULong() -> "(KLong) $content"
-    type.isArray() -> type.arrayType { type ->
-        when {
-            type.isUByte() -> "(KByteArray*) $content"
-            type.isUShort() -> "(KShortArray*) $content"
-            type.isUInt() -> "(KIntArray*) $content"
-            type.isULong() -> "(KLongArray*) $content"
-            else -> content
-        }
-    }
-    else -> content
-}
-
-internal fun castToUnsignedC(type: ResolvedIdlType, content: String): String = when {
-    type.isUByte() -> "(KUByte) $content"
-    type.isUShort() -> "(KUShort) $content"
-    type.isUInt() -> "(KUInt) $content"
-    type.isULong() -> "(KULong) $content"
-    type.isArray() -> type.arrayType { type ->
-        when {
-            type.isUByte() -> "(KUByteArray*) $content"
-            type.isUShort() -> "(KUShortArray*) $content"
-            type.isUInt() -> "(KUIntArray*) $content"
-            type.isULong() -> "(KULongArray*) $content"
-            else -> content
-        }
-    }
-    else -> content
-}
-
 
 // ===== Simple types ======
 
@@ -355,26 +395,6 @@ fun ResolvedIdlType.toSignedType(): ResolvedIdlType {
         isUShort() -> WebIDLBuiltinKind.SHORT
         isUInt() -> WebIDLBuiltinKind.INT
         isULong() -> WebIDLBuiltinKind.LONG
-        else -> throw UnsupportedOperationException()
-    }
-    return ResolvedIdlType.Default(BuiltinIdlDeclaration(declaration.name, kind), emptyList(), isNullable)
-}
-
-fun ResolvedIdlType.toUnsignedType(): ResolvedIdlType {
-    contract {
-        returns(true) implies(this@toUnsignedType is ResolvedIdlType.Default)
-    }
-    if(isUnsigned())
-        return this
-    if(isArray()) {
-        val arrType = arrayTypeOrNull()!!.toUnsignedType()
-        return ResolvedIdlType.Default(BuiltinIdlDeclaration(declaration.name, WebIDLBuiltinKind.LIST), listOf(arrType), isNullable)
-    }
-    val kind = when {
-        isByte() -> WebIDLBuiltinKind.UNSIGNED_BYTE
-        isShort() -> WebIDLBuiltinKind.UNSIGNED_SHORT
-        isInt() -> WebIDLBuiltinKind.UNSIGNED_INT
-        isLong() -> WebIDLBuiltinKind.UNSIGNED_LONG
         else -> throw UnsupportedOperationException()
     }
     return ResolvedIdlType.Default(BuiltinIdlDeclaration(declaration.name, kind), emptyList(), isNullable)
@@ -506,6 +526,13 @@ fun ResolvedIdlType.isInterface(): Boolean {
     return this is ResolvedIdlType.Default && declaration is ResolvedIdlInterface
 }
 
+fun ResolvedIdlType.isRawInterface(): Boolean {
+    contract {
+        returns(true) implies(this@isRawInterface is ResolvedIdlType.Default)
+    }
+    return isInterface() && parameters.isNotEmpty()
+}
+
 fun ResolvedIdlType.isDictionary(): Boolean {
     contract {
         returns(true) implies(this@isDictionary is ResolvedIdlType.Default)
@@ -514,15 +541,78 @@ fun ResolvedIdlType.isDictionary(): Boolean {
 }
 
 fun ResolvedIdlType.isReleasable(): Boolean =
-    isArray() || isString() || isDictionary() || isCallback()
+    isArray() || isString() || isDictionary() || isCallback() || isInterface()
 
 // ==== Arrays =====
 
 fun ResolvedIdlType.isStringArray(): Boolean {
-    contract {
-        returns(true) implies(this@isStringArray is ResolvedIdlType.Default)
-    }
+    contract { returns(true) implies(this@isStringArray is ResolvedIdlType.Default) }
     return arrayTypeOrNull()?.isString() ?: false
+}
+
+fun ResolvedIdlType.isCharArray(): Boolean {
+    contract { returns(true) implies(this@isCharArray is ResolvedIdlType.Default) }
+    return arrayTypeOrNull()?.isChar() ?: false
+}
+
+fun ResolvedIdlType.isBooleanArray(): Boolean {
+    contract { returns(true) implies(this@isBooleanArray is ResolvedIdlType.Default) }
+    return arrayTypeOrNull()?.isBoolean() ?: false
+}
+
+fun ResolvedIdlType.isByteArray(): Boolean {
+    contract { returns(true) implies(this@isByteArray is ResolvedIdlType.Default) }
+    return arrayTypeOrNull()?.isByte() ?: false
+}
+
+fun ResolvedIdlType.isUByteArray(): Boolean {
+    contract { returns(true) implies(this@isUByteArray is ResolvedIdlType.Default) }
+    return arrayTypeOrNull()?.isUByte() ?: false
+}
+
+fun ResolvedIdlType.isShortArray(): Boolean {
+    contract { returns(true) implies(this@isShortArray is ResolvedIdlType.Default) }
+    return arrayTypeOrNull()?.isShort() ?: false
+}
+
+fun ResolvedIdlType.isUShortArray(): Boolean {
+    contract { returns(true) implies(this@isUShortArray is ResolvedIdlType.Default) }
+    return arrayTypeOrNull()?.isUShort() ?: false
+}
+
+fun ResolvedIdlType.isIntArray(): Boolean {
+    contract { returns(true) implies(this@isIntArray is ResolvedIdlType.Default) }
+    return arrayTypeOrNull()?.isInt() ?: false
+}
+
+fun ResolvedIdlType.isUIntArray(): Boolean {
+    contract { returns(true) implies(this@isUIntArray is ResolvedIdlType.Default) }
+    return arrayTypeOrNull()?.isUInt() ?: false
+}
+
+fun ResolvedIdlType.isLongArray(): Boolean {
+    contract { returns(true) implies(this@isLongArray is ResolvedIdlType.Default) }
+    return arrayTypeOrNull()?.isLong() ?: false
+}
+
+fun ResolvedIdlType.isULongArray(): Boolean {
+    contract { returns(true) implies(this@isULongArray is ResolvedIdlType.Default) }
+    return arrayTypeOrNull()?.isULong() ?: false
+}
+
+fun ResolvedIdlType.isFloatArray(): Boolean {
+    contract { returns(true) implies(this@isFloatArray is ResolvedIdlType.Default) }
+    return arrayTypeOrNull()?.isFloat() ?: false
+}
+
+fun ResolvedIdlType.isDoubleArray(): Boolean {
+    contract { returns(true) implies(this@isDoubleArray is ResolvedIdlType.Default) }
+    return arrayTypeOrNull()?.isDouble() ?: false
+}
+
+fun ResolvedIdlType.isPrimitiveArray(): Boolean {
+    contract { returns(true) implies(this@isPrimitiveArray is ResolvedIdlType.Default) }
+    return arrayTypeOrNull()?.isPrimitive() ?: false
 }
 
 fun ResolvedIdlType.isEnumArray(): Boolean {
@@ -539,41 +629,20 @@ fun ResolvedIdlType.isDictionaryArray(): Boolean {
     return arrayTypeOrNull()?.isDictionary() ?: false
 }
 
-fun ResolvedIdlType.isLongArray(): Boolean {
+fun ResolvedIdlType.isInterfaceArray(): Boolean {
     contract {
-        returns(true) implies(this@isLongArray is ResolvedIdlType.Default)
+        returns(true) implies(this@isInterfaceArray is ResolvedIdlType.Default)
     }
-    return arrayTypeOrNull()?.isLong() ?: false
+    return arrayTypeOrNull()?.isInterface() ?: false
 }
 
-internal fun ResolvedIdlType.isAnyLongType(): Boolean {
-    contract {
-        returns(true) implies(this@isAnyLongType is ResolvedIdlType.Default)
-    }
-    return isLong() || isULong() || isLongArray()
-}
-
-internal fun IdlResolver.isUsingLong(): Boolean {
-    // operators
-    if(globalOperators().any { op ->
-        op.type.isAnyLongType() || op.args.any { it.type.isAnyLongType() }
-    }) return true
-
-    // callbacks
-    if(callbacks.values.any { cb ->
-        cb.type.isAnyLongType() || cb.args.any { it.type.isAnyLongType() }
-    }) return true
-
-    // dictionaries
-    if(dictionaries.values.any { cb ->
-        cb.fields.any { it.type.isAnyLongType() }
-    }) return true
-
-    return false
-}
 
 private fun ResolvedIdlOperation.hasAttribute(name: String): Boolean =
     attributes.any { it.name.lowercase() == name }
+
+
+fun ResolvedIdlOperation.getInterface(context: NativeModuleContext) =
+    context.interfaces.firstOrNull { it.name == interfaceName() }
 
 fun ResolvedIdlOperation.isInterfaceOperation() = hasAttribute("__interface")
 
@@ -587,35 +656,40 @@ fun ResolvedIdlOperation.interfaceFunctionName(): String = attributes
     .first { it.name.lowercase() == "__interface_fn" }
     .value
 
+fun ResolvedIdlOperation.interfaceConstructorNameOrNull(): String? = attributes
+    .filterIsInstance<IdlExtendedAttribute.IdentifierValue>()
+    .firstOrNull { it.name.lowercase() == "name" }
+    ?.identifier
+
 fun ResolvedIdlOperation.interfaceConstructorIndex(): Int = attributes
     .filterIsInstance<IdlExtendedAttribute.IntegerValue>()
     .first { it.name.lowercase() == "__interface_new" }
     .value
 
-fun ResolvedIdlOperation.isInterfaceOperationFree() = hasAttribute("__interface_free")
 fun ResolvedIdlOperation.isInterfaceOperationConstructor() = hasAttribute("__interface_new")
 fun ResolvedIdlOperation.isInterfaceOperationFn() = hasAttribute("__interface_fn")
+fun ResolvedIdlOperation.isInterfaceOperationFree() = hasAttribute("__interface_free")
+fun ResolvedIdlOperation.isInterfaceOperationClone() = hasAttribute("__interface_clone")
+fun ResolvedIdlOperation.isInterfaceOperationAddress() = hasAttribute("__interface_address")
 
 fun ResolvedIdlOperation.isCritical(): Boolean = hasAttribute("critical")
 
 fun ResolvedIdlOperation.isCriticalCapable(): Boolean =
-    !type.isArray() && !type.isString() && !type.isDictionary() &&
-            args.all { !it.type.isStringArray() && !it.type.isDictionaryArray() }
+    (type.isVoid() || type.isPrimitive() || type.isEnum() || type.isInterface()) &&
+            args.all {
+                it.type.isPrimitive() || it.type.isEnum()
+                    || it.type.isString() || it.type.isInterface()
+                    || it.type.isPrimitiveArray() || it.type.isEnumArray()
+            }
 
 // Same as default critical, but without array and string args
 fun ResolvedIdlOperation.isAndroidCriticalCapable(): Boolean =
     !type.isArray() && !type.isString() && !type.isDictionary() &&
             args.all { !it.type.isArray() && !it.type.isString() }
 
-fun ResolvedIdlOperation.hasString(): Boolean =
-    args.any { it.type.isString() }
-
-fun ResolvedIdlOperation.hasArray(): Boolean =
-    args.any { it.type.isArray() }
-
 // ========
 
-fun IdlResolver.allOperators() = buildList {
+fun IdlResolver.allOperations() = buildList {
     addAll(globalOperators())
     addAll(interfaceOperators())
 }
@@ -635,18 +709,28 @@ fun ResolvedIdlDictionary.allFields() = buildList {
 }
 
 fun ResolvedIdlInterface.toOperations() = buildList {
-    val interfaceType = ResolvedIdlType.Default(this@toOperations, emptyList(), false)
-    val interfaceArg = ResolvedIdlField.Argument(
-        "_self", interfaceType, null,
-        isOptional = false, isVariadic = false, attributes = emptyList()
-    )
-
     val interfaceTagAttribute = IdlExtendedAttribute.StringValue("__interface", name)
+    val criticalAttribute = IdlExtendedAttribute.NoArgs("critical")
+
+    val longType = ResolvedIdlType.Default(
+        BuiltinIdlDeclaration("long", WebIDLBuiltinKind.LONG),
+        emptyList(),
+        false
+    )
+    val rawInterfaceType = ResolvedIdlType.Default(
+        this@toOperations,
+        listOf(longType),
+        false
+    )
+    val rawInterfaceArg = ResolvedIdlField.Argument(
+        "_self", rawInterfaceType, null,
+        isOptional = false, isVariadic = false, attributes = listOf(interfaceTagAttribute)
+    )
 
     constructors.forEachIndexed { index, constructor ->
         add(ResolvedIdlOperation(
             name = "INTERFACE_CONSTRUCTOR",
-            type = interfaceType,
+            type = rawInterfaceType,
             args = constructor.args,
             isStatic = false,
             attributes = buildList {
@@ -661,7 +745,7 @@ fun ResolvedIdlInterface.toOperations() = buildList {
             name = "INTERFACE_FUNCTION",
             type = operation.type,
             args = buildList {
-                add(interfaceArg)
+                add(rawInterfaceArg)
                 addAll(operation.args)
             },
             isStatic = false,
@@ -677,27 +761,30 @@ fun ResolvedIdlInterface.toOperations() = buildList {
     add(ResolvedIdlOperation(
         name = "INTERFACE_FREE",
         type = ResolvedIdlType.Void("void"),
-        args = listOf(interfaceArg),
+        args = listOf(rawInterfaceArg),
         isStatic = false,
         attributes = listOf(interfaceTagAttribute, IdlExtendedAttribute.NoArgs("__interface_free"))
     ))
+
+    // clone
+    add(ResolvedIdlOperation(
+        name = "INTERFACE_CLONE",
+        type = rawInterfaceType,
+        args = listOf(rawInterfaceArg),
+        isStatic = false,
+        attributes = listOf(interfaceTagAttribute, criticalAttribute, IdlExtendedAttribute.NoArgs("__interface_clone"))
+    ))
+
+    // address
+    add(ResolvedIdlOperation(
+        name = "INTERFACE_ADDRESS",
+        type = longType,
+        args = listOf(rawInterfaceArg),
+        isStatic = false,
+        attributes = listOf(interfaceTagAttribute, criticalAttribute, IdlExtendedAttribute.NoArgs("__interface_address"))
+    ))
 }
 
-fun functionHeader(
-    function: ResolvedIdlOperation,
-    isOverride: Boolean = false,
-    isPrivate: Boolean = false,
-    isActual: Boolean = false,
-    isExternal: Boolean = false,
-    isExpect: Boolean = false,
-    name: String = function.kname,
-    printType: Boolean = true,
-    forceVoid: Boolean = false,
-    stringAsBytes: Boolean = false,
-    callbackAsAny: Boolean = false
-) = StringBuilder().apply {
-    printFunctionHeader(this, function, isOverride, isPrivate, isActual, isExternal, isExpect, name, printType, forceVoid, stringAsBytes, callbackAsAny)
-}.toString()
 
 fun printFunctionHeader(
     builder: StringBuilder,
@@ -712,7 +799,9 @@ fun printFunctionHeader(
     forcePrintVoid: Boolean = false,
     stringAsBytes: Boolean = false,
     enumAsInt: Boolean = false,
+    printNullable: Boolean = true,
     ignoreUnsigned: Boolean = false,
+    interfaceAsLong: Boolean = false,
     arraysLen: Boolean = false,
 ) = builder.apply {
     if(isActual) append("actual ")
@@ -723,7 +812,13 @@ fun printFunctionHeader(
 
     val args = function.args.flatMap { arg ->
         val name = arg.kname
-        val result = "$name: ${arg.type.toKotlinType(stringAsBytes, enumAsInt, ignoreUnsigned = ignoreUnsigned)}"
+        val result = "$name: ${arg.type.toKotlinType(
+            stringAsBytes, 
+            enumAsInt,
+            printNullable,
+            ignoreUnsigned,
+            interfaceAsLong = interfaceAsLong,
+        )}"
         when {
             stringAsBytes && arg.type.isString() ->
                 listOf(result, "__len_$name: Int", "__size_$name: Int")
@@ -736,24 +831,34 @@ fun printFunctionHeader(
     append("fun $name($args)")
 
     if(printType && (forcePrintVoid || function.type !is ResolvedIdlType.Void))
-        append(": ${function.type.toKotlinType(stringAsBytes, enumAsInt, ignoreUnsigned = ignoreUnsigned)}")
+        append(": ${function.type.toKotlinType(
+            stringAsBytes, 
+            enumAsInt,
+            printNullable,
+            ignoreUnsigned,
+            interfaceAsLong = interfaceAsLong
+        )}")
 }
 
-fun printLabel(builder: StringBuilder, text: String, indent: Int = 5) = builder.apply {
+fun StringBuilder.printLabel(text: String, padding: Int = 5, indent: String = "") {
     // line 1
-    append("\n// ╔")
-    append("═".repeat(text.length + indent*2))
+    append("\n")
+    append(indent)
+    append("// ╔")
+    append("═".repeat(text.length + padding*2))
     append("╗\n")
 
     // line 2
+    append(indent)
     append("// ║")
-    append(" ".repeat(indent))
+    append(" ".repeat(padding))
     append(text)
-    append(" ".repeat(indent))
+    append(" ".repeat(padding))
     append("║\n")
 
     // line 3
+    append(indent)
     append("// ╚")
-    append("═".repeat(text.length + indent*2))
+    append("═".repeat(text.length + padding*2))
     append("╝\n")
 }

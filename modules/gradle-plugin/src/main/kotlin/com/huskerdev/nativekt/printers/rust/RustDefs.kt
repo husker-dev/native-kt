@@ -1,434 +1,381 @@
 package com.huskerdev.nativekt.printers.rust
 
+import com.huskerdev.nativekt.NativeModuleContext
+import com.huskerdev.nativekt.utils.camelCase
+import com.huskerdev.nativekt.utils.isReleasable
 import com.huskerdev.nativekt.utils.printLabel
 
-internal fun StringBuilder.printHeaderDef() {
-    append($$"""
+
+internal fun StringBuilder.printHeaderDef(context: NativeModuleContext) {
+    appendLine($$"""
         #![allow(unused)]
-        #![allow(private_bounds)]
         
         use std::ffi::c_void;
-        use std::fmt::{Debug, Display, Formatter};
+        use std::ptr::null_mut;
+        use std::hash::{Hasher, Hash};
         use std::mem::ManuallyDrop;
-        use std::ptr::null;
         use std::sync::Arc;
+        use std::alloc::{alloc, dealloc, Layout};
         
-        extern "C" {
-            fn malloc(s: usize) -> *const c_void;
-        }
+        #[cfg(target_arch = "wasm32")]
+        use wasm_bindgen::prelude::*;
         
-        trait PtrHolder: Clone {
-            fn ptr(&self) -> *const c_void;
-            fn free_ptr() -> *const c_void;
-            fn clone_ptr() -> *const c_void;
-            fn wrap(of: *const c_void) -> Self;
-        }
+        #[cfg(not(target_arch = "wasm32"))]
+        #[no_mangle] 
+        unsafe extern "C" fn $${context.mangle("init")}() {}
         
-        macro_rules! impl_wrapper {
-            ($name:ident, $inner:ident) => {
-                impl $name {
-                    fn wrap_nullable(ptr: *const $inner) -> Option<$name> {
-                        if (ptr == std::ptr::null()) {
-                            return None;
-                        }
-                        Some(Self::wrap(ptr))
-                    }
-                    fn unwrap(self) -> *const $inner {
-                        let ptr = self.ptr;
-                        std::mem::forget(self);
-                        ptr
-                    }
-                    fn unwrap_nullable(of: Option<Self>) -> *const $inner {
-                        if (of.is_none()) {
-                            return std::ptr::null();
-                        }
-                        of.unwrap().unwrap()
-                    }
-                }
-            };
-        }
-        
-        macro_rules! impl_drop_clone {
-            ($name:ident, $free:ident, $clone:ident) => {
-                impl Drop for $name {
-                    fn drop(&mut self) {
-                        unsafe { $free(self.ptr); }
-                    }
-                }
+        // Macro: Function export
+        macro_rules! export_fn {
+            (@parse
+                fn $native:ident($($arg:ident : $ty:ty),* $(,)?) -> $ret:ty as $js:ident $body:block
+                $($rest:tt)*
+            ) => {
+                #[cfg(target_arch = "wasm32")]
+                #[wasm_bindgen]
+                #[allow(non_snake_case)]
+                pub fn $js($($arg: $ty),*) -> $ret $body
 
-                impl Clone for $name {
-                    fn clone(&self) -> Self {
-                        unsafe { $name::wrap($clone(self.ptr)) }
-                    }
-                }
+                #[cfg(not(target_arch = "wasm32"))]
+                #[no_mangle]
+                extern "C" fn $native($($arg: $ty),*) -> $ret $body
+
+                export_fn!(@parse $($rest)*);
+            };
+        	(@parse) => {};
+        	($($item:tt)*) => {
+                export_fn!(@parse $($item)*);
+            };
+        }
+    """.trimIndent())
+
+    if(context.usedTypes.any { it.isReleasable() }) appendLine("""
+        
+        fn from_raw<T>(of: *mut T) -> T {
+            unsafe { *Box::from_raw(of) }
+        }
+        
+        fn into_raw<T>(of: T) -> *mut T {
+            Box::into_raw(Box::new(of))
+        }
+    """.trimIndent())
+    if(context.hasNullableToNative) appendLine("""
+        
+        fn ptr_opt<T, R>(ptr: *mut T, f: fn(*mut T) -> R) -> Option<R> {
+            if ptr.is_null() { None } else { Some(f(ptr)) }
+        }
+    """.trimIndent())
+    if(context.hasNullableToKotlin) appendLine("""
+        
+        fn obj_opt<T, R>(ptr: Option<R>, f: fn(R) -> *mut T) -> *mut T {
+            if ptr.is_none() { null_mut() } else { f(ptr.unwrap()) }
+        }
+    """.trimIndent())
+    if(context.needsAllocFunctions) appendLine("""
+        
+        export_fn! {
+            fn ${context.mangle("alloc")}(size: usize) -> *mut u8 as ${context.jsMangle["alloc"]} {
+                unsafe { alloc(Layout::from_size_align_unchecked(size, 1)) }
+            }
+            fn ${context.mangle("dealloc")}(ptr: *mut u8, size: usize) -> () as ${context.jsMangle["dealloc"]} {
+                if ptr.is_null() { return }
+                unsafe { dealloc(ptr, Layout::from_size_align_unchecked(size, 1)) }
+            }
+        }
+    """.trimIndent())
+
+    if(context.callbacks.isNotEmpty()) appendLine($$"""
+        
+        // Macro: External function type declaration
+        
+        #[cfg(target_arch = "wasm32")]
+        use wasm_bindgen::JsValue;
+        
+        #[cfg(target_arch = "wasm32")]
+        macro_rules! external_fn_type {
+            ($ret:ty; $($arg:ty),* $(,)?) => {
+                wasm_bindgen::JsValue
             };
         }
         
-        macro_rules! impl_ptr_holder {
-            ($name:ident, $inner:ident, $free:ident, $clone:ident) => {
-                impl PtrHolder for $name {
-                    fn ptr(&self) -> *const c_void {
-                        self.ptr as *const c_void
-                    }
-                    fn free_ptr() -> *const c_void {
-                        $free as *const c_void
-                    }
-                    fn clone_ptr() -> *const c_void {
-                        $clone as *const c_void
-                    }
-                    fn wrap(of: *const c_void) -> Self {
-                        $name::wrap(of as *const $inner)
-                    }
-                }
+        #[cfg(not(target_arch = "wasm32"))]
+        macro_rules! external_fn_type {
+            ($ret:ty; $($arg:ty),* $(,)?) => {
+                extern "C" fn($($arg),*) -> $ret
             };
         }
         
+        // Macro: External function call
+        
+        #[cfg(target_arch = "wasm32")]
+        #[wasm_bindgen]
+        extern "C" {
+        	#[wasm_bindgen(js_namespace = Reflect, js_name = apply)]
+        	fn reflect_apply(target: &JsValue, this_arg: &JsValue, args: &JsValue) -> JsValue;
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        macro_rules! external_fn_call {
+            ((); $cb:expr; $($arg:expr),* $(,)?) => {{
+                let __args = JsValue::from(vec![$(JsValue::from($arg)),+]);
+                reflect_apply(&$cb, &JsValue::UNDEFINED, &__args);
+            }};
+            (bool; $cb:expr; $($arg:expr),* $(,)?) => {{
+                let __args = JsValue::from(vec![$(JsValue::from($arg)),+]);
+                reflect_apply(&$cb, &JsValue::UNDEFINED, &__args).as_bool().unwrap()
+            }};
+            (i64; $cb:expr; $($arg:expr),* $(,)?) => {{
+                let __args = JsValue::from(vec![$(JsValue::from($arg)),+]);
+                i64::try_from(reflect_apply(&$cb, &JsValue::UNDEFINED, &__args)).unwrap()
+            }};
+            (u64; $cb:expr; $($arg:expr),* $(,)?) => {{
+                let __args = JsValue::from(vec![$(JsValue::from($arg)),+]);
+                i64::try_from(reflect_apply(&$cb, &JsValue::UNDEFINED, &__args)).unwrap() as u64
+            }};
+            (enum $t:ty; $cb:expr; $($arg:expr),* $(,)?) => {{
+                let __args = JsValue::from(vec![$(JsValue::from($arg)),+]);
+                let __r = reflect_apply(&$cb, &JsValue::UNDEFINED, &__args).as_f64().unwrap() as i32;
+                unsafe { std::mem::transmute::<i32, $t>(__r) }
+            }};
+            (*mut $t:ty; $cb:expr; $($arg:expr),* $(,)?) => {{
+                let __args = JsValue::from(vec![$(JsValue::from($arg)),+]);
+                let __r = reflect_apply(&$cb, &JsValue::UNDEFINED, &__args);
+                (__r.as_f64().unwrap_or(0.0) as usize) as *mut $t
+            }};
+            ($ret:ty; $cb:expr; $($arg:expr),* $(,)?) => {{
+                let __args = JsValue::from(vec![$(JsValue::from($arg)),+]);
+                reflect_apply(&$cb, &JsValue::UNDEFINED, &__args).as_f64().unwrap() as $ret
+            }};
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        macro_rules! external_fn_call {
+        	(enum $ret:ty; $cb:expr; $($arg:expr),* $(,)?) => { $cb($($arg),*) };
+            ($ret:ty; $cb:expr; $($arg:expr),* $(,)?) => { $cb($($arg),*) };
+        }
     """.trimIndent())
 }
 
-internal fun StringBuilder.printStringDef(
-    mangle: (String) -> String
-) {
-    printLabel(this, "String")
-    append($$"""
-        
-        #[repr(C)]
-        #[derive(Debug)]
-        struct _KString {
-            data: *const u8,
-            size: usize,
-            length: i32,
-            __flags: i8
-        }
-        
-        pub struct KString {
-            ptr: *const _KString
-        }
-        
-        impl KString {
-            fn wrap(ptr: *const _KString) -> Self {
-                Self { ptr }
-            }
-            pub fn from(value: String) -> Self {
-                unsafe {
-                    let length = value.chars().count() as i32;
-                    let size = value.len();
-                    let data = malloc(size) as *mut u8;
-                    std::ptr::copy_nonoverlapping(value.as_ptr(), data, size);
-                    Self { ptr: $${mangle("kstring_new")}(data, length, size, true) }
-                }
-            }
-            pub fn from_str(value: &str) -> Self {
-                unsafe {
-                    let length = value.chars().count() as i32;
-                    let size = value.len();
-                    let data = value.as_ptr();
-                    Self { ptr: $${mangle("kstring_new")}(data, length, size, false) }
-                }
-            }
-            pub fn as_str(&self) -> &str {
-                unsafe {
-                    let str = &*self.ptr;
-                    std::str::from_utf8_unchecked(
-                        std::slice::from_raw_parts(str.data, str.size)
-                    )
-                }
-            }
-        }
+internal fun StringBuilder.printStringDef(context: NativeModuleContext) {
+    if(!context.hasString)
+        return
+    printLabel("String")
 
-        impl From<KString> for String {
-            fn from(value: KString) -> Self {
-                value.to_string()
+    append("\nexport_fn! {")
+    if(context.hasStringToNativeCast) appendLine($$"""
+        
+        fn $${context.mangle("string_new")}(data: *mut u8, _length: i32, size: i32, make_copy: bool) -> *mut String as $${context.jsMangle["string_new"]} {
+            if make_copy {
+                unsafe { into_raw(String::from_utf8_unchecked(std::slice::from_raw_parts(data, size as usize).to_vec())) }
+            } else {
+                unsafe { into_raw(String::from_raw_parts(data, size as usize, size as usize)) }
             }
         }
+    """.replaceIndent("\t"))
+    if(context.hasStringToKotlinCast) appendLine("""
         
-        impl Display for KString {
-            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-                Debug::fmt(&self.as_str(), f)
-            }
+        fn ${context.mangle("string_data")}(str: *mut String) -> *mut u8 as ${context.jsMangle["string_data"]} {
+            unsafe { (&*str).as_ptr().cast_mut() }
         }
-
-        impl_wrapper!(KString, _KString);
-        impl_drop_clone!(KString, $${mangle("kstring_free")}, $${mangle("kstring_clone")});
-        impl_ptr_holder!(KString, _KString, $${mangle("kstring_free")}, $${mangle("kstring_clone")});
-
-        extern "C" {
-            fn $${mangle("kstring_new")}(data: *const u8, length: i32, size: usize, is_data_owner: bool) -> *const _KString;
-            fn $${mangle("kstring_free")}(self_: *const _KString);
-            fn $${mangle("kstring_clone")}(self_: *const _KString) -> *const _KString;
+        fn ${context.mangle("string_length")}(str: *mut String) -> i32 as ${context.jsMangle["string_length"]} {
+            unsafe { (&*str).chars().count() as i32 }
         }
-
-        #[macro_export] macro_rules! k_string {
-            ($str:expr) => (KString::from($str));
+        fn ${context.mangle("string_size")}(str: *mut String) -> i32 as ${context.jsMangle["string_size"]} {
+            unsafe { (&*str).len() as i32 }
         }
-        
-    """.trimIndent())
+        fn ${context.mangle("string_free")}(str: *mut String) -> () as ${context.jsMangle["string_free"]} {
+            from_raw(str);
+        }
+    """.replaceIndent("\t"))
+    appendLine("\n}")
 }
 
-internal fun StringBuilder.printArraysDef(
-    mangle: (String) -> String
-) {
-    printLabel(this, "Arrays")
+internal fun StringBuilder.printArraysDef(context: NativeModuleContext) {
+    if(context.hasPrimitiveArray) {
+        printLabel("Primitive arrays")
+        append($$"""
+            
+            macro_rules! impl_typed_array {
+                ($rsType:ident, 
+            	$funcNew:ident, $funcNewJs:ident, 
+            	$funcData:ident, $funcDataJs:ident, 
+            	$funcLength:ident, $funcLengthJs:ident, 
+            	$funcFree:ident, $funcFreeJs:ident) => {
+            		export_fn! {
+            			fn $funcNew(elements: *mut $rsType, length: i32, make_copy: bool) -> *mut Vec<$rsType> as $funcNewJs {
+            				if(make_copy) {
+                                unsafe { into_raw(std::slice::from_raw_parts(elements, length as usize).to_vec()) }
+                            } else {
+                                unsafe { into_raw(Vec::from_raw_parts(elements, length as usize, length as usize)) }
+                            }
+            			}
+            			fn $funcData(of: *mut Vec<$rsType>) -> *mut $rsType as $funcDataJs {
+            				unsafe { (*of).as_mut_ptr() }
+            			}
+            			fn $funcLength(of: *mut Vec<$rsType>) -> i32 as $funcLengthJs {
+            				unsafe { (*of).len() as i32 }
+            			}
+            			fn $funcFree(of: *mut Vec<$rsType>) -> () as $funcFreeJs {
+            				drop(from_raw(of));
+            			}
+            		}
+                };
+            }
+        """.trimIndent())
 
-    append($$"""
-        
-        #[repr(C)]
-        #[derive(Debug)]
-        struct _KArray {
-            elements: *const c_void,
-            size: usize,
-            length: i32,
-            __flags: i8
+        listOf(
+            Triple("char", "u16", context.hasCharArray),
+            Triple("boolean", "bool", context.hasBooleanArray),
+            Triple("byte", "i8", context.hasByteArray || context.hasUByteArray),
+            Triple("short", "i16", context.hasShortArray || context.hasUShortArray),
+            Triple("int", "i32", context.hasIntArray || context.hasEnums || context.hasUIntArray),
+            Triple("long", "i64", context.hasLongArray || context.hasULongArray),
+            Triple("float", "f32", context.hasFloatArray),
+            Triple("double", "f64", context.hasDoubleArray)
+        ).forEach { (name, type, has) ->
+            if(!has)
+                return@forEach
+            append("""
+                
+                impl_typed_array!($type,
+                    ${context.mangle("${name}array_new")}, ${context.jsMangle["${name}array_new"]},
+                    ${context.mangle("${name}array_elements")}, ${context.jsMangle["${name}array_elements"]},
+                    ${context.mangle("${name}array_length")}, ${context.jsMangle["${name}array_length"]},
+                    ${context.mangle("${name}array_free")}, ${context.jsMangle["${name}array_free"]}
+                );
+            """.trimIndent())
         }
-        
-        extern "C" {
-            fn $${mangle("karray_new")}(elements: *const *const c_void, length: i32, is_data_owner: bool) -> *const _KArray;
-            fn $${mangle("karray_clone")}(self_: *const _KArray, clone_op: *const c_void) -> *const _KArray;
-            fn $${mangle("karray_free")}(self_: *const _KArray, free_op: *const c_void);
-        }
-        
-        macro_rules! impl_typed_array {
-            ($name:ident, $rsType:ident, $size:expr, $new:ident, $free:ident, $clone:ident) => {
-                pub struct $name {
-                    ptr: *const _KArray
-                }
-        
-                impl $name {
-                    fn wrap(ptr: *const _KArray) -> Self {
-                        Self { ptr }
-                    }
-                    pub fn as_slice(&self) -> &[$rsType] {
-                        unsafe {
-                            let arr = &*self.ptr;
-                            std::slice::from_raw_parts(arr.elements as *const $rsType, arr.length as usize)
+        append("\n")
+    }
+
+    if(context.hasObjectArrays) {
+        printLabel("Object array")
+        append($$"""
+            
+            macro_rules! impl_object_array {
+                ($T:ty, 
+                $funcNew:ident, $funcNewJs:ident, 
+                $funcLength:ident, $funcLengthJs:ident,
+                $funcPush:ident, $funcPushJs:ident, 
+                $funcGet:ident, $funcGetJs:ident, 
+                $funcFree:ident, $funcFreeJs:ident) => {
+                    export_fn! {
+                        fn $funcNew(capacity: i32, nullable_elements: bool) -> *mut c_void as $funcNewJs {
+                            match nullable_elements {
+                                true => into_raw(Vec::<Option<$T>>::with_capacity(capacity as usize)) as *mut c_void,
+                                false => into_raw(Vec::<$T>::with_capacity(capacity as usize)) as *mut c_void,
+                            }
+                        }
+                        fn $funcLength(arr: *mut c_void, nullable_elements: bool) -> i32 as $funcLengthJs {
+                            unsafe { match nullable_elements {
+                                true => (&mut *(arr as *mut Vec<Option<$T>>)).len() as i32,
+                                false => (&mut *(arr as *mut Vec<$T>)).len() as i32
+                            } }
+                        }
+                        fn $funcPush(arr: *mut c_void, element: *mut c_void, nullable_elements: bool) -> () as $funcPushJs {
+                            unsafe { if(nullable_elements) {
+                                let arr = &mut *(arr as *mut Vec<Option<$T>>);
+                                arr.push(match element.is_null() {
+                                    true => None,
+                                    false => Some(*Box::from_raw(element as *mut $T)),
+                                });
+                            } else {
+                                let arr = &mut *(arr as *mut Vec<$T>);
+                                arr.push(*Box::from_raw(element as *mut $T));
+                            } }
+                        }
+                        fn $funcGet(arr: *mut c_void, index: i32, nullable_elements: bool) -> *mut c_void as $funcGetJs {
+                            unsafe { if(nullable_elements) {
+                                let arr = &mut *(arr as *mut Vec<Option<$T>>);
+                                let element = arr.get_unchecked_mut(index as usize);
+                                match element {
+                                    Some(obj) => obj as *mut $T as *mut c_void,
+                                    None => null_mut(),
+                                }
+                            } else {
+                                let arr = &mut *(arr as *mut Vec<$T>);
+                                arr.get_unchecked_mut(index as usize) as *mut $T as *mut c_void
+                            } }
+                        }
+                        fn $funcFree(arr: *mut c_void, nullable_elements: bool) -> () as $funcFreeJs {
+                            if(nullable_elements) {
+                                drop(from_raw(arr as *mut Vec<Option<$T>>));
+                            } else {
+                                drop(from_raw(arr as *mut Vec<$T>));
+                            }
                         }
                     }
-                    pub fn from(array: Vec<$rsType>) -> Self {
-                        unsafe {
-                            let length = array.len();
-                            let size = length * $size;
-                            let elements = malloc(size) as *mut $rsType;
-                            std::ptr::copy_nonoverlapping(array.as_ptr(), elements, length);
-                            Self { ptr: $new(elements, length as i32, size) }
-                        }
-                    }
-                }
-                extern "C" {
-                    fn $new(elements: *const $rsType, length: i32, size: usize) -> *const _KArray;
-                    fn $free(self_: *const _KArray);
-                    fn $clone(self_: *const _KArray) -> *const _KArray;
-                }
-        
-                impl_wrapper!($name, _KArray);
-                impl_drop_clone!($name, $free, $clone);
-                impl_ptr_holder!($name, _KArray, $free, $clone);
-            };
-        }
-        
-        impl_typed_array!(KCharArray, u16, 2, $${mangle("kchar_array_new")}, $${mangle("kchar_array_free")}, $${mangle("_kchar_array_clone")});
-        impl_typed_array!(KBooleanArray, bool, 1, $${mangle("kboolean_array_new")}, $${mangle("kboolean_array_free")}, $${mangle("_kboolean_array_clone")});
-        impl_typed_array!(KByteArray, i8, 1, $${mangle("kbyte_array_new")}, $${mangle("kbyte_array_free")}, $${mangle("_kbyte_array_clone")});
-        impl_typed_array!(KUByteArray, u8, 1, $${mangle("kubyte_array_new")}, $${mangle("kubyte_array_free")}, $${mangle("_kubyte_array_clone")});
-        impl_typed_array!(KShortArray, i16, 2, $${mangle("kshort_array_new")}, $${mangle("kshort_array_free")}, $${mangle("_kshort_array_clone")});
-        impl_typed_array!(KUShortArray, u16, 2, $${mangle("kushort_array_new")}, $${mangle("kushort_array_free")}, $${mangle("_kushort_array_clone")});
-        impl_typed_array!(KIntArray, i32, 4, $${mangle("kint_array_new")}, $${mangle("kint_array_free")}, $${mangle("_kint_array_clone")});
-        impl_typed_array!(KUIntArray, u32, 4, $${mangle("kuint_array_new")}, $${mangle("kuint_array_free")}, $${mangle("_kuint_array_clone")});
-        impl_typed_array!(KLongArray, i64, 8, $${mangle("klong_array_new")}, $${mangle("klong_array_free")}, $${mangle("_klong_array_clone")});
-        impl_typed_array!(KULongArray, u64, 8, $${mangle("kulong_array_new")}, $${mangle("kulong_array_free")}, $${mangle("_kulong_array_clone")});
-        impl_typed_array!(KFloatArray, f32, 4, $${mangle("kfloat_array_new")}, $${mangle("kfloat_array_free")}, $${mangle("_kdloat_array_clone")});
-        impl_typed_array!(KDoubleArray, f64, 8, $${mangle("kdouble_array_new")}, $${mangle("kdouble_array_free")}, $${mangle("_kdouble_array_clone")});
-        
-        #[macro_export] macro_rules! k_char_array {
-            ($($x:expr),+ $(,)?) => (KCharArray::from(vec![$($x),+]));
-        }
-        #[macro_export] macro_rules! k_boolean_array {
-            ($($x:expr),+ $(,)?) => (KBooleanArray::from(vec![$($x),+]));
-        }
-        #[macro_export] macro_rules! k_byte_array {
-            ($($x:expr),+ $(,)?) => (KByteArray::from(vec![$($x),+]));
-        }
-        #[macro_export] macro_rules! k_ubyte_array {
-            ($($x:expr),+ $(,)?) => (KUByteArray::from(vec![$($x),+]));
-        }
-        #[macro_export] macro_rules! k_short_array {
-            ($($x:expr),+ $(,)?) => (KShortArray::from(vec![$($x),+]));
-        }
-        #[macro_export] macro_rules! k_ushort_array {
-            ($($x:expr),+ $(,)?) => (KUShortArray::from(vec![$($x),+]));
-        }
-        #[macro_export] macro_rules! k_int_array {
-            ($($x:expr),+ $(,)?) => (KIntArray::from(vec![$($x),+]));
-        }
-        #[macro_export] macro_rules! k_uint_array {
-            ($($x:expr),+ $(,)?) => (KUIntArray::from(vec![$($x),+]));
-        }
-        #[macro_export] macro_rules! k_long_array {
-            ($($x:expr),+ $(,)?) => (KLongArray::from(vec![$($x),+]));
-        }
-        #[macro_export] macro_rules! k_ulong_array {
-            ($($x:expr),+ $(,)?) => (KULongArray::from(vec![$($x),+]));
-        }
-        #[macro_export] macro_rules! k_float_array {
-            ($($x:expr),+ $(,)?) => (KFloatArray::from(vec![$($x),+]));
-        }
-        #[macro_export] macro_rules! k_double_array {
-            ($($x:expr),+ $(,)?) => (KDoubleArray::from(vec![$($x),+]));
-        }
-        
+                };
+            }
+            
+        """.trimIndent())
 
-        // KArray
-        
-        pub struct KArray<T: PtrHolder> {
-            ptr: *const _KArray,
-            elements: Vec<T>
-        }
-        
-        impl<T: PtrHolder> KArray<T> {
-            fn wrap(of: *const _KArray) -> KArray<T> {
-                unsafe {
-                    let _of = &*of;
-                    let _elements = _of.elements as *const *const c_void;
-                    let mut elements: Vec<T> = Vec::with_capacity(_of.length as usize);
-        
-                    for i in 0.._of.length {
-                        let el = T::wrap(*_elements.offset(i as isize));
-                        elements.push(el)
-                    }
-                    KArray { ptr: of, elements }
-                }
+        buildList {
+            context.usedDictionaries.mapTo(this) {
+                it.rustName to it.name.camelCase().lowercase()
             }
-            fn wrap_nullable(ptr: *const _KArray) -> Option<KArray<T>> {
-                if (ptr == null()) {
-                    return None
-                }
-                Some(KArray::wrap(ptr))
+            context.usedInterfaces.mapTo(this) {
+                "Arc<${it.rustName}>" to it.name.camelCase().lowercase()
             }
-            fn unwrap(self) -> *const _KArray {
-                let ptr = self.ptr;
-                std::mem::forget(self);
-                ptr
+            /*
+            context.usedCallbacks.mapTo(this) {
+                "Arc<${it.rustName}>" to it.name.camelCase().lowercase()
             }
-            fn unwrap_nullable(of: Option<KArray<T>>) -> *const _KArray {
-                if(of.is_none()) {
-                    return null()
-                }
-                of.unwrap().unwrap()
-            }
-            pub fn new(elements: Vec<T>) -> KArray<T> {
-                unsafe {
-                    let mut ptrs = malloc(elements.len() * size_of::<isize>()) as *mut *const c_void;
-                    for i in 0..elements.len() {
-                        ptrs.offset(i as isize).write(elements[i].ptr());
-                    }
-                    let ptr = unsafe { $${mangle("karray_new")}(ptrs, elements.len() as i32, true) };
-                    KArray { ptr, elements }
-                }
-            }
-            pub fn as_slice(&self) -> &[T] {
-                self.elements.as_slice()
-            }
-        }
-        
-        impl<T: PtrHolder> Drop for KArray<T> {
-            fn drop(&mut self) {
-                unsafe { 
-                    self.elements.set_len(0);
-                    $${mangle("karray_free")}(self.ptr, T::free_ptr()); 
-                }
-            }
-        }
-        
-        impl<T: PtrHolder> Clone for KArray<T> {
-            fn clone(&self) -> Self {
-                KArray::wrap(unsafe { $${mangle("karray_clone")}(self.ptr, T::clone_ptr()) })
-            }
-        }
-        
-        #[macro_export] macro_rules! k_array {
-            ($($x:expr),+ $(,)?) => (KArray::new(vec![$($x),+]));
-        }
-        
-        // KArrayOpt
 
-        pub struct KArrayOpt<T: PtrHolder> {
-            ptr: *const _KArray,
-            elements: Vec<Option<T>>
+             */
+            if(context.hasStringArray)
+                add("String" to "string")
+        }.joinTo(this, separator = "") {
+            val lower = it.second
+            """
+            
+            impl_object_array!(${it.first},
+            	${context.mangle("array_${lower}_new")}, ${context.jsMangle["array_${lower}_new"]},
+                ${context.mangle("array_${lower}_length")}, ${context.jsMangle["array_${lower}_length"]},
+                ${context.mangle("array_${lower}_push")}, ${context.jsMangle["array_${lower}_push"]},
+                ${context.mangle("array_${lower}_get")}, ${context.jsMangle["array_${lower}_get"]},
+                ${context.mangle("array_${lower}_free")}, ${context.jsMangle["array_${lower}_free"]}
+            );
+        """.trimIndent()
         }
+        append("\n")
+    }
+}
 
-        impl<T: PtrHolder> KArrayOpt<T> {
-            fn wrap(of: *const _KArray) -> KArrayOpt<T> {
-                unsafe {
-                    let _of = &*of;
-                    let _elements = _of.elements as *const *const c_void;
-                    let mut elements: Vec<Option<T>> = Vec::with_capacity(_of.length as usize);
+internal fun StringBuilder.printCriticalFuncDef(context: NativeModuleContext) {
+    if(!context.hasCriticalString &&
+        !context.hasCriticalStringOpt &&
+        !context.hasCriticalArray && !
+        context.hasCriticalArrayOpt
+    ) return
 
-                    for i in 0.._of.length {
-                        let p = *_elements.offset(i as isize);
-                        if(p == null()) {
-                            elements.push(None)
-                        } else {
-                            let el = T::wrap(p);
-                            elements.push(Some(el))
-                        }
-                    }
-                    KArrayOpt { ptr: of, elements }
-                }
-            }
-            fn wrap_nullable(ptr: *const _KArray) -> Option<KArrayOpt<T>> {
-                if (ptr == null()) {
-                    return None
-                }
-                Some(KArrayOpt::wrap(ptr))
-            }
-            fn unwrap(self) -> *const _KArray {
-                let ptr = self.ptr;
-                std::mem::forget(self);
-                ptr
-            }
-            fn unwrap_nullable(of: Option<KArrayOpt<T>>) -> *const _KArray {
-                if(of.is_none()) {
-                    return null()
-                }
-                of.unwrap().unwrap()
-            }
-            pub fn new(elements: Vec<Option<T>>) -> KArrayOpt<T> {
-                unsafe {
-                    let mut ptrs = malloc(elements.len() * size_of::<isize>()) as *mut *const c_void;
-                    for i in 0..elements.len() {
-                        let element = &elements[i];
-                        if(element.is_none()) {
-                            ptrs.offset(i as isize).write(null());
-                        } else {
-                            ptrs.offset(i as isize).write(element.clone().unwrap().ptr());
-                        }
-                    }
-                    let ptr = unsafe { $${mangle("karray_new")}(ptrs, elements.len() as i32, true) };
-                    KArrayOpt { ptr, elements }
-                }
-            }
-            pub fn as_slice(&self) -> &[Option<T>] {
-                self.elements.as_slice()
-            }
-        }
+    printLabel("Critical functions")
 
-        impl<T: PtrHolder> Drop for KArrayOpt<T> {
-            fn drop(&mut self) {
-                unsafe {
-                    self.elements.set_len(0);
-                    $${mangle("karray_free")}(self.ptr, T::free_ptr()); 
-                }
-            }
-        }
-
-        impl<T: PtrHolder> Clone for KArrayOpt<T> {
-            fn clone(&self) -> Self {
-                KArrayOpt::wrap(unsafe { $${mangle("karray_clone")}(self.ptr, T::clone_ptr()) })
-            }
-        }
+    if(context.hasCriticalString) appendLine("""
         
-        #[macro_export] macro_rules! k_array_opt {
-            ($($x:expr),+ $(,)?) => (KArrayOpt::new(vec![$($x),+]));
+        fn critical_string(data: *mut u8, size: i32) -> ManuallyDrop<String> {
+            unsafe { ManuallyDrop::new(String::from_raw_parts(data, size as usize, size as usize)) }
         }
+    """.trimIndent())
+    if(context.hasCriticalStringOpt) appendLine("""
         
+        fn critical_string_opt(data: *mut u8, length: i32, size: i32) -> ManuallyDrop<Option<String>> {
+            ManuallyDrop::new(if length != -1 {
+                Some(unsafe { String::from_raw_parts(data, size as usize, size as usize) })
+            } else { None })
+        }
+    """.trimIndent())
+    if(context.hasCriticalArray) appendLine("""
+        
+        fn critical_array<T>(data: *mut T, size: i32) -> ManuallyDrop<Vec<T>> {
+            unsafe { ManuallyDrop::new(Vec::from_raw_parts(data, size as usize, size as usize)) }
+        }
+    """.trimIndent())
+    if(context.hasCriticalArrayOpt) appendLine("""
+        
+        fn critical_array_opt<T>(data: *mut T, size: i32) -> ManuallyDrop<Option<Vec<T>>> {
+            ManuallyDrop::new(if size != -1 {
+                Some(unsafe { Vec::from_raw_parts(data, size as usize, size as usize) })
+            } else { None })
+        }
     """.trimIndent())
 }

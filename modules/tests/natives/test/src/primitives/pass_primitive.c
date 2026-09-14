@@ -3,77 +3,85 @@
 
 // Consume
 
-KBoolean pass_void() {
+bool pass_void(void) {
     return true;
 }
 
-KBoolean pass_char(const KChar arg) {
+bool pass_char(const uint16_t arg) {
     return arg == 'a';
 }
 
-KBoolean pass_boolean(const KBoolean arg) {
+bool pass_boolean(const bool arg) {
     return arg == true;
 }
 
-KBoolean pass_byte(const KByte arg) {
+bool pass_byte(const int8_t arg) {
     return arg == 1;
 }
 
-KBoolean pass_ubyte(const KUByte arg) {
+bool pass_ubyte(const uint8_t arg) {
     return arg == 255u;
 }
 
-KBoolean pass_short(const KShort arg) {
+bool pass_short(const int16_t arg) {
     return arg == 1;
 }
 
-KBoolean pass_ushort(const KUShort arg) {
+bool pass_ushort(const uint16_t arg) {
     return arg == 65535u;
 }
 
-KBoolean pass_int(const KInt arg) {
+bool pass_int(const int32_t arg) {
     return arg == 99;
 }
 
-KBoolean pass_uint(const KUInt arg) {
+bool pass_uint(const uint32_t arg) {
     return arg == 4294967295u;
 }
 
-KBoolean pass_long(const KLong arg) {
+bool pass_long(const int64_t arg) {
     return arg == 9223372036854775805;
 }
 
-KBoolean pass_ulong(const KULong arg) {
+bool pass_ulong(const uint64_t arg) {
     return arg == 18446744073709551615u;
 }
 
-KBoolean pass_float(const KFloat arg) {
+bool pass_float(const float arg) {
     return arg == 99.9f;
 }
 
-KBoolean pass_double(const KDouble arg) {
+bool pass_double(const double arg) {
     return arg == 1.1;
 }
 
-KBoolean pass_string(KString* arg) {
-    return !(arg->__flags & 1) && arg->length == 11 && strncmp(arg->data, "test string", arg->length) == 0;
+bool pass_string(KString* arg) {
+    return arg->length == 11 && strncmp(arg->data, "test string", arg->length) == 0;
 }
 
-KBoolean pass_string_n(KString* arg) {
+bool pass_string_n(KString* arg) {
     return arg == NULL;
 }
 
-KBoolean pass_enum(const MyEnum arg) {
+bool pass_enum(const MyEnum arg) {
     return arg == MyEnum_CASE2;
 }
 
-KBoolean pass_dictionary(MyDictionary* arg) {
+bool pass_dictionary(MyDictionary* arg) {
     return arg->a == 1 &&
         arg->b == 2 &&
         arg->c == 3 &&
         arg->d == 4;
 }
 
-KBoolean pass_dictionary_n(MyDictionary* arg) {
+bool pass_dictionary_n(MyDictionary* arg) {
+    return arg == NULL;
+}
+
+bool pass_interface(RC_MyInterface* arg) {
+    return arg->pointed == (void*) 1;
+}
+
+bool pass_interface_n(RC_MyInterface* arg) {
     return arg == NULL;
 }

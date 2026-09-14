@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "com.huskerdev"
-version = projectDir.parentFile.parentFile.resolve("VERSION").readText()
+version = projectDir.parentFile.parentFile.resolve("VERSION").readText().trim()
 
 repositories {
     mavenCentral()
@@ -15,20 +15,21 @@ repositories {
 
 kotlin {
     compilerOptions {
-        jvmTarget = JvmTarget.JVM_11
+        jvmTarget = JvmTarget.JVM_17
     }
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 }
 
 dependencies {
     implementation(libs.kotlin.gradle.plugin)
     implementation(libs.kotlinx.serialization)
     implementation(libs.webidl)
-    compileOnly(libs.android.tools)
+    implementation(libs.osutils)
+    compileOnly(libs.android.gradle)
 }
 
 tasks.jar {
@@ -43,7 +44,7 @@ gradlePlugin {
             id = "com.huskerdev.native-kt"
             implementationClass = "com.huskerdev.nativekt.plugin.NativeKtPlugin"
             displayName = "native-kt"
-            description = "Gradle plugin for convenient C/C++ integration into a Kotlin Multiplatform project."
+            description = "Gradle plugin for convenient C/C++/Rust integration into a Kotlin Multiplatform project."
             tags.set(listOf("kotlin", "multiplatform", "native"))
         }
     }

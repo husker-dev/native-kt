@@ -8,116 +8,114 @@ import java.io.File
 import java.io.Serializable
 import javax.inject.Inject
 
-const val NDK_LATEST = "~latest~"
 
 @Suppress("JavaDefaultMethodsNotOverriddenByDelegation")
-open class NativeKtMultiplatformExtension @Inject constructor(
-    objects: ObjectFactory
+open class NativeKtMultiplatformExtension @Inject @JvmOverloads constructor(
+    objects: ObjectFactory,
+    projectDir: File,
+    internal val impl: NativeKtCommonInterface = NativeKtMultiplatformInterface.Impl()
 ): ExtensiblePolymorphicDomainObjectContainer<NativeProject> by objects.polymorphicDomainObjectContainer(NativeProject::class.java),
-    NativeKtJvmInterface, NativeKtJsInterface, NativeKtAndroidInterface, NativeKtNativeInterface, NativeKtCommonInterface
+    NativeKtMultiplatformInterface by impl as NativeKtMultiplatformInterface
 {
     init {
         registerFactory(Multiplatform::class.java) { name ->
-            objects.newInstance(Multiplatform::class.java, name)
+            objects.newInstance(Multiplatform::class.java, name, projectDir.resolve("natives/$name"))
         }
         registerFactory(SinglePlatform::class.java) { name ->
-            objects.newInstance(SinglePlatform::class.java, name)
+            objects.newInstance(SinglePlatform::class.java, name, projectDir.resolve("natives/$name"))
         }
         registerFactory(NativeProject::class.java) { name ->
-            objects.newInstance(Multiplatform::class.java, name)
+            objects.newInstance(Multiplatform::class.java, name, projectDir.resolve("natives/$name"))
         }
     }
-
-    // JVM
-    override var useJvmRecord = true
-    override var useUniversalMacOSLib = false
-
-    override var useJNI = true
-    override var useForeignApi = true
-    override var useJVMCI = true
-
-    override var jvmNativesJarTask: Jar? = null
-
-    // Android
-    override var ndkVersion: String = NDK_LATEST
-    override var androidTargets = arrayListOf("arm64-v8a", "armeabi-v7a", "x86_64")
-
-    override var applyAndroidCriticalStub = true
-    override var useAndroidCriticalNative = true
-
-    // JS
-    override var useJsBigInt = false
-    override var emscriptenEnv: List<String>? = null
-
-    // Common
-    override var useCoroutines = true
-    override var applyRuntime = true
 }
 
 @Suppress("JavaDefaultMethodsNotOverriddenByDelegation")
-open class NativeKtJvmExtension @Inject constructor(
-    objects: ObjectFactory
+open class NativeKtJvmExtension @Inject @JvmOverloads constructor(
+    objects: ObjectFactory,
+    projectDir: File,
+    internal val impl: NativeKtCommonInterface = NativeKtJvmInterface.Impl()
 ): ExtensiblePolymorphicDomainObjectContainer<SinglePlatform> by objects.polymorphicDomainObjectContainer(SinglePlatform::class.java),
-    NativeKtJvmInterface
+    NativeKtJvmInterface by impl as NativeKtJvmInterface,
+    NativeKtCommonInterface by impl
 {
     init {
         registerFactory(SinglePlatform::class.java) { name ->
-            objects.newInstance(SinglePlatform::class.java, name).also {
+            objects.newInstance(SinglePlatform::class.java, name, projectDir.resolve("natives/$name")).also {
                 it.targetSourceSet = "main"
             }
         }
     }
-    override var useCoroutines = true
-    override var useJvmRecord = true
-
-    override var useJNI = true
-    override var useForeignApi = true
-    override var useJVMCI = true
-
-    override var useUniversalMacOSLib = false
-
-    override var applyRuntime = true
-
-    override var jvmNativesJarTask: Jar? = null
 }
 
 @Suppress("JavaDefaultMethodsNotOverriddenByDelegation")
-open class NativeKtJsExtension @Inject constructor(
-    objects: ObjectFactory
+open class NativeKtJsExtension @Inject @JvmOverloads constructor(
+    objects: ObjectFactory,
+    projectDir: File,
+    internal val impl: NativeKtCommonInterface = NativeKtJsInterface.Impl()
 ): ExtensiblePolymorphicDomainObjectContainer<SinglePlatform> by objects.polymorphicDomainObjectContainer(SinglePlatform::class.java),
-    NativeKtJsInterface
+    NativeKtJsInterface by impl as NativeKtJsInterface,
+    NativeKtCommonInterface by impl
 {
     init {
         registerFactory(SinglePlatform::class.java) { name ->
-            objects.newInstance(SinglePlatform::class.java, name).also {
+            objects.newInstance(SinglePlatform::class.java, name, projectDir.resolve("natives/$name")).also {
                 it.targetSourceSet = "main"
             }
         }
     }
-
-    override var useCoroutines = true
-    override var applyRuntime = true
-
-    override var useJsBigInt = false
-    override var emscriptenEnv: List<String>? = null
 }
 
-interface NativeKtNativeInterface: NativeKtCommonInterface
+// ==================
+//     Interfaces
+// ==================
 
-interface NativeKtAndroidInterface: NativeKtCommonInterface {
-    var ndkVersion: String
+interface NativeKtMultiplatformInterface:
+    NativeKtCommonInterface,
+    NativeKtJvmInterface,
+    NativeKtJsInterface,
+    NativeKtAndroidInterface,
+    NativeKtNativeInterface
+{
+    class Impl: NativeKtMultiplatformInterface,
+        NativeKtJvmInterface by NativeKtJvmInterface.Defaults(),
+        NativeKtJsInterface by NativeKtJsInterface.Defaults(),
+        NativeKtAndroidInterface by NativeKtAndroidInterface.Defaults(),
+        NativeKtNativeInterface by NativeKtNativeInterface.Defaults(),
+        NativeKtCommonInterface by NativeKtCommonInterface.Defaults(),
+        Serializable
+}
+
+interface NativeKtNativeInterface {
+    class Defaults: NativeKtNativeInterface, Serializable
+}
+
+interface NativeKtAndroidInterface {
+    var ndkVersion: String?
     var androidTargets: ArrayList<String>
 
     var useAndroidCriticalNative: Boolean
     var applyAndroidCriticalStub: Boolean
+
+    class Defaults: NativeKtAndroidInterface, Serializable {
+        override var ndkVersion: String? = null
+        override var androidTargets = arrayListOf("arm64-v8a", "armeabi-v7a", "x86_64")
+
+        override var applyAndroidCriticalStub = true
+        override var useAndroidCriticalNative = true
+    }
 }
 
-interface NativeKtJsInterface: NativeKtCommonInterface {
+interface NativeKtJsInterface {
     var useJsBigInt: Boolean
-    var emscriptenEnv: List<String>?
+
+    open class Defaults: NativeKtJsInterface, Serializable {
+        override var useJsBigInt = false
+    }
+    class Impl: Defaults(), NativeKtCommonInterface by NativeKtCommonInterface.Defaults()
 }
 
-interface NativeKtJvmInterface: NativeKtCommonInterface {
+interface NativeKtJvmInterface {
     var useJvmRecord: Boolean
     var useUniversalMacOSLib: Boolean
 
@@ -126,11 +124,38 @@ interface NativeKtJvmInterface: NativeKtCommonInterface {
     var useJVMCI: Boolean
 
     var jvmNativesJarTask: Jar?
+
+    open class Defaults: NativeKtJvmInterface, Serializable {
+        override var useJvmRecord = true
+        override var useUniversalMacOSLib = false
+
+        override var useJNI = true
+        override var useForeignApi = true
+        override var useJVMCI = true
+
+        @Transient override var jvmNativesJarTask: Jar? = null
+    }
+    class Impl: Defaults(), NativeKtCommonInterface by NativeKtCommonInterface.Defaults()
 }
 
 interface NativeKtCommonInterface {
+    var debug: MutableList<DebugKind>
     var useCoroutines: Boolean
     var applyRuntime: Boolean
+
+    class Defaults: NativeKtCommonInterface, Serializable {
+        override var debug = mutableListOf<DebugKind>()
+        override var useCoroutines = true
+        override var applyRuntime = true
+    }
+}
+
+// ==============
+//     Debug
+// ==============
+
+enum class DebugKind {
+    PRINT_EXEC
 }
 
 // ==============
@@ -140,27 +165,25 @@ interface NativeKtCommonInterface {
 sealed interface BuildSystem: Serializable {
     val language: Language
 
-    open class CMake: BuildSystem {
+    open class CMake(
+        private val module: NativeProject,
+
         /**
          * CMake target language
          *
          * Default value: C
          */
-        override var language: Language = Language.C
+        override val language: Language
+    ): BuildSystem {
 
         /**
-         * Generated header file directory.
+         * Generated header file.
          *
-         * Default value: `natives/[name]/include`
+         * Default value: `natives/[name]/include/api.*`
          */
-        var headerDir: File? = null
+        var headerFile: File? = null
 
-        /**
-         * Generated header file name (without extension).
-         *
-         * Default value: 'api`
-         */
-        var headerFileName: String = "api"
+        fun headerFile() = headerFile ?: module.projectDir.resolve("include/api.${language.headerExtension}")
 
         /**
          * CMake build type.
@@ -175,12 +198,18 @@ sealed interface BuildSystem: Serializable {
         var args = arrayListOf<String>()
     }
 
-    open class Cargo: BuildSystem {
+    open class Cargo(
+        private val module: NativeProject
+    ): BuildSystem {
         override val language: Language = Language.RUST
+
+        var printApi: Boolean = false
+
+        var buildType: CargoBuildType = CargoBuildType.RELEASE
 
         var apiRsFile: File? = null
 
-        var buildType: CargoBuildType = CargoBuildType.RELEASE
+        fun apiRsFile() = apiRsFile ?: module.projectDir.resolve("src/nativekt.rs")
     }
 }
 
@@ -189,27 +218,29 @@ sealed interface BuildSystem: Serializable {
 // ==============
 
 sealed class NativeProject @Inject constructor(
-    @get:JvmName("_name")
-    val name: String
-): Named {
-    override fun getName(): String = name
-
-    var buildSystem: BuildSystem = BuildSystem.CMake()
-        private set
+    private val _name: String,
+    defaultDir: File
+): Named, Serializable {
+    override fun getName(): String = _name
 
     /**
      * Directory with CMake project.
      *
      * Default value: `natives/[name]`
      */
-    abstract var projectDir: File?
+    var projectDir: File = defaultDir
+
+    var buildSystem: BuildSystem = BuildSystem.CMake(this, Language.C)
+        private set
 
     /**
      * NDL file
      *
      * Default value: `natives/[name]/api.ndl`
      */
-    abstract var ndlFile: File?
+    var ndlFile: File? = null
+
+    fun ndlFile() = ndlFile ?: projectDir.resolve("api.ndl")
 
     /**
      * Classpath where bindings will be generated.
@@ -218,22 +249,25 @@ sealed class NativeProject @Inject constructor(
      */
     var classPath: String = "natives.$name"
 
-    fun cmake(configure: BuildSystem.CMake.() -> Unit = {}) {
-        val buildSystem = BuildSystem.CMake()
+    var jsTarget: JsTarget = JsTarget.WEB
+
+    fun cmake(language: Language = Language.C, configure: BuildSystem.CMake.() -> Unit = {}) {
+        val buildSystem = BuildSystem.CMake(this, language)
         buildSystem.configure()
         this.buildSystem = buildSystem
     }
 
     fun cargo(configure: BuildSystem.Cargo.() -> Unit = {}) {
-        val buildSystem = BuildSystem.Cargo()
+        val buildSystem = BuildSystem.Cargo(this)
         buildSystem.configure()
         this.buildSystem = buildSystem
     }
 }
 
 abstract class Multiplatform @Inject constructor(
-    name: String
-): NativeProject(name) {
+    name: String,
+    dir: File
+): NativeProject(name, dir), Serializable {
 
     /**
      * SourceSet that will have 'expect' api
@@ -284,8 +318,9 @@ abstract class Multiplatform @Inject constructor(
 }
 
 abstract class SinglePlatform @Inject constructor(
-    name: String
-): NativeProject(name) {
+    name: String,
+    dir: File
+): NativeProject(name, dir), Serializable {
 
     /**
      * SourceSet with implementation
@@ -301,7 +336,6 @@ enum class Language(
     C("c", "h"),
     CPP("cpp", "hpp"),
     RUST
-    // OBJ_C("m", "h")
 }
 
 @Suppress("unused")
@@ -320,4 +354,10 @@ enum class CargoBuildType(
 ) {
     RELEASE("release"),
     DEBUG("debug")
+}
+
+@Suppress("unused")
+enum class JsTarget {
+    WEB,
+    NODE
 }

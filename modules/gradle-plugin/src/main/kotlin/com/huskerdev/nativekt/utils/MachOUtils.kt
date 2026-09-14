@@ -60,7 +60,7 @@ internal fun globalizeMachOSymbols(file: File, symbols: List<String>) {
 
             // Skip if already external
             if (nType and 0x01 != 0) continue
-            if (nStrx <= 0 || nStrx >= strsize) continue
+            if (nStrx !in 1..<strsize) continue
 
             // Read null-terminated symbol name from string table
             val nameStart = stroff + nStrx

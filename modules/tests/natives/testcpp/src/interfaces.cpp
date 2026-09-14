@@ -1,21 +1,36 @@
 #include <api.hpp>
 #include <iostream>
 
-struct B : IB {
-    explicit B() {}
-};
+namespace {
+    struct MyInterface : IMyInterface {
+        explicit MyInterface() {}
+        ~MyInterface() override {
+            std::cout << "Destroy MyInterface" << std::endl;
+        }
 
-struct A : IA {
-    explicit A() {}
-    void test(void* arg) override {
-        std::cout << "Hello from C++ interface!" << std::endl;
-    }
-};
+        bool test() override {
+            std::cout << "Hello from C++ interface!" << std::endl;
+            return true;
+        }
 
-IB* IB::_create() {
-    return new B();
+        bool test_critical() override {
+            return true;
+        }
+
+        void pass_interface(std::shared_ptr<IMyInterface> a1) override {
+
+        }
+
+        std::shared_ptr<IMyInterface> return_interface() override {
+            return std::make_shared<MyInterface>();
+        }
+    };
 }
 
-IA* IA::_create() {
-    return new A();
+IMyInterface* IMyInterface::_create() {
+    return new MyInterface();
+}
+
+IMyInterface* IMyInterface::new_critical(int32_t a1) {
+    return new MyInterface();
 }

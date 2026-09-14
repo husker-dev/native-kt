@@ -1,15 +1,16 @@
 package com.huskerdev.nativekt.utils
 
+import com.huskerdev.nativekt.NativeModuleContext
 import com.huskerdev.nativekt.TargetType
 import com.huskerdev.nativekt.plugin.NativeKtInfo
-import org.apache.tools.ant.taskdefs.condition.Os
+import com.huskerdev.osutils.OS
 import org.gradle.process.ExecOperations
 import java.io.File
 
-internal fun locateClang(execOps: ExecOperations): File {
-    return locate(execOps, "clang")
+internal fun locateClang(execOps: ExecOperations, context: NativeModuleContext): File {
+    return locate(execOps, context, "clang")
         ?: run {
-            if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+            if (OS.current == OS.WINDOWS) {
                 File.listRoots()!!.forEach {
                     val file = File(it, "msys64/clang64/bin/clang.exe")
                     if (file.exists())
@@ -20,29 +21,15 @@ internal fun locateClang(execOps: ExecOperations): File {
         }
 }
 
-internal fun locateEMCC(execOps: ExecOperations): File {
-    return locate(execOps, "emcc")
-        ?: run {
-            if("EMSDK" in System.getenv())
-                return@run File(System.getenv()["EMSDK"], "upstream/emscripten/emcc")
-            if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-                File.listRoots()!!.forEach {
-                    if (File(it, "emsdk/upstream/emscripten/emcc.bat").exists())
-                        return@run File(it, "emsdk/upstream/emscripten/emcc")
-                }
-            }
-            throw UnsupportedOperationException("Could not locate 'emcc'")
-        }
-}
-
-internal fun mingwLibsDir(execOps: ExecOperations) =
-    File(locateClang(execOps).parentFile.parentFile, "lib")
+internal fun mingwLibsDir(execOps: ExecOperations, context: NativeModuleContext) =
+    File(locateClang(execOps, context).parentFile.parentFile, "lib")
 
 internal fun normalizeMinGWLibs(
     execOps: ExecOperations,
+    context: NativeModuleContext,
     linkerOpts: List<String>
 ): List<String> {
-    val mingwLibs = mingwLibsDir(execOps)
+    val mingwLibs = mingwLibsDir(execOps, context)
 
     return linkerOpts.map {
         if(it.startsWith("-l")) {
@@ -59,25 +46,20 @@ internal fun normalizeMinGWLibs(
     }
 }
 
-internal fun systemExtension(dynamicLib: Boolean): String {
-    return if(dynamicLib) {
-        when {
-            Os.isFamily(Os.FAMILY_WINDOWS) -> "dll"
-            Os.isFamily(Os.FAMILY_MAC) -> "dylib"
-            Os.isFamily(Os.FAMILY_UNIX) -> "so"
-            else -> ""
-        }
-    } else "a"
-}
+internal fun systemExtension(dynamicLib: Boolean): String =
+    if(dynamicLib) OS.current.dylibExtension
+    else OS.current.staticLibExtension
 
 internal fun wholeArchive(name: String) =
-    if(Os.isFamily(Os.FAMILY_MAC))
+    if(OS.current == OS.MACOS)
         "-force_load $name"
     else "-Wl,--whole-archive $name -Wl,--no-whole-archive"
 
 internal fun clangCompile(
     execOps: ExecOperations,
+    context: NativeModuleContext,
     clang: String = "clang",
+    ar: String = "ar",
     sources: List<String>,
     includeDirs: List<String> = emptyList(),
     linkerArgs: List<String> = emptyList(),
@@ -91,7 +73,7 @@ internal fun clangCompile(
     }
 
     sources.forEachIndexed { i, source ->
-        execOps.exec(
+        execOps.exec(context,
             command = "$clang -c -o ${sourcesObj[i]} $source -fPIC ${includeDirs.joinToString(" ") {"-I$it"}} ${linkerArgs.joinToString(" ")}",
             workingDir = workingDir,
             silent = true
@@ -99,14 +81,14 @@ internal fun clangCompile(
     }
 
     if(dynamicLib) {
-        execOps.exec(
+        execOps.exec(context,
             command = "$clang -shared -o $outputBaseName.$extension ${sourcesObj.joinToString(" ")} ${linkerArgs.joinToString(" ")}",
             workingDir = workingDir,
             silent = true
         )
     } else {
-        execOps.exec(
-            command = "ar r $outputBaseName.$extension ${sourcesObj.joinToString(" ")}",
+        execOps.exec(context,
+            command = "$ar r $outputBaseName.$extension ${sourcesObj.joinToString(" ")}",
             workingDir = workingDir,
             silent = true
         )
@@ -116,15 +98,16 @@ internal fun clangCompile(
 
 internal fun getClangTargetArgs(
     execOps: ExecOperations,
+    context: NativeModuleContext,
     targetType: TargetType,
 ): List<String> {
     fun xcSdkVersion(sdk: String) =
-        execOps.exec("xcrun --sdk $sdk --show-sdk-platform-version", silent = true)
+        execOps.exec(context, "xcrun --sdk $sdk --show-sdk-platform-version", silent = true)
     fun xcSdkSysroot(sdk: String) =
-        execOps.exec("xcrun --sdk $sdk --show-sdk-path", silent = true)
+        execOps.exec(context, "xcrun --sdk $sdk --show-sdk-path", silent = true)
     fun konanSysroot(baseName: String): File {
         return File(System.getProperty("user.home"), ".konan/dependencies")
-            .listFiles()
+            .listFiles()!!
             .filter { it.name.startsWith(baseName) }
             .maxOf { it }
     }
@@ -221,6 +204,7 @@ internal fun getClangTargetArgs(
  */
 internal fun prepareNativeLibraryForKN(
     execOps: ExecOperations,
+    context: NativeModuleContext,
     nativesRootBuildDir: File,
     lib: File,
     symbols: List<String>,
@@ -236,8 +220,8 @@ internal fun prepareNativeLibraryForKN(
                 file.parentFile.mkdirs()
                 file.outputStream().use { ins.copyTo(it) }
             }
-            if(!Os.isFamily(Os.FAMILY_WINDOWS))
-                execOps.exec("chmod +x \"${file.posixPath}\"")
+            if(OS.current != OS.WINDOWS)
+                execOps.exec(context, "chmod +x \"${file.posixPath}\"")
         }
         return "\"${file.posixPath}\""
     }
@@ -251,25 +235,26 @@ internal fun prepareNativeLibraryForKN(
     var ar = "ar"
 
     // Unpack GNU tools on Windows (because clang64 tools in MinGW does not support COFF)
-    if(Os.isFamily(Os.FAMILY_WINDOWS)) {
+    if(OS.current == OS.WINDOWS) {
         ld = unpack("mingw64/ld.exe")
         ar = unpack("mingw64/ar.exe")
         objcopy = unpack("mingw64/objcopy.exe")
     }
 
     // Unpack all .a into several .o
-    execOps.exec(
+    execOps.exec(context,
         "$ar x ../${lib.name}",
         workingDir = tmpDir
     )
 
     val objFiles = tmpDir
-        .listFiles { it.extension == "o" || it.extension == "obj" }
+        .listFiles { it.extension == "o" || it.extension == "obj" }!!
         .toMutableList()
 
     // Generate C file with init function that calls each ctor
     objFiles += createCppInitFunction(
         execOps,
+        context,
         objcopy,
         tmpDir,
         objFiles,
@@ -278,22 +263,20 @@ internal fun prepareNativeLibraryForKN(
     )
 
     // Merge several .o into one
-    execOps.exec(
+    execOps.exec(context,
         "$ld -r ${objFiles.joinToString(" ") { it.name }} -o ${tmpObjFile.name}",
         workingDir = tmpDir
     )
 
     // Localize С symbols
     localizeSymbols(
-        execOps,
-        objcopy,
-        tmpObjFile,
-        symbols
+        execOps, context,
+        objcopy, tmpObjFile, symbols
     )
 
     // Archive into .a
     lib.delete()
-    execOps.exec(
+    execOps.exec(context,
         "$ar rcs ../${lib.name} ${tmpObjFile.name}",
         workingDir = tmpDir
     )
@@ -304,6 +287,7 @@ internal fun prepareNativeLibraryForKN(
 
 private fun localizeSymbols(
     execOps: ExecOperations,
+    context: NativeModuleContext,
     objcopy: String,
     objFile: File,
     symbols: List<String>
@@ -312,10 +296,10 @@ private fun localizeSymbols(
     val tmpSymbolsFile = File(dir, "__symbols.txt")
 
     // Localize symbols
-    if(Os.isFamily(Os.FAMILY_MAC)) {
+    if(OS.current == OS.MACOS) {
         try {
             tmpSymbolsFile.writeText(symbols.joinToString("\n") { "_$it" })
-            execOps.exec(
+            execOps.exec(context,
                 command = "nmedit -R ${tmpSymbolsFile.name} ${objFile.name}",
                 workingDir = dir,
                 silent = true
@@ -323,7 +307,7 @@ private fun localizeSymbols(
         } catch (_: Throwable) {}
     } else {
         tmpSymbolsFile.writeText(symbols.joinToString("\n"))
-        execOps.exec(
+        execOps.exec(context,
             command = "$objcopy --localize-symbols=${tmpSymbolsFile.name} ${objFile.name}",
             workingDir = dir
         )
@@ -333,6 +317,7 @@ private fun localizeSymbols(
 
 private fun createCppInitFunction(
     execOps: ExecOperations,
+    context: NativeModuleContext,
     objcopy: String,
     dir: File,
     objFiles: List<File>,
@@ -343,7 +328,7 @@ private fun createCppInitFunction(
     // Detect and globalize C++ ctor symbols in individual .o files
     val ctorSymbols = objFiles
         .asSequence()
-        .map { execOps.exec("nm -a ${it.name}", workingDir = dir, silent = true) }
+        .map { execOps.exec(context, "nm -a ${it.name}", workingDir = dir, silent = true) }
         .flatMap { it.split("\n") }
         .filter { it.contains("_GLOBAL__sub_I_") }
         .map { it.trim().split(Regex("\\s+")).last() }
@@ -351,13 +336,13 @@ private fun createCppInitFunction(
         .toList()
 
     if(ctorSymbols.isNotEmpty()) {
-        if (Os.isFamily(Os.FAMILY_MAC)) {
+        if (OS.current == OS.MACOS) {
             objFiles.forEach { globalizeMachOSymbols(it, ctorSymbols) }
         } else {
             val tmpSymbolsFile = File(dir, "__symbols.txt")
             tmpSymbolsFile.writeText(ctorSymbols.joinToString("\n"))
             objFiles.forEach {
-                execOps.exec("$objcopy --globalize-symbols=${tmpSymbolsFile.name} ${it.name}", workingDir = dir)
+                execOps.exec(context, "$objcopy --globalize-symbols=${tmpSymbolsFile.name} ${it.name}", workingDir = dir)
             }
             tmpSymbolsFile.delete()
         }
@@ -376,8 +361,8 @@ private fun createCppInitFunction(
 
     // Compile C file
     val initO = File(dir, "${initC.nameWithoutExtension}.o")
-    execOps.exec(
-        "${locateClang(execOps)} -c -o ${initO.name} ${initC.name} ${targetArgs.joinToString(" ")}",
+    execOps.exec(context,
+        "${locateClang(execOps, context)} -c -o ${initO.name} ${initC.name} ${targetArgs.joinToString(" ")}",
         workingDir = dir,
         silent = true
     )

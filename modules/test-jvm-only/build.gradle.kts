@@ -18,7 +18,6 @@ dependencies {
 natives {
     applyRuntime = false
     useJvmRecord = false
-    useForeignApi = false
 
     create("jvmOnlyTest")
 }

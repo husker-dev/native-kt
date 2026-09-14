@@ -1,5 +1,4 @@
 #include <api.h>
-#include <stdio.h>
 
 #include <ft2build.h>
 
@@ -9,7 +8,7 @@
 const char* shades = " .:-=+*#%@";
 const int shade_count = 10;
 
-void helloWorld() {
+void hello_world() {
     FT_Library library;
     FT_Error error = FT_Init_FreeType(&library);
     if (error) {

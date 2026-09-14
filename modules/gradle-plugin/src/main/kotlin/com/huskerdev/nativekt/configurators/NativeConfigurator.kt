@@ -1,18 +1,17 @@
 package com.huskerdev.nativekt.configurators
 
-import com.android.build.gradle.internal.tasks.factory.dependsOn
+import com.huskerdev.nativekt.NativeModuleContext
 import com.huskerdev.nativekt.TargetType
 import com.huskerdev.nativekt.plugin.BuildSystem
+import com.huskerdev.nativekt.plugin.Language
 import com.huskerdev.nativekt.plugin.NATIVE_TASK_GROUP
-import com.huskerdev.nativekt.plugin.NativeKtNativeInterface
-import com.huskerdev.nativekt.plugin.NativeProject
 import com.huskerdev.nativekt.printers.DefPrinter
 import com.huskerdev.nativekt.printers.c.CApiHeaderPrinter
 import com.huskerdev.nativekt.printers.c.CApiImplPrinter
+import com.huskerdev.nativekt.printers.cpp.CppApiHeaderPrinter
+import com.huskerdev.nativekt.printers.cpp.CppApiImplPrinter
 import com.huskerdev.nativekt.printers.kotlin.KotlinNativePrinter
 import com.huskerdev.nativekt.utils.*
-import com.huskerdev.webidl.resolver.IdlResolver
-import kotlinx.serialization.json.Json
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.file.RegularFileProperty
@@ -25,23 +24,17 @@ import org.gradle.kotlin.dsl.the
 import org.gradle.process.ExecOperations
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeCacheApi
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinNativeLink
 import java.io.File
 import javax.inject.Inject
 
-@OptIn(KotlinNativeCacheApi::class)
 internal fun configureNative(
     project: Project,
-    extension: NativeKtNativeInterface,
     commonTask: TaskProvider<*>?,
-    idl: IdlResolver,
-    module: NativeProject,
+    context: NativeModuleContext,
     sourceSet: KotlinSourceSet,
     targetType: TargetType,
-    srcGenDir: File,
-    nativesBuildDir: File,
     expectActual: Boolean
 ) {
     val targetName = targetType.kotlinTarget
@@ -51,16 +44,16 @@ internal fun configureNative(
 
     val kotlin = project.the<KotlinMultiplatformExtension>()
 
-    val nativesBuildSourcesDir = File(nativesBuildDir, "native/$targetName/sources")
-    val nativesBuildOutDir = File(nativesBuildDir, "native/$targetName/out")
+    val nativesBuildSourcesDir = File(context.nativesBuildDir, "native/$targetName/sources")
+    val nativesBuildOutDir = File(context.nativesBuildDir, "native/$targetName/out")
 
     // src paths
-    val srcDir = File(srcGenDir, "native/$targetName/src")
-    val cinteropDir = File(srcGenDir, "native/$targetName/cinterop")
+    val srcDir = File(context.srcGenDir, "native/$targetName/src")
+    val cinteropDir = File(context.srcGenDir, "native/$targetName/cinterop")
 
     val kotlinFile = srcDir
-        .resolve(module.classPath.replace(".", "/"))
-        .resolve("${module.name}.native.kt")
+        .resolve(context.classPath.replace(".", "/"))
+        .resolve("${context.moduleName}.native.kt")
 
     val defFile = File(cinteropDir, "cinterop.def")
     val headerFile = File(cinteropDir, "header.h")
@@ -77,35 +70,27 @@ internal fun configureNative(
     // Prepare task
 
     val prepareTask = project.tasks.register(
-        "prepareNatives${module.name.capitalized()}Kn${targetName.capitalized()}",
+        "prepareNatives${context.moduleName.upperCamelCase()}Kn${targetName.capitalized()}",
         PrepareNativesKn::class.java
     )
-    prepareTask.get().also {
+    prepareTask.get().let {
         it.defFile.set(defFile)
-        it.inputs.dir(module.dir(project))
-        it.inputs.file(module.getNDLFile(project))
+        it.inputs.dir(context.module.projectDir)
+        it.inputs.file(context.module.ndlFile())
         it.outputs.dirs(nativesBuildSourcesDir)
 
-        it.idl                    = Json.encodeToString(idl)
-
-        it.moduleName             = module.name
-        it.moduleClasspath        = module.classPath
-
-        it.useCoroutines          = extension.useCoroutines
+        it.context                = context
         it.expectActual           = expectActual
 
         it.targetType             = targetType
-        it.headerFile             = headerFile.absolutePath
+        it.cinteropHeaderFile     = headerFile.absolutePath
         it.kotlinFile             = kotlinFile.absolutePath
 
-        it.projectDir             = module.dir(project).posixPath
         it.nativesBuildSourcesDir = nativesBuildSourcesDir.absolutePath
         it.nativesBuildOutDir     = nativesBuildOutDir.absolutePath
-
-        it.buildSystem            = module.buildSystem
     }
     if(commonTask != null)
-        prepareTask.dependsOn(commonTask)
+        prepareTask.get().dependsOn(commonTask)
 
     project.tasks.matching { it.name == "downloadKotlinNativeDistribution" }.forEach {
         prepareTask.get().dependsOn(it)
@@ -113,33 +98,27 @@ internal fun configureNative(
 
     // Add cinterop
     compilation.cinterops {
-        create("nativekt${module.name.capitalized()}").definitionFile.set(prepareTask.flatMap { it.defFile })
+        create("nativekt${context.moduleName.upperCamelCase()}").definitionFile.set(prepareTask.flatMap { it.defFile })
     }
 
     // Compilation task
 
     val compilationTask = project.tasks.register(
-        "compileNatives${module.name.capitalized()}Kn${targetName.capitalized()}",
+        "compileNatives${context.moduleName.upperCamelCase()}Kn${targetName.capitalized()}",
         CompileNativesKn::class.java
     )
-    compilationTask.get().also {
-        it.inputs.dir(module.dir(project))
-        it.inputs.file(module.getNDLFile(project))
+    compilationTask.get().let {
+        it.inputs.dir(context.module.projectDir)
+        it.inputs.file(context.module.ndlFile())
         it.outputs.dirs(nativesBuildOutDir)
 
-        it.idl                    = Json.encodeToString(idl)
-
-        it.moduleName             = module.name
-        it.moduleClasspath        = module.classPath
+        it.context                = context
         it.targetType             = targetType
 
-        it.projectDir             = module.dir(project).posixPath
         it.nativesBuildSourcesDir = nativesBuildSourcesDir.absolutePath
         it.nativesBuildOutDir     = nativesBuildOutDir.absolutePath
-
-        it.buildSystem            = module.buildSystem
     }
-    compilationTask.dependsOn(prepareTask)
+    compilationTask.get().dependsOn(prepareTask)
 
     // Depends compilation on Kotlin source-generator
     project.tasks.matching { it.name == "compileKotlin${targetName.capitalized()}" }.forEach {
@@ -151,8 +130,8 @@ internal fun configureNative(
 
     // Force Kotlin re-linking when native files are changed
     project.tasks.matching { it is KotlinNativeLink && it.project == project }.forEach {
-        it.inputs.dir(module.dir(project))
-        it.inputs.file(module.getNDLFile(project))
+        it.inputs.dir(context.module.projectDir)
+        it.inputs.file(context.module.ndlFile())
     }
 
     // Compile natives only when compiling project (to prevent compilation on Gradle reload)
@@ -168,70 +147,73 @@ private abstract class PrepareNativesKn @Inject constructor(
     @get:OutputFile
     abstract val defFile: RegularFileProperty
 
+    @get:Input abstract var context: NativeModuleContext
+
     @get:Input abstract var shouldInit: Boolean
-    @get:Input abstract var idl: String
-
-    @get:Input abstract var moduleName: String
-    @get:Input abstract var moduleClasspath: String
-
-    @get:Input abstract var useCoroutines: Boolean
     @get:Input abstract var expectActual: Boolean
 
     @get:Input abstract var targetType: TargetType
-    @get:Input abstract var headerFile: String
+    @get:Input abstract var cinteropHeaderFile: String
     @get:Input abstract var kotlinFile: String
 
-    @get:Input abstract var projectDir: String
     @get:Input abstract var nativesBuildSourcesDir: String
     @get:Input abstract var nativesBuildOutDir: String
 
-    @get:Input abstract var buildSystem: BuildSystem
-
     @TaskAction
     fun action() {
-        val idl = Json.decodeFromString<IdlResolver>(idl)
 
+        val moduleName = context.moduleName
         val nativesBuildSourcesDir = File(nativesBuildSourcesDir).fresh()
         val nativesBuildOutDir = File(nativesBuildOutDir)
 
-        val sourceExtension = buildSystem.language.sourceExtension ?: "c"
-        val headerExtension = buildSystem.language.headerExtension ?: "h"
-
-        val headerFile = File(headerFile)
-        headerFile.parentFile.mkdirs()
+        val cinteropHeaderFile = File(this@PrepareNativesKn.cinteropHeaderFile)
+        cinteropHeaderFile.parentFile.mkdirs()
 
         val linkerOpts = arrayListOf<String>()
 
         // Generate header
         CApiHeaderPrinter(
-            idl = idl,
-            target = headerFile,
+            context = context,
+            target = cinteropHeaderFile,
             language = null,
-            classPath = moduleClasspath,
-            moduleName = moduleName,
             isInternal = true,
         )
 
-        // Generate api sources
-        CApiHeaderPrinter(
-            idl = idl,
-            target = File(nativesBuildSourcesDir, "api.$headerExtension"),
-            language = buildSystem.language,
-            classPath = moduleClasspath,
-            moduleName = moduleName,
-            isInternal = true
-        )
+        // Generate api sources if needed
+        fun createCApi() {
+            when (context.buildSystem.language) {
+                Language.C -> {
+                    CApiHeaderPrinter(
+                        context = context,
+                        target = File(nativesBuildSourcesDir, "api.h"),
+                        isInternal = true
+                    )
+                    CApiImplPrinter(
+                        context = context,
+                        target = File(nativesBuildSourcesDir, "api.c"),
+                    )
+                }
+                Language.CPP -> {
+                    CppApiHeaderPrinter(
+                        context = context,
+                        target = File(nativesBuildSourcesDir, "api.hpp"),
+                        tppTarget = File(nativesBuildSourcesDir, "api.tpp"),
+                    )
+                    CppApiImplPrinter(
+                        context = context,
+                        target = File(nativesBuildSourcesDir, "api.cpp"),
+                    )
+                }
+                else -> Unit
+            }
+        }
 
-        CApiImplPrinter(
-            idl = idl,
-            target = File(nativesBuildSourcesDir, "api.$sourceExtension"),
-            language = buildSystem.language,
-            classPath = moduleClasspath,
-            moduleName = moduleName
-        )
-
-        when(val buildSystem = buildSystem) {
+        when(val buildSystem = context.buildSystem) {
             is BuildSystem.CMake -> {
+
+                // Create C/C++ Api
+                createCApi()
+                val sourceExtension = buildSystem.language.sourceExtension ?: "c"
 
                 // Create CMake file
                 File(nativesBuildSourcesDir, "CMakeLists.txt").writeText($$"""
@@ -239,13 +221,18 @@ private abstract class PrepareNativesKn @Inject constructor(
             
                     project("$$moduleName")
                     
+                    $${if (buildSystem.language == Language.CPP) "set(CMAKE_CXX_STANDARD 17)" else ""}
+                    $${if (buildSystem.language == Language.CPP) "set(CMAKE_CXX_STANDARD_REQUIRED ON)" else ""}
+                    
                     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY $${nativesBuildOutDir.posixPath})
                     set(CMAKE_LIBRARY_OUTPUT_DIRECTORY $${nativesBuildOutDir.posixPath})
                     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY $${nativesBuildOutDir.posixPath})
                     
                     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
                     
-                    add_subdirectory("$$projectDir" "$${File(nativesBuildOutDir, "common").posixPath}")
+                    add_compile_options(-Wno-initializer-overrides)
+                    
+                    add_subdirectory("$${context.module.projectDir.posixPath}" "$${File(nativesBuildOutDir, "common").posixPath}")
                         
                     add_library(lib_$$moduleName SHARED api.$$sourceExtension)
                     target_link_libraries(lib_$$moduleName PUBLIC $$moduleName)
@@ -257,7 +244,7 @@ private abstract class PrepareNativesKn @Inject constructor(
                 // Configure CMake (if needed)
                 if(shouldInit) {
                     configureCMake(
-                        execOps, targetType,
+                        execOps, context, targetType,
                         cmakeArgs = LinkedHashSet(buildSystem.args),
                         cmakeDir = nativesBuildSourcesDir,
                         cmakeBuildDir = File(nativesBuildSourcesDir, "cmake"),
@@ -265,15 +252,16 @@ private abstract class PrepareNativesKn @Inject constructor(
                     )
 
                     // Get linker opts
-                    linkerOpts += extractLinkerOpts(execOps, File(nativesBuildSourcesDir, "cmake"), moduleName)
+                    linkerOpts += extractLinkerOpts(execOps, context,
+                        File(nativesBuildSourcesDir, "cmake"), moduleName)
 
                     linkerOpts += nativesBuildOutDir.resolve("liblibstatic_$moduleName.a").posixPath
                 }
             }
             is BuildSystem.Cargo -> {
                 if(shouldInit) {
-                    val rustFlags = cargoLinkerFlags(execOps,
-                        project = File(projectDir),
+                    val rustFlags = cargoLinkerFlags(execOps, context,
+                        project = context.module.projectDir,
                         buildType = buildSystem.buildType,
                         buildDir = nativesBuildOutDir,
                         target = getCargoTarget(targetType)
@@ -286,8 +274,7 @@ private abstract class PrepareNativesKn @Inject constructor(
 
                     linkerOpts += listOf(
                         *rustFlags.toTypedArray(),
-                        File(rustBuildDir, "lib$moduleName.a").posixPath,
-                        File(nativesBuildOutDir, "libnativekt.a").posixPath,
+                        File(rustBuildDir, "lib$moduleName.a").posixPath
                     )
                 }
             }
@@ -295,20 +282,16 @@ private abstract class PrepareNativesKn @Inject constructor(
 
         // Create .def file
         DefPrinter(
+            context = context,
             target = defFile.get().asFile,
-            headerFile = headerFile,
-            classPath = moduleClasspath,
+            headerFile = cinteropHeaderFile,
             linkerOpts = linkerOpts
         )
 
         // Generate Kotlin files
         KotlinNativePrinter(
-            idl = idl,
+            context = context,
             target = File(kotlinFile),
-            language = buildSystem.language,
-            classPath = moduleClasspath,
-            moduleName = moduleName,
-            useCoroutines = useCoroutines,
             expectActual = expectActual
         )
     }
@@ -317,17 +300,12 @@ private abstract class PrepareNativesKn @Inject constructor(
 private abstract class CompileNativesKn @Inject constructor(
     private val execOps: ExecOperations,
 ): DefaultTask() {
-    @get:Input abstract var idl: String
-    @get:Input abstract var moduleName: String
-    @get:Input abstract var moduleClasspath: String
+    @get:Input abstract var context: NativeModuleContext
 
     @get:Input abstract var targetType: TargetType
 
-    @get:Input abstract var projectDir: String
     @get:Input abstract var nativesBuildSourcesDir: String
     @get:Input abstract var nativesBuildOutDir: String
-
-    @get:Input abstract var buildSystem: BuildSystem
 
     init {
         group = NATIVE_TASK_GROUP
@@ -335,37 +313,28 @@ private abstract class CompileNativesKn @Inject constructor(
 
     @TaskAction
     fun action() {
-        val idl = Json.decodeFromString<IdlResolver>(idl)
-
+        val moduleName = context.moduleName
         val nativesBuildSourcesDir = File(nativesBuildSourcesDir)
         val nativesBuildOutDir = File(nativesBuildOutDir)
 
-        when(val buildSystem = buildSystem) {
+        when(val buildSystem = context.buildSystem) {
             is BuildSystem.CMake -> {
-                cmakeBuild(execOps, File(nativesBuildSourcesDir, "cmake"))
+                cmakeBuild(execOps, context, File(nativesBuildSourcesDir, "cmake"))
 
-                prepareNativeLibraryForKN(execOps,
+                prepareNativeLibraryForKN(execOps, context,
                     nativesBuildOutDir.parentFile,
                     File(nativesBuildOutDir, "liblibstatic_$moduleName.a"),
-                    symbols = idl.globalOperators().map { it.name.snakeCase() },
-                    initSymbolName = mangle(moduleClasspath, moduleName, "_init"),
-                    targetArgs = getClangTargetArgs(execOps, targetType)
+                    symbols = context.globalOperations.map { it.cname },
+                    initSymbolName = context.mangle("init"),
+                    targetArgs = getClangTargetArgs(execOps, context, targetType)
                 )
             }
             is BuildSystem.Cargo -> {
-                cargoBuild(execOps,
-                    project = File(projectDir),
+                cargoBuild(execOps, context,
+                    project = context.module.projectDir,
                     buildType = buildSystem.buildType,
                     buildDir = nativesBuildOutDir,
                     target = getCargoTarget(targetType)
-                )
-                clangCompile(
-                    execOps,
-                    sources = listOf("api.c").map { nativesBuildSourcesDir.resolve(it).posixPath },
-                    linkerArgs = getClangTargetArgs(execOps, targetType),
-                    dynamicLib = false,
-                    workingDir = nativesBuildOutDir,
-                    outputBaseName = "libnativekt"
                 )
             }
         }

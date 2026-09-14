@@ -1,105 +1,277 @@
 package com.huskerdev.nativekt.printers.c
 
+import com.huskerdev.nativekt.NativeModuleContext
 import com.huskerdev.nativekt.plugin.Language
 import com.huskerdev.nativekt.utils.*
-import com.huskerdev.webidl.resolver.IdlResolver
+import com.huskerdev.webidl.resolver.ResolvedIdlType
 import java.io.File
 
 class CEmscriptenPrinter(
-    val idl: IdlResolver,
-    target: File,
-    language: Language,
-    val jsMangle: Map<String, String>,
-    val classPath: String,
-    val moduleName: String
+    private val context: NativeModuleContext,
+    target: File
 ) {
     init {
-        val builder = StringBuilder()
-
-        val headerExtension = language.headerExtension ?: "h"
-
-        builder.append("""
-            #include "api.$headerExtension"
-            #include <emscripten.h>
-            
-            #ifdef __cplusplus
-            extern "C" {
-            #endif
-            
-            EMSCRIPTEN_KEEPALIVE void ${jsMangle["karray_free"]}(KArray* self, void (*free_op)(void*)) {
-                ${mangle("karray_free")}(self, free_op);
-            }
-            
-        """.trimIndent())
-
-        listOf(
-            "KString",
-            "KCharArray",
-            "KBooleanArray",
-            "KByteArray",
-            "KShortArray",
-            "KIntArray",
-            "KLongArray",
-            "KFloatArray",
-            "KDoubleArray",
-        ).forEach { name ->
-            val lowerName = name.snakeCase()
-            builder.append("""
-                
-                EMSCRIPTEN_KEEPALIVE void ${jsMangle["${lowerName}_free"]}($name* self) {
-                    ${mangle("${lowerName}_free")}(self);
-                }
-                
-                EMSCRIPTEN_KEEPALIVE void* ${jsMangle["${lowerName}_free_addr"]}() {
-                    return (void*) &${mangle("${lowerName}_free")};
-                }
-                
-            """.trimIndent())
-        }
-
-        idl.dictionaries.values.forEach {
-            val name = it.name.lowercase()
-            val funcFree = it.subCFunc(classPath, moduleName, "free")
-            builder.append("""
-                
-                EMSCRIPTEN_KEEPALIVE void ${jsMangle["${name}_free"]}(${it.cname}* self) {
-                    $funcFree(self);
-                }
-                
-                EMSCRIPTEN_KEEPALIVE void* ${jsMangle["${name}_free_addr"]}() {
-                    return (void*) &$funcFree;
-                }
-                
-            """.trimIndent())
-        }
-
-        idl.allOperators().forEach { function ->
-            val name = function.cname
-            val mangledName = function.cnameMangled(classPath, moduleName)
-            val type = function.type.toCType()
-            val args = function.args.joinToString {
-                "${it.type.toCType()} ${it.cname}"
-            }
-            val argNames = function.args.joinToString { it.cname }
-
-            builder.append("""
-                
-                EMSCRIPTEN_KEEPALIVE $type ${jsMangle[name]}($args) {
-                    ${if(function.type.isVoid()) "" else "return "}$mangledName($argNames);
-                }
-                
-            """.trimIndent())
-        }
-
-        builder.append("""
-            
-            #ifdef __cplusplus
-            }
-            #endif
-        """.trimIndent())
-        target.writeText(builder.toString())
+        target.writeText(buildString {
+            printHeader()
+            printString()
+            printPrimitiveArrays()
+            printTypedArrays()
+            printDictionaries()
+            printCallbacks()
+            printOperations()
+        })
     }
 
-    private fun mangle(name: String) =
-        mangle(classPath, moduleName, "_$name")
+    private fun StringBuilder.printHeader() {
+        appendLine("""
+            #include "api.h"
+            #include <emscripten.h>
+            
+        """.trimIndent())
+        if(context.needsAllocFunctions) appendLine("""
+            
+            EMSCRIPTEN_KEEPALIVE void* ${context.jsMangle["alloc"]}(const size_t size) {
+                return malloc(size);
+            }
+            
+            EMSCRIPTEN_KEEPALIVE void ${context.jsMangle["dealloc"]}(void* ptr, const size_t size) {
+                free(ptr);
+            }
+        """.trimIndent())
+    }
+
+    private fun StringBuilder.printString() {
+        if(!context.hasString)
+            return
+        appendLine("\n// String")
+
+        if(context.hasStringToNativeCast) appendLine("""
+            
+            EMSCRIPTEN_KEEPALIVE void* ${context.jsMangle["string_new"]}(const char* _Nullable data, const int32_t length, const int32_t size, const bool make_copy) {
+                return ${context.mangle("string_new")}(data, length, size, make_copy);
+            }
+        """.trimIndent())
+        if(context.hasStringToKotlinCast) appendLine("""
+            
+            EMSCRIPTEN_KEEPALIVE const char* ${context.jsMangle["string_data"]}(const void* _Nullable self) {
+                return ${context.mangle("string_data")}(self);
+            }
+            EMSCRIPTEN_KEEPALIVE size_t ${context.jsMangle["string_size"]}(const void* _Nullable self) {
+                return ${context.mangle("string_size")}(self);
+            }
+            EMSCRIPTEN_KEEPALIVE int32_t ${context.jsMangle["string_length"]}(const void* _Nullable self) {
+                return ${context.mangle("string_length")}(self);
+            }
+            EMSCRIPTEN_KEEPALIVE void ${context.jsMangle["string_free"]}(void* _Nullable self) {
+                ${context.mangle("string_free")}(self);
+            }
+        """.trimIndent())
+    }
+
+    private fun StringBuilder.printPrimitiveArrays() {
+        if(!context.hasPrimitiveArray)
+            return
+        listOf(
+            Triple("Char" to "uint16_t", context.hasCharArrayToNativeCast, context.hasCharArrayToKotlinCast),
+            Triple("Boolean" to "bool", context.hasBooleanArrayToNativeCast, context.hasBooleanArrayToKotlinCast),
+            Triple("Byte" to "int8_t",
+                context.hasByteArrayToNativeCast || context.hasUByteArrayToNativeCast,
+                context.hasByteArrayToKotlinCast || context.hasUByteArrayToKotlinCast),
+            Triple("Short" to "int16_t",
+                context.hasShortArrayToNativeCast || context.hasUShortArrayToNativeCast,
+                context.hasShortArrayToKotlinCast || context.hasUShortArrayToKotlinCast),
+            Triple("Int" to "int32_t",
+                context.hasIntArrayToNativeCast || context.hasUIntArrayToNativeCast || context.hasEnumArrayToNativeCast,
+                context.hasIntArrayToKotlinCast || context.hasUIntArrayToKotlinCast || context.hasEnumArrayToKotlinCast),
+            Triple("Long" to "int64_t",
+                context.hasLongArrayToNativeCast || context.hasULongArrayToNativeCast,
+                context.hasLongArrayToKotlinCast || context.hasULongArrayToKotlinCast),
+            Triple("Float" to "float", context.hasFloatArrayToNativeCast, context.hasFloatArrayToKotlinCast),
+            Triple("Double" to "double", context.hasDoubleArrayToNativeCast, context.hasDoubleArrayToKotlinCast),
+        ).forEach { (names, hasToNativeCast, hasToKotlinCast) ->
+            if(!hasToNativeCast && !hasToKotlinCast)
+                return@forEach
+            val name = "${names.first.lowercase()}array"
+            val type = names.second
+
+            appendLine("\n// Array: $name")
+            if(hasToNativeCast) appendLine("""
+                
+                EMSCRIPTEN_KEEPALIVE void* ${context.jsMangle["${name}_new"]}(const $type* _Nullable elements, const int32_t length, const bool make_copy) {
+                    return ${context.mangle("${name}_new")}(elements, length, make_copy);
+                }
+            """.trimIndent())
+            if(hasToKotlinCast) appendLine("""
+                
+                EMSCRIPTEN_KEEPALIVE const $type* ${context.jsMangle["${name}_elements"]}(const void* _Nullable self) {
+                    return ${context.mangle("${name}_elements")}(self);
+                }
+                EMSCRIPTEN_KEEPALIVE int32_t ${context.jsMangle["${name}_length"]}(const void* _Nullable self) {
+                    return ${context.mangle("${name}_length")}(self);
+                }
+                EMSCRIPTEN_KEEPALIVE void ${context.jsMangle["${name}_free"]}(void* _Nullable self) {
+                    ${context.mangle("${name}_free")}(self);
+                }
+            """.trimIndent())
+        }
+    }
+
+    private fun StringBuilder.printTypedArrays() {
+        if(!context.hasObjectArrays)
+            return
+
+        append("""
+            
+            #define OBJECT_ARRAY(FUNC_NEW, FUNC_LENGTH, FUNC_PUSH, FUNC_GET, FUNC_FREE,  \
+                JS_FUNC_NEW, JS_FUNC_LENGTH, JS_FUNC_PUSH, JS_FUNC_GET, JS_FUNC_FREE)    \
+            EMSCRIPTEN_KEEPALIVE void* _Nullable JS_FUNC_NEW(int32_t capacity, bool ne) {             \
+                return FUNC_NEW(capacity, ne);                                                     \
+            }                                                                                      \
+            EMSCRIPTEN_KEEPALIVE int32_t JS_FUNC_LENGTH(void* _Nullable self, bool ne) {              \
+                return FUNC_LENGTH(self, ne);                                                      \
+            }                                                                                      \
+            EMSCRIPTEN_KEEPALIVE void JS_FUNC_PUSH(void* _Nullable self, void* element, bool ne) { \
+                FUNC_PUSH(self, element, ne);                                                      \
+            }                                                                                      \
+            EMSCRIPTEN_KEEPALIVE void* JS_FUNC_GET(void* _Nullable self, int32_t index, bool ne) {    \
+                return FUNC_GET(self, index, ne);                                                  \
+            }                                                                                      \
+            EMSCRIPTEN_KEEPALIVE void JS_FUNC_FREE(void* _Nullable self, bool ne) {                \
+                FUNC_FREE(self, ne);                                                               \
+            }
+            
+        """.trimIndent())
+
+        buildList {
+            (context.usedDictionaries + context.usedInterfaces)
+                .filter { it in context.usedObjectArrayCast }
+                .mapTo(this) { it.name.camelCase().lowercase() }
+            if(context.hasStringArray)
+                add("string")
+        }.forEach {
+            append("""
+                
+                OBJECT_ARRAY(
+                    ${context.mangle("array_${it}_new")},
+                    ${context.mangle("array_${it}_length")},
+                    ${context.mangle("array_${it}_push")},
+                    ${context.mangle("array_${it}_get")},
+                    ${context.mangle("array_${it}_free")},
+                    ${context.jsMangle["array_${it}_new"]}, ${context.jsMangle["array_${it}_length"]}, ${context.jsMangle["array_${it}_push"]}, ${context.jsMangle["array_${it}_get"]}, ${context.jsMangle["array_${it}_free"]}
+                )
+            """.trimIndent())
+        }
+        append("\n")
+    }
+
+    private fun StringBuilder.printDictionaries() {
+        context.usedDictionaries.forEach { dictionary ->
+            val name = dictionary.name.camelCase().lowercase()
+            val fields = context.allFields[dictionary]!!
+            val args = fields.joinToString {
+                "${it.type.toLangType()} ${it.cname}"
+            }
+
+            appendLine("\n// ${dictionary.cname}")
+            if(dictionary in context.toNativeDeclarations) appendLine("""
+                
+                EMSCRIPTEN_KEEPALIVE void* _Nullable ${context.jsMangle["${name}_new"]}($args) {
+                    return ${context.mangle("${name}_new")}(${fields.joinToString { it.cname }});
+                }
+            """.trimIndent())
+            if(dictionary in context.toKotlinDeclarations) {
+                appendLine("""
+                    
+                    EMSCRIPTEN_KEEPALIVE void ${context.jsMangle["${name}_free"]}(void* _Nullable self) {
+                        ${context.mangle("${name}_free")}(self);
+                    }
+                """.trimIndent())
+                fields.forEach {
+                    val fieldName = it.name.camelCase().lowercase()
+                    val type = it.type.toLangType()
+                    appendLine("""
+                        
+                        EMSCRIPTEN_KEEPALIVE $type ${context.jsMangle["${name}__$fieldName"]}(void* _Nullable self) {
+                            return ${context.mangle("${name}__$fieldName")}(self);
+                        }
+                    """.trimIndent())
+                }
+            }
+        }
+    }
+
+    private fun StringBuilder.printCallbacks() {
+        context.usedCallbacks.forEach { callback ->
+            val name = callback.name.camelCase().lowercase()
+
+            appendLine("\n// ${callback.cname}")
+            if(callback in context.toNativeDeclarations) append("""
+                
+                EMSCRIPTEN_KEEPALIVE void* _Nullable ${context.jsMangle["${name}_new"]}(const size_t id, const int32_t hash_code, void* _Nullable invoke, void* _Nullable equals, void* _Nullable free) {
+                	return ${context.mangle("${name}_new")}(id, hash_code, invoke, equals, free);
+                }
+            """.trimIndent())
+            if(callback in context.toKotlinDeclarations) append("""
+                
+                EMSCRIPTEN_KEEPALIVE size_t ${context.jsMangle["${name}_id"]}(void* _Nullable _self) {
+                    return ${context.mangle("${name}_id")}(_self);
+                }
+                EMSCRIPTEN_KEEPALIVE void ${context.jsMangle["${name}_free"]}(void* _Nullable _self) {
+                    ${context.mangle("${name}_free")}(_self);
+                }
+            """.trimIndent())
+            append("\n")
+        }
+    }
+
+    private fun StringBuilder.printOperations() {
+        if(context.allOperations.isEmpty())
+            return
+        printLabel("Operations")
+
+        context.allOperations.forEach { operation ->
+            val critical = operation.isCritical()
+            val type = if(operation.isInterfaceOperationAddress())
+                "size_t"
+            else operation.type.toLangType()
+            val jsName = context.jsMangle[operation.cname]
+            val cname = operation.cnameMangled(context)
+
+            val args = operation.args.joinToString {
+                val name = it.cname
+                when {
+                    critical && it.type.isString() ->
+                        "const char* _Nullable $name, int32_t _${name}_size, int32_t _${name}_length"
+                    critical && it.type.isArray() ->
+                        "const ${it.type.arrayTypeOrNull()!!.toLangType()}* _Nullable $name, int32_t _${name}_length"
+                    else -> "${it.type.toLangType()} $name"
+                }
+            }
+            val argNames = operation.args.joinToString {
+                val name = it.cname
+                when {
+                    critical && it.type.isString() ->
+                        "$name, _${name}_size, _${name}_length"
+                    critical && it.type.isArray() ->
+                        "$name, _${name}_length"
+                    else -> name
+                }
+            }
+            val returns = if(operation.type.isVoid())
+                "" else "return "
+
+            append("""
+                
+                EMSCRIPTEN_KEEPALIVE $type $jsName($args) {
+                    $returns$cname($argNames);
+                }
+            """.trimIndent())
+        }
+        append("\n")
+    }
+
+    private fun ResolvedIdlType.toLangType(): String = when (context.language) {
+        Language.C -> toCType(printNullable = true)
+        else -> toCommonNativeType(printNullable = true)
+    }
 }

@@ -1,144 +1,146 @@
 #include <api.hpp>
-#include <cstdio>
-#include <cstring>
-#include <cinttypes>
+#include <iostream>
 
 // JVMCI
 
-KBoolean jvmci1() {
-    printf("jvmci1  |\n");
-    fflush(stdout);
+bool jvmci1() {
+    std::cout << "jvmci1  |" << std::endl;
     return true;
 }
 
-KBoolean jvmci2(const KInt a1) {
-    printf("jvmci2  | a1: %d\n", a1);
-    fflush(stdout);
+bool jvmci2(const int32_t a1) {
+    std::cout << "jvmci2  | a1: " << a1 << std::endl;
     return a1 == 1;
 }
 
-KBoolean jvmci3(const KInt a1, const KInt a2) {
-    printf("jvmci3  | a1: %d, a2: %d\n", a1, a2);
-    fflush(stdout);
+bool jvmci3(const int32_t a1, const int32_t a2) {
+    std::cout << "jvmci3  | a1: " << a1 << ", a2" << a2 << std::endl;
     return a1 == 1 && a2 == 2;
 }
 
-KBoolean jvmci4(
-    const KInt a1, const KInt a2, const KInt a3, const KInt a4,
-    const KInt a5, const KInt a6, const KInt a7, const KInt a8, const KInt a9
+bool jvmci4(
+    const int32_t a1, const int32_t a2, const int32_t a3, const int32_t a4,
+    const int32_t a5, const int32_t a6, const int32_t a7, const int32_t a8, const int32_t a9
 ) {
-    printf("jvmci4  | a1: %d, a2: %d, a3: %d, a4: %d, a5: %d, a6: %d, a7: %d, a8: %d, a9: %d\n", a1, a2, a3, a4, a5, a6, a7, a8, a9);
-    fflush(stdout);
+    std::cout << "jvmci4  | a1: " << a1 << ", a2: " << a2 << ", a3: " << a3 <<
+        ", a4: " << a4 << ", a5: " << a5 << ", a6: " << a6 << ", a7: " << a7 <<
+        ", a8: " << a8 << ", a9: " << a9 << std::endl;
     return a1 == 1 && a2 == 2 && a3 == 3 && a4 == 4 && a5 == 5 && a6 == 6 && a7 == 7 && a8 == 8 && a9 == 9;
 }
 
-KBoolean jvmci5(
-    const KInt a1, const KLong a2, const KInt a3, const KLong a4,
-    const KInt a5, const KLong a6, const KInt a7, const KInt a8, const KLong a9
+bool jvmci5(
+    const int32_t a1, const int64_t a2, const int32_t a3, const int64_t a4,
+    const int32_t a5, const int64_t a6, const int32_t a7, const int32_t a8, const int64_t a9
 ) {
-    printf("jvmci5  | a1: %d, a2: %" PRId64 ", a3: %d, a4: %" PRId64 ", a5: %d, a6: %" PRId64 ", a7: %d, a8: %d, a9: %" PRId64 "\n", a1, a2, a3, a4, a5, a6, a7, a8, a9);
-    fflush(stdout);
+    std::cout << "jvmci5  | a1: " << a1 << ", a2: " << a2 << ", a3: " << a3 <<
+        ", a4: " << a4 << ", a5: " << a5 << ", a6: " << a6 << ", a7: " << a7 <<
+        ", a8: " << a8 << ", a9: " << a9 << std::endl;
     return a1 == 1 && a2 == 2 && a3 == 3 && a4 == 4 && a5 == 5 && a6 == 6 && a7 == 7 && a8 == 8 && a9 == 9;
 }
 
-KBoolean jvmci6(
-    const KFloat a1, const KFloat a2, const KFloat a3, const KFloat a4,
-    const KFloat a5, const KFloat a6, const KFloat a7, const KFloat a8,
-    const KFloat a9, const KInt a10, const KInt a11, const KInt a12, const KInt a13
+bool jvmci6(
+    const float a1, const float a2, const float a3, const float a4,
+    const float a5, const float a6, const float a7, const float a8,
+    const float a9, const int32_t a10, const int32_t a11, const int32_t a12, const int32_t a13
 ) {
-    printf("jvmci6  | a1: %f, a2: %f, a3: %f, a4: %f, a5: %f, a6: %f, a7: %f, a8: %f, a9: %f, a10: %d, a11: %d, a12: %d, a13: %d\n", a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13);
-    fflush(stdout);
+    std::cout << "jvmci6  | a1: " << a1 << ", a2: " << a2 << ", a3: " << a3 <<
+        ", a4: " << a4 << ", a5: " << a5 << ", a6: " << a6 << ", a7: " << a7 <<
+        ", a8: " << a8 << ", a9: " << a9 << ", a10: " << a10 << ", a11: " << a11 <<
+        ", a12: " << a12 << std::endl;
     return a1 == 1.0 && a2 == 2.0 && a3 == 3.0 && a4 == 4.0 && a5 == 5.0 && a6 == 6.0 && a7 == 7.0 && a8 == 8.0 && a9 == 9.0 && a10 == 10 && a11 == 11 && a12 == 12 && a13 == 13;
 }
 
-KBoolean jvmci7(
-    const KFloat a1, const KDouble a2, const KFloat a3, const KDouble a4,
-    const KFloat a5, const KDouble a6, const KFloat a7, const KFloat a8, const KDouble a9
+bool jvmci7(
+    const float a1, const double a2, const float a3, const double a4,
+    const float a5, const double a6, const float a7, const float a8, const double a9
 ) {
-    printf("jvmci7  | a1: %f, a2: %f, a3: %f, a4: %f, a5: %f, a6: %f, a7: %f, a8: %f, a9: %f\n", a1, a2, a3, a4, a5, a6, a7, a8, a9);
-    fflush(stdout);
+    std::cout << "jvmci7  | a1: " << a1 << ", a2: " << a2 << ", a3: " << a3 <<
+        ", a4: " << a4 << ", a5: " << a5 << ", a6: " << a6 << ", a7: " << a7 <<
+        ", a8: " << a8 << ", a9: " << a9 << std::endl;
     return a1 == 1.0 && a2 == 2.0 && a3 == 3.0 && a4 == 4.0 && a5 == 5.0 && a6 == 6.0 && a7 == 7.0 && a8 == 8.0 && a9 == 9.0;
 }
 
-KBoolean jvmci8(const KInt a1, const KDouble a2, const KFloat a3, const KLong a4) {
-    printf("jvmci8  | a1: %d, a2: %f, a3: %f, a4: %" PRId64 "\n", a1, a2, a3, a4);
-    fflush(stdout);
+bool jvmci8(const int32_t a1, const double a2, const float a3, const int64_t a4) {
+    std::cout << "jvmci8  | a1: " << a1 << ", a2: " << a2 << ", a3: " << a3 << std::endl;
     return a1 == 1 && a2 == 2.0 && a3 == 3.0 && a4 == 4;
 }
 
-KBoolean jvmci9(
-    const KInt a1, const KDouble a2, const KFloat a3, const KLong a4,
-    const KLong a5, const KDouble a6, const KFloat a7, const KFloat a8, const KInt a9
+bool jvmci9(
+    const int32_t a1, const double a2, const float a3, const int64_t a4,
+    const int64_t a5, const double a6, const float a7, const float a8, const int32_t a9
 ) {
-    printf("jvmci9  | a1: %d, a2: %f, a3: %f, a4: %" PRId64 ", a5: %" PRId64 ", a6: %f, a7: %f, a8: %f, a9: %d\n", a1, a2, a3, a4, a5, a6, a7, a8, a9);
-    fflush(stdout);
+    std::cout << "jvmci9  | a1: " << a1 << ", a2: " << a2 << ", a3: " << a3 <<
+        ", a4: " << a4 << ", a5: " << a5 << ", a6: " << a6 << ", a7: " << a7 <<
+        ", a8: " << a8 << ", a9: " << a9 << std::endl;
     return a1 == 1 && a2 == 2.0 && a3 == 3.0 && a4 == 4 && a5 == 5 && a6 == 6.0 && a7 == 7.0 && a8 == 8.0 && a9 == 9;
 }
 
-KBoolean jvmci10(
-    KString* a1, const KDouble a2, const KFloat a3, const KLong a4,
-    const KLong a5, const KDouble a6, KString* a7, const KFloat a8, const KInt a9
+bool jvmci10(
+    const KString& a1, const double a2, const float a3, const int64_t a4,
+    const int64_t a5, const double a6, const KString& a7, const float a8, const int32_t a9
 ) {
-    printf("jvmci10 | a1: %s, a2: %f, a3: %f, a4: %" PRId64 ", a5: %" PRId64 ", a6: %f, a7: %s (%d, %" PRIuPTR ", %d), a8: %f, a9: %d\n", a1->data, a2, a3, a4, a5, a6, a7->data, a7->length, a7->size, a7->__flags, a8, a9);
-    fflush(stdout);
-    return strncmp(a1->data, "string1", 7) == 0 && a2 == 2.0 && a3 == 3.0 && a4 == 4 && a5 == 5 && a6 == 6.0 && strncmp(a7->data, "string7", 7) == 0 && a8 == 8.0 && a9 == 9;
+    std::cout << "jvmci10  | a1: " << a1.get_data() << ", a2: " << a2 << ", a3: " << a3 <<
+        ", a4: " << a4 << ", a5: " << a5 << ", a6: " << a6 << ", a7: " << a7.get_data() <<
+        ", a8: " << a8 << ", a9: " << a9 << std::endl;
+    return std::string(a1.get_data(), a1.get_size()) == "string1" && a2 == 2.0 && a3 == 3.0 && a4 == 4 && a5 == 5 && a6 == 6.0 && std::string(a7.get_data(), a7.get_size()) == "string7" && a8 == 8.0 && a9 == 9;
 }
 
-KBoolean jvmci11(
-    const KFloat a1, const KInt a2, const KFloat a3, const KInt a4,
-    const KFloat a5, const KInt a6, const KFloat a7, const KInt a8,
-    const KFloat a9, const KInt a10, const KFloat a11, const KInt a12,
-    const KFloat a13, const KInt a14, const KFloat a15, const KInt a16, const KFloat a17
+bool jvmci11(
+    const float a1, const int32_t a2, const float a3, const int32_t a4,
+    const float a5, const int32_t a6, const float a7, const int32_t a8,
+    const float a9, const int32_t a10, const float a11, const int32_t a12,
+    const float a13, const int32_t a14, const float a15, const int32_t a16, const float a17
 ) {
-    printf("jvmci11 | a1: %f, a2: %d, a3: %f, a4: %d, a5: %f, a6: %d, a7: %f, a8: %d, a9: %f, a10: %d, a11: %f, a12: %d, a13: %f, a14: %d, a15: %f, a16: %d, a17: %f\n", a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17);
-    fflush(stdout);
+    std::cout << "jvmci11  | a1: " << a1 << ", a2: " << a2 << ", a3: " << a3 <<
+        ", a4: " << a4 << ", a5: " << a5 << ", a6: " << a6 << ", a7: " << a7 <<
+        ", a8: " << a8 << ", a9: " << a9 << ", a10: " << a10 << ", a11: " << a11 <<
+        ", a12: " << a12 << ", a13: " << a13 << ", a14: " << a14 << ", a15: " << a15 <<
+        ", a16: " << a16 << std::endl;
     return a1 == 1.0 && a2 == 2 && a3 == 3.0 && a4 == 4 && a5 == 5.0 && a6 == 6 && a7 == 7.0 && a8 == 8 && a9 == 9.0 && a10 == 10 && a11 == 11.0 && a12 == 12 && a13 == 13.0 && a14 == 14 && a15 == 15.0 && a16 == 16 && a17 == 17.0;
 }
 
-KInt jvmci12() {
+int32_t jvmci12() {
     return 1;
 }
 
-KLong jvmci13() {
+int64_t jvmci13() {
     return 1;
 }
 
-KFloat jvmci14() {
+float jvmci14() {
     return 1.5;
 }
 
-KDouble jvmci15() {
+double jvmci15() {
     return 1.5;
 }
 
-KBoolean jvmci_array(KIntArray* array) {
-    return array->length == 3 &&
-        array->elements[0] == 1 &&
-        array->elements[1] == 2 &&
-        array->elements[2] == 3;
+bool jvmci_array(const KArray<int32_t>& array) {
+    return array.get_length() == 3 &&
+        array[0] == 1 &&
+        array[1] == 2 &&
+        array[2] == 3;
 }
 
-KBoolean jvmci_some_arrays(KIntArray* array1, KFloatArray* array2, KDoubleArray* array3) {
-    return array1->length == 3 &&
-        array1->elements[0] == 1 &&
-        array1->elements[1] == 2 &&
-        array1->elements[2] == 3 &&
-        array2->length == 3 &&
-        array2->elements[0] == 4.0 &&
-        array2->elements[1] == 5.0 &&
-        array2->elements[2] == 6.0 &&
-        array3->length == 3 &&
-        array3->elements[0] == 7.0 &&
-        array3->elements[1] == 8.0 &&
-        array3->elements[2] == 9.0;
+bool jvmci_some_arrays(const KArray<int32_t>& array1, const KArray<float>& array2, const KArray<double>& array3) {
+    return array1.get_length() == 3 &&
+        array1[0] == 1 &&
+        array1[1] == 2 &&
+        array1[2] == 3 &&
+        array2.get_length() == 3 &&
+        array2[0] == 4.0 &&
+        array2[1] == 5.0 &&
+        array2[2] == 6.0 &&
+        array3.get_length() == 3 &&
+        array3[0] == 7.0 &&
+        array3[1] == 8.0 &&
+        array3[2] == 9.0;
 }
 
-KBoolean jvmci_enum(const MyEnum enum1, const MyEnum enum2, KIntArray* enumArray){
-    const MyEnum *elements = (MyEnum*)enumArray->elements;
-
+bool jvmci_enum(const MyEnum enum1, const MyEnum enum2, const KArray<MyEnum>& enumArray){
     return enum1 == CASE1 && enum2 == CASE2 &&
-        enumArray->length == 3 &&
-            elements[0] == CASE1 &&
-            elements[1] == CASE2 &&
-            elements[2] == CASE1;
+        enumArray.get_length() == 3 &&
+            enumArray[0] == CASE1 &&
+            enumArray[1] == CASE2 &&
+            enumArray[2] == CASE1;
 }

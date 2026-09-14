@@ -1,0 +1,13 @@
+[package]
+name = "foreignBindings"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+name = "foreignBindings"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+

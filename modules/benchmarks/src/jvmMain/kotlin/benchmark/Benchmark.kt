@@ -1,31 +1,21 @@
+@file:Suppress("FunctionName")
+
 package benchmark
 
+import com.example.boltFFI.BoltFFI
+import com.huskerdev.*
 import kotlinx.benchmark.*
-import natives.foreignBindings.callCriticalForeign
-import natives.foreignBindings.callCriticalForeignAdd
-import natives.foreignBindings.callCriticalForeignString
-import natives.foreignBindings.callForeign
-import natives.foreignBindings.callForeignAdd
-import natives.foreignBindings.callForeignString
-import natives.foreignBindings.loadLibForeignBindingsSync
-import natives.jniBindings.callCriticalJni
-import natives.jniBindings.callCriticalJniString
-import natives.jniBindings.callJni
-import natives.jniBindings.callJniAdd
-import natives.jniBindings.callJniString
-import natives.jniBindings.loadLibJniBindingsSync
-import natives.jvmciBindings.callCriticalJvmci
-import natives.jvmciBindings.callCriticalJvmciAdd
-import natives.jvmciBindings.callCriticalJvmciString
-import natives.jvmciBindings.loadLibJvmciBindingsSync
+import natives.foreignBindings.*
+import natives.jniBindings.*
+import natives.jvmciBindings.*
 import java.util.concurrent.ThreadLocalRandom
 
 @State(Scope.Benchmark)
 @Suppress("unused")
 open class NativeKtBenchmark {
 
-    var a: Int = 0
-    var b: Int = 0
+    private var a: Int = 0
+    private var b: Int = 0
 
     @Setup
     open fun prepare() {
@@ -41,68 +31,102 @@ open class NativeKtBenchmark {
 
         System.setProperty("nativekt.jvm.forceInvoker", "foreign")
         loadLibForeignBindingsSync()
+
+        uniffiEnsureInitialized()
+
+        // Call once to initialize
+        BoltFFI.empty()
     }
 
-    @Benchmark
-    open fun jvmAdd(): Int =
-        a + b
+    // Java
 
     @Benchmark
-    open fun jni() =
+    open fun jvm_add(): Int =
+        a + b
+
+    // native-kt (JNI)
+
+    @Benchmark
+    open fun nativekt_jni_empty() =
         callJni()
 
     @Benchmark
-    open fun jniAdd() =
+    open fun nativekt_jni_add() =
         callJniAdd(a, b)
 
     @Benchmark
-    open fun jniString() =
+    open fun nativekt_jni_string() =
         callJniString("test")
 
     @Benchmark
-    open fun foreign() =
+    open fun nativekt_jni_critical_string() =
+        callCriticalJniString("test")
+
+    // native-kt (Foreign)
+
+    @Benchmark
+    open fun nativekt_foreign_empty() =
         callForeign()
 
     @Benchmark
-    open fun foreignAdd() =
+    open fun nativekt_foreign_add() =
         callForeignAdd(a, b)
 
     @Benchmark
-    open fun foreignString() =
+    open fun nativekt_foreign_string() =
         callForeignString("test")
 
-    // Critical
-
     @Benchmark
-    open fun criticalJni() =
-        callCriticalJni()
-
-    @Benchmark
-    open fun criticalJniString() =
-        callCriticalJniString("test")
-
-    @Benchmark
-    open fun criticalForeign() =
+    open fun nativekt_foreign_critical_empty() =
         callCriticalForeign()
 
     @Benchmark
-    open fun criticalForeignAdd() =
+    open fun nativekt_foreign_critical_add() =
         callCriticalForeignAdd(a, b)
 
     @Benchmark
-    open fun criticalForeignString() =
+    open fun nativekt_foreign_critical_string() =
         callCriticalForeignString("test")
 
+    // native-kt (JVMCI)
+
     @Benchmark
-    open fun criticalJVMCI() =
+    open fun nativekt_jvmci_empty() =
         callCriticalJvmci()
 
     @Benchmark
-    open fun criticalJVMCIAdd() =
+    open fun nativekt_jvmci_add() =
         callCriticalJvmciAdd(a, b)
 
     @Benchmark
-    open fun criticalJVMCIString() =
+    open fun nativekt_jvmci_string() =
         callCriticalJvmciString("test")
 
+    // Gobley/UniFFI
+
+    @Benchmark
+    open fun gobley_empty() =
+        empty()
+
+    @Benchmark
+    open fun gobley_add() =
+        addNumbers(a, b)
+
+    @Benchmark
+    open fun gobley_string() =
+        passString("test")
+
+    // BoltFFI
+
+    @Benchmark
+    open fun boltffi_empty() =
+        BoltFFI.empty()
+
+    @Benchmark
+    open fun boltffi_add() =
+        BoltFFI.addNumbers(a, b)
+
+    @Benchmark
+    open fun boltffi_string() =
+        BoltFFI.passString("test")
 }

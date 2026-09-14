@@ -1,7 +1,7 @@
 package com.huskerdev.nativekt.jvm
 
-import com.huskerdev.nativekt.Arch
-import com.huskerdev.nativekt.OS
+import com.huskerdev.osutils.Arch
+import com.huskerdev.osutils.OS
 import sun.misc.Unsafe
 import java.io.File
 import java.io.IOException
@@ -57,7 +57,7 @@ object NativeKtUtils {
         try {
             Class.forName("jdk.vm.ci.runtime.JVMCI")
             val arch = Arch.current
-            val os = OS.current()
+            val os = OS.current
 
             return arch == Arch.ARM64 || (arch == Arch.X64 && os != OS.MACOS)
         } catch (_: ClassNotFoundException) {
@@ -92,7 +92,7 @@ object NativeKtUtils {
     fun resolveLibraryFile(baseName: String, macosUniversal: Boolean): String {
 
         // Get OS
-        val os = OS.current()
+        val os = OS.current
 
         // Get lib arch
         val arch = if(macosUniversal && os == OS.MACOS)
@@ -105,8 +105,8 @@ object NativeKtUtils {
         // Create tmp dir
         val tempDir = Files.createTempDirectory("natives-kt").toFile()
         val libPath = File(tempDir, fileName)
-        libPath.deleteOnExit()
         tempDir.deleteOnExit()
+        libPath.deleteOnExit()
 
         // Copy lib from resources
         val classLoader = Thread.currentThread().getContextClassLoader()
@@ -193,7 +193,7 @@ object NativeKtUtils {
             findNativeMethod!!.invoke(
                 null,
                 NativeKtUtils::class.java.getClassLoader(),
-                NativeKtUtils::class,
+                NativeKtUtils::class.java,
                 funcName,
                 funcName
             ) as Long
@@ -211,6 +211,7 @@ object NativeKtUtils {
      * @param obj AccessibleObject to access
      * @throws Exception When Unsafe or reflection is not available
      */
+    @Suppress("DiscouragedPrivateApi")
     fun setAccessible(obj: AccessibleObject) {
         // Init unsafe and methods
         if(unsafe == null) {

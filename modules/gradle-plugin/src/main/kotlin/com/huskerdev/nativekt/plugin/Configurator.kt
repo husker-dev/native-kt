@@ -1,232 +1,227 @@
 package com.huskerdev.nativekt.plugin
 
 import com.android.build.api.variant.KotlinMultiplatformAndroidComponentsExtension
+import com.huskerdev.nativekt.NativeModuleContext
 import com.huskerdev.nativekt.TargetType
 import com.huskerdev.nativekt.configurators.*
-import com.huskerdev.nativekt.printers.c.CApiHeaderPrinter
-import com.huskerdev.nativekt.printers.rust.RustPrinter
-import com.huskerdev.nativekt.utils.*
-import com.huskerdev.webidl.resolver.IdlResolver
+import com.huskerdev.nativekt.createContext
+import com.huskerdev.nativekt.plugin.tasks.ApiGenTask
+import com.huskerdev.nativekt.plugin.tasks.InitTask
+import com.huskerdev.nativekt.utils.dependsOnProjectReload
+import com.huskerdev.nativekt.utils.upperCamelCase
+import org.gradle.api.ExtensiblePolymorphicDomainObjectContainer
+import org.gradle.api.Project
 import org.gradle.api.tasks.TaskProvider
-import org.gradle.internal.extensions.stdlib.capitalized
 import org.gradle.kotlin.dsl.the
-import org.jetbrains.kotlin.gradle.dsl.*
+import org.jetbrains.kotlin.gradle.dsl.HasConfigurableKotlinCompilerOptions
+import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
+import org.jetbrains.kotlin.gradle.dsl.KotlinProjectExtension
+import org.jetbrains.kotlin.gradle.dsl.KotlinSingleJavaTargetExtension
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
+import org.jetbrains.kotlin.gradle.plugin.KotlinTarget
 import org.jetbrains.kotlin.gradle.plugin.KotlinTargetsContainer
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.konan.target.KonanTarget
-import java.io.File
-import kotlin.concurrent.getOrSet
 
-private const val RUNTIME_DEPENDENCY = "com.huskerdev:native-kt-runtime:${NativeKtInfo.VERSION}"
 
-private val tmpCommonTasks = ThreadLocal<MutableMap<NativeProject, TaskProvider<*>>>()
+/* ========================================
+    Configuration call sequence:
+    1. 'configureAndroid'
+    2. 'configureKotlin'
+    3. finalizeDsl in 'configureAndroid'
+    4. afterEvaluate in 'configureKotlin'
+=========================================== */
 
-private fun NativeKtPlugin.validateModule(module: NativeProject): IdlResolver? {
-    if(!module.name.matches("^[a-zA-Z_]+$".toRegex()))
-        throw Exception("Native module '${module.name}' name contains an unsupported characters.\nAvailable: a-z, A-Z, underscore")
-
-    if(module.name.startsWith("_") || module.name.endsWith("_"))
-        throw Exception("native module '${module.name}' The name must not begin or end with an underscore..")
-
-    val initTask = project.tasks.register("cmakeInit${module.name.capitalized()}", InitTask::class.java)
-    initTask.get().apply {
-        this.dir = module.dir(project).absolutePath
-        this.moduleClasspath = module.classPath
-        this.moduleName = module.name
-    }
-
-    project.gradle.taskGraph.whenReady {
-        if (!module.getNDLFile(project).exists() && !hasTask(initTask.get())) {
-            project.logger.error("""
-                Native module '${module.name}' is not loaded:
-                  'api.ndl' file not found.
-                
-                Possible solution: 
-                  run './gradlew :${initTask.name}'
-            """.trimIndent())
-        }
-    }
-
-    if(!module.getNDLFile(project).exists())
-        return null
-
-    return module.idl(project)
-        .also { validateIDL(it) }
-}
-
-fun NativeKtPlugin.configureKotlin(
-    nativesBuildDir: File,
-    srcGenDir: File
+/**
+ * Configures the Kotlin plugin, regardless of its type (JVM, Multiplatform, etc.)
+ */
+internal fun configureKotlin(
+    project: Project,
+    extension: ExtensiblePolymorphicDomainObjectContainer<*>
 ){
     project.afterEvaluate {
-        if(kotlin is KotlinMultiplatformExtension) {
-            (kotlin as KotlinMultiplatformExtension).targets
-                .filterIsInstance<HasConfigurableKotlinCompilerOptions<KotlinCommonCompilerOptions>>()
-                .forEach {
-                    it.compilerOptions {
-                        freeCompilerArgs.addAll("-Xexpect-actual-classes")
-                    }
-                }
-        } else if(kotlin is KotlinJvmProjectExtension) {
-            (kotlin as KotlinJvmProjectExtension).target.compilerOptions {
-                freeCompilerArgs.addAll("-Xexpect-actual-classes")
-            }
-        }
-
-        extension.forEach {
-            val module = it as NativeProject
-
-            val idl = validateModule(module)
+        extension.forEach { module ->
+            val context = createContextWithProject(project, extension, module as NativeProject, false)
                 ?: return@forEach
 
-            val nativesBuildDir = File(nativesBuildDir, module.name)
-            val srcGenDir = File(srcGenDir, module.name)
-
-            when(module) {
-                is Multiplatform -> configureMultiplatform(idl, nativesBuildDir, srcGenDir, module)
-                is SinglePlatform -> configureSinglePlatform(idl, nativesBuildDir, srcGenDir, module)
+            val apiGenTask = project.tasks.register(
+                "nativeApi${context.moduleName.upperCamelCase()}",
+                ApiGenTask::class.java
+            )
+            apiGenTask.get().let {
+                it.context = context
+                it.dependsOnProjectReload()
             }
 
-            when(val buildSystem = module.buildSystem) {
-                is BuildSystem.CMake -> {
-                    CApiHeaderPrinter(
-                        idl = idl,
-                        target = module.getHeaderFile(project),
-                        language = buildSystem.language,
-                        classPath = module.classPath,
-                        moduleName = module.name
-                    )
-                }
-                is BuildSystem.Cargo -> {
-                    RustPrinter(
-                        idl = idl,
-                        target = module.getApiRsFile(project),
-                        classPath = module.classPath,
-                        moduleName = module.name
-                    )
-                }
+            when(module) {
+                is Multiplatform -> configureMultiplatform(project, context, apiGenTask)
+                is SinglePlatform -> configureSinglePlatform(project, context, apiGenTask)
             }
         }
     }
 }
 
-fun NativeKtPlugin.configureAndroid(
-    nativesBuildDir: File,
-    srcGenDir: File
+/**
+ * Android is a separate plugin that also requires remote configuration.
+ * It uses finalizeDsl instead of afterEvaluate.
+ */
+internal fun configureAndroid(
+    project: Project,
+    extensionProvider: () -> ExtensiblePolymorphicDomainObjectContainer<*>?
 ) {
+    val kotlin = project.the<KotlinProjectExtension>()
     val androidComponents = project.the<KotlinMultiplatformAndroidComponentsExtension>()
 
     androidComponents.finalizeDsl { androidExtension ->
+        val extension = extensionProvider()
+
+        if(extension == null) {
+            project.logger.error("[native-kt] Could not setup Android: Kotlin plugin is not applied to the current project.")
+            return@finalizeDsl
+        }
+
         extension.forEach { module ->
             module as NativeProject
 
-            if(!module.getNDLFile(project).exists())
-                return@forEach
+            // If module is not valid, then skip.
+            // INFO:
+            //     Android can not exist without at least one Kotlin target (Multiplatform, JVM, etc.)
+            //     So we mute error message here, because it was already printed from 'configureKotlin'.
+            val context = createContextWithProject(project, extension, module, true)
+                ?: return@forEach
 
-            val idl = module.idl(project)
-
-            val nativesBuildDir = File(nativesBuildDir, module.name)
-            val srcGenDir = File(srcGenDir, module.name)
-
+            // Configure only Android source sets
             when(module) {
                 is Multiplatform -> {
-                    val commonTask = tmpCommonTasks.get()?.remove(module)
-                    module.getActiveSourceSets(kotlin)
-                        .filter {
-                            getTargetType(kotlin, it) == TargetType.ANDROID
-                        }
-                        .forEach {
-                            configureAndroidSourceSet(project, extension as NativeKtAndroidInterface, androidExtension, commonTask, idl, module, it, srcGenDir, nativesBuildDir, true)
-                        }
+                    module.getActiveSourceSets(kotlin).forEach {
+                        if(getTargetType(project, it) == TargetType.ANDROID)
+                            configureAndroidSourceSet(project, context, androidExtension, it, true)
+                    }
                 }
                 is SinglePlatform -> {
                     val sourceSet = kotlin.findSourceSet(module.targetSourceSet)
 
-                    if(getTargetType(kotlin, sourceSet) == TargetType.ANDROID)
-                        configureAndroidSourceSet(project, extension as NativeKtAndroidInterface, androidExtension, null, idl, module, sourceSet, srcGenDir, nativesBuildDir, false)
+                    if(getTargetType(project, sourceSet) == TargetType.ANDROID)
+                        configureAndroidSourceSet(project, context, androidExtension, sourceSet, false)
                 }
             }
         }
-        tmpCommonTasks.get()?.clear()
     }
 }
 
-private fun NativeKtPlugin.configureSinglePlatform(
-    idl: IdlResolver,
-    nativesBuildDir: File,
-    srcGenDir: File,
-    module: SinglePlatform
+private fun createContextWithProject(
+    project: Project,
+    extension: ExtensiblePolymorphicDomainObjectContainer<*>,
+    module: NativeProject,
+    muteError: Boolean
+): NativeModuleContext? {
+    val buildDir = project.layout.buildDirectory.asFile.get()
+
+    val context = createContext(
+        buildDir = buildDir,
+        extension = extension as NativeKtCommonInterface,
+        module = module
+    )
+
+    val initTaskName = "init${module.name.upperCamelCase()}"
+    val initTask = project.tasks.findByName(initTaskName)
+        ?: project.tasks.register(initTaskName, InitTask::class.java).get().also {
+            it.extension = extension
+            it.module = module
+            it.buildDir = buildDir.absolutePath
+        }
+    project.gradle.taskGraph.whenReady {
+        if (context == null && !muteError && !hasTask(initTask)) {
+            project.logger.error("""
+                Native module '${module.name}' is not loaded:
+                  'api.ndl' file not found.
+                
+                To initialize module: 
+                  ./gradlew ${initTask.path}
+            """.trimIndent())
+        }
+    }
+    return context
+}
+
+private fun configureSinglePlatform(
+    project: Project,
+    context: NativeModuleContext,
+    apiGenTask: TaskProvider<ApiGenTask>
 ){
-    val extension = extension as NativeKtCommonInterface
-    val sourceSet = kotlin.findSourceSet(module.targetSourceSet)
+    val kotlin = project.the<KotlinProjectExtension>()
+    val sourceSet = kotlin.findSourceSet((context.module as SinglePlatform).targetSourceSet)
 
     // Apply runtime
-    if(extension.applyRuntime) {
+    if(context.extension.applyRuntime) {
         sourceSet.dependencies {
             implementation(RUNTIME_DEPENDENCY)
         }
     }
 
-    configureKotlinSourceSet(kotlin, null, idl, nativesBuildDir, srcGenDir, module, sourceSet, false)
+    configureKotlinSourceSet(project, apiGenTask, context, sourceSet, false)
 }
 
-private fun NativeKtPlugin.configureMultiplatform(
-    idl: IdlResolver,
-    nativesBuildDir: File,
-    srcGenDir: File,
-    module: Multiplatform
+private fun configureMultiplatform(
+    project: Project,
+    context: NativeModuleContext,
+    apiGenTask: TaskProvider<ApiGenTask>
 ){
-    val extension = extension as NativeKtCommonInterface
-    val kotlin = project.the<KotlinMultiplatformExtension>()
+    val module = context.module as Multiplatform
+    val kotlin = project.the<KotlinProjectExtension>()
 
-    val commonSourceSet = kotlin.sourceSets.findByName(module.commonSourceSet)
-        ?: throw Exception("Source set '${module.commonSourceSet}' was not found")
+    val commonSourceSet = kotlin.findSourceSet(module.commonSourceSet)
     val targetSourceSets = module.getActiveSourceSets(kotlin)
     val stubSourceSets = module.getActiveStubs(kotlin)
 
     val commonTask = configureCommon(
         project = project,
-        extension = extension,
-        idl = idl,
-        module = module,
-        sourceSet = commonSourceSet,
-        srcRootDir = srcGenDir
+        context = context,
+        sourceSet = commonSourceSet
     )
-    tmpCommonTasks.getOrSet { hashMapOf() }[module] = commonTask
+    commonTask.get().dependsOn(apiGenTask)
 
-    // Apply runtime
-    if(extension.applyRuntime) {
+    // Apply runtime to common source set
+    if(context.extension.applyRuntime) {
         commonSourceSet.dependencies {
             implementation(RUNTIME_DEPENDENCY)
         }
     }
 
-    targetSourceSets.forEach {
-        configureKotlinSourceSet(kotlin, commonTask, idl, nativesBuildDir, srcGenDir, module, it, true)
+    // Add '-Xexpect-actual-classes' to all targets
+    (targetSourceSets + stubSourceSets + commonSourceSet)
+        .map { getKotlinTarget(project, it) }
+        .filterIsInstance<HasConfigurableKotlinCompilerOptions<*>>()
+        .toSet()
+        .forEach { target ->
+            if("-Xexpect-actual-classes" !in target.compilerOptions.freeCompilerArgs.get())
+                target.compilerOptions.freeCompilerArgs.addAll("-Xexpect-actual-classes")
+        }
+
+    // Configure targets (not stubs)
+    targetSourceSets.forEach { sourceSet ->
+        configureKotlinSourceSet(project, commonTask, context, sourceSet, true)
     }
 
+    // Configure stubs
     stubSourceSets.forEach {
-        configureStub(project, commonTask, extension, idl, module, it, srcGenDir)
+        configureStub(project, commonTask, context, it)
     }
 }
 
-private fun NativeKtPlugin.configureKotlinSourceSet(
-    kotlin: KotlinProjectExtension,
+private fun configureKotlinSourceSet(
+    project: Project,
     commonTask: TaskProvider<*>?,
-    idl: IdlResolver,
-    nativesBuildDir: File,
-    srcGenDir: File,
-    module: NativeProject,
+    context: NativeModuleContext,
     sourceSet: KotlinSourceSet,
     expectActual: Boolean
-) = when(val targetType = getTargetType(kotlin, sourceSet)) {
-    TargetType.JVM -> configureJvm(project, extension as NativeKtJvmInterface, commonTask, idl, module, sourceSet, srcGenDir, nativesBuildDir, expectActual)
-    TargetType.JS -> configureJs(project, extension as NativeKtJsInterface, commonTask, idl, module, sourceSet, srcGenDir, nativesBuildDir, expectActual, false)
-    TargetType.WASM_JS -> configureJs(project, extension as NativeKtJsInterface, commonTask, idl, module, sourceSet, srcGenDir, nativesBuildDir, expectActual, true)
+) = when(val targetType = getTargetType(project, sourceSet)) {
+    TargetType.JVM -> configureJvm(project, commonTask, context, sourceSet, expectActual)
+    TargetType.JS -> configureJs(project, commonTask, context, sourceSet, expectActual, false)
+    TargetType.WASM_JS -> configureJs(project, commonTask, context, sourceSet, expectActual, true)
     TargetType.ANDROID -> { }
-    else -> configureNative(project, extension as NativeKtNativeInterface, commonTask, idl, module, sourceSet, targetType, srcGenDir, nativesBuildDir, expectActual)
+    else -> configureNative(project, commonTask, context, sourceSet, targetType, expectActual)
 }
 
 private fun Multiplatform.getActiveSourceSets(kotlin: KotlinProjectExtension): List<KotlinSourceSet> {
@@ -240,22 +235,18 @@ private fun Multiplatform.getActiveStubs(kotlin: KotlinProjectExtension): List<K
 }
 
 private fun getTargetType(
-    kotlin: KotlinProjectExtension,
+    project: Project,
     sourceSet: KotlinSourceSet
 ): TargetType {
+    val kotlin = project.the<KotlinProjectExtension>()
     when (kotlin) {
         is KotlinSingleJavaTargetExtension -> return TargetType.JVM
         is KotlinAndroidProjectExtension -> return TargetType.ANDROID
     }
-    kotlin as KotlinTargetsContainer
 
-    val target = kotlin.targets.first { target ->
-        target.compilations.forEach { compilation ->
-            if(compilation.allKotlinSourceSets.any { it == sourceSet })
-                return@first true
-        }
-        false
-    }
+    val target = getKotlinTarget(project, sourceSet)
+        ?: throw UnsupportedOperationException("KotlinTarget not found for KotlinSourceSet '${sourceSet.name}'")
+
     return when(target.platformType) {
         KotlinPlatformType.common -> throw UnsupportedOperationException()
         KotlinPlatformType.jvm -> TargetType.JVM
@@ -294,7 +285,19 @@ private fun getTargetType(
     }
 }
 
+private fun getKotlinTarget(project: Project, sourceSet: KotlinSourceSet): KotlinTarget? {
+    val kotlin = project.the<KotlinProjectExtension>() as KotlinTargetsContainer
+
+    return kotlin.targets.firstOrNull { target ->
+        target.compilations.any { compilation ->
+            compilation.allKotlinSourceSets.any {
+                it == sourceSet
+            }
+        }
+    }
+}
+
 private fun KotlinProjectExtension.findSourceSet(name: String): KotlinSourceSet {
     return sourceSets.findByName(name)
-        ?: throw Exception("Source set '$name:' was not found")
+        ?: throw Exception("Could not find source set: '$name:'")
 }

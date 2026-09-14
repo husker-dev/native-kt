@@ -1,5 +1,6 @@
 @file:OptIn(ExperimentalKotlinGradlePluginApi::class)
 
+import com.huskerdev.nativekt.plugin.JsTarget
 import com.huskerdev.nativekt.plugin.currentNativeDesktopTargets
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JsModuleKind
@@ -60,5 +61,7 @@ natives {
     // Remove auto runtime applying to use local version
     applyRuntime = false
 
-    create("freetypeBindings")
+    create("freetypeBindings") {
+        jsTarget = JsTarget.NODE
+    }
 }

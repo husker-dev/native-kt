@@ -1,18 +1,32 @@
 #include <api.h>
 #include <stdio.h>
 
-void* _Nonnull _interface_b_new_0() {
-    return (void*) 1;
-}
-void _interface_b_free(void* _Nonnull _self) {}
-
-void* _Nonnull _interface_a_new_0() {
+void* _interface_myinterface_new_0(void) {
     return (void*) 1;
 }
 
-void _interface_a_fn_test(void* _Nonnull _self, void* _Nonnull arg) {
+void* _interface_myinterface_new_1(int32_t a1) {
+    return (void*) 1;
+}
+
+bool _interface_myinterface_fn_test(void* _self) {
     printf("Hello from C interface!\n");
     fflush(stdout);
+    return true;
 }
 
-void _interface_a_free(void* _Nonnull _self) {}
+bool _interface_myinterface_fn_test_critical(void* _self) {
+    return true;
+}
+
+void _interface_myinterface_fn_pass_interface(void* _Nonnull _self, RC_MyInterface* _Nonnull a1) {
+
+}
+RC_MyInterface* _Nonnull _interface_myinterface_fn_return_interface(void* _Nonnull _self) {
+    return (void*) 1;
+}
+
+void _interface_myinterface_free(void* _self) {
+    printf("Clean MyInterface!\n");
+    fflush(stdout);
+}

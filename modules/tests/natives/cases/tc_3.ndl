@@ -1,0 +1,14 @@
+namespace global {
+    void stub1(EmptyDictionary1 e);
+    void stub2(MyDictionary e);
+};
+
+dictionary EmptyDictionary {
+};
+
+dictionary EmptyDictionary1: EmptyDictionary {
+};
+
+dictionary MyDictionary {
+    int a;
+};

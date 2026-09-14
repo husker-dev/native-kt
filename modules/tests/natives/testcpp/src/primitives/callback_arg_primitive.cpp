@@ -1,85 +1,95 @@
 #include <api.hpp>
 
-void callback_void(VoidCallback* arg) {
-    arg->invoke(arg);
+// Consume
+
+void callback_void(const std::shared_ptr<VoidCallback>& arg) {
+    arg->invoke();
 }
 
-KBoolean callback_void_n(VoidCallback* arg) {
-    return arg == nullptr;
+bool callback_void_n(const KOptional<std::shared_ptr<VoidCallback>>& arg) {
+    return arg.is_none();
 }
 
-KBoolean callback_arg_char(CallbackPassChar* arg) {
-    return arg->invoke(arg, 'a');
+bool callback_arg_char(const std::shared_ptr<CallbackPassChar>& arg) {
+    return arg->invoke('a');
 }
 
-KBoolean callback_arg_boolean(CallbackPassBoolean* arg) {
-    return arg->invoke(arg, true);
+bool callback_arg_boolean(const std::shared_ptr<CallbackPassBoolean>& arg) {
+    return arg->invoke(true);
 }
 
-KBoolean callback_arg_byte(CallbackPassByte* arg) {
-    return arg->invoke(arg, 1);
+bool callback_arg_byte(const std::shared_ptr<CallbackPassByte>& arg) {
+    return arg->invoke(1);
 }
 
-KBoolean callback_arg_ubyte(CallbackPassUByte* arg) {
-    return arg->invoke(arg, 255u);
+bool callback_arg_ubyte(const std::shared_ptr<CallbackPassUByte>& arg) {
+    return arg->invoke(255u);
 }
 
-KBoolean callback_arg_short(CallbackPassShort* arg) {
-    return arg->invoke(arg, 1);
+bool callback_arg_short(const std::shared_ptr<CallbackPassShort>& arg) {
+    return arg->invoke(1);
 }
 
-KBoolean callback_arg_ushort(CallbackPassUShort* arg) {
-    return arg->invoke(arg, 65535u);
+bool callback_arg_ushort(const std::shared_ptr<CallbackPassUShort>& arg) {
+    return arg->invoke(65535u);
 }
 
-KBoolean callback_arg_int(CallbackPassInt* arg) {
-    return arg->invoke(arg, 1);
+bool callback_arg_int(const std::shared_ptr<CallbackPassInt>& arg) {
+    return arg->invoke(1);
 }
 
-KBoolean callback_arg_uint(CallbackPassUInt* arg) {
-    return arg->invoke(arg, 4294967295u);
+bool callback_arg_uint(const std::shared_ptr<CallbackPassUInt>& arg) {
+    return arg->invoke(4294967295u);
 }
 
-KBoolean callback_arg_long(CallbackPassLong* arg) {
-    return arg->invoke(arg, 1);
+bool callback_arg_long(const std::shared_ptr<CallbackPassLong>& arg) {
+    return arg->invoke(1);
 }
 
-KBoolean callback_arg_ulong(CallbackPassULong* arg) {
-    return arg->invoke(arg, 18446744073709551615u);
+bool callback_arg_ulong(const std::shared_ptr<CallbackPassULong>& arg) {
+    return arg->invoke(18446744073709551615u);
 }
 
-KBoolean callback_arg_float(CallbackPassFloat* arg) {
-    return arg->invoke(arg, 1.1f);
+bool callback_arg_float(const std::shared_ptr<CallbackPassFloat>& arg) {
+    return arg->invoke(1.1f);
 }
 
-KBoolean callback_arg_double(CallbackPassDouble* arg) {
-    return arg->invoke(arg, 1.1);
+bool callback_arg_double(const std::shared_ptr<CallbackPassDouble>& arg) {
+    return arg->invoke(1.1);
 }
 
-KBoolean callback_arg_string(CallbackPassString* arg) {
-    return arg->invoke(arg, new KString("test string", 11, 11, false));
+bool callback_arg_string(const std::shared_ptr<CallbackPassString>& arg) {
+    return arg->invoke(KString("test string"));
 }
 
-KBoolean callback_arg_string_n(CallbackPassStringN* arg) {
-    return arg->invoke(arg, nullptr);
+bool callback_arg_string_n(const std::shared_ptr<CallbackPassStringN>& arg) {
+    return arg->invoke(KOptional<KString>());
 }
 
-KBoolean callback_arg_callback(VoidCallback* pass, CallbackPassCallback* arg) {
-    return arg->invoke(arg, pass);
+bool callback_arg_callback(const std::shared_ptr<VoidCallback>& pass, const std::shared_ptr<CallbackPassCallback>& arg) {
+    return arg->invoke(pass);
 }
 
-KBoolean callback_arg_callback_n(CallbackPassCallbackN* arg) {
-    return arg->invoke(arg, nullptr);
+bool callback_arg_callback_n(const std::shared_ptr<CallbackPassCallbackN>& arg) {
+    return arg->invoke(KOptional<std::shared_ptr<VoidCallback>>());
 }
 
-KBoolean callback_arg_enum(CallbackPassEnum* arg) {
-    return arg->invoke(arg, CASE2);
+bool callback_arg_enum(const std::shared_ptr<CallbackPassEnum>& arg) {
+    return arg->invoke(CASE2);
 }
 
-KBoolean callback_arg_dictionary(CallbackPassDictionary* arg) {
-    return arg->invoke(arg, new MyDictionary(1, 2, 3, 4));
+bool callback_arg_dictionary(const std::shared_ptr<CallbackPassDictionary>& arg) {
+    return arg->invoke(MyDictionary(1, 2, 3, 4));
 }
 
-KBoolean callback_arg_dictionary_n(CallbackPassDictionaryN* arg) {
-    return arg->invoke(arg, nullptr);
+bool callback_arg_dictionary_n(const std::shared_ptr<CallbackPassDictionaryN>& arg) {
+    return arg->invoke(KOptional<MyDictionary>());
+}
+
+bool callback_arg_interface(const std::shared_ptr<IMyInterface>& pass, const std::shared_ptr<CallbackPassInterface>& arg) {
+    return arg->invoke(std::shared_ptr(pass));
+}
+
+bool callback_arg_interface_n(const std::shared_ptr<CallbackPassInterfaceN>& arg) {
+    return arg->invoke(KOptional<std::shared_ptr<IMyInterface>>());
 }

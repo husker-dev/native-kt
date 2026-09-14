@@ -1,73 +1,97 @@
 package com.huskerdev.nativekt.printers.kotlin
 
+import com.huskerdev.nativekt.NativeModuleContext
+import com.huskerdev.nativekt.plugin.NativeKtJvmInterface
 import com.huskerdev.nativekt.printers.kotlin.jvm.KotlinJvmCIPrinter
 import com.huskerdev.nativekt.printers.kotlin.jvm.KotlinJvmForeignPrinter
 import com.huskerdev.nativekt.printers.kotlin.jvm.KotlinJvmJniPrinter
 import com.huskerdev.nativekt.utils.*
-import com.huskerdev.webidl.resolver.IdlResolver
-import com.huskerdev.webidl.resolver.ResolvedIdlInterface
-import com.huskerdev.webidl.resolver.ResolvedIdlOperation
-import org.gradle.internal.extensions.stdlib.capitalized
+import com.huskerdev.webidl.resolver.*
 import java.io.File
 
 class KotlinJvmPrinter(
-    idl: IdlResolver,
+    val context: NativeModuleContext,
     target: File,
-    classPath: String,
-    moduleName: String,
-    useCoroutines: Boolean,
-    val expectActual: Boolean,
-    useJNI: Boolean,
-    useForeignApi: Boolean,
-    useJVMCI: Boolean,
-    useUniversalMacOSLib: Boolean
+    val expectActual: Boolean
 ) {
-    private val implName = "${moduleName}Impl"
+    private val moduleName = context.moduleName
+    private val extension = context.extension as NativeKtJvmInterface
+
+    private val useJNI = extension.useJNI
+    private val useForeignApi = extension.useForeignApi
+    private val useJVMCI = extension.useJVMCI
+
+    private val commonInvokerName = "${moduleName.upperCamelCase()}NativeInvoker"
+    private val jniInvokerName = "${moduleName.upperCamelCase()}Jni"
+    private val foreignInvokerName = "${moduleName.upperCamelCase()}Foreign"
+    private val jvmciInvokerName = "${moduleName.upperCamelCase()}Jvmci"
+
+    private val implFieldName = "${moduleName}Impl"
 
     init {
-        val builder = StringBuilder()
+        target.parentFile.mkdirs()
+        target.writeText(buildString {
+            printHeader()
+            printJvmInterfaces(context)
+            printFunctions()
+            printInvokerInterface()
+
+            // JNI
+            if(useJNI) {
+                append("\n\n")
+                KotlinJvmJniPrinter(context, this,
+                    name = jniInvokerName,
+                    parentClass = commonInvokerName,
+                    isAndroid = false
+                )
+            }
+
+            // Foreign
+            if(useForeignApi) {
+                append("\n\n")
+                KotlinJvmForeignPrinter(context, this,
+                    name = foreignInvokerName,
+                    parentClass = commonInvokerName,
+                )
+            }
+
+            // JVMCI
+            if(useJVMCI) {
+                append("\n\n")
+                KotlinJvmCIPrinter(context, this,
+                    name = jvmciInvokerName,
+                    parentClass = commonInvokerName,
+                    standalone = !useJNI && !useForeignApi,
+                )
+            }
+        })
+    }
+
+    private fun StringBuilder.printHeader() {
         val actual = if (expectActual) "actual " else ""
-        val nativeInvoker = "${moduleName.capitalized()}NativeInvoker"
 
-        fun invokerChooser(indent: String) = when {
-            useForeignApi && useJNI -> """
-                $implName = when(NativeKtUtils.getInvoker()) {
-                    NativeKtUtils.Invoker.FOREIGN -> ${moduleName.capitalized()}Foreign(libraryPath)
-                    NativeKtUtils.Invoker.JNI     -> ${moduleName.capitalized()}JNI(libraryPath)
-                }
-            """.replaceIndent(indent)
-            useJNI -> """
-                $implName = ${moduleName.capitalized()}JNI(libraryPath)
-            """.replaceIndent(indent)
-            useForeignApi -> """
-                $implName = ${moduleName.capitalized()}Foreign(libraryPath)
-            """.replaceIndent(indent)
-           else -> ""
-        }
-
-        builder.append("""
-            @file:Suppress("unused", "unchecked_cast")
-            @file:OptIn(ExperimentalUnsignedTypes::class)
+        appendLine("""
+            @file:Suppress("SpellCheckingInspection", "LocalVariableName", "FunctionName", "PropertyName", "ObjectPropertyName", "SameParameterValue", "ClassName", "UnsafeDynamicallyLoadedCode")
+            @file:OptIn(ExperimentalUnsignedTypes::class, ExperimentalAtomicApi::class)
             
-            package $classPath
+            package ${context.classPath}
             
-            
+            import kotlin.concurrent.atomics.*
+            import com.huskerdev.nativekt.*
+            import com.huskerdev.nativekt.jvm.*
         """.trimIndent())
 
         if(useJVMCI)
-            builder.append("import com.huskerdev.nativekt.jvm.jvmci.*\n")
+            appendLine("import com.huskerdev.nativekt.jvm.jvmci.*")
         if(useForeignApi)
-            builder.append("""
+            appendLine("""
                 import com.huskerdev.nativekt.jvm.foreign.*
                 import java.lang.foreign.*
-                import java.lang.invoke.*
-                
             """.trimIndent())
 
-        val isLibLoadedField = "isLib${moduleName.capitalized()}Loaded"
+        val isLibLoadedField = loadFieldName(context)
 
-        builder.append($$"""
-            import com.huskerdev.nativekt.jvm.*
+        appendLine($$"""
             
             
             private var _$$isLibLoadedField = false
@@ -76,154 +100,126 @@ class KotlinJvmPrinter(
                 get() = _$$isLibLoadedField
             
             @Throws(UnsupportedOperationException::class)
-            $${actual}fun $${syncLoadFunctionName(moduleName)}() {
+            $${actual}fun $${syncLoadFunctionName(context)}() {
                 if(_$$isLibLoadedField) return
                 _$$isLibLoadedField = true
                 
-                val libraryPath = NativeKtUtils.resolveLibraryFile("$$moduleName", $$useUniversalMacOSLib)
-
+                val libraryPath = NativeKtUtils.resolveLibraryFile("$$moduleName", $${extension.useUniversalMacOSLib})
 
         """.trimIndent())
 
-        builder.append(invokerChooser("    "))
+        append(when {
+            useForeignApi && useJNI -> """
+                $implFieldName = when(NativeKtUtils.getInvoker()) {
+                    NativeKtUtils.Invoker.FOREIGN -> $foreignInvokerName(libraryPath)
+                    NativeKtUtils.Invoker.JNI     -> $jniInvokerName(libraryPath)
+                }
+            """.replaceIndent("\t")
+            useJNI -> "\t$implFieldName = $jniInvokerName(libraryPath)"
+            useForeignApi -> "\t$implFieldName = $foreignInvokerName(libraryPath)"
+            else -> ""
+        })
         if(useJVMCI) {
             if(useJNI || useForeignApi) {
-                builder.append("""
+                append("""
                 
                     if(NativeKtUtils.isJVMCIAvailable()) 
-                        $implName = ${moduleName.capitalized()}JVMCI(libraryPath, $implName!!)
+                        $implFieldName = $jvmciInvokerName($implFieldName)
                 """.replaceIndent("\t"))
-            } else {
-                builder.append("""
-                    $implName = ${moduleName.capitalized()}JVMCI(libraryPath)
-                """.replaceIndent("\t"))
-            }
+            } else
+                append("\t$implFieldName = $jvmciInvokerName(libraryPath)")
         }
-        builder.append("""
+        appendLine("""
             
             }
             
-            ${actual}fun ${asyncLoadFunctionName(moduleName)}(onReady: () -> Unit) {
-                ${syncLoadFunctionName(moduleName)}()
+            ${actual}fun ${asyncLoadFunctionName(context)}(onReady: () -> Unit) {
+                ${syncLoadFunctionName(context)}()
                 onReady()
             }
-            
         """.trimIndent())
 
-        if(useCoroutines) builder.append("""
+        if(context.extension.useCoroutines) appendLine("""
             
-            ${actual}suspend fun ${asyncLoadFunctionName(moduleName)}() =
-                ${syncLoadFunctionName(moduleName)}()
-            
+            ${actual}suspend fun ${asyncLoadFunctionName(context)}() =
+                ${syncLoadFunctionName(context)}()
         """.trimIndent())
-
-        if(idl.interfaces.isNotEmpty()) {
-            printLabel(builder, "Interfaces")
-            idl.interfaces.values.forEach {
-                printJvmInterface(builder, it)
-            }
-        }
-
-        // Functions
-        printLabel(builder, "Functions")
-        idl.allOperators().forEach { printFunctionProxy(builder, it) }
-
-        // Implementation
-        printLabel(builder, "Implementation")
-        builder.append("""
-            
-            private var $implName: $nativeInvoker? = null
-            
-            private sealed interface $nativeInvoker {
-                fun _address(name: String): Long
-                
-        """.trimIndent())
-
-        idl.allOperators().forEach {
-            val isInterfaceConstructor = it.isInterfaceOperationConstructor()
-
-            builder.append("\n\t")
-            builder.append(functionHeader(it,
-                printType = !isInterfaceConstructor
-            ))
-            if(isInterfaceConstructor)
-                builder.append(": Long")
-        }
-        builder.append("\n}")
-
-        // JNI
-        if(useJNI) {
-            builder.append("\n\n")
-            KotlinJvmJniPrinter(
-                idl, builder,
-                name = "${moduleName.capitalized()}JNI",
-                parentClass = nativeInvoker,
-                isAndroid = false,
-                isAndroidCriticalEnabled = false
-            )
-        }
-
-        // Foreign
-        if(useForeignApi) {
-            builder.append("\n\n")
-            KotlinJvmForeignPrinter(
-                idl, builder,
-                classPath = classPath,
-                moduleName = moduleName,
-                name = "${moduleName.capitalized()}Foreign",
-                parentClass = nativeInvoker,
-            )
-        }
-
-        // JVMCI
-        if(useJVMCI) {
-            builder.append("\n\n")
-            KotlinJvmCIPrinter(
-                idl, builder,
-                implementFields = !useJNI && !useForeignApi,
-                classPath = classPath,
-                moduleName = moduleName,
-                name = "${moduleName.capitalized()}JVMCI",
-                parentClass = nativeInvoker,
-            )
-        }
-
-        target.parentFile.mkdirs()
-        target.writeText(builder.toString())
     }
 
-    private fun printFunctionProxy(
-        builder: StringBuilder,
-        function: ResolvedIdlOperation
-    ) = builder.apply {
-        val isInterfaceFunction = function.isInterfaceOperation()
-        val isInterfaceConstructor = function.isInterfaceOperationConstructor()
+    private fun StringBuilder.printInvokerInterface() {
+        printLabel("Implementation")
 
-        append('\n')
-        printFunctionHeader(builder, function,
-            name = function.kname,
-            printType = !isInterfaceConstructor,
-            isActual = expectActual && !isInterfaceFunction,
-            isPrivate = isInterfaceFunction,
-            forcePrintVoid = true
-        )
-        if(isInterfaceConstructor)
-            append(": Long")
-        append(" = \n\t$implName!!.${function.kname}")
-        function.args.joinTo(this, prefix = "(", postfix = ")\n") { it.kname }
+        appendLine("""
+            
+            private lateinit var $implFieldName: $commonInvokerName
+            
+            private sealed interface $commonInvokerName {
+                fun _address(name: String): Long
+        """.trimIndent())
+
+        context.allOperations.forEach { function ->
+            val type = when {
+                function.type.isVoid() -> ""
+                function.isInterfaceOperationConstructor() || function.isInterfaceOperationClone() -> ": Long"
+                else -> ": ${function.type.toKotlinType()}"
+            }
+
+            val args = function.args.mapIndexed { i, it ->
+                if(i == 0 && function.isInterfaceOperation() && !function.isInterfaceOperationConstructor())
+                    "${it.kname}: Long"
+                else "${it.kname}: ${it.type.toKotlinType()}"
+            }.joinToString()
+
+            append("\n\tfun ${function.kname}($args)$type")
+        }
+        append("\n}")
+    }
+
+    private fun StringBuilder.printFunctions() {
+        if(context.allOperations.isEmpty())
+            return
+        printLabel("Functions")
+
+        context.allOperations.forEach { function ->
+            val isInterfaceFunction = function.isInterfaceOperation()
+
+            val actual = if(expectActual && !isInterfaceFunction) "actual " else ""
+            val private = if(isInterfaceFunction) "private " else ""
+
+            val args = function.args.mapIndexed { i, it ->
+                if(i == 0 && function.isInterfaceOperation() && !function.isInterfaceOperationConstructor())
+                    "${it.kname}: Long"
+                else "${it.kname}: ${it.type.toKotlinType()}"
+            }.joinToString()
+            val argNames = function.args.joinToString { it.kname }
+
+            append("""
+                
+                $actual${private}fun ${function.kname}($args) = $implFieldName.${function.kname}($argNames)
+            """.trimIndent())
+        }
+        append("\n")
     }
 }
 
-internal fun printJvmInterface(builder: StringBuilder, inter: ResolvedIdlInterface) = builder.apply {
+internal fun StringBuilder.printJvmInterfaces(context: NativeModuleContext) {
+    if(!context.hasInterfaces)
+        return
+    printLabel("Interfaces")
+
+    context.usedInterfaces.forEach(::printJvmInterface)
+}
+
+internal fun StringBuilder.printJvmInterface(inter: ResolvedIdlInterface) {
     val name = inter.kname
-    append("""
-            
-            actual class $name(_ptr: Long): NativeKtResourceJvm(_ptr) {
-                companion object {
-                    @JvmStatic fun _wrap(ptr: Long): $name? = 
-                        if(ptr == 0L) null else $name(ptr)
-                }
-        """.trimIndent())
+
+    appendLine("""
+        
+        actual class $name(m: Unit, ptr: Long): NativeKtRcObject(ptr, ::_interface${name}Free) {
+            @Suppress("unused")
+            private val cleaner = createCleaner(this, releaser) { it.release() }
+            override fun _address(): Long = _interface${name}Address(rcPtr)
+    """.trimIndent())
 
     inter.toOperations().forEach { operation ->
         val args = operation.args.map {
@@ -231,21 +227,18 @@ internal fun printJvmInterface(builder: StringBuilder, inter: ResolvedIdlInterfa
         }
         val argNames = operation.args.map { it.kname }
 
-        append("\n\t")
         append(when {
             operation.isInterfaceOperationConstructor() ->
-                "actual constructor(${args.joinToString()}): this(${operation.kname}(${argNames.joinToString()}))"
+                "\n\tactual constructor(${args.joinToString()}): this(Unit, ${operation.kname}(${argNames.joinToString()}))"
             operation.isInterfaceOperationFn() -> {
                 val name = operation.interfaceFunctionName()
                 val args = args.drop(1).joinToString()
                 val argNames = argNames.toMutableList()
-                    .apply { set(0, "this") }
+                    .apply { set(0, "rcPtr") }
                     .joinToString()
-                "actual fun $name($args) = ${operation.kname}($argNames)"
+                "\n\tactual fun $name($args) = ${operation.kname}($argNames)"
             }
-            operation.isInterfaceOperationFree() ->
-                "override fun _close() = ${operation.kname}(this)"
-            else -> throw UnsupportedOperationException()
+            else -> return@forEach
         })
     }
     append("\n}\n")

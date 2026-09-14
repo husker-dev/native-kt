@@ -1,120 +1,66 @@
 package com.huskerdev.nativekt.utils
 
-import com.huskerdev.nativekt.NDLEnv
+import com.huskerdev.nativekt.NativeModuleContext
+import com.huskerdev.nativekt.NdlEnv
 import com.huskerdev.nativekt.TargetType
-import com.huskerdev.nativekt.plugin.BuildSystem
+import com.huskerdev.nativekt.plugin.DebugKind
 import com.huskerdev.nativekt.plugin.NativeProject
+import com.huskerdev.osutils.Arch
+import com.huskerdev.osutils.OS
 import com.huskerdev.webidl.WebIDL
 import com.huskerdev.webidl.jvm.iterator
 import com.huskerdev.webidl.resolver.*
 import com.huskerdev.webidl.resolver.WebIDLBuiltinKind.*
-import org.apache.tools.ant.taskdefs.condition.Os
-import org.gradle.api.Project
-import org.gradle.api.tasks.TaskProvider
+import org.gradle.api.Task
 import org.gradle.process.ExecOperations
 import java.io.File
 import java.io.OutputStream
 
-enum class Arch {
-    X86,
-    X64,
-    ARM32,
-    ARM64,
-    RISCV32,
-    RISCV64,
-    UNKNOWN
-    ;
-    companion object {
-        @JvmStatic fun current() = System.getProperty("os.arch").lowercase().run {
-            when {
-                matches("^(x8632|x86|i[3-6]86|ia32|x32)$".toRegex()) -> X86
-                matches("^(x8664|amd64|ia32e|em64t|x64)$".toRegex()) -> X64
-                matches("^(arm|arm32)$".toRegex()) -> ARM32
-                equals("aarch64") -> ARM64
-                matches("^(riscv|riscv32)$".toRegex()) -> RISCV32
-                equals("riscv64") -> RISCV64
-                else -> UNKNOWN
-            }
-        }
-    }
-}
 
 val File.posixPath: String
     get() = absolutePath.replace("\\", "/")
 
-fun NativeProject.dir(project: Project): File =
-    projectDir ?: project.file("natives/$name")
-
-fun NativeProject.getNDLFile(project: Project): File =
-    ndlFile ?: File(dir(project), "api.ndl")
-
-fun NativeProject.getHeaderFile(project: Project): File {
-    val buildSystem = buildSystem as? BuildSystem.CMake
-        ?: throw UnsupportedOperationException("Not CMake module")
-
-    val dir = buildSystem.headerDir
-        ?: File(dir(project), "include")
-    val extension = buildSystem.language.headerExtension
-
-    return File(dir, "${buildSystem.headerFileName}.$extension")
+fun NativeProject.idl() = ndlFile().reader().use {
+    WebIDL.resolve(
+        iterable = it.iterator(),
+        env = NdlEnv()
+    )
 }
 
-fun NativeProject.getApiRsFile(project: Project): File =
-    (buildSystem as BuildSystem.Cargo).apiRsFile
-        ?: File(dir(project), "src/nativekt.rs")
-
-fun NativeProject.idl(project: Project) = WebIDL.resolve(
-    iterable = getNDLFile(project).reader().iterator(),
-    env = NDLEnv()
-)
-
-fun TaskProvider<*>.dependsOnReload() {
+fun Task.dependsOnProjectReload() {
     // Invoke task when reloading using IDEA
-    get().project.rootProject.tasks
+    project.rootProject.tasks
         .matching { it.name == "prepareKotlinBuildScriptModel" }
         .configureEach {
-            dependsOn(this@dependsOnReload)
+            dependsOn(this@dependsOnProjectReload)
         }
 }
 
-internal fun locate(execOps: ExecOperations, binary: String): File? {
+internal fun locate(execOps: ExecOperations, context: NativeModuleContext, binary: String): File? {
     return try {
-        File(
-            execOps.exec(
-                when {
-                    Os.isFamily(Os.FAMILY_WINDOWS) -> "where $binary"
-                    else -> "which $binary"
-                },
-                silent = true
-            )
-        ).run { if (exists()) this else null }
+        File(execOps.exec(context,
+            command = when(OS.current) {
+                OS.WINDOWS -> "where $binary"
+                else -> "which $binary"
+            },
+            silent = true
+        )).run { if (exists()) this else null }
     } catch (_: Throwable) {
         null
     }
 }
 
-
-fun ExecOperations.execWithArgsFile(
-    command: String,
-    args: File,
-    workingDir: File? = null,
-    silent: Boolean = false,
-    errAsStd: Boolean = false
-): String {
-    val filePath = args.posixPath
-    val toExec = when {
-        Os.isFamily(Os.FAMILY_WINDOWS) -> "$command @$filePath"
-        else -> "$command $(cat $filePath)"
-    }
-    return exec(toExec, workingDir, silent, errAsStd)
-}
-
 fun ExecOperations.exec(
+    context: NativeModuleContext,
     command: String,
     workingDir: File? = null,
     silent: Boolean = false,
-    errAsStd: Boolean = false
+    errAsStd: Boolean = false,
+    env: Map<String, String>? = null
 ): String {
+    if(DebugKind.PRINT_EXEC in context.debug)
+        println("[nativekt] $command\n    at: ${workingDir?.absolutePath ?: File("./").absolutePath}")
+
     class StringOutputStream(
         private val delegate: OutputStream,
         private val string: StringBuilder = StringBuilder()
@@ -134,28 +80,39 @@ fun ExecOperations.exec(
         if(workingDir != null)
             this.workingDir = workingDir
 
-        if(!Os.isFamily(Os.FAMILY_WINDOWS))
-            commandLine("/bin/bash", "-c", command)
-        else
+        if(OS.current == OS.WINDOWS)
             commandLine("cmd.exe", "/c", command)
+        else
+            commandLine("/bin/bash", "-c", command)
 
         standardOutput = stdOut
         errorOutput = if(errAsStd) stdOut else errOut
+        env?.forEach(environment::put)
     }.run {
         if(exitValue != 0)
-            throw Exception("Failed to execute command (code=${exitValue}): \n$command\nError:\n${if(errAsStd) stdOut else errOut}")
+            throw Exception(buildString {
+                appendLine("Failed to execute command (code=${exitValue}): ")
+                appendLine(command)
+                if(env != null) {
+                    append("Environment:")
+                    env.forEach { (key, value) -> append("\n   $key = $value") }
+                    append("\n")
+                }
+                appendLine("Error:")
+                append(if(errAsStd) stdOut else errOut)
+            })
         stdOut.toString().trim()
     }
 }
 
-fun currentTargetType(): TargetType = when {
-    Os.isFamily(Os.FAMILY_WINDOWS) -> TargetType.MINGW_X64
-    Os.isFamily(Os.FAMILY_MAC) -> when {
-        Os.isArch("aarch64") -> TargetType.MACOS_ARM64
+fun currentTargetType(): TargetType = when(OS.current) {
+    OS.WINDOWS -> TargetType.MINGW_X64
+    OS.MACOS -> when(Arch.current) {
+        Arch.ARM64 -> TargetType.MACOS_ARM64
         else -> TargetType.MACOS_X64
     }
-    Os.isFamily(Os.FAMILY_UNIX) -> when {
-        Os.isArch("aarch64") -> TargetType.LINUX_ARM64
+    OS.LINUX -> when(Arch.current) {
+        Arch.ARM64 -> TargetType.LINUX_ARM64
         else -> TargetType.LINUX_X64
     }
     else -> throw UnsupportedOperationException()
@@ -250,12 +207,24 @@ fun validateIDL(idl: IdlResolver) {
 
     idl.enums.values.forEach { enum ->
         checkName(enum.name)
+        if(enum.elements.isEmpty())
+            throw UnsupportedOperationException("Use of empty enum '${enum.name}'")
         enum.elements.forEach { checkName(it) }
     }
 
-    idl.globalOperators().forEach { operation ->
+    idl.allOperations().forEach { operation ->
+        val isInterfaceConstructor = operation.isInterfaceOperationConstructor()
+        val isInterfaceOperation = operation.isInterfaceOperation()
+
+        if(operation.isCritical() && !operation.isCriticalCapable())
+            throw UnsupportedOperationException("Operation '${operation.name}' is not critical capable")
+
         checkType(operation.type)
         checkName(operation.name)
-        operation.args.forEach { checkField(it) }
+        operation.args.forEachIndexed { i, it ->
+            if(i == 0 && isInterfaceOperation && !isInterfaceConstructor)
+                return@forEach
+            checkField(it)
+        }
     }
 }

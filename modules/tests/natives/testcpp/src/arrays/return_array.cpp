@@ -1,79 +1,110 @@
 #include <api.hpp>
 
-KCharArray* return_char_array() {
-    return KCharArray::of({'a', 'b'});
+KArray<uint16_t> return_char_array() {
+    return KArray<uint16_t> {
+        'a', 'b'
+    };
 }
 
-KCharArray* return_char_array_n() {
-    return nullptr;
+KOptional<KArray<uint16_t>> return_char_array_n() {
+    return KOptional<KArray<uint16_t>>();
 }
 
-KBooleanArray* return_boolean_array() {
-    return KBooleanArray::of({true, false});
+KArray<bool> return_boolean_array() {
+    return KArray {
+        true, false
+    };
 }
 
-KByteArray* return_byte_array() {
-    return KByteArray::of({1, 2});
+KArray<int8_t> return_byte_array() {
+    return KArray<int8_t> {
+        1, 2
+    };
 }
 
-KUByteArray* return_ubyte_array() {
-    return KUByteArray::of({1, 255u});
+KArray<uint8_t> return_ubyte_array() {
+    return KArray<uint8_t> {
+        1u, 255u
+    };
 }
 
-KShortArray* return_short_array() {
-    return KShortArray::of({1, 2});
+KArray<int16_t> return_short_array() {
+    return KArray<int16_t> {
+        1, 2
+    };
 }
 
-KUShortArray* return_ushort_array() {
-    return KUShortArray::of({1, 65535u});
+KArray<uint16_t> return_ushort_array() {
+    return KArray<uint16_t> {
+        1u, 65535u
+    };
 }
 
-KIntArray* return_int_array() {
-    return KIntArray::of({1, 2});
+KArray<int32_t> return_int_array() {
+    return KArray {
+        1, 2
+    };
 }
 
-KUIntArray* return_uint_array() {
-    return KUIntArray::of({1, 4294967295u});
+KArray<uint32_t> return_uint_array() {
+    return KArray {
+        1u, 4294967295u
+    };
 }
 
-KLongArray* return_long_array() {
-    return KLongArray::of({1, 2});
+KArray<int64_t> return_long_array() {
+    return KArray<int64_t> {
+        1, 2
+    };
 }
 
-KULongArray* return_ulong_array() {
-    return KULongArray::of({1, 18446744073709551615u});
+KArray<uint64_t> return_ulong_array() {
+    return KArray<uint64_t> {
+        1u, 18446744073709551615u
+    };
 }
 
-KFloatArray* return_float_array() {
-    return KFloatArray::of({1.1f, 2.2f});
+KArray<float> return_float_array() {
+    return KArray {
+        1.1f, 2.2f
+    };
 }
 
-KDoubleArray* return_double_array() {
-    return KDoubleArray::of({1.1, 2.2});
+KArray<double> return_double_array() {
+    return KArray {
+        1.1, 2.2
+    };
 }
 
-KArray* return_string_array() {
-    return KArray::of({
-        new KString("string1", 7, 7, false),
-        new KString("string2", 7, 7, false)
-    });
+KArray<KString> return_string_array() {
+    return KArray {
+        KString("string1"), KString("string2")
+    };
 }
 
-KArray* return_string_array_n() {
-    return KArray::of({nullptr, nullptr});
+KArray<KOptional<KString>> return_string_array_n() {
+    return KArray {
+        KOptional<KString>(),
+        KOptional<KString>()
+    };
 }
 
-KIntArray* return_enum_array() {
-    return KIntArray::of({CASE1, CASE2});
+KArray<MyEnum> return_enum_array() {
+    return KArray {
+        CASE1, CASE2
+    };
 }
 
-KArray* return_dictionary_array() {
-    return KArray::of({
-        new MyDictionary(1, 2, 3, 4),
-        new MyDictionary(5, 6, 7, 8)
-    });
+KArray<MyDictionary> return_dictionary_array() {
+    return KArray {
+        MyDictionary(1, 2, 3, 4),
+        MyDictionary(5, 6, 7, 8)
+    };
 }
 
-KArray* return_dictionary_array_n() {
-    return KArray::of({nullptr, nullptr});
+KArray<KOptional<MyDictionary>> return_dictionary_array_n() {
+    return KArray {
+        KOptional<MyDictionary>(),
+        KOptional<MyDictionary>()
+    };
 }

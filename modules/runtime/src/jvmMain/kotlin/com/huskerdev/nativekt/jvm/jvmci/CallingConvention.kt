@@ -2,8 +2,8 @@
 
 package com.huskerdev.nativekt.jvm.jvmci
 
-import com.huskerdev.nativekt.Arch
-import com.huskerdev.nativekt.OS
+import com.huskerdev.osutils.Arch
+import com.huskerdev.osutils.OS
 import com.huskerdev.nativekt.jvm.jvmci.conventions.AMD64LinuxCallingConvention
 import com.huskerdev.nativekt.jvm.jvmci.conventions.AMD64WindowsCallingConvention
 import com.huskerdev.nativekt.jvm.jvmci.conventions.ARM64CallingConvention
@@ -50,9 +50,9 @@ abstract class CallingConvention {
 
         val current: CallingConvention = when (Arch.current) {
             Arch.ARM64 -> ARM64CallingConvention()
-            Arch.X64 -> when {
-                OS.current() == OS.WINDOWS -> AMD64WindowsCallingConvention()
-                OS.current() == OS.LINUX -> AMD64LinuxCallingConvention()
+            Arch.X64 -> when (OS.current) {
+                OS.WINDOWS -> AMD64WindowsCallingConvention()
+                OS.LINUX -> AMD64LinuxCallingConvention()
                 else -> throw UnsupportedOperationException("Unsupported OS")
             }
             else -> throw UnsupportedOperationException("Unsupported CPU architecture")

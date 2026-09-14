@@ -1,12 +1,24 @@
+import gobley.gradle.GobleyHost
+import gobley.gradle.cargo.dsl.jvm
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlinx.benchmark)
+    alias(libs.plugins.kotlin.atomicfu)
 
     id("com.huskerdev.native-kt")
+
+    alias(libs.plugins.gobley.cargo)
+    alias(libs.plugins.gobley.uniffy)
 }
 
 group = "com.huskerdev"
-version = projectDir.parentFile.parentFile.resolve("VERSION").readText()
+version = projectDir.parentFile.parentFile.resolve("VERSION").readText().trim()
+
+val boltFfiJar = tasks.register<BoltFFIJar>("generateBoltFffiJni") {
+    description = "Generates BoltFFI JNI bindings"
+    projectDir = file("natives/boltFFI")
+}
 
 kotlin {
     jvmToolchain {
@@ -15,9 +27,17 @@ kotlin {
     }
     jvm()
 
-    sourceSets.commonMain.dependencies {
-        implementation(libs.kotlinx.benchmark)
-        implementation(project(":modules:runtime"))
+    sourceSets {
+        commonMain.dependencies {
+            implementation(libs.kotlinx.benchmark)
+            implementation(project(":modules:runtime"))
+        }
+        jvmMain {
+            java.sourceSets.getByName("jvmMain").apply {
+                java.srcDirs(boltFfiJar.flatMap { it.sourcesDir })
+                resources.srcDir(boltFfiJar.flatMap { it.resourcesDir })
+            }
+        }
     }
 }
 
@@ -25,9 +45,29 @@ natives {
     applyRuntime = false
     useCoroutines = false
 
-    create("jniBindings")
-    create("foreignBindings")
-    create("jvmciBindings")
+    create("jniBindings") {
+        cargo()
+    }
+    create("foreignBindings") {
+        cargo()
+    }
+    create("jvmciBindings") {
+        cargo()
+    }
+}
+
+cargo {
+    packageDirectory = layout.projectDirectory.dir("natives/gobley")
+    builds.jvm {
+        embedRustLibrary = (rustTarget == GobleyHost.current.rustTarget)
+    }
+}
+uniffi {
+    generateFromLibrary {
+        namespace = "gobley"
+        packageName = "com.huskerdev"
+    }
+    generateDuringSync = false
 }
 
 benchmark {

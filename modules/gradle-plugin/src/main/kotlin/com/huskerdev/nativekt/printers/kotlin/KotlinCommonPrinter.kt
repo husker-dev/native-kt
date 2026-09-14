@@ -1,233 +1,231 @@
 package com.huskerdev.nativekt.printers.kotlin
 
-import com.huskerdev.nativekt.utils.allFields
-import com.huskerdev.nativekt.utils.asyncLoadFunctionName
-import com.huskerdev.nativekt.utils.camelCase
-import com.huskerdev.nativekt.utils.globalOperators
-import com.huskerdev.nativekt.utils.isArray
-import com.huskerdev.nativekt.utils.printFunctionHeader
-import com.huskerdev.nativekt.utils.printLabel
-import com.huskerdev.nativekt.utils.syncLoadFunctionName
-import com.huskerdev.nativekt.utils.toKotlinType
-import com.huskerdev.nativekt.utils.upperCamelCase
-import com.huskerdev.webidl.resolver.IdlResolver
-import com.huskerdev.webidl.resolver.ResolvedIdlCallbackFunction
-import com.huskerdev.webidl.resolver.ResolvedIdlDictionary
-import com.huskerdev.webidl.resolver.ResolvedIdlEnum
+import com.huskerdev.nativekt.NativeModuleContext
+import com.huskerdev.nativekt.plugin.NativeKtJvmInterface
+import com.huskerdev.nativekt.utils.*
 import com.huskerdev.webidl.resolver.ResolvedIdlField
-import com.huskerdev.webidl.resolver.ResolvedIdlInterface
-import com.huskerdev.webidl.resolver.ResolvedIdlType
-import org.gradle.internal.extensions.stdlib.capitalized
 import java.io.File
 
 class KotlinCommonPrinter(
-    idl: IdlResolver,
-    target: File,
-    classPath: String,
-    moduleName: String,
-    useCoroutines: Boolean,
-    val useJvmRecord: Boolean
+    val context: NativeModuleContext,
+    target: File
 ) {
     init {
-        val builder = StringBuilder()
+        target.parentFile.mkdirs()
+        target.writeText(buildString {
+            printHeader()
+            printEnums()
+            printDictionaries()
+            printInterface()
+            printCallbacks()
+            printOperations()
+        })
+    }
 
-        builder.append("""
+    private fun StringBuilder.printHeader() {
+        append("""
             @file:OptIn(ExperimentalUnsignedTypes::class)
             
-            package $classPath
+            package ${context.classPath}
             
             /**
-             * Initializes the native library `${moduleName}` synchronously.
+             * Initializes the native library `${context.moduleName}` synchronously.
              * @throws UnsupportedOperationException When called in Kotlin/JS
              */
             @Throws(UnsupportedOperationException::class)
-            expect fun ${syncLoadFunctionName(moduleName)}()
+            expect fun ${syncLoadFunctionName(context)}()
             
             /**
-             * Initializes the native library `${moduleName}` asynchronously.
+             * Initializes the native library `${context.moduleName}` asynchronously.
              * @param onReady Invoked when the native library is loaded.
              */
-            expect fun ${asyncLoadFunctionName(moduleName)}(onReady: () -> Unit)
+            expect fun ${asyncLoadFunctionName(context)}(onReady: () -> Unit)
             
         """.trimIndent())
-        if(useCoroutines)
-            builder.append("""
-                
-                /**
-                 * Initializes the native library `${moduleName}` asynchronously.
-                 */
-                expect suspend fun ${asyncLoadFunctionName(moduleName)}()
-                
-            """.trimIndent())
-
-        builder.append("""
+        if(context.extension.useCoroutines) append("""
             
             /**
-             * Indicates when library `${moduleName}` is loaded
+             * Initializes the native library `${context.moduleName}` asynchronously.
              */
-            expect val isLib${moduleName.capitalized()}Loaded: Boolean
+            expect suspend fun ${asyncLoadFunctionName(context)}()
             
         """.trimIndent())
 
-        if(idl.enums.isNotEmpty()) {
-            printLabel(builder, "Enums")
-            idl.enums.values.forEach { printEnum(builder, it) }
-        }
-
-        if(idl.dictionaries.isNotEmpty()) {
-            printLabel(builder, "Dictionaries")
-            idl.dictionaries.values.forEach { printDictionary(builder, it) }
-        }
-
-        if(idl.interfaces.isNotEmpty()) {
-            printLabel(builder, "Interfaces")
-            idl.interfaces.values.forEach { printInterface(builder, it) }
-        }
-
-        if(idl.callbacks.isNotEmpty()) {
-            printLabel(builder, "Callbacks")
-            val maxLength = idl.callbacks.values.maxOf { it.name.length }
-
-            idl.callbacks.values.forEach { printCallback(builder, maxLength, it) }
-            builder.append("\n")
-        }
-
-        printLabel(builder, "Functions")
-        idl.globalOperators().forEach {
-            builder.append("\n")
-            printFunctionHeader(builder, it, isExpect = true)
-        }
-
-        target.parentFile.mkdirs()
-        target.writeText(builder.toString())
+        append("""
+            
+            /**
+             * Indicates when library `${context.moduleName}` is loaded
+             */
+            expect val ${loadFieldName(context)}: Boolean
+            
+        """.trimIndent())
     }
 
-    private fun printCallback(builder: StringBuilder, maxLength: Int, callbackFunction: ResolvedIdlCallbackFunction) = builder.apply {
-        append("\nfun interface ")
-        append(callbackFunction.name.upperCamelCase())
-        append(" ".repeat(maxLength - callbackFunction.name.upperCamelCase().length))
-        append(" { operator fun invoke(")
+    private fun StringBuilder.printOperations() {
+        if(context.globalOperations.isEmpty())
+            return
 
-        callbackFunction.args.joinTo(builder) {
-            "${it.name.camelCase()}: ${it.type.toKotlinType()}"
+        printLabel("Functions")
+        context.globalOperations.forEach {
+            append("\n")
+            printFunctionHeader(this, it, isExpect = true)
         }
-        append(")")
-        if(callbackFunction.type !is ResolvedIdlType.Void) {
-            append(": ")
-            append(callbackFunction.type.toKotlinType())
-        }
-        append(" }")
     }
 
-    private fun printEnum(builder: StringBuilder, enum: ResolvedIdlEnum) = builder.apply {
-        append("\nenum class ")
-        append(enum.name.upperCamelCase())
-        append(" {\n\t")
+    private fun StringBuilder.printCallbacks() {
+        if(context.callbacks.isEmpty())
+            return
 
-        enum.elements.joinTo(builder, separator = ",\n\t")
+        printLabel("Callbacks")
+        val maxLength = context.callbacks.maxOf { it.kname.length }
 
-        append("\n}\n")
-    }
-
-    private fun printInterface(builder: StringBuilder, inter: ResolvedIdlInterface) = builder.apply {
-        append("\nexpect class ")
-        append(inter.name.upperCamelCase())
-
-        listOfNotNull(
-            inter.implements?.name?.upperCamelCase(),
-            "AutoCloseable"
-        ).joinTo(this, prefix = ": ", postfix = " {")
-
-        if(inter.constructors.size == 1) {
-            append("\n\tconstructor(")
-            inter.constructors[0].args.joinTo(this) {
-                "${it.name.camelCase()}: ${it.type.toKotlinType()}"
+        context.callbacks.forEach { callback ->
+            val name = callback.kname
+            val spaces = " ".repeat(maxLength - name.length)
+            val args = callback.args.joinToString {
+                "${it.kname}: ${it.type.toKotlinType()}"
             }
-            append(")")
+            val type = if(!callback.type.isVoid())
+                ": ${callback.type.toKotlinType()}"
+            else ""
+
+            append("\nfun interface $name$spaces { operator fun invoke($args)$type }")
         }
-        inter.operations.forEach { operation ->
-            append("\n\tfun ${operation.name.camelCase()}(")
-            operation.args.joinTo(this) {
-                "${it.name.camelCase()}: ${it.type.toKotlinType()}"
-            }
-            append(")")
-        }
-        append("\n\toverride fun close()")
-        append("\n}\n")
+        append("\n")
     }
 
-    private fun printDictionary(builder: StringBuilder, dictionary: ResolvedIdlDictionary) = builder.apply {
-        append("\ninterface ")
-        append(dictionary.name.upperCamelCase())
-        if(dictionary.implements != null)
-            append(": ").append(dictionary.implements!!.name.upperCamelCase())
-        append(" {\n\t")
+    private fun StringBuilder.printEnums() {
+        if(context.enums.isEmpty())
+            return
 
-        // Interface fields
-        dictionary.fields.joinTo(builder, separator = "\n\t") { field ->
-            "val ${field.name.camelCase()}: ${field.type.toKotlinType()}"
+        printLabel("Enums")
+        context.enums.forEach { enum ->
+            append("\nenum class ${enum.kname} {")
+            enum.elements.joinTo(this, separator = ",") { "\n\t$it" }
+            append("\n}\n")
         }
+    }
 
-        // Companion
-        append("\n\n\tcompanion object {\n\t\t")
-        append("@kotlin.jvm.JvmStatic\n\t\t")
-        append("@kotlin.jvm.JvmName(\"of\")\n\t\t")
-        append("operator fun invoke(")
-        dictionary.allFields().joinTo(builder) { field ->
-            "${field.name.camelCase()}: ${field.type.toKotlinType()}"
+    private fun StringBuilder.printInterface() {
+        if(context.interfaces.isEmpty())
+            return
+
+        printLabel("Interfaces")
+        context.interfaces.forEach { inter ->
+            append("\nexpect class ${inter.kname}")
+
+            listOfNotNull(
+                inter.implements?.kname,
+                "AutoCloseable"
+            ).joinTo(this, prefix = ": ", postfix = " {")
+
+            inter.constructors.forEach { constructor ->
+                append("\n\tconstructor(")
+                constructor.args.joinTo(this) {
+                    "${it.kname}: ${it.type.toKotlinType()}"
+                }
+                append(")")
+            }
+            inter.operations.forEach { operation ->
+                append("\n\tfun ${operation.kname}(")
+                operation.args.joinTo(this) {
+                    "${it.kname}: ${it.type.toKotlinType()}"
+                }
+                append(")")
+                if (!operation.type.isVoid())
+                    append(": ${operation.type.toKotlinType()}")
+            }
+            append("\n\toverride fun close()")
+            append("\n}\n")
         }
-        append("): ")
-        append(dictionary.name.upperCamelCase())
-        append(" =\n\t\t\t")
-        append("Impl(")
-        dictionary.allFields().joinTo(builder) { it.name.camelCase() }
-        append(")")
-        append("\n\t}\n")
+    }
 
-        // Impl (data class)
-        if(useJvmRecord)
-            append("\n\t@kotlin.jvm.JvmRecord")
-        append("\n\tdata class Impl(\n\t\t")
-        dictionary.allFields().joinTo(builder, separator = ",\n\t\t") { field ->
-            "override val ${field.name.camelCase()}: ${field.type.toKotlinType()}"
-        }
-        append("\n\t): ")
-        append(dictionary.name.upperCamelCase())
+    private fun StringBuilder.printDictionaries() {
+        if(context.dictionaries.isEmpty())
+            return
 
-        if(dictionary.allFields().any { it.type.isArray() }) {
-            append(" {\n")
-            // equals
+        printLabel("Dictionaries")
+        context.dictionaries.forEach { dictionary ->
+            val name = dictionary.kname
+            val parent = if (dictionary.implements != null)
+                ": ${dictionary.implements!!.kname}"
+            else ""
+
+            val fields = dictionary.allFields()
+            val args = fields.joinToString {
+                "${it.kname}: ${it.type.toKotlinType()}"
+            }
+            val argNames = fields.joinToString { it.kname }
+
+            // Print
+
+            append("\ninterface $name$parent {")
+
+            // Interface fields
+            dictionary.fields.joinTo(this, separator = "") {
+                "\n\tval ${it.kname}: ${it.type.toKotlinType()}"
+            }
+
+            // Companion
             append("""
-                override fun equals(other: Any?): Boolean {
-                    if (this === other) return true
-                    if (other == null || other !is Impl) return false
-                    
-            """.replaceIndent("\t\t"))
-            dictionary.allFields().joinTo(builder, separator = "\n\t\t\t") {
-                val name = it.name.camelCase()
-                if(it.type.isArray())
-                    "if (!$name.contentEquals(other.$name)) return false"
-                else "if ($name != other.$name) return false"
-            }
-            append("\n\t\t\treturn true\n\t\t}\n\n")
+                
+                
+                companion object {
+                    @kotlin.jvm.JvmStatic
+                    @kotlin.jvm.JvmName("of")
+                    operator fun invoke($args): ${dictionary.kname} = 
+                        Impl($argNames)
+                }
+            """.replaceIndent("\t"))
 
-            // hashCode
-            fun hashFunc(field: ResolvedIdlField.Declaration) = if(field.type.isArray())
-                "${field.name.camelCase()}.contentHashCode()"
-            else "${field.name.camelCase()}.hashCode()"
+            // Impl (data class)
+            if ((context.extension as? NativeKtJvmInterface)?.useJvmRecord ?: false)
+                append("\n\t@kotlin.jvm.JvmRecord")
 
-            append("""
-                override fun hashCode(): Int {
-                    var result = ${hashFunc(dictionary.allFields()[0])}
-                    
-            """.replaceIndent("\t\t"))
-            dictionary.allFields().drop(1).joinTo(builder, separator = "\n\t\t\t") {
-                "result = 31 * result + ${hashFunc(it)}"
+            if(fields.isNotEmpty()) {
+                append("\n\tdata class Impl(")
+                fields.joinTo(this, separator = ",") { field ->
+                    "\n\t\toverride val ${field.kname}: ${field.type.toKotlinType()}"
+                }
+                append("\n\t): ${dictionary.kname}")
+            } else append("\n\tclass Impl: ${dictionary.kname}")
+
+            if (fields.any { it.type.isArray() }) {
+                fun hashFunc(field: ResolvedIdlField.Declaration) = if (field.type.isArray())
+                    "${field.kname}.contentHashCode()"
+                else "${field.kname}.hashCode()"
+
+                fun equalFunc(field: ResolvedIdlField.Declaration) = if (field.type.isArray())
+                    "if (!${field.kname}.contentEquals(other.${field.kname})) return false"
+                else "if (${field.kname} != other.${field.kname}) return false"
+
+                append(" {\n")
+
+                // equals
+                append("""
+                    override fun equals(other: Any?): Boolean {
+                        if (this === other) return true
+                        if (other == null || other !is Impl) return false
+                        
+                """.replaceIndent("\t\t"))
+                fields.joinTo(this, separator = "") {
+                    "\n\t\t\t${equalFunc(it)}"
+                }
+                append("\n\t\t\treturn true\n\t\t}\n\n")
+
+                // hashCode
+                append("""
+                    override fun hashCode(): Int {
+                        var result = ${hashFunc(fields[0])}
+                """.replaceIndent("\t\t"))
+                fields.drop(1).joinTo(this, separator = "") {
+                    "\n\t\t\tresult = 31 * result + ${hashFunc(it)}"
+                }
+                append("\n\t\t\treturn result\n\t\t}")
+                append("\n\t}")
             }
-            append("\n\t\t\treturn result\n\t\t}")
-            append("\n\t}")
+
+            append("\n}\n")
         }
-
-        append("\n}\n")
     }
 }

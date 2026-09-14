@@ -1,14 +1,11 @@
 package com.huskerdev.nativekt.configurators
 
 import com.android.build.gradle.internal.tasks.factory.dependsOn
-import com.huskerdev.nativekt.plugin.NativeKtCommonInterface
-import com.huskerdev.nativekt.plugin.NativeProject
+import com.huskerdev.nativekt.NativeModuleContext
 import com.huskerdev.nativekt.printers.kotlin.KotlinStubPrinter
-import com.huskerdev.nativekt.utils.dependsOnReload
-import com.huskerdev.nativekt.utils.dir
+import com.huskerdev.nativekt.utils.camelCase
+import com.huskerdev.nativekt.utils.dependsOnProjectReload
 import com.huskerdev.nativekt.utils.fresh
-import com.huskerdev.webidl.resolver.IdlResolver
-import kotlinx.serialization.json.Json
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
@@ -16,41 +13,32 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.TaskProvider
-import org.gradle.internal.extensions.stdlib.capitalized
 import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
 import java.io.File
 
 internal fun configureStub(
     project: Project,
     commonTask: TaskProvider<*>?,
-    extension: NativeKtCommonInterface,
-    idl: IdlResolver,
-    module: NativeProject,
-    sourceSet: KotlinSourceSet,
-    srcRootDir: File
+    context: NativeModuleContext,
+    sourceSet: KotlinSourceSet
 ) {
-    val srcDir = File(srcRootDir, "common")
+    val srcDir = File(context.srcGenDir, "stub")
 
-    val classPathFile = File(srcDir, module.classPath.replace(".", "/"))
+    val classPathFile = File(srcDir, context.classPath.replace(".", "/"))
 
     val prepareTask = project.tasks.register(
-        "prepareNatives${module.name.capitalized()}Common",
+        "prepareNatives${context.moduleName.camelCase()}Stub",
         PrepareNativesStub::class.java
     )
-    prepareTask.get().also {
+    prepareTask.get().let {
         it.srcDir.set(srcDir)
-        it.inputs.dir(module.dir(project))
+        it.inputs.dir(context.module.projectDir)
 
-        it.idl = Json.encodeToString(idl)
-        it.targetFile = File(classPathFile, "${module.name}.stub.kt").absolutePath
-        it.moduleName = module.name
-        it.moduleClasspath = module.classPath
-        it.useCoroutines = extension.useCoroutines
+        it.context = context
+        it.targetFile = File(classPathFile, "${context.moduleName}.kt").absolutePath
     }
-    if(commonTask != null)
-        prepareTask.dependsOn(commonTask)
-    prepareTask.dependsOnReload()
-
+    prepareTask.dependsOn(commonTask)
+    prepareTask.get().dependsOnProjectReload()
     sourceSet.kotlin.srcDir(prepareTask.flatMap { it.srcDir })
 }
 
@@ -58,23 +46,16 @@ private abstract class PrepareNativesStub: DefaultTask() {
     @get:OutputDirectory
     abstract val srcDir: DirectoryProperty
 
-    @get:Input abstract var idl: String
+    @get:Input abstract var context: NativeModuleContext
     @get:Input abstract var targetFile: String
-    @get:Input abstract var moduleName: String
-    @get:Input abstract var moduleClasspath: String
-    @get:Input abstract var useCoroutines: Boolean
 
     @TaskAction
     fun action() {
         srcDir.get().asFile.fresh()
 
-        // Create stub sources
         KotlinStubPrinter(
-            idl = Json.decodeFromString<IdlResolver>(idl),
-            target = File(targetFile),
-            classPath = moduleClasspath,
-            moduleName = moduleName,
-            useCoroutines = useCoroutines
+            context = context,
+            target = File(targetFile)
         )
     }
 }
