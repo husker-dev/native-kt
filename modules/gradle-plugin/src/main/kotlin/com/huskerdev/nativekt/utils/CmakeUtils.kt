@@ -44,7 +44,8 @@ internal fun extractLinkerOpts(
     execOps: ExecOperations,
     context: NativeModuleContext,
     cmakeBuildDir: File,
-    moduleName: String
+    moduleName: String,
+    resolveMingwLibs: Boolean = true
 ): List<String> = buildList {
     // Tip: arguments generates only with executable or shared libraries, so our CMakeLists.txt contains `SHARED` target
 
@@ -64,14 +65,14 @@ internal fun extractLinkerOpts(
     // Collect linker flags from 'linkLibs.rsp' or 'link.txt'
 
     if(linkLibs.exists()) {
-        this += linkLibs.readText()
+        addAll(linkLibs.readText()
             .splitRespectingQuotes()
             .map {
                 if(!it.startsWith("-l") && !File(it).isAbsolute)
                     File(cmakeBuildDir, it).posixPath
                 else it
             }
-            .filter { it !in setOf("-lpthread") }
+            .filter { it !in setOf("-lpthread") })
     } else if(link.exists()) {
         val parts = link.readText()
             .splitRespectingQuotes()
@@ -106,10 +107,10 @@ internal fun extractLinkerOpts(
     val cmakeCacheText = cmakeCache.readLines()
 
     if(cmakeCacheText.any { "_STATIC_LDFLAGS:INTERNAL=" in it && !it.endsWith("=") }) {
-        this += cmakeCacheText
+        addAll(cmakeCacheText
             .filter { "_STATIC_LDFLAGS:INTERNAL=" in it }
             .flatMap { it.split("_STATIC_LDFLAGS:INTERNAL=")[1].split(";") }
-            .toSet().sorted()
+            .toSet().sorted())
         return@buildList
     }
 
@@ -139,12 +140,11 @@ internal fun extractLinkerOpts(
             }
         }
     }
-
+}.run {
     // Try to resolve libraries in MinGW
-    if(OS.current == OS.WINDOWS) {
+    if(OS.current == OS.WINDOWS && resolveMingwLibs)
         normalizeMinGWLibs(execOps, context, this)
-            .forEachIndexed { i, it -> this[i] = it }
-    }
+    else this
 }
 
 fun String.splitRespectingQuotes(): List<String> =

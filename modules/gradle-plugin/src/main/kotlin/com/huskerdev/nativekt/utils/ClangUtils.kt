@@ -179,7 +179,8 @@ internal fun getClangTargetArgs(
             "--unwindlib=libgcc",
             "-stdlib=libstdc++",
             "--sysroot=${konanSysroot("msys2-mingw-w64-x86_64")}",
-            "-target x86_64-w64-mingw32"
+            "-target x86_64-w64-mingw32",
+            "-L${konanSysroot("msys2-mingw-w64-x86_64")}/x86_64-w64-mingw32/lib"
         )
         TargetType.LINUX_X64 -> listOf(
             "--sysroot=${konanSysroot("x86_64-unknown-linux-gnu")}/x86_64-unknown-linux-gnu/sysroot",

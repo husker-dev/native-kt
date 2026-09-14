@@ -254,7 +254,10 @@ private abstract class PrepareNativesKn @Inject constructor(
 
                     // Get linker opts
                     linkerOpts += extractLinkerOpts(execOps, context,
-                        File(nativesBuildSourcesDir, "cmake"), moduleName)
+                        File(nativesBuildSourcesDir, "cmake"),
+                        moduleName,
+                        resolveMingwLibs = false
+                    )
 
                     linkerOpts += nativesBuildOutDir.resolve("liblibstatic_$moduleName.a").posixPath
                 }
@@ -265,7 +268,8 @@ private abstract class PrepareNativesKn @Inject constructor(
                         project = context.module.projectDir,
                         buildType = buildSystem.buildType,
                         buildDir = nativesBuildOutDir,
-                        target = getCargoTarget(targetType)
+                        target = getCargoTarget(targetType),
+                        resolveMingwLibs = false
                     )
                     val rustBuildDir = cargoTargetDir(
                         buildDir = nativesBuildOutDir,

@@ -88,7 +88,8 @@ internal fun cargoLinkerFlags(
     buildDir: File,
     buildType: CargoBuildType,
     target: String = rustcCurrentTaget,
-    env: Map<String, String>? = null
+    env: Map<String, String>? = null,
+    resolveMingwLibs: Boolean = false
 ): List<String> {
     val buildDirClean = buildDir.posixPath
 
@@ -108,7 +109,9 @@ internal fun cargoLinkerFlags(
         ?.splitRespectingQuotes()
         ?: return emptyList()
 
-    return normalizeMinGWLibs(execOps, context, flags)
+    return if(OS.current == OS.WINDOWS && resolveMingwLibs)
+        normalizeMinGWLibs(execOps, context, flags)
+    else flags
 }
 
 internal fun cargoBuild(
