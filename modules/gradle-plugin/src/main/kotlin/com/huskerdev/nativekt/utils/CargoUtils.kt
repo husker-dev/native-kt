@@ -111,9 +111,10 @@ internal fun cargoLinkerFlags(
         ?: return emptyList()
 
     if(OS.current == OS.WINDOWS) {
+        flags.remove("-lsynchronization")
         flags.add(0, "-lsynchronization")
         if(isKN)
-            flags.add(0, "-L${konanSysroot(KONAN_SYSROOT_MINGW)}/lib")
+            flags.add(0, "-L${konanSysroot(KONAN_SYSROOT_MINGW)}/x86_64-w64-mingw32/lib")
         else
             flags.add(0, "-L${locateMingw(execOps, context).posixPath}/lib")
     }
