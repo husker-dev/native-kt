@@ -120,7 +120,7 @@ internal fun cargoLinkerFlags(
             flags.add(0, "-L${locateMingw(execOps, context).posixPath}/lib")
     }
     if(OS.current == OS.MACOS) {
-        println("flags: ${flags.joinToString { "'$it'" }} | ${"-lSystem" in flags} | ${"-lm" in flags}")
+        println("flags: ${flags.joinToString { "'$it'" }} | ${flags.joinToString { "[" + it.encodeToByteArray().joinToString { it.toInt().toString() } + "]" }} | ${"-lSystem" in flags} | ${"-lm" in flags} | ${"-lm".encodeToByteArray().joinToString { it.toInt().toString() }}")
         flags -= "-lm"
         flags -= "-lc"
         flags -= "-ldl"
