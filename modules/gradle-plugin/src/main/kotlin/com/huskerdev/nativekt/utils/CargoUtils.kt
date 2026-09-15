@@ -98,7 +98,7 @@ internal fun cargoLinkerFlags(
 
     val flags = execOps.exec(
         context,
-        command = "cargo rustc --target=$target --target-dir=$buildDirClean --lib --${buildType.cargoName} -- --print=native-static-libs",
+        command = "cargo rustc --target=$target --target-dir=$buildDirClean --lib --${buildType.cargoName} --color never -- --print=native-static-libs",
         workingDir = project,
         silent = true,
         errAsStd = true,
