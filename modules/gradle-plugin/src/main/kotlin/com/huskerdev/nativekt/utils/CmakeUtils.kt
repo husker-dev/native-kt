@@ -154,7 +154,7 @@ internal fun extractLinkerOpts(
 fun String.splitRespectingQuotes(): List<String> =
     """[^\s"']+|"([^"]*)"|'([^']*)'""".toRegex()
         .findAll(this)
-        .map { it.value.trim('"', '\'') }
+        .map { it.value.trim('"', '\'').trim() }
         .toList()
 
 internal fun configureCMake(
