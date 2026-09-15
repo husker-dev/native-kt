@@ -2,10 +2,13 @@ package com.huskerdev.nativekt.utils
 
 import com.huskerdev.nativekt.NativeModuleContext
 import com.huskerdev.nativekt.TargetType
-import com.huskerdev.nativekt.plugin.NativeKtInfo
 import com.huskerdev.osutils.OS
 import org.gradle.process.ExecOperations
 import java.io.File
+
+internal const val KONAN_SYSROOT_MINGW = "msys2-mingw-w64-x86_64"
+internal const val KONAN_SYSROOT_LINUX_X86_64 = "x86_64-unknown-linux-gnu"
+internal const val KONAN_SYSROOT_LINUX_AARCH64 = "aarch64-unknown-linux-gnu"
 
 internal fun locateClang(execOps: ExecOperations, context: NativeModuleContext): File {
     return locate(execOps, context, "clang")
@@ -19,28 +22,6 @@ internal fun locateClang(execOps: ExecOperations, context: NativeModuleContext):
             }
             throw UnsupportedOperationException("Could not locate 'clang'")
         }
-}
-
-internal fun mingwLibsDir(execOps: ExecOperations, context: NativeModuleContext) =
-    File(locateClang(execOps, context).parentFile.parentFile, "lib")
-
-internal fun normalizeMinGWLibs(
-    execOps: ExecOperations,
-    context: NativeModuleContext,
-    linkerOpts: List<String>
-): List<String> {
-    val mingwLibs = mingwLibsDir(execOps, context)
-
-    return linkerOpts.mapNotNull {
-        if(it.startsWith("-l")) {
-            val name = it.substring(2)
-
-            File(mingwLibs, "lib$name.dll.a")
-                .run { if(exists()) posixPath else null }
-                ?: File(mingwLibs, "lib$name.a")
-                    .run { if(exists()) posixPath else null }
-        } else it
-    }
 }
 
 internal fun systemExtension(dynamicLib: Boolean): String =
@@ -93,6 +74,14 @@ internal fun clangCompile(
     return File(workingDir, "$outputBaseName.$extension")
 }
 
+internal fun konanSysroot(name: String): String {
+    return File(System.getProperty("user.home"), ".konan/dependencies")
+        .listFiles()!!
+        .filter { it.name.startsWith(name) }
+        .maxOf { it }
+        .posixPath
+}
+
 internal fun getClangTargetArgs(
     execOps: ExecOperations,
     context: NativeModuleContext,
@@ -102,12 +91,6 @@ internal fun getClangTargetArgs(
         execOps.exec(context, "xcrun --sdk $sdk --show-sdk-platform-version", silent = true)
     fun xcSdkSysroot(sdk: String) =
         execOps.exec(context, "xcrun --sdk $sdk --show-sdk-path", silent = true)
-    fun konanSysroot(baseName: String): File {
-        return File(System.getProperty("user.home"), ".konan/dependencies")
-            .listFiles()!!
-            .filter { it.name.startsWith(baseName) }
-            .maxOf { it }
-    }
 
     return when(targetType) {
         TargetType.IOS_SIMULATOR_ARM64 -> listOf(
@@ -178,18 +161,18 @@ internal fun getClangTargetArgs(
             "--rtlib=libgcc",
             "--unwindlib=libgcc",
             "-stdlib=libstdc++",
-            "--sysroot=${konanSysroot("msys2-mingw-w64-x86_64")}",
+            "--sysroot=${konanSysroot(KONAN_SYSROOT_MINGW)}",
             "-target x86_64-w64-mingw32",
-            "-L${konanSysroot("msys2-mingw-w64-x86_64")}/x86_64-w64-mingw32/lib"
+            "-L${konanSysroot(KONAN_SYSROOT_MINGW)}/x86_64-w64-mingw32/lib"
         )
         TargetType.LINUX_X64 -> listOf(
-            "--sysroot=${konanSysroot("x86_64-unknown-linux-gnu")}/x86_64-unknown-linux-gnu/sysroot",
-            "--gcc-toolchain=${konanSysroot("x86_64-unknown-linux-gnu")}",
+            "--sysroot=${konanSysroot(KONAN_SYSROOT_LINUX_X86_64)}/x86_64-unknown-linux-gnu/sysroot",
+            "--gcc-toolchain=${konanSysroot(KONAN_SYSROOT_LINUX_X86_64)}",
             "-target x86_64-unknown-linux-gnu"
         )
         TargetType.LINUX_ARM64 -> listOf(
-            "--sysroot=${konanSysroot("aarch64-unknown-linux-gnu")}/aarch64-unknown-linux-gnu/sysroot",
-            "--gcc-toolchain=${konanSysroot("aarch64-unknown-linux-gnu")}",
+            "--sysroot=${konanSysroot(KONAN_SYSROOT_LINUX_AARCH64)}/aarch64-unknown-linux-gnu/sysroot",
+            "--gcc-toolchain=${konanSysroot(KONAN_SYSROOT_LINUX_AARCH64)}",
             "-target aarch64-unknown-linux-gnu"
         )
         else -> emptyList()
@@ -197,46 +180,27 @@ internal fun getClangTargetArgs(
 }
 
 /**
- * 1. Localizes C symbols
- * 2. Adds C++ initialization function
+ * 1. Globalizes C++ ctor symbols and adds C++ initialization function
+ * 2. Repacks the library into an archive with individual object members
  */
 internal fun prepareNativeLibraryForKN(
     execOps: ExecOperations,
     context: NativeModuleContext,
-    nativesRootBuildDir: File,
     lib: File,
-    symbols: List<String>,
     initSymbolName: String,
     targetArgs: List<String> = emptyList(),
 ) {
-    fun unpack(path: String): String {
-        val file = File(nativesRootBuildDir, File(path).name)
-        if(!file.exists()) {
-            NativeKtInfo::class.java.getResourceAsStream("/com/huskerdev/nativekt/$path").use { ins ->
-                if (ins == null)
-                    throw NullPointerException("Can not find file in plugin resources: $path")
-                file.parentFile.mkdirs()
-                file.outputStream().use { ins.copyTo(it) }
-            }
-            if(OS.current != OS.WINDOWS)
-                execOps.exec(context, "chmod +x \"${file.posixPath}\"")
-        }
-        return "\"${file.posixPath}\""
-    }
-
     val libDir = lib.parentFile
     val tmpDir = File(libDir, "_tmp").fresh()
-    val tmpObjFile = File(tmpDir, "__merged.o")
 
-    var ld = "ld"
     var objcopy = "objcopy"
     var ar = "ar"
 
-    // Unpack GNU tools on Windows (because clang64 tools in MinGW does not support COFF)
+    // Use konan tools
     if(OS.current == OS.WINDOWS) {
-        ld = unpack("mingw64/ld.exe")
-        ar = unpack("mingw64/ar.exe")
-        objcopy = unpack("mingw64/objcopy.exe")
+        val mingwSysroot = konanSysroot(KONAN_SYSROOT_MINGW)
+        ar = "$mingwSysroot/bin/ar.exe"
+        objcopy = "$mingwSysroot/bin/objcopy.exe"
     }
 
     // Unpack all .a into several .o
@@ -260,60 +224,15 @@ internal fun prepareNativeLibraryForKN(
         targetArgs
     )
 
-    // Merge several .o into one
-    execOps.exec(context,
-        "$ld -r ${objFiles.joinToString(" ") { it.name }} -o ${tmpObjFile.name}",
-        workingDir = tmpDir
-    )
-
-    // Localize С symbols
-    localizeSymbols(
-        execOps, context,
-        objcopy, tmpObjFile, symbols
-    )
-
     // Archive into .a
     lib.delete()
     execOps.exec(context,
-        "$ar rcs ../${lib.name} ${tmpObjFile.name}",
+        "$ar rcs ../${lib.name} ${objFiles.joinToString(" ") { it.name }}",
         workingDir = tmpDir
     )
 
     // Remove temporary dir
     tmpDir.deleteRecursively()
-}
-
-private fun localizeSymbols(
-    execOps: ExecOperations,
-    context: NativeModuleContext,
-    objcopy: String,
-    objFile: File,
-    symbols: List<String>
-) {
-    if(symbols.isEmpty())
-        return
-
-    val dir = objFile.parentFile
-    val tmpSymbolsFile = File(dir, "__symbols.txt")
-
-    // Localize symbols
-    if(OS.current == OS.MACOS) {
-        try {
-            tmpSymbolsFile.writeText(symbols.joinToString("\n") { "_$it" })
-            execOps.exec(context,
-                command = "nmedit -R ${tmpSymbolsFile.name} ${objFile.name}",
-                workingDir = dir,
-                silent = true
-            )
-        } catch (_: Throwable) {}
-    } else {
-        tmpSymbolsFile.writeText(symbols.joinToString("\n"))
-        execOps.exec(context,
-            command = "$objcopy --localize-symbols=${tmpSymbolsFile.name} ${objFile.name}",
-            workingDir = dir
-        )
-    }
-    tmpSymbolsFile.delete()
 }
 
 private fun createCppInitFunction(

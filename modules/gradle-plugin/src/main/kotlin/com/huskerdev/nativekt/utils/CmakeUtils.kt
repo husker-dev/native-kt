@@ -49,6 +49,9 @@ internal fun extractLinkerOpts(
 ): List<String> = buildList {
     // Tip: arguments generates only with executable or shared libraries, so our CMakeLists.txt contains `SHARED` target
 
+    if(OS.current == OS.WINDOWS)
+        add("-lsynchronization")
+
     val linkLibs = File(
         cmakeBuildDir,
         "CMakeFiles/lib_$moduleName.dir/linkLibs.rsp"
@@ -140,11 +143,9 @@ internal fun extractLinkerOpts(
             }
         }
     }
-}.run {
-    // Try to resolve libraries in MinGW
+
     if(OS.current == OS.WINDOWS && resolveMingwLibs)
-        normalizeMinGWLibs(execOps, context, this)
-    else this
+        add(0, "-L${konanSysroot(KONAN_SYSROOT_MINGW)}/lib")
 }
 
 fun String.splitRespectingQuotes(): List<String> =

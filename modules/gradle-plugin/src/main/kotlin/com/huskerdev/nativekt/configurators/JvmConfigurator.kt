@@ -387,6 +387,8 @@ private abstract class CompileNativesJvm @Inject constructor(
                         sources = emptyList(),
                         includeDirs = emptyList(),
                         linkerArgs = buildList {
+                            if (OS.current == OS.WINDOWS && !rustLinkerFlags.contains("-lsynchronization"))
+                                add("-lsynchronization")
                             addAll(rustLinkerFlags)
                             add("$rustBuildDir/lib${context.moduleName}.a")
                             add(wholeArchive(jniLib!!.posixPath))

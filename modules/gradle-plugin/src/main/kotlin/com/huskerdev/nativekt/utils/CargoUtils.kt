@@ -107,11 +107,15 @@ internal fun cargoLinkerFlags(
         ?.getOrNull(0)
         ?.trim()
         ?.splitRespectingQuotes()
+        ?.toMutableList()
         ?: return emptyList()
 
-    return if(OS.current == OS.WINDOWS && resolveMingwLibs)
-        normalizeMinGWLibs(execOps, context, flags)
-    else flags
+    if(OS.current == OS.WINDOWS) {
+        flags.add(0, "-lsynchronization")
+        if(resolveMingwLibs)
+            flags.add(0, "-L${konanSysroot(KONAN_SYSROOT_MINGW)}/lib")
+    }
+    return flags
 }
 
 internal fun cargoBuild(

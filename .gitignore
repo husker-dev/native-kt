@@ -47,5 +47,9 @@ bin/
 ### VS Code ###
 .vscode/
 
+### Cargo ###
+Cargo.lock
+target/
+
 ### Mac OS ###
 .DS_Store

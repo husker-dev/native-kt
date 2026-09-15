@@ -216,6 +216,17 @@ private abstract class PrepareNativesKn @Inject constructor(
                 createCApi()
                 val sourceExtension = buildSystem.language.sourceExtension ?: "c"
 
+                // Mangle C non-static functions
+                val funcRedefines = if(buildSystem.language == Language.C && context.allOperations.isNotEmpty()) {
+                    val symbolDefines = context.allOperations
+                        .joinToString(" ") { "${it.cname}=${it.cnameMangled(context)}__impl" }
+                    listOf(
+                        "target_compile_definitions($moduleName PRIVATE $symbolDefines)",
+                        "target_compile_definitions(lib_$moduleName PRIVATE $symbolDefines)",
+                        "target_compile_definitions(libstatic_$moduleName PRIVATE $symbolDefines)"
+                    )
+                } else listOf("", "", "")
+
                 // Create CMake file
                 File(nativesBuildSourcesDir, "CMakeLists.txt").writeText($$"""
                     cmake_minimum_required(VERSION 3.15)
@@ -239,7 +250,11 @@ private abstract class PrepareNativesKn @Inject constructor(
                     target_link_libraries(lib_$$moduleName PUBLIC $$moduleName)
                     
                     add_library(libstatic_$$moduleName STATIC api.$$sourceExtension)
-                    target_link_libraries(libstatic_$$moduleName PUBLIC $$moduleName)
+                    target_link_libraries(libstatic_$$moduleName PRIVATE $$moduleName)
+                    
+                    $${funcRedefines[0]}
+                    $${funcRedefines[1]}
+                    $${funcRedefines[2]}
                 """.trimIndent())
 
                 // Configure CMake (if needed)
@@ -330,9 +345,7 @@ private abstract class CompileNativesKn @Inject constructor(
                 cmakeBuild(execOps, context, File(nativesBuildSourcesDir, "cmake"))
 
                 prepareNativeLibraryForKN(execOps, context,
-                    nativesBuildOutDir.parentFile,
-                    File(nativesBuildOutDir, "liblibstatic_$moduleName.a"),
-                    symbols = context.globalOperations.map { it.cname },
+                    lib = File(nativesBuildOutDir, "liblibstatic_$moduleName.a"),
                     initSymbolName = context.mangle("init"),
                     targetArgs = getClangTargetArgs(execOps, context, targetType)
                 )
