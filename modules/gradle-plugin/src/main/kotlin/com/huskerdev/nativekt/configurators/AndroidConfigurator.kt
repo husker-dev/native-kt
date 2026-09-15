@@ -380,11 +380,11 @@ private abstract class CompileNativesAndroid @Inject constructor(
                     clangCompileAndroidTarget(
                         sources = listOf(),
                         linkerArgs = listOf(
-                            *rustLinkerFlags.toTypedArray(),
-                            "$rustBuildDir/lib$moduleName.a",
                             "-Wl,--whole-archive",
                             libJni.posixPath,
-                            "-Wl,--no-whole-archive"
+                            "-Wl,--no-whole-archive",
+                            "$rustBuildDir/lib$moduleName.a",
+                            *rustLinkerFlags.toTypedArray()
                         ),
                         dynamicLib = true,
                         extension = "so"
