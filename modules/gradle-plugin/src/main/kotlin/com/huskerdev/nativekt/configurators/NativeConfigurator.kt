@@ -267,14 +267,14 @@ private abstract class PrepareNativesKn @Inject constructor(
                         cmakeBuildType = buildSystem.buildType
                     )
 
+                    linkerOpts += nativesBuildOutDir.resolve("liblibstatic_$moduleName.a").posixPath
+
                     // Get linker opts
                     linkerOpts += extractLinkerOpts(execOps, context,
                         File(nativesBuildSourcesDir, "cmake"),
                         moduleName,
                         isKN = true
                     )
-
-                    linkerOpts += nativesBuildOutDir.resolve("liblibstatic_$moduleName.a").posixPath
                 }
             }
             is BuildSystem.Cargo -> {

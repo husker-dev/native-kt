@@ -144,9 +144,6 @@ internal fun extractLinkerOpts(
         }
     }
 
-    // Remove link to self dynamic library (if any)
-    removeIf { it.endsWith("lib${context.moduleName}.a") }
-
     if(OS.current == OS.WINDOWS) {
         removeAll { it == "-lsynchronization" }
         add(0, "-lsynchronization")
