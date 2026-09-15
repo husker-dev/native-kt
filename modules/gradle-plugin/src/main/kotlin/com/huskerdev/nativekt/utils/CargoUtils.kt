@@ -7,6 +7,7 @@ import com.huskerdev.osutils.Arch
 import com.huskerdev.osutils.OS
 import org.gradle.process.ExecOperations
 import java.io.File
+import kotlin.collections.removeAll
 
 private val rustcCurrentTaget: String
     get() {
@@ -111,7 +112,7 @@ internal fun cargoLinkerFlags(
         ?: return emptyList()
 
     if(OS.current == OS.WINDOWS) {
-        flags.remove("-lsynchronization")
+        flags.removeAll { it == "-lsynchronization" }
         flags.add(0, "-lsynchronization")
         if(isKN)
             flags.add(0, "-L${konanSysroot(KONAN_SYSROOT_MINGW)}/x86_64-w64-mingw32/lib")
@@ -119,6 +120,7 @@ internal fun cargoLinkerFlags(
             flags.add(0, "-L${locateMingw(execOps, context).posixPath}/lib")
     }
     if(OS.current == OS.MACOS) {
+        println("flags: ${flags.joinToString { "'$it'" }} | ${"-lSystem" in flags} | ${"-lm" in flags}")
         flags -= "-lm"
         flags -= "-lc"
         flags -= "-ldl"

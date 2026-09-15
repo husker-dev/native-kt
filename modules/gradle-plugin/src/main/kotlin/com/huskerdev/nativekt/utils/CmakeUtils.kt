@@ -149,7 +149,7 @@ internal fun extractLinkerOpts(
     removeIf { it.endsWith("lib${context.moduleName}.a") }
 
     if(OS.current == OS.WINDOWS) {
-        remove("-lsynchronization")
+        removeAll { it == "-lsynchronization" }
         add(0, "-lsynchronization")
         if(isKN)
             add(0, "-L${konanSysroot(KONAN_SYSROOT_MINGW)}/x86_64-w64-mingw32/lib")
