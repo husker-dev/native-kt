@@ -14,6 +14,11 @@ private val cmakeGenerator: String = when(OS.current) {
 
 val libExtension = OS.current.dylibExtension
 
+internal fun locateMingw(
+    execOps: ExecOperations,
+    context: NativeModuleContext,
+) = locateClang(execOps, context).parentFile.parentFile
+
 internal fun cmakeGen(
     execOps: ExecOperations,
     context: NativeModuleContext,
@@ -45,12 +50,9 @@ internal fun extractLinkerOpts(
     context: NativeModuleContext,
     cmakeBuildDir: File,
     moduleName: String,
-    resolveMingwLibs: Boolean = true
+    isKN: Boolean = false
 ): List<String> = buildList {
     // Tip: arguments generates only with executable or shared libraries, so our CMakeLists.txt contains `SHARED` target
-
-    if(OS.current == OS.WINDOWS)
-        add("-lsynchronization")
 
     val linkLibs = File(
         cmakeBuildDir,
@@ -130,8 +132,7 @@ internal fun extractLinkerOpts(
             .toSet().sorted()
             .toMutableList()
 
-        if(OS.current == OS.WINDOWS)
-            libNames += "mingwex"
+
 
         libNames.forEach { lib ->
             this.remove("-l$lib")
@@ -147,8 +148,13 @@ internal fun extractLinkerOpts(
     // Remove link to self dynamic library (if any)
     removeIf { it.endsWith("lib${context.moduleName}.a") }
 
-    if(OS.current == OS.WINDOWS && resolveMingwLibs)
-        add(0, "-L${konanSysroot(KONAN_SYSROOT_MINGW)}/lib")
+    if(OS.current == OS.WINDOWS) {
+        add(0, "-lsynchronization")
+        if(isKN)
+            add(0, "-L${konanSysroot(KONAN_SYSROOT_MINGW)}/lib")
+        else
+            add(0, "-L${locateMingw(execOps, context).posixPath}/lib")
+    }
 }
 
 fun String.splitRespectingQuotes(): List<String> =

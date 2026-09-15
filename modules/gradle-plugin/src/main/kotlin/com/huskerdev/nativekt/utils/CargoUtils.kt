@@ -89,7 +89,7 @@ internal fun cargoLinkerFlags(
     buildType: CargoBuildType,
     target: String = rustcCurrentTaget,
     env: Map<String, String>? = null,
-    resolveMingwLibs: Boolean = false
+    isKN: Boolean = false
 ): List<String> {
     val buildDirClean = buildDir.posixPath
 
@@ -112,8 +112,10 @@ internal fun cargoLinkerFlags(
 
     if(OS.current == OS.WINDOWS) {
         flags.add(0, "-lsynchronization")
-        if(resolveMingwLibs)
+        if(isKN)
             flags.add(0, "-L${konanSysroot(KONAN_SYSROOT_MINGW)}/lib")
+        else
+            flags.add(0, "-L${locateMingw(execOps, context).posixPath}/lib")
     }
     if(OS.current == OS.MACOS) {
         flags -= "-lm"
