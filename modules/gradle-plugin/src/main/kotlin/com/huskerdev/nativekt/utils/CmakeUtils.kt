@@ -144,6 +144,9 @@ internal fun extractLinkerOpts(
         }
     }
 
+    // Remove link to self dynamic library (if any)
+    removeIf { it.endsWith("lib${context.moduleName}.a") }
+
     if(OS.current == OS.WINDOWS && resolveMingwLibs)
         add(0, "-L${konanSysroot(KONAN_SYSROOT_MINGW)}/lib")
 }

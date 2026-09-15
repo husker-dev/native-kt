@@ -115,6 +115,17 @@ internal fun cargoLinkerFlags(
         if(resolveMingwLibs)
             flags.add(0, "-L${konanSysroot(KONAN_SYSROOT_MINGW)}/lib")
     }
+    if(OS.current == OS.MACOS && "-lSystem" in flags) {
+        flags -= "-lm"
+        flags -= "-lc"
+        flags -= "-ldl"
+        flags -= "-lpthread"
+        flags -= "-lresolv"
+        flags -= "-ldispatch"
+        flags -= "-lxpc"
+        flags -= "-lcommonCrypto"
+        flags -= "-lsys"
+    }
     return flags
 }
 
