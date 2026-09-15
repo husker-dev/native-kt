@@ -13,6 +13,7 @@ import com.huskerdev.webidl.resolver.*
 import com.huskerdev.webidl.resolver.WebIDLBuiltinKind.*
 import org.gradle.api.Task
 import org.gradle.process.ExecOperations
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.OutputStream
 
@@ -64,14 +65,18 @@ fun ExecOperations.exec(
 
     class StringOutputStream(
         private val delegate: OutputStream,
-        private val string: StringBuilder = StringBuilder()
+        private val bytes: ByteArrayOutputStream = ByteArrayOutputStream()
     ): OutputStream() {
         override fun write(b: Int) {
-            string.append(b.toChar())
+            bytes.write(b)
             if(!silent) delegate.write(b)
         }
+        override fun write(b: ByteArray, off: Int, len: Int) {
+            bytes.write(b, off, len)
+            if(!silent) delegate.write(b, off, len)
+        }
         override fun flush() = delegate.flush()
-        override fun toString() = string.toString()
+        fun toDecodedString() = String(bytes.toByteArray(), Charsets.UTF_8)
     }
     val stdOut = StringOutputStream(System.out)
     val errOut = StringOutputStream(System.err)
@@ -99,9 +104,9 @@ fun ExecOperations.exec(
                 append("\n")
             }
             appendLine("Error:")
-            append(if(errAsStd) stdOut else errOut)
+            append(if(errAsStd) stdOut.toDecodedString() else errOut.toDecodedString())
         })
-        stdOut.toString().trim()
+        stdOut.toDecodedString().trim()
     }
 }
 
