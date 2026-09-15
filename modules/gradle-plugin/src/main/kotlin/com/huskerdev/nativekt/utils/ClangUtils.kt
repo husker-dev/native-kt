@@ -82,71 +82,98 @@ internal fun konanSysroot(name: String): String {
         .posixPath
 }
 
+internal fun getAppleSdkName(
+    targetType: TargetType,
+) = when(targetType) {
+    TargetType.IOS_SIMULATOR_ARM64,
+    TargetType.IOS_X64 -> "iphonesimulator"
+    TargetType.IOS_ARM64 -> "iphoneos"
+    TargetType.TVOS_ARM64 -> "appletvos"
+    TargetType.TVOS_SIMULATOR_ARM64,
+    TargetType.TVOS_X64 -> "appletvsimulator"
+    TargetType.WATCHOS_ARM32,
+    TargetType.WATCHOS_ARM64,
+    TargetType.WATCHOS_DEVICE_ARM64 -> "watchos"
+    TargetType.WATCHOS_SIMULATOR_ARM64,
+    TargetType.WATCHOS_X64 -> "watchsimulator"
+    else -> throw UnsupportedOperationException()
+}
+internal fun getAppleSdkSysroot(
+    execOps: ExecOperations,
+    context: NativeModuleContext,
+    targetType: TargetType,
+) = execOps.exec(context, "xcrun --sdk ${getAppleSdkName(targetType)} --show-sdk-path", silent = true)
+
+internal fun getAppleSdkVersion(
+    execOps: ExecOperations,
+    context: NativeModuleContext,
+    targetType: TargetType,
+) = execOps.exec(context, "xcrun --sdk ${getAppleSdkName(targetType)} --show-sdk-platform-version", silent = true)
+
+
 internal fun getClangTargetArgs(
     execOps: ExecOperations,
     context: NativeModuleContext,
     targetType: TargetType,
 ): List<String> {
-    fun xcSdkVersion(sdk: String) =
-        execOps.exec(context, "xcrun --sdk $sdk --show-sdk-platform-version", silent = true)
-    fun xcSdkSysroot(sdk: String) =
-        execOps.exec(context, "xcrun --sdk $sdk --show-sdk-path", silent = true)
+    fun appleSdkVersion() = getAppleSdkVersion(execOps, context, targetType)
+    fun appleSdkSysroot() = getAppleSdkSysroot(execOps, context, targetType)
 
     return when(targetType) {
         TargetType.IOS_SIMULATOR_ARM64 -> listOf(
             "-arch arm64",
-            "-target arm64-apple-ios${xcSdkVersion("iphonesimulator")}-simulator",
-            "-isysroot ${xcSdkSysroot("iphonesimulator")}"
+            "-target arm64-apple-ios${appleSdkVersion()}-simulator",
+            "-isysroot ${appleSdkSysroot()}"
         )
         TargetType.IOS_X64 -> listOf(
             "-arch x86_64",
-            "-target x86_64-apple-ios${xcSdkVersion("iphonesimulator")}-simulator",
-            "-isysroot ${xcSdkSysroot("iphonesimulator")}"
+            "-target x86_64-apple-ios${appleSdkVersion()}-simulator",
+            "-isysroot ${appleSdkSysroot()}"
         )
         TargetType.IOS_ARM64 -> listOf(
             "-arch arm64",
-            "-target arm64-apple-ios${xcSdkVersion("iphoneos")}",
-            "-isysroot ${xcSdkSysroot("iphoneos")}"
+            "-target arm64-apple-ios${appleSdkVersion()}",
+            "-isysroot ${appleSdkSysroot()}"
         )
         TargetType.TVOS_ARM64 -> listOf(
             "-arch arm64",
-            "-target arm64-apple-tvos${xcSdkVersion("appletvos")}",
-            "-isysroot ${xcSdkSysroot("appletvos")}"
+            "-target arm64-apple-tvos${appleSdkVersion()}",
+            "-isysroot ${appleSdkSysroot()}"
         )
         TargetType.TVOS_SIMULATOR_ARM64 -> listOf(
             "-arch arm64",
-            "-target arm64-apple-tvos${xcSdkVersion("appletvsimulator")}-simulator",
-            "-isysroot ${xcSdkSysroot("appletvsimulator")}"
+            "-target arm64-apple-tvos${appleSdkVersion()}-simulator",
+            "-isysroot ${appleSdkSysroot()}"
         )
         TargetType.TVOS_X64 -> listOf(
             "-arch x86_64",
-            "-target x86_64-apple-tvos${xcSdkVersion("appletvsimulator")}-simulator",
-            "-isysroot ${xcSdkSysroot("appletvsimulator")}"
+            "-target x86_64-apple-tvos${appleSdkVersion()}-simulator",
+            "-isysroot ${appleSdkSysroot()}"
         )
         TargetType.WATCHOS_ARM32 -> listOf(
             "-arch armv7k",
-            "-target armv7k-apple-watchos${xcSdkVersion("watchos")}",
-            "-isysroot ${xcSdkSysroot("watchos")}"
+            "-target armv7k-apple-watchos${appleSdkVersion()}",
+            "-isysroot ${appleSdkSysroot()}"
         )
         TargetType.WATCHOS_ARM64 -> listOf(
             "-arch arm64_32",
-            "-target arm64-apple-watchos${xcSdkVersion("watchos")}",
-            "-isysroot ${xcSdkSysroot("watchos")}"
+            "-target arm64-apple-watchos${appleSdkVersion()}",
+            "-isysroot ${appleSdkSysroot()}"
         )
         TargetType.WATCHOS_DEVICE_ARM64 -> listOf(
             "-arch arm64",
-            "-target arm64-apple-watchos${xcSdkVersion("watchos")}",
-            "-isysroot ${xcSdkSysroot("watchos")}"
+            "-target arm64-apple-watchos${appleSdkVersion()}",
+            "-isysroot ${appleSdkSysroot()}"
         )
         TargetType.WATCHOS_SIMULATOR_ARM64 -> listOf(
             "-arch arm64",
-            "-target arm64-apple-watchos${xcSdkVersion("watchsimulator")}-simulator",
-            "-isysroot ${xcSdkSysroot("watchsimulator")}"
+            "-target arm64-apple-watchos${appleSdkVersion()}-simulator",
+            "-isysroot ${appleSdkSysroot()}"
         )
         TargetType.WATCHOS_X64 -> listOf(
             "-arch x86_64",
-            "-target x86_64-apple-watchos${xcSdkVersion("watchsimulator")}-simulator",
-            "-isysroot ${xcSdkSysroot("watchsimulator")}"
+            "-target x86_64-apple-watchos${appleSdkVersion()}-simulator",
+            "-isysroot ${appleSdkSysroot()}"
         )
         TargetType.MACOS_ARM64 -> listOf(
             "-arch arm64",
