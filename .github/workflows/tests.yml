@@ -159,13 +159,13 @@ jobs:
         if: runner.os == 'Windows'
         run: ./gradlew :modules:tests:mingwX64Test --continue --stacktrace
 
-      - name: Kotlin/JS tests
+      - name: Kotlin Web tests
         if: runner.os == 'Linux'
-        run: ./gradlew :modules:tests:jsTest --continue --stacktrace
+        run: ./gradlew :modules:tests:jsBrowserTest :modules:tests:wasmJsBrowserTest --continue --stacktrace
 
-      - name: Kotlin/Wasm tests
+      - name: Kotlin Node tests
         if: runner.os == 'Linux'
-        run: ./gradlew :modules:tests:wasmJsTest --continue --stacktrace
+        run: ./gradlew :modules:tests:jsNodeTest :modules:tests:wasmJsNodeTest --continue --stacktrace
 
       - name: Kotlin/JVM tests (Linux x64)
         if: runner.os == 'Linux'
