@@ -78,6 +78,12 @@ fun ExecOperations.exec(
         override fun flush() = delegate.flush()
         fun toDecodedString() = String(bytes.toByteArray(), Charsets.UTF_8)
     }
+
+    fun String.stripAnsi() = replace(
+        "\u001B\\[[0-?]*[ -/]*[@-~]|\u001B][^\u0007]*\u0007".toRegex(),
+        ""
+    )
+
     val stdOut = StringOutputStream(System.out)
     val errOut = StringOutputStream(System.err)
 
@@ -106,7 +112,7 @@ fun ExecOperations.exec(
             appendLine("Error:")
             append(if(errAsStd) stdOut.toDecodedString() else errOut.toDecodedString())
         })
-        stdOut.toDecodedString().trim()
+        stdOut.toDecodedString().stripAnsi().trim()
     }
 }
 

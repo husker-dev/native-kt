@@ -97,7 +97,8 @@ internal fun extractLinkerOpts(
                 val path = if(!File(part).isAbsolute)
                     File(cmakeBuildDir, part).absolutePath
                 else part
-                this += path
+                if(File(path).exists())
+                    this += path
             }
             if(part == "-framework") {
                 this += part
@@ -131,8 +132,6 @@ internal fun extractLinkerOpts(
             .flatMap { it.split("STATIC_LIBRARIES:INTERNAL=")[1].split(";") }
             .toSet().sorted()
             .toMutableList()
-
-
 
         libNames.forEach { lib ->
             this.remove("-l$lib")
