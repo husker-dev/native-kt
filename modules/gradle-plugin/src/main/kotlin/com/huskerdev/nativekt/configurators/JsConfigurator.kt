@@ -11,15 +11,9 @@ import com.huskerdev.nativekt.printers.c.CEmscriptenPrinter
 import com.huskerdev.nativekt.printers.cpp.CppApiHeaderPrinter
 import com.huskerdev.nativekt.printers.cpp.CppApiImplPrinter
 import com.huskerdev.nativekt.printers.kotlin.KotlinJsPrinter
-import com.huskerdev.nativekt.utils.cmakeBuild
-import com.huskerdev.nativekt.utils.cmakeGen
-import com.huskerdev.nativekt.utils.dependsOnProjectReload
-import com.huskerdev.nativekt.utils.fresh
-import com.huskerdev.nativekt.utils.getEmccArgs
-import com.huskerdev.nativekt.utils.locateEmcc
-import com.huskerdev.nativekt.utils.posixPath
-import com.huskerdev.nativekt.utils.upperCamelCase
-import com.huskerdev.nativekt.utils.wasmBindgenBuild
+import com.huskerdev.nativekt.utils.*
+import com.huskerdev.webidl.resolver.ResolvedIdlOperation
+import com.huskerdev.webidl.resolver.ResolvedIdlType
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.tasks.Input
@@ -42,28 +36,7 @@ internal fun configureJs(
     val targetName = if(isWasm) "wasmJs" else "js"
     val extension = context.extension as NativeKtJsInterface
 
-    if(context.hasAnyLong && !extension.useJsBigInt) {
-        throw UnsupportedOperationException("""
-            A Long type was detected in your .ndl file, but it is not enabled by the current Kotlin/JS configuration.
-
-            To fix this issue:
-            
-            1. Make sure your Kotlin Multiplatform version is >= 2.2.20
-            2. Set 'useJsBigInt = true' in the plugin configuration.
-            3. Add the following compiler options to the Kotlin Multiplatform JS target:
-            
-            kotlin {
-                $targetName {
-                    compilerOptions {
-                        freeCompilerArgs.addAll(
-                            "-Xes-long-as-bigint", 
-                            "-XXLanguage:+JsAllowLongInExportedDeclarations"
-                        )
-                    }
-                }
-            }
-        """.trimIndent())
-    }
+    checkForLongTypes(context, extension, targetName)
 
     val srcDir = File(context.srcGenDir, "$targetName/src")
     val resourcesDir = File(context.srcGenDir, "$targetName/resources")
@@ -82,7 +55,7 @@ internal fun configureJs(
         PrepareNativesJs::class.java
     )
     prepareTask.get().also {
-        it.inputs.dir(context.module.projectDir)
+        it.inputs.dir(context.module.dir)
         it.inputs.file(context.module.ndlFile())
         it.outputs.dirs(nativesBuildSourcesDir, srcDir)
 
@@ -106,7 +79,7 @@ internal fun configureJs(
         CompileNativesJs::class.java
     )
     compileTask.get().also {
-        it.inputs.dir(context.module.projectDir)
+        it.inputs.dir(context.module.dir)
         it.inputs.dir(nativesBuildSourcesDir)
         it.inputs.file(context.module.ndlFile())
         it.outputs.dirs(nativesBuildOutDir, resourcesDir)
@@ -181,7 +154,7 @@ private abstract class PrepareNativesJs: DefaultTask() {
         when(context.buildSystem) {
             is BuildSystem.CMake -> {
                 val targetName = "lib${context.moduleName}"
-                val projectPath = context.module.projectDir.posixPath
+                val projectPath = context.module.dir.posixPath
                 val projectBuildPath = File(nativesBuildOutDir, "sub").posixPath
 
                 val languages = buildList {
@@ -293,7 +266,7 @@ private abstract class CompileNativesJs @Inject constructor(
 
             is BuildSystem.Cargo -> {
                 val pkgDir = wasmBindgenBuild(execOps, context,
-                    context.module.projectDir,
+                    context.module.dir,
                     buildSystem.buildType,
                     nativesBuildOutDir
                 )
@@ -311,5 +284,84 @@ private abstract class CompileNativesJs @Inject constructor(
                 packResult(jsFile, wasmFile)
             }
         }
+    }
+}
+
+private fun checkForLongTypes(
+    context: NativeModuleContext,
+    extension: NativeKtJsInterface,
+    targetName: String
+) {
+    if(extension.useJsBigInt)
+        return
+
+    // Collect long fields/operations
+
+    val errors = arrayListOf<String>()
+
+    fun ResolvedIdlType.isAnyLong(): Boolean =
+        !isRawInterface() && (isLong() || isULong() || (this is ResolvedIdlType.Default && parameters.any { it.isAnyLong() }) )
+
+    fun checkOperation(operation: ResolvedIdlOperation) {
+        if(operation.type.isAnyLong())
+            errors += "Function ${operation.name}: return type"
+        operation.args.forEach {
+            if(it.type.isAnyLong())
+                errors += "Function ${operation.name}: argument ${it.name}"
+        }
+    }
+
+    context.allOperations.forEach {
+        if(it.isInterfaceOperationAddress())
+            return@forEach
+        checkOperation(it)
+    }
+    context.dictionaries.forEach { dictionary ->
+        dictionary.fields.forEach { arg ->
+            if(arg.type.isAnyLong())
+                errors += "Dictionary ${dictionary.name}: field ${arg.name}"
+        }
+    }
+    context.interfaces.forEach {
+        it.operations.forEach(::checkOperation)
+    }
+    context.callbacks.forEach { callback ->
+        if(callback.type.isAnyLong())
+            errors += "Callback ${callback.name}: return type"
+        callback.args.forEach {
+            if(it.type.isAnyLong())
+                errors += "Callback ${callback.name}: argument ${it.name}"
+        }
+    }
+
+    // Print result
+
+    if(errors.isNotEmpty()) {
+        throw UnsupportedOperationException(buildString {
+            appendLine("A Long type was detected in your .ndl file, but it is not enabled by the current Kotlin/JS configuration.")
+
+            errors.forEach { append("\n- $it") }
+
+            append("""
+                
+                
+                To fix this issue:
+                
+                1. Make sure your Kotlin Multiplatform version is >= 2.2.20
+                2. Set 'useJsBigInt = true' in the plugin configuration.
+                3. Add the following compiler options to the Kotlin Multiplatform JS target:
+                
+                kotlin {
+                    $targetName {
+                        compilerOptions {
+                            freeCompilerArgs.addAll(
+                                "-Xes-long-as-bigint", 
+                                "-XXLanguage:+JsAllowLongInExportedDeclarations"
+                            )
+                        }
+                    }
+                }
+            """.trimIndent())
+        })
     }
 }

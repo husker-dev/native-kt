@@ -61,9 +61,9 @@ class KotlinJvmForeignPrinter(
         }
 
         // String
-        if(context.hasStringToNativeCast)
+        if(context.hasStringCastToNative)
             printHandle("string_new", true, TYPE_ADDRESS, TYPE_ADDRESS, TYPE_INT, TYPE_INT, TYPE_BOOLEAN)
-        if(context.hasStringToKotlinCast) {
+        if(context.hasStringCastToKotlin) {
             printHandle("string_data", true, TYPE_ADDRESS, TYPE_ADDRESS)
             printHandle("string_length", true, TYPE_INT, TYPE_ADDRESS)
             printHandle("string_size", true, TYPE_LONG, TYPE_ADDRESS)
@@ -72,22 +72,22 @@ class KotlinJvmForeignPrinter(
 
         // Primitive arrays
         listOf(
-            Triple("char", context.hasCharArrayToNativeCast, context.hasCharArrayToKotlinCast),
-            Triple("boolean", context.hasBooleanArrayToNativeCast, context.hasBooleanArrayToKotlinCast),
+            Triple("char", context.hasCharArrayCastToNative, context.hasCharArrayCastToKotlin),
+            Triple("boolean", context.hasBooleanArrayCastToNative, context.hasBooleanArrayCastToKotlin),
             Triple("byte",
-                context.hasByteArrayToNativeCast || context.hasUByteArrayToNativeCast,
-                context.hasByteArrayToKotlinCast || context.hasUByteArrayToKotlinCast),
+                context.hasByteArrayCastToNative || context.hasUByteArrayCastToNative,
+                context.hasByteArrayCastToKotlin || context.hasUByteArrayCastToKotlin),
             Triple("short",
-                context.hasShortArrayToNativeCast || context.hasUShortArrayToNativeCast,
-                context.hasShortArrayToKotlinCast || context.hasUShortArrayToKotlinCast),
+                context.hasShortArrayCastToNative || context.hasUShortArrayCastToNative,
+                context.hasShortArrayCastToKotlin || context.hasUShortArrayCastToKotlin),
             Triple("int",
-                context.hasIntArrayToNativeCast || context.hasEnumArrayToNativeCast || context.hasUIntArrayToNativeCast,
-                context.hasIntArrayToKotlinCast || context.hasEnumArrayToKotlinCast || context.hasUIntArrayToKotlinCast),
+                context.hasIntArrayCastToNative || context.hasEnumArrayCastToNative || context.hasUIntArrayCastToNative,
+                context.hasIntArrayCastToKotlin || context.hasEnumArrayCastToKotlin || context.hasUIntArrayCastToKotlin),
             Triple("long",
-                context.hasLongArrayToNativeCast || context.hasULongArrayToNativeCast,
-                context.hasLongArrayToKotlinCast || context.hasULongArrayToKotlinCast),
-            Triple("float", context.hasFloatArrayToNativeCast, context.hasFloatArrayToKotlinCast),
-            Triple("double", context.hasDoubleArrayToNativeCast, context.hasDoubleArrayToKotlinCast),
+                context.hasLongArrayCastToNative || context.hasULongArrayCastToNative,
+                context.hasLongArrayCastToKotlin || context.hasULongArrayCastToKotlin),
+            Triple("float", context.hasFloatArrayCastToNative, context.hasFloatArrayCastToKotlin),
+            Triple("double", context.hasDoubleArrayCastToNative, context.hasDoubleArrayCastToKotlin),
         ).forEach { (name, hasToNative, hasToKotlin) ->
             if(hasToNative)
                 printHandle("${name}array_new", true, TYPE_ADDRESS, TYPE_ADDRESS, TYPE_INT, TYPE_BOOLEAN)
@@ -100,19 +100,19 @@ class KotlinJvmForeignPrinter(
 
         // Object arrays
         buildList {
-            context.usedDictionaries.mapTo(this) { dictionary ->
+            context.castedDictionaries.mapTo(this) { dictionary ->
                 Triple(dictionary.cname.lowercase(),
-                    dictionary in context.usedObjectArrayToNativeCast,
-                    dictionary in context.usedObjectArrayToKotlinCast)
+                    dictionary in context.usedObjectArrayCastToNative,
+                    dictionary in context.usedObjectArrayCastToKotlin)
             }
-            context.usedInterfaces.mapTo(this) { inter ->
+            context.castedInterfaces.mapTo(this) { inter ->
                 Triple(inter.cname.lowercase(),
-                    inter in context.usedObjectArrayToNativeCast,
-                    inter in context.usedObjectArrayToKotlinCast)
+                    inter in context.usedObjectArrayCastToNative,
+                    inter in context.usedObjectArrayCastToKotlin)
             }
             add(Triple("string",
-                context.hasStringArrayToNativeCast,
-                context.hasStringArrayToKotlinCast))
+                context.hasStringArrayCastToNative,
+                context.hasStringArrayCastToKotlin))
         }.forEach { (name, hasToNative, hasToKotlin) ->
             if(hasToNative) {
                 printHandle("array_${name}_new", true, TYPE_ADDRESS, TYPE_INT, TYPE_BOOLEAN)
@@ -126,27 +126,27 @@ class KotlinJvmForeignPrinter(
         }
 
         // Dictionary
-        context.usedDictionaries.forEach { dictionary ->
+        context.castedDictionaries.forEach { dictionary ->
             val lower = dictionary.name.camelCase().lowercase()
             val fields = dictionary.allFields()
 
-            if(dictionary in context.toNativeDeclarations)
+            if(dictionary in context.toNativeDeclarationCasts)
                 printHandle("${lower}_new", true, TYPE_ADDRESS, *fields.map { it.type.toForeignType() }.toTypedArray())
-            if(dictionary in  context.toKotlinDeclarations) {
+            if(dictionary in  context.toKotlinDeclarationCasts) {
                 printHandle("${lower}_free", false, TYPE_VOID, TYPE_ADDRESS)
                 fields.forEach { field ->
-                    printHandle("${lower}__${field.name.camelCase().lowercase()}", true, field.type.toForeignType(), TYPE_ADDRESS)
+                    printHandle("${lower}__${field.cname}", true, field.type.toForeignType(), TYPE_ADDRESS)
                 }
             }
         }
 
         // Callbacks
-        context.usedCallbacks.forEach { callback ->
+        context.castedCallbacks.forEach { callback ->
             val lower = callback.name.camelCase().lowercase()
 
-            if(callback in context.toNativeDeclarations)
+            if(callback in context.toNativeDeclarationCasts)
                 printHandle("${lower}_new", true, TYPE_ADDRESS, TYPE_LONG, TYPE_INT, TYPE_ADDRESS, TYPE_ADDRESS, TYPE_ADDRESS)
-            if(callback in context.toKotlinDeclarations) {
+            if(callback in context.toKotlinDeclarationCasts) {
                 printHandle("${lower}_id", true, TYPE_LONG, TYPE_ADDRESS)
                 printHandle("${lower}_free", false, TYPE_VOID, TYPE_ADDRESS)
             }
@@ -171,10 +171,10 @@ class KotlinJvmForeignPrinter(
     }
 
     private fun StringBuilder.printBasicCasts() {
-        if(context.hasString) {
+        if(context.hasStringCast) {
             printLabel("String", indent = indent1)
 
-            if (context.hasStringToNativeCast) appendLine("""
+            if (context.hasStringCastToNative) appendLine("""
                 
                 private fun toNativeString(of: String?): MemorySegment {
                     of ?: return MemorySegment.NULL
@@ -182,7 +182,7 @@ class KotlinJvmForeignPrinter(
                     return _stringNew(MemorySegment.ofArray(bytes), of.length, bytes.size, true) as MemorySegment
                 }
             """.replaceIndent(indent1))
-            if (context.hasStringToKotlinCast) appendLine("""
+            if (context.hasStringCastToKotlin) appendLine("""
                 
                 private fun toKotlinString(of: MemorySegment, free: Boolean): String? {
                     if (of.address() == 0L) return null
@@ -195,19 +195,19 @@ class KotlinJvmForeignPrinter(
             """.replaceIndent(indent1))
         }
 
-        if(context.hasPrimitiveArray || context.hasEnumArray) {
+        if(context.hasPrimitiveArrayCast || context.hasEnumArrayCast) {
             printLabel("Primitive arrays", indent = indent1)
 
             // CharArray
-            if (context.hasCharArray) appendLine("\n$indent1// Char")
-            if (context.hasCharArrayToNativeCast) appendLine("""
+            if (context.hasCharArrayCast) appendLine("\n$indent1// Char")
+            if (context.hasCharArrayCastToNative) appendLine("""
                 
                 private fun toNativeCharArray(of: CharArray?): MemorySegment {
                     of ?: return MemorySegment.NULL
                     return _chararrayNew(MemorySegment.ofArray(of), of.size, true) as MemorySegment
                 }
             """.replaceIndent(indent1))
-            if (context.hasCharArrayToKotlinCast) appendLine("""
+            if (context.hasCharArrayCastToKotlin) appendLine("""
                 
                 private fun toKotlinCharArray(of: MemorySegment, free: Boolean): CharArray? {
                     if (of.address() == 0L) return null
@@ -220,15 +220,15 @@ class KotlinJvmForeignPrinter(
             """.replaceIndent(indent1))
 
             // BooleanArray
-            if (context.hasBooleanArray) appendLine("\n$indent1// Boolean")
-            if (context.hasBooleanArrayToNativeCast) appendLine("""
+            if (context.hasBooleanArrayCast) appendLine("\n$indent1// Boolean")
+            if (context.hasBooleanArrayCastToNative) appendLine("""
                 
                 private fun toNativeBooleanArray(of: BooleanArray?): MemorySegment {
                     of ?: return MemorySegment.NULL
                     return _booleanarrayNew(MemorySegment.ofArray(ByteArray(of.size) { if(of[it]) 1 else 0 }), of.size, true) as MemorySegment
                 }
             """.replaceIndent(indent1))
-            if (context.hasBooleanArrayToKotlinCast) appendLine("""
+            if (context.hasBooleanArrayCastToKotlin) appendLine("""
                 
                 private fun toKotlinBooleanArray(of: MemorySegment, free: Boolean): BooleanArray? {
                     if (of.address() == 0L) return null
@@ -242,15 +242,15 @@ class KotlinJvmForeignPrinter(
             """.replaceIndent(indent1))
 
             // ByteArray
-            if (context.hasByteArray || context.hasUByteArray || context.hasBooleanArray) appendLine("\n$indent1// Byte")
-            if (context.hasByteArrayToNativeCast || context.hasUByteArrayToNativeCast) appendLine("""
+            if (context.hasByteArrayCast || context.hasUByteArrayCast || context.hasBooleanArrayCast) appendLine("\n$indent1// Byte")
+            if (context.hasByteArrayCastToNative || context.hasUByteArrayCastToNative) appendLine("""
                 
                 private fun toNativeByteArray(of: ByteArray?): MemorySegment {
                     of ?: return MemorySegment.NULL
                     return _bytearrayNew(MemorySegment.ofArray(of), of.size, true) as MemorySegment
                 }
             """.replaceIndent(indent1))
-            if (context.hasByteArrayToKotlinCast || context.hasUByteArrayToKotlinCast) appendLine("""
+            if (context.hasByteArrayCastToKotlin || context.hasUByteArrayCastToKotlin) appendLine("""
                 
                 private fun toKotlinByteArray(of: MemorySegment, free: Boolean): ByteArray? {
                     if (of.address() == 0L) return null
@@ -263,15 +263,15 @@ class KotlinJvmForeignPrinter(
             """.replaceIndent(indent1))
 
             // ShortArray
-            if (context.hasShortArray || context.hasUShortArray) appendLine("\n$indent1// Short")
-            if (context.hasShortArrayToNativeCast || context.hasUShortArrayToNativeCast) appendLine("""
+            if (context.hasShortArrayCast || context.hasUShortArrayCast) appendLine("\n$indent1// Short")
+            if (context.hasShortArrayCastToNative || context.hasUShortArrayCastToNative) appendLine("""
                 
                 private fun toNativeShortArray(of: ShortArray?): MemorySegment {
                     of ?: return MemorySegment.NULL
                     return _shortarrayNew(MemorySegment.ofArray(of), of.size, true) as MemorySegment
                 }
             """.replaceIndent(indent1))
-            if (context.hasShortArrayToKotlinCast || context.hasUShortArrayToKotlinCast) appendLine("""
+            if (context.hasShortArrayCastToKotlin || context.hasUShortArrayCastToKotlin) appendLine("""
                 
                 private fun toKotlinShortArray(of: MemorySegment, free: Boolean): ShortArray? {
                     if (of.address() == 0L) return null
@@ -284,15 +284,15 @@ class KotlinJvmForeignPrinter(
             """.replaceIndent(indent1))
 
             // IntArray
-            if (context.hasIntArray || context.hasUIntArray || context.hasEnumArray) appendLine("\n$indent1// Int")
-            if (context.hasIntArrayToNativeCast || context.hasUIntArrayToNativeCast || context.hasEnumArrayToNativeCast) appendLine("""
+            if (context.hasIntArrayCast || context.hasUIntArrayCast || context.hasEnumArrayCast) appendLine("\n$indent1// Int")
+            if (context.hasIntArrayCastToNative || context.hasUIntArrayCastToNative || context.hasEnumArrayCastToNative) appendLine("""
                 
                 private fun toNativeIntArray(of: IntArray?): MemorySegment {
                     of ?: return MemorySegment.NULL
                     return _intarrayNew(MemorySegment.ofArray(of), of.size, true) as MemorySegment
                 }
             """.replaceIndent(indent1))
-            if (context.hasIntArrayToKotlinCast || context.hasUIntArrayToKotlinCast || context.hasEnumArrayToKotlinCast) appendLine("""
+            if (context.hasIntArrayCastToKotlin || context.hasUIntArrayCastToKotlin || context.hasEnumArrayCastToKotlin) appendLine("""
                 
                 private fun toKotlinIntArray(of: MemorySegment, free: Boolean): IntArray? {
                     if (of.address() == 0L) return null
@@ -305,15 +305,15 @@ class KotlinJvmForeignPrinter(
             """.replaceIndent(indent1))
 
             // LongArray
-            if (context.hasLongArray || context.hasULongArray) appendLine("\n$indent1// Long")
-            if (context.hasLongArrayToNativeCast || context.hasULongArrayToNativeCast) appendLine("""
+            if (context.hasLongArrayCast || context.hasULongArrayCast) appendLine("\n$indent1// Long")
+            if (context.hasLongArrayCastToNative || context.hasULongArrayCastToNative) appendLine("""
                 
                 private fun toNativeLongArray(of: LongArray?): MemorySegment {
                     of ?: return MemorySegment.NULL
                     return _longarrayNew(MemorySegment.ofArray(of), of.size, true) as MemorySegment
                 }
             """.replaceIndent(indent1))
-            if (context.hasLongArrayToKotlinCast || context.hasULongArrayToKotlinCast) appendLine("""
+            if (context.hasLongArrayCastToKotlin || context.hasULongArrayCastToKotlin) appendLine("""
                 
                 private fun toKotlinLongArray(of: MemorySegment, free: Boolean): LongArray? {
                     if (of.address() == 0L) return null
@@ -326,15 +326,15 @@ class KotlinJvmForeignPrinter(
             """.replaceIndent(indent1))
 
             // FloatArray
-            if (context.hasFloatArray) appendLine("\n$indent1// Float")
-            if (context.hasFloatArrayToNativeCast) appendLine("""
+            if (context.hasFloatArrayCast) appendLine("\n$indent1// Float")
+            if (context.hasFloatArrayCastToNative) appendLine("""
                 
                 private fun toNativeFloatArray(of: FloatArray?): MemorySegment {
                     of ?: return MemorySegment.NULL
                     return _floatarrayNew(MemorySegment.ofArray(of), of.size, true) as MemorySegment
                 }
             """.replaceIndent(indent1))
-            if (context.hasFloatArrayToKotlinCast) appendLine("""
+            if (context.hasFloatArrayCastToKotlin) appendLine("""
                 
                 private fun toKotlinFloatArray(of: MemorySegment, free: Boolean): FloatArray? {
                     if (of.address() == 0L) return null
@@ -347,15 +347,15 @@ class KotlinJvmForeignPrinter(
             """.replaceIndent(indent1))
 
             // DoubleArray
-            if (context.hasDoubleArray) appendLine("\n$indent1// Double")
-            if (context.hasDoubleArrayToNativeCast) appendLine("""
+            if (context.hasDoubleArrayCast) appendLine("\n$indent1// Double")
+            if (context.hasDoubleArrayCastToNative) appendLine("""
                 
                 private fun toNativeDoubleArray(of: DoubleArray?): MemorySegment {
                     of ?: return MemorySegment.NULL
                     return _doublearrayNew(MemorySegment.ofArray(of), of.size, true) as MemorySegment
                 }
             """.replaceIndent(indent1))
-            if (context.hasDoubleArrayToKotlinCast) appendLine("""
+            if (context.hasDoubleArrayCastToKotlin) appendLine("""
                 
                 private fun toKotlinDoubleArray(of: MemorySegment, free: Boolean): DoubleArray? {
                     if (of.address() == 0L) return null
@@ -368,14 +368,14 @@ class KotlinJvmForeignPrinter(
             """.replaceIndent(indent1))
 
             // Enum
-            if (context.hasEnumArray) appendLine("\n$indent1// Enum")
-            if (context.hasEnumArrayToNativeCast) appendLine("""
+            if (context.hasEnumArrayCast) appendLine("\n$indent1// Enum")
+            if (context.hasEnumArrayCastToNative) appendLine("""
                 
                 fun <T : Enum<T>> toNativeEnumArray(of: Array<T>?): MemorySegment = of?.run {
                     toNativeIntArray(IntArray(of.size) { of[it].ordinal })
                 } ?: MemorySegment.NULL
             """.replaceIndent(indent1))
-            if (context.hasEnumArrayToKotlinCast) appendLine("""
+            if (context.hasEnumArrayCastToKotlin) appendLine("""
                 
                 @Suppress("unchecked_cast")
                 fun <T : Enum<T>> toKotlinEnumArray(of: MemorySegment, enumClass: Class<T>, free: Boolean): Array<T>? {
@@ -390,23 +390,23 @@ class KotlinJvmForeignPrinter(
             """.replaceIndent(indent1))
         }
 
-        if(context.hasObjectArrays) {
+        if(context.hasObjectArraysCast) {
             printLabel("Object arrays", indent = indent1)
 
             buildList {
                 context.dictionaries.mapTo(this) { dictionary ->
                     Triple(dictionary.kname,
-                        dictionary in context.usedObjectArrayToNativeCast,
-                        dictionary in context.usedObjectArrayToKotlinCast)
+                        dictionary in context.usedObjectArrayCastToNative,
+                        dictionary in context.usedObjectArrayCastToKotlin)
                 }
                 context.interfaces.mapTo(this) { inter ->
                     Triple(inter.kname,
-                        inter in context.usedObjectArrayToNativeCast,
-                        inter in context.usedObjectArrayToKotlinCast)
+                        inter in context.usedObjectArrayCastToNative,
+                        inter in context.usedObjectArrayCastToKotlin)
                 }
                 add(Triple("String",
-                    context.hasStringArrayToNativeCast,
-                    context.hasStringArrayToKotlinCast))
+                    context.hasStringArrayCastToNative,
+                    context.hasStringArrayCastToKotlin))
             }.forEach { (name, hasToNative, hasToKotlin) ->
                 val lower = name.lowercase().capitalized()
 
@@ -442,24 +442,24 @@ class KotlinJvmForeignPrinter(
     }
 
     private fun StringBuilder.printInterfaces() {
-        if(!context.hasInterfaces)
+        if(!context.hasInterfaceCast)
             return
         printLabel("Interfaces", indent = indent1)
 
-        context.usedInterfaces.forEach { inter ->
+        context.castedInterfaces.forEach { inter ->
             val name = inter.kname
             val lower = inter.name.camelCase().lowercase().capitalized()
 
             appendLine("\n$indent1// $name")
 
-            if(inter in context.toNativeDeclarations) appendLine("""
+            if(inter in context.toNativeDeclarationCasts) appendLine("""
                 
                 private fun toNative$name(of: $name?): MemorySegment {
                     of ?: return MemorySegment.NULL
                     return interface${lower}Clone(MemorySegment.ofAddress(of.rcPtr)) as MemorySegment
                 }
             """.replaceIndent(indent1))
-            if(inter in context.toKotlinDeclarations) appendLine("""
+            if(inter in context.toKotlinDeclarationCasts) appendLine("""
                 
                 private fun toKotlin$name(of: MemorySegment, free: Boolean): $name? {
                     if(of.address() == 0L) return null
@@ -471,18 +471,18 @@ class KotlinJvmForeignPrinter(
     }
 
     private fun StringBuilder.printDictionaries() {
-        if(!context.hasDictionaries)
+        if(!context.hasDictionaryCast)
             return
         printLabel("Dictionaries", indent = indent1)
 
-        context.usedDictionaries.forEach { dictionary ->
+        context.castedDictionaries.forEach { dictionary ->
             val name = dictionary.kname
             val lower = dictionary.name.camelCase().lowercase()
             val fields = context.allFields[dictionary]!!
 
             appendLine("\n$indent1// $name")
 
-            if(dictionary in context.toNativeDeclarations) {
+            if(dictionary in context.toNativeDeclarationCasts) {
                 append("""
                     
                     private fun toNative$name(of: $name?): MemorySegment {
@@ -500,7 +500,7 @@ class KotlinJvmForeignPrinter(
                     }
                 """.replaceIndent(indent1))
             }
-            if(dictionary in context.toKotlinDeclarations) {
+            if(dictionary in context.toKotlinDeclarationCasts) {
                 append("""
                     
                     private fun toKotlin$name(of: MemorySegment, free: Boolean): $name? {
@@ -508,7 +508,7 @@ class KotlinJvmForeignPrinter(
                         return $name(
                 """.replaceIndent(indent1))
                 fields.forEach {
-                    val value = "_${lower}${it.name.camelCase().lowercase().capitalized()}(of) as ${it.type.toForeignKotlinType()}"
+                    val value = "_${lower}${it.cname.camelCase().capitalized()}(of) as ${it.type.toForeignKotlinType()}"
                     val casted = castToKotlin(it.type, value, false, brackets = true)
                     append("\n$indent1\t\t$casted,")
                 }
@@ -522,7 +522,7 @@ class KotlinJvmForeignPrinter(
     }
 
     private fun StringBuilder.printCallbacks() {
-        if(!context.hasCallbacks)
+        if(!context.hasCallbackCast)
             return
         printLabel("Callbacks", indent = indent1)
 
@@ -556,13 +556,13 @@ class KotlinJvmForeignPrinter(
             })
         """.replaceIndent(indent1))
 
-        context.usedCallbacks.forEach { callback ->
+        context.castedCallbacks.forEach { callback ->
             val name = callback.kname
             val lower = callback.name.camelCase().lowercase()
 
             appendLine("\n$indent1// $name")
 
-            if(callback in context.toNativeDeclarations) {
+            if(callback in context.toNativeDeclarationCasts) {
                 val args = buildList {
                     add("_self: Long")
                     callback.args.mapTo(this) { "${it.kname}: ${it.type.toForeignKotlinType()}" }
@@ -585,7 +585,7 @@ class KotlinJvmForeignPrinter(
                     }
                 """.replaceIndent(indent1))
             }
-            if(callback in context.toKotlinDeclarations) appendLine("""
+            if(callback in context.toKotlinDeclarationCasts) appendLine("""
                 
                 private fun toKotlin$name(of: MemorySegment, free: Boolean): $name? {
                     if(of.address() == 0L) return null

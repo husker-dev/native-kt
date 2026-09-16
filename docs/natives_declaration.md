@@ -56,7 +56,7 @@ Each native project has a minimum set of files required to work. These are:
 : Kotlin classpath where API will be generated.
 : Default: `natives.[name]`
 
-### `projectDir`
+### `dir`
 : Directory with CMake project.
 : Default: `<projectDir>/natives/[name]`
 

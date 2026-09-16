@@ -687,6 +687,10 @@ fun ResolvedIdlOperation.isAndroidCriticalCapable(): Boolean =
     !type.isArray() && !type.isString() && !type.isDictionary() &&
             args.all { !it.type.isArray() && !it.type.isString() }
 
+fun ResolvedIdlEnum.defaultValue(): String? =
+    attributes.filterIsInstance<IdlExtendedAttribute.IdentifierValue>()
+        .firstOrNull { it.name == "default" }?.identifier
+
 // ========
 
 fun IdlResolver.allOperations() = buildList {

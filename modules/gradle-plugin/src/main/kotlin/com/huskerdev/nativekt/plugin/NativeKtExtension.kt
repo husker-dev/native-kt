@@ -184,7 +184,7 @@ sealed interface BuildSystem: Serializable {
          */
         var headerFile: File? = null
 
-        fun headerFile() = headerFile ?: module.projectDir.resolve("include/api.${language.headerExtension}")
+        fun headerFile() = headerFile ?: module.dir.resolve("include/api.${language.headerExtension}")
 
         /**
          * CMake build type.
@@ -210,7 +210,7 @@ sealed interface BuildSystem: Serializable {
 
         var apiRsFile: File? = null
 
-        fun apiRsFile() = apiRsFile ?: module.projectDir.resolve("src/nativekt.rs")
+        fun apiRsFile() = apiRsFile ?: module.dir.resolve("src/nativekt.rs")
     }
 }
 
@@ -229,7 +229,7 @@ sealed class NativeProject @Inject constructor(
      *
      * Default value: `natives/[name]`
      */
-    var projectDir: File = defaultDir
+    var dir: File = defaultDir
 
     var buildSystem: BuildSystem = BuildSystem.CMake(this, Language.C)
         private set
@@ -241,7 +241,7 @@ sealed class NativeProject @Inject constructor(
      */
     var ndlFile: File? = null
 
-    fun ndlFile() = ndlFile ?: projectDir.resolve("api.ndl")
+    fun ndlFile() = ndlFile ?: dir.resolve("api.ndl")
 
     /**
      * Classpath where bindings will be generated.

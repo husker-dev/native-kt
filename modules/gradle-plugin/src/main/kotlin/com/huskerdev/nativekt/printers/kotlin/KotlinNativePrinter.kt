@@ -57,15 +57,15 @@ class KotlinNativePrinter(
     }
 
     private fun StringBuilder.printBasicCasts() {
-        if(context.hasString) {
+        if(context.hasStringCast) {
             printLabel("String")
-            if(context.hasStringToNativeCast) appendLine("""
+            if(context.hasStringCastToNative) appendLine("""
                 
                 private fun toNativeString(str: String?): COpaquePointer? = str?.encodeToByteArray()?.usePinned {
                     ${context.mangle("string_new")}(it.addressOf(0), str.length, it.get().size.convert(), true)
                 }
             """.trimIndent())
-            if(context.hasStringToKotlinCast) appendLine("""
+            if(context.hasStringCastToKotlin) appendLine("""
                 
                 private fun toKotlinString(str: COpaquePointer?, free: Boolean): String? {
                     if(str == null) return null
@@ -77,18 +77,18 @@ class KotlinNativePrinter(
             """.trimIndent())
         }
 
-        if(context.hasPrimitiveArray || context.hasEnumArray) {
+        if(context.hasPrimitiveArrayCast || context.hasEnumArrayCast) {
             printLabel("Primitive arrays")
 
-            if (context.hasCharArray) {
+            if (context.hasCharArrayCast) {
                 appendLine("\n// Char")
-                if (context.hasCharArrayToNativeCast) appendLine("""
+                if (context.hasCharArrayCastToNative) appendLine("""
                     
                     private fun toNativeCharArray(arr: CharArray?): COpaquePointer? = arr?.usePinned {
                         ${context.mangle("chararray_new")}(it.addressOf(0).reinterpret(), arr.size, true)
                     }
                 """.trimIndent())
-                if (context.hasCharArrayToKotlinCast) appendLine("""
+                if (context.hasCharArrayCastToKotlin) appendLine("""
                     
                     private fun toKotlinCharArray(arr: COpaquePointer?, free: Boolean): CharArray? {
                         if(arr == null) return null
@@ -99,9 +99,9 @@ class KotlinNativePrinter(
                     }
                 """.trimIndent())
             }
-            if (context.hasBooleanArray) {
+            if (context.hasBooleanArrayCast) {
                 appendLine("\n// Boolean")
-                if (context.hasBooleanArrayToNativeCast) appendLine("""
+                if (context.hasBooleanArrayCastToNative) appendLine("""
                     
                     private fun toNativeBooleanArray(arr: BooleanArray?): COpaquePointer? {
                         if(arr == null) return null
@@ -110,7 +110,7 @@ class KotlinNativePrinter(
                         }
                     }
                 """.trimIndent())
-                if (context.hasBooleanArrayToKotlinCast) appendLine("""
+                if (context.hasBooleanArrayCastToKotlin) appendLine("""
                     
                     private fun toKotlinBooleanArray(arr: COpaquePointer?, free: Boolean): BooleanArray? {
                         if(arr == null) return null
@@ -122,15 +122,15 @@ class KotlinNativePrinter(
                 """.trimIndent())
             }
 
-            if (context.hasByteArray || context.hasUByteArray) {
+            if (context.hasByteArrayCast || context.hasUByteArrayCast) {
                 appendLine("\n// Byte")
-                if (context.hasByteArrayToNativeCast || context.hasUByteArrayToNativeCast) appendLine("""
+                if (context.hasByteArrayCastToNative || context.hasUByteArrayCastToNative) appendLine("""
                     
                     private fun toNativeByteArray(arr: ByteArray?): COpaquePointer? = arr?.usePinned {
                         ${context.mangle("bytearray_new")}(it.addressOf(0).reinterpret(), arr.size, true)
                     }
                 """.trimIndent())
-                if (context.hasByteArrayToKotlinCast || context.hasUByteArrayToKotlinCast) appendLine("""
+                if (context.hasByteArrayCastToKotlin || context.hasUByteArrayCastToKotlin) appendLine("""
                     
                     private fun toKotlinByteArray(arr: COpaquePointer?, free: Boolean): ByteArray? {
                         if(arr == null) return null
@@ -142,15 +142,15 @@ class KotlinNativePrinter(
                 """.trimIndent())
             }
 
-            if (context.hasShortArray || context.hasUShortArray) {
+            if (context.hasShortArrayCast || context.hasUShortArrayCast) {
                 appendLine("\n// Short")
-                if (context.hasShortArrayToNativeCast || context.hasUShortArrayToNativeCast) appendLine("""
+                if (context.hasShortArrayCastToNative || context.hasUShortArrayCastToNative) appendLine("""
                     
                     private fun toNativeShortArray(arr: ShortArray?): COpaquePointer? = arr?.usePinned {
                         ${context.mangle("shortarray_new")}(it.addressOf(0).reinterpret(), arr.size, true)
                     }
                 """.trimIndent())
-                if (context.hasShortArrayToKotlinCast || context.hasUShortArrayToKotlinCast) appendLine("""
+                if (context.hasShortArrayCastToKotlin || context.hasUShortArrayCastToKotlin) appendLine("""
                     
                     private fun toKotlinShortArray(arr: COpaquePointer?, free: Boolean): ShortArray? {
                         if(arr == null) return null
@@ -162,15 +162,15 @@ class KotlinNativePrinter(
                 """.trimIndent())
             }
 
-            if (context.hasIntArray || context.hasUIntArray || context.hasEnumArray) {
+            if (context.hasIntArrayCast || context.hasUIntArrayCast || context.hasEnumArrayCast) {
                 appendLine("\n// Int")
-                if (context.hasIntArrayToNativeCast || context.hasUIntArrayToNativeCast || context.hasEnumArrayToNativeCast) appendLine("""
+                if (context.hasIntArrayCastToNative || context.hasUIntArrayCastToNative || context.hasEnumArrayCastToNative) appendLine("""
                     
                     private fun toNativeIntArray(arr: IntArray?): COpaquePointer? = arr?.usePinned {
                         ${context.mangle("intarray_new")}(it.addressOf(0).reinterpret(), arr.size, true)
                     }
                 """.trimIndent())
-                if (context.hasIntArrayToKotlinCast || context.hasUIntArrayToKotlinCast || context.hasEnumArrayToKotlinCast) appendLine("""
+                if (context.hasIntArrayCastToKotlin || context.hasUIntArrayCastToKotlin || context.hasEnumArrayCastToKotlin) appendLine("""
                     
                     private fun toKotlinIntArray(arr: COpaquePointer?, free: Boolean): IntArray? {
                         if(arr == null) return null
@@ -182,15 +182,15 @@ class KotlinNativePrinter(
                 """.trimIndent())
             }
 
-            if (context.hasLongArray || context.hasULongArray) {
+            if (context.hasLongArrayCast || context.hasULongArrayCast) {
                 appendLine("\n// Long")
-                if (context.hasLongArrayToNativeCast || context.hasULongArrayToNativeCast) appendLine("""
+                if (context.hasLongArrayCastToNative || context.hasULongArrayCastToNative) appendLine("""
                     
                     private fun toNativeLongArray(arr: LongArray?): COpaquePointer? = arr?.usePinned {
                         ${context.mangle("longarray_new")}(it.addressOf(0).reinterpret(), arr.size, true)
                     }
                 """.trimIndent())
-                if (context.hasLongArrayToKotlinCast || context.hasULongArrayToKotlinCast) appendLine("""
+                if (context.hasLongArrayCastToKotlin || context.hasULongArrayCastToKotlin) appendLine("""
                     
                     private fun toKotlinLongArray(arr: COpaquePointer?, free: Boolean): LongArray? {
                         if(arr == null) return null
@@ -202,15 +202,15 @@ class KotlinNativePrinter(
                 """.trimIndent())
             }
 
-            if (context.hasFloatArray) {
+            if (context.hasFloatArrayCast) {
                 appendLine("\n// Float")
-                if (context.hasFloatArrayToNativeCast) appendLine("""
+                if (context.hasFloatArrayCastToNative) appendLine("""
                     
                     private fun toNativeFloatArray(arr: FloatArray?): COpaquePointer? = arr?.usePinned {
                         ${context.mangle("floatarray_new")}(it.addressOf(0).reinterpret(), arr.size, true)
                     }
                 """.trimIndent())
-                if (context.hasFloatArrayToKotlinCast) appendLine("""
+                if (context.hasFloatArrayCastToKotlin) appendLine("""
                     
                     private fun toKotlinFloatArray(arr: COpaquePointer?, free: Boolean): FloatArray? {
                         if(arr == null) return null
@@ -222,15 +222,15 @@ class KotlinNativePrinter(
                 """.trimIndent())
             }
 
-            if (context.hasDoubleArray) {
+            if (context.hasDoubleArrayCast) {
                 appendLine("\n// Double")
-                if (context.hasDoubleArrayToNativeCast) appendLine("""
+                if (context.hasDoubleArrayCastToNative) appendLine("""
                     
                     private fun toNativeDoubleArray(arr: DoubleArray?): COpaquePointer? = arr?.usePinned {
                         ${context.mangle("doublearray_new")}(it.addressOf(0).reinterpret(), arr.size, true)
                     }
                 """.trimIndent())
-                if (context.hasDoubleArrayToKotlinCast) appendLine("""
+                if (context.hasDoubleArrayCastToKotlin) appendLine("""
                     
                     private fun toKotlinDoubleArray(arr: COpaquePointer?, free: Boolean): DoubleArray? {
                         if(arr == null) return null
@@ -242,14 +242,14 @@ class KotlinNativePrinter(
                 """.trimIndent())
             }
 
-            if (context.hasEnumArray) {
+            if (context.hasEnumArrayCast) {
                 printLabel("Enum array")
-                if (context.hasEnumArrayToNativeCast) appendLine("""
+                if (context.hasEnumArrayCastToNative) appendLine("""
                     
                     fun <T: Enum<T>> toNativeEnumArray(arr: Array<T>?): COpaquePointer? =
                         arr?.run { toNativeIntArray(IntArray(arr.size) { arr[it].ordinal }) }
                 """.trimIndent())
-                if (context.hasEnumArrayToKotlinCast) appendLine("""
+                if (context.hasEnumArrayCastToKotlin) appendLine("""
                     
                     private inline fun <reified T: Enum<T>> toKotlinEnumArray(arr: COpaquePointer?, free: Boolean): Array<T>? {
                         if(arr == null) return null
@@ -261,24 +261,24 @@ class KotlinNativePrinter(
             }
         }
 
-        if(context.hasObjectArrays) {
+        if(context.hasObjectArraysCast) {
             printLabel("Object arrays")
 
             buildList {
-                context.usedDictionaries.mapTo(this) { dictionary ->
+                context.castedDictionaries.mapTo(this) { dictionary ->
                     Triple(dictionary.kname to dictionary.cname.lowercase(),
-                        dictionary in context.usedObjectArrayToNativeCast,
-                        dictionary in context.usedObjectArrayToKotlinCast)
+                        dictionary in context.usedObjectArrayCastToNative,
+                        dictionary in context.usedObjectArrayCastToKotlin)
                 }
-                context.usedInterfaces.mapTo(this) { inter ->
+                context.castedInterfaces.mapTo(this) { inter ->
                     Triple(inter.kname to inter.cname.lowercase(),
-                        inter in context.usedObjectArrayToNativeCast,
-                        inter in context.usedObjectArrayToKotlinCast)
+                        inter in context.usedObjectArrayCastToNative,
+                        inter in context.usedObjectArrayCastToKotlin)
                 }
-                if (context.hasStringArray) {
+                if (context.hasStringArrayCast) {
                     add(Triple("String" to "string",
-                        context.hasStringArrayToNativeCast,
-                        context.hasStringArrayToKotlinCast))
+                        context.hasStringArrayCastToNative,
+                        context.hasStringArrayCastToKotlin))
                 }
             }.forEach { (names, hasToNativeCast, hasToKotlinCast) ->
                 val name = names.first
@@ -323,11 +323,11 @@ class KotlinNativePrinter(
     }
 
     private fun StringBuilder.printDictionariesCasts() {
-        if(!context.hasDictionaries)
+        if(!context.hasDictionaryCast)
             return
         printLabel("Dictionary")
 
-        context.usedDictionaries.forEach { dictionary ->
+        context.castedDictionaries.forEach { dictionary ->
             val name = dictionary.kname
             val funcNew = dictionary.subCFunc(context, "new")
             val fields = context.allFields[dictionary]!!
@@ -335,7 +335,7 @@ class KotlinNativePrinter(
             appendLine("\n// $name")
 
             // to native
-            if(dictionary in context.toNativeDeclarations) {
+            if(dictionary in context.toNativeDeclarationCasts) {
                 append($$"""
                     
                     private fun toNative$$name(of: $$name?): COpaquePointer? {
@@ -354,7 +354,7 @@ class KotlinNativePrinter(
             }
 
             // to kotlin
-            if(dictionary in context.toKotlinDeclarations) {
+            if(dictionary in context.toKotlinDeclarationCasts) {
                 append($$"""
                     
                     private fun toKotlin$$name(of: COpaquePointer?, free: Boolean): $$name? {
@@ -373,7 +373,7 @@ class KotlinNativePrinter(
     }
 
     private fun StringBuilder.printCallbacks() {
-        if(!context.hasCallbacks)
+        if(!context.hasCallbackCast)
             return
         printLabel("Callbacks")
 
@@ -393,7 +393,7 @@ class KotlinNativePrinter(
             
         """.trimIndent())
 
-        context.usedCallbacks.forEach { callback ->
+        context.castedCallbacks.forEach { callback ->
             val name = callback.kname
             val lower = callback.name.camelCase().lowercase()
             val invokeFunc = "invoke$name"
@@ -411,7 +411,7 @@ class KotlinNativePrinter(
 
             appendLine("\n// $name")
 
-            if(callback in context.toNativeDeclarations) appendLine("""
+            if(callback in context.toNativeDeclarationCasts) appendLine("""
                 
                 private val $invokeFunc = staticCFunction { $invokeArgs ->
                     ${castToNative(callback.type, "getCallback<$name>(_id)($castedArgs)")}
@@ -425,7 +425,7 @@ class KotlinNativePrinter(
                 	)
                 }
             """.trimIndent())
-            if(callback in context.toKotlinDeclarations) appendLine("""
+            if(callback in context.toKotlinDeclarationCasts) appendLine("""
                 
                 private fun toKotlin$name(self: COpaquePointer?, free: Boolean): $name? {
                 	if(self == null) return null
@@ -530,15 +530,15 @@ class KotlinNativePrinter(
     }
 
     private fun StringBuilder.printInterfaces() {
-        if(!context.hasInterfaces)
+        if(context.interfaces.isEmpty())
             return
         printLabel("Interfaces")
 
-        context.usedInterfaces.forEach { inter ->
+        context.interfaces.forEach { inter ->
             val name = inter.kname
             val lower = inter.kname.lowercase()
 
-            if(inter in context.toKotlinDeclarations) appendLine("""
+            if(inter in context.toKotlinDeclarationCasts) appendLine("""
                 
                 private fun toKotlin$name(ptr: COpaquePointer?, free: Boolean): $name? {
                     if(ptr == null) return null
@@ -546,7 +546,7 @@ class KotlinNativePrinter(
                         .also { if(free) ${context.mangle("interface_${lower}_free")}(ptr) }
                 }
             """.trimIndent())
-            if(inter in context.toNativeDeclarations) appendLine("""
+            if(inter in context.toNativeDeclarationCasts) appendLine("""
                 
                 private fun toNative$name(obj: $name?): COpaquePointer? {
                     if(obj == null) return null

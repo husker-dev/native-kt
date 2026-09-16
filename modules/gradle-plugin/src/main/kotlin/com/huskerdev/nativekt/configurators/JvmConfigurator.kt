@@ -116,7 +116,7 @@ internal fun configureJvm(
         "prepareNatives${context.moduleName.upperCamelCase()}Jvm",
         PrepareNativesJvm::class.java
     ) {
-        this.inputs.dir(context.module.projectDir)
+        this.inputs.dir(context.module.dir)
         this.inputs.file(context.module.ndlFile())
         this.outputs.dirs(nativesBuildSourcesDir, srcDir)
 
@@ -140,7 +140,7 @@ internal fun configureJvm(
         "compileNatives${context.moduleName.upperCamelCase()}Jvm",
         CompileNativesJvm::class.java
     ) {
-        this.inputs.dir(context.module.projectDir)
+        this.inputs.dir(context.module.dir)
         this.inputs.file(context.module.ndlFile())
         this.outputs.dir(nativesBuildOutDir)
 
@@ -190,7 +190,7 @@ private abstract class PrepareNativesJvm: DefaultTask() {
 
         val nativesBuildSourcesDir = File(nativesBuildSourcesDir).fresh()
         val nativesBuildOutDir = File(nativesBuildOutDir)
-        val projectDir = File(context.module.projectDir.absolutePath)
+        val projectDir = File(context.module.dir.absolutePath)
 
         // Generate all files
 
@@ -314,7 +314,7 @@ private abstract class CompileNativesJvm @Inject constructor(
 
         val nativesBuildSourcesDir = File(nativesBuildSourcesDir)
         val nativesBuildOutDir = File(nativesBuildOutDir)
-        val projectDir = File(context.module.projectDir.absolutePath)
+        val projectDir = File(context.module.dir.absolutePath)
 
         val platformBuildDir = File(nativesBuildOutDir, "${platformName()}${libArch(extension.useUniversalMacOSLib).capitalized()}")
         platformBuildDir.mkdirs()

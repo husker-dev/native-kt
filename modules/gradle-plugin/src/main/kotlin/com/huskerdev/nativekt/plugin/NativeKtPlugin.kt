@@ -57,7 +57,7 @@ class NativeKtPlugin: Plugin<Project> {
         project.afterEvaluate {
             File(project.layout.buildDirectory.get().asFile, "nativekt.txt").apply {
                 val content = extension?.joinToString(separator = "\n") {
-                    (it as NativeProject).projectDir.absolutePath
+                    (it as NativeProject).dir.absolutePath
                 } ?: ""
 
                 if(content.isNotEmpty()) {

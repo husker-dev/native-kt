@@ -17,20 +17,16 @@ bool pass_big_dictionary(TypeDictionary* arg) {
         strncmp(arg->a13->data, "test string", arg->a13->length) == 0 &&
         arg->a14 == MyEnum_CASE2 &&
         arg->a15->a == 1 && arg->a15->b == 2 && arg->a15->c == 3 && arg->a15->d == 4 &&
-        arg->a16->pointed == (void*) 1 &&
+        arg->a16 == NULL &&
+        arg->a17->pointed == (void*) 1 &&
+        arg->a18 == NULL &&
         // callback (a16) is skipped
-        arg->a18->length == 2 &&
-            arg->a18->elements[0] == 'a' &&
-            arg->a18->elements[1] == 'b' &&
-        arg->a19->length == 2 &&
-            arg->a19->elements[0] == true &&
-            arg->a19->elements[1] == false &&
         arg->a20->length == 2 &&
-            arg->a20->elements[0] == 1 &&
-            arg->a20->elements[1] == 2 &&
+            arg->a20->elements[0] == 'a' &&
+            arg->a20->elements[1] == 'b' &&
         arg->a21->length == 2 &&
-            arg->a21->elements[0] == 1 &&
-            arg->a21->elements[1] == 2 &&
+            arg->a21->elements[0] == true &&
+            arg->a21->elements[1] == false &&
         arg->a22->length == 2 &&
             arg->a22->elements[0] == 1 &&
             arg->a22->elements[1] == 2 &&
@@ -50,29 +46,35 @@ bool pass_big_dictionary(TypeDictionary* arg) {
             arg->a27->elements[0] == 1 &&
             arg->a27->elements[1] == 2 &&
         arg->a28->length == 2 &&
-            arg->a28->elements[0] == 1.2f &&
-            arg->a28->elements[1] == 3.4f &&
+            arg->a28->elements[0] == 1 &&
+            arg->a28->elements[1] == 2 &&
         arg->a29->length == 2 &&
-            arg->a29->elements[0] == 1.2 &&
-            arg->a29->elements[1] == 3.4 &&
+            arg->a29->elements[0] == 1 &&
+            arg->a29->elements[1] == 2 &&
         arg->a30->length == 2 &&
-            strncmp(((KString*)arg->a30->elements[0])->data, "string1", ((KString*)arg->a30->elements[0])->length) == 0 &&
-            strncmp(((KString*)arg->a30->elements[1])->data, "string2", ((KString*)arg->a30->elements[1])->length) == 0 &&
+            arg->a30->elements[0] == 1.2f &&
+            arg->a30->elements[1] == 3.4f &&
         arg->a31->length == 2 &&
-            arg->a31->elements[0] == MyEnum_CASE1 &&
-            arg->a31->elements[1] == MyEnum_CASE2 &&
+            arg->a31->elements[0] == 1.2 &&
+            arg->a31->elements[1] == 3.4 &&
         arg->a32->length == 2 &&
-            ((MyDictionary**)arg->a32->elements)[0]->a == 1 &&
-            ((MyDictionary**)arg->a32->elements)[0]->b == 2 &&
-            ((MyDictionary**)arg->a32->elements)[0]->c == 3 &&
-            ((MyDictionary**)arg->a32->elements)[0]->d == 4 &&
-            ((MyDictionary**)arg->a32->elements)[1]->a == 5 &&
-            ((MyDictionary**)arg->a32->elements)[1]->b == 6 &&
-            ((MyDictionary**)arg->a32->elements)[1]->c == 7 &&
-            ((MyDictionary**)arg->a32->elements)[1]->d == 8 &&
+            strncmp(((KString*)arg->a32->elements[0])->data, "string1", ((KString*)arg->a32->elements[0])->length) == 0 &&
+            strncmp(((KString*)arg->a32->elements[1])->data, "string2", ((KString*)arg->a32->elements[1])->length) == 0 &&
         arg->a33->length == 2 &&
-            ((RC_MyInterface*)arg->a33->elements[0])->pointed == (void*) 1 &&
-            ((RC_MyInterface*)arg->a33->elements[1])->pointed == (void*) 1
+            arg->a33->elements[0] == MyEnum_CASE1 &&
+            arg->a33->elements[1] == MyEnum_CASE2 &&
+        arg->a34->length == 2 &&
+            ((MyDictionary**)arg->a34->elements)[0]->a == 1 &&
+            ((MyDictionary**)arg->a34->elements)[0]->b == 2 &&
+            ((MyDictionary**)arg->a34->elements)[0]->c == 3 &&
+            ((MyDictionary**)arg->a34->elements)[0]->d == 4 &&
+            ((MyDictionary**)arg->a34->elements)[1]->a == 5 &&
+            ((MyDictionary**)arg->a34->elements)[1]->b == 6 &&
+            ((MyDictionary**)arg->a34->elements)[1]->c == 7 &&
+            ((MyDictionary**)arg->a34->elements)[1]->d == 8 &&
+        arg->a35->length == 2 &&
+            ((RC_MyInterface*)arg->a35->elements[0])->pointed == (void*) 1 &&
+            ((RC_MyInterface*)arg->a35->elements[1])->pointed == (void*) 1
     ;
 }
 
@@ -96,7 +98,9 @@ TypeDictionary* return_big_dictionary(
         kstring_new("test string"),
         MyEnum_CASE2,
         MyDictionary_new(1, 2, 3, 4),
+        NULL,
         inter->clone(inter),
+        NULL,
         callback->clone(callback),
         kchar_array_of('a', 'b'),
         kboolean_array_of(true, false),

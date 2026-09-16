@@ -101,7 +101,9 @@ class KotlinCommonPrinter(
         printLabel("Enums")
         context.enums.forEach { enum ->
             append("\nenum class ${enum.kname} {")
-            enum.elements.joinTo(this, separator = ",") { "\n\t$it" }
+            enum.elements.joinTo(this, separator = ",") {
+                "\n\t${it.snakeCase().uppercase()}"
+            }
             append("\n}\n")
         }
     }

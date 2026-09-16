@@ -25,7 +25,7 @@ abstract class InitTask: DefaultTask() {
     @TaskAction
     fun action() {
         moduleName = module.name
-        dir = module.projectDir
+        dir = module.dir
         ndlFile = module.ndlFile()
 
         dir.mkdirs()

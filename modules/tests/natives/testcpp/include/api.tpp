@@ -127,12 +127,14 @@ T &&KOptional<T>::operator*() && {
 }
 
 template<typename T>
-T* _Nonnull KOptional<T>::get_ptr() {
+T* _Nullable KOptional<T>::get_ptr() {
+    if (is_empty) return nullptr;
     return reinterpret_cast<T*>(storage);
 }
 
 template<typename T>
-const T* _Nonnull KOptional<T>::get_ptr() const {
+const T* _Nullable KOptional<T>::get_ptr() const {
+    if (is_empty) return nullptr;
     return reinterpret_cast<const T*>(storage);
 }
 

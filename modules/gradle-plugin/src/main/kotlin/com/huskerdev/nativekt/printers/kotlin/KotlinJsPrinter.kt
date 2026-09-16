@@ -139,10 +139,10 @@ class KotlinJsPrinter(
     }
 
     private fun StringBuilder.printBasicCasts() {
-        if(context.hasString) {
+        if(context.hasStringCast) {
             printLabel("String")
 
-            if (context.hasStringToNativeCast) appendLine("""
+            if (context.hasStringCastToNative) appendLine("""
                 
                 private fun toNativeString(of: String?): Int {
                     if(of == null) return 0
@@ -152,7 +152,7 @@ class KotlinJsPrinter(
                     return _module.string_new(data, of.length, bytes.size, false)
                 }
             """.trimIndent())
-            if (context.hasStringToKotlinCast) appendLine("""
+            if (context.hasStringCastToKotlin) appendLine("""
                 
                 private fun toKotlinString(of: Int, free: Boolean): String? {
                     if(of == 0) return null
@@ -164,10 +164,10 @@ class KotlinJsPrinter(
             """.trimIndent())
         }
 
-        if(context.hasPrimitiveArray) {
+        if(context.hasPrimitiveArrayCast) {
             printLabel("Primitive arrays")
 
-            if (context.hasCharArrayToNativeCast) appendLine("""
+            if (context.hasCharArrayCastToNative) appendLine("""
                 
                 private fun toNativeCharArray(of: CharArray?, pure: Boolean = false): Int {
                     if(of == null) return 0
@@ -177,7 +177,7 @@ class KotlinJsPrinter(
                     return _module.chararray_new(data, of.size, false)
                 }
             """.trimIndent())
-            if (context.hasCharArrayToKotlinCast) appendLine("""
+            if (context.hasCharArrayCastToKotlin) appendLine("""
                 
                 private fun toKotlinCharArray(of: Int, free: Boolean): CharArray? {
                     if(of == 0) return null
@@ -186,7 +186,7 @@ class KotlinJsPrinter(
                         .also { if(free) _module.chararray_free(of) }
                 }
             """.trimIndent())
-            if (context.hasBooleanArrayToNativeCast) appendLine("""
+            if (context.hasBooleanArrayCastToNative) appendLine("""
                 
                 private fun toNativeBooleanArray(of: BooleanArray?, pure: Boolean = false): Int {
                     if(of == null) return 0
@@ -196,7 +196,7 @@ class KotlinJsPrinter(
                     return _module.booleanarray_new(data, of.size, false)
                 }
             """.trimIndent())
-            if (context.hasBooleanArrayToKotlinCast) appendLine("""
+            if (context.hasBooleanArrayCastToKotlin) appendLine("""
                 
                 private fun toKotlinBooleanArray(of: Int, free: Boolean): BooleanArray? {
                     if(of == 0) return null
@@ -205,8 +205,8 @@ class KotlinJsPrinter(
                         .also { if(free) _module.booleanarray_free(of) }
                 }
             """.trimIndent())
-            if (context.hasByteArrayToNativeCast || context.hasUByteArrayToNativeCast ||
-                context.hasCriticalString || context.hasCriticalStringOpt) appendLine("""
+            if (context.hasByteArrayCastToNative || context.hasUByteArrayCastToNative ||
+                context.hasCriticalStringCast || context.hasCriticalStringOptCast) appendLine("""
                 
                 private fun toNativeByteArray(of: ByteArray?, pure: Boolean = false): Int {
                     if(of == null) return 0
@@ -216,7 +216,7 @@ class KotlinJsPrinter(
                     return _module.bytearray_new(data, of.size, false)
                 }
             """.trimIndent())
-            if (context.hasByteArrayToKotlinCast || context.hasUByteArrayToKotlinCast) appendLine("""
+            if (context.hasByteArrayCastToKotlin || context.hasUByteArrayCastToKotlin) appendLine("""
                 
                 private fun toKotlinByteArray(of: Int, free: Boolean): ByteArray? {
                     if(of == 0) return null
@@ -225,7 +225,7 @@ class KotlinJsPrinter(
                         .also { if(free) _module.bytearray_free(of) }
                 }
             """.trimIndent())
-            if (context.hasShortArrayToNativeCast || context.hasUShortArrayToNativeCast) appendLine("""
+            if (context.hasShortArrayCastToNative || context.hasUShortArrayCastToNative) appendLine("""
                 
                 private fun toNativeShortArray(of: ShortArray?, pure: Boolean = false): Int {
                     if(of == null) return 0
@@ -235,7 +235,7 @@ class KotlinJsPrinter(
                     return _module.shortarray_new(data, of.size, false)
                 }
             """.trimIndent())
-            if (context.hasShortArrayToKotlinCast || context.hasUShortArrayToKotlinCast) appendLine("""
+            if (context.hasShortArrayCastToKotlin || context.hasUShortArrayCastToKotlin) appendLine("""
                 
                 private fun toKotlinShortArray(of: Int, free: Boolean): ShortArray? {
                     if(of == 0) return null
@@ -244,7 +244,7 @@ class KotlinJsPrinter(
                         .also { if(free) _module.shortarray_free(of) }
                 }
             """.trimIndent())
-            if (context.hasIntArrayToNativeCast || context.hasUIntArrayToNativeCast || context.hasEnumArrayToNativeCast) appendLine("""
+            if (context.hasIntArrayCastToNative || context.hasUIntArrayCastToNative || context.hasEnumArrayCastToNative) appendLine("""
                 
                 private fun toNativeIntArray(of: IntArray?, pure: Boolean = false): Int {
                     if(of == null) return 0
@@ -254,7 +254,7 @@ class KotlinJsPrinter(
                     return _module.intarray_new(data, of.size, false)
                 }
             """.trimIndent())
-            if (context.hasIntArrayToKotlinCast || context.hasUIntArrayToKotlinCast || context.hasEnumArrayToKotlinCast) appendLine("""
+            if (context.hasIntArrayCastToKotlin || context.hasUIntArrayCastToKotlin || context.hasEnumArrayCastToKotlin) appendLine("""
                 
                 private fun toKotlinIntArray(of: Int, free: Boolean): IntArray? {
                     if(of == 0) return null
@@ -263,7 +263,7 @@ class KotlinJsPrinter(
                         .also { if(free) _module.intarray_free(of) }
                 }
             """.trimIndent())
-            if (context.hasLongArrayToNativeCast || context.hasULongArrayToNativeCast) appendLine("""
+            if (context.hasLongArrayCastToNative || context.hasULongArrayCastToNative) appendLine("""
                 
                 private fun toNativeLongArray(of: LongArray?, pure: Boolean = false): Int {
                     if(of == null) return 0
@@ -273,7 +273,7 @@ class KotlinJsPrinter(
                     return _module.longarray_new(data, of.size, false)
                 }
             """.trimIndent())
-            if (context.hasLongArrayToKotlinCast || context.hasULongArrayToKotlinCast) appendLine("""
+            if (context.hasLongArrayCastToKotlin || context.hasULongArrayCastToKotlin) appendLine("""
                 
                 private fun toKotlinLongArray(of: Int, free: Boolean): LongArray? {
                     if(of == 0) return null
@@ -282,7 +282,7 @@ class KotlinJsPrinter(
                         .also { if(free) _module.longarray_free(of) }
                 }
             """.trimIndent())
-            if (context.hasFloatArrayToNativeCast) appendLine("""
+            if (context.hasFloatArrayCastToNative) appendLine("""
                 
                 private fun toNativeFloatArray(of: FloatArray?, pure: Boolean = false): Int {
                     if(of == null) return 0
@@ -292,7 +292,7 @@ class KotlinJsPrinter(
                     return _module.floatarray_new(data, of.size, false)
                 }
             """.trimIndent())
-            if (context.hasFloatArrayToKotlinCast) appendLine("""
+            if (context.hasFloatArrayCastToKotlin) appendLine("""
                 
                 private fun toKotlinFloatArray(of: Int, free: Boolean): FloatArray? {
                     if(of == 0) return null
@@ -301,7 +301,7 @@ class KotlinJsPrinter(
                         .also { if(free) _module.floatarray_free(of) }
                 }
             """.trimIndent())
-            if (context.hasDoubleArrayToNativeCast) appendLine("""
+            if (context.hasDoubleArrayCastToNative) appendLine("""
                 
                 private fun toNativeDoubleArray(of: DoubleArray?, pure: Boolean = false): Int {
                     if(of == null) return 0
@@ -311,7 +311,7 @@ class KotlinJsPrinter(
                     return _module.doublearray_new(data, of.size, false)
                 }
             """.trimIndent())
-            if (context.hasDoubleArrayToKotlinCast) appendLine("""
+            if (context.hasDoubleArrayCastToKotlin) appendLine("""
                 
                 private fun toKotlinDoubleArray(of: Int, free: Boolean): DoubleArray? {
                     if(of == 0) return null
@@ -322,8 +322,8 @@ class KotlinJsPrinter(
             """.trimIndent())
         }
 
-        if(context.hasEnumArray) {
-            if(context.hasEnumArrayToNativeCast) appendLine("""
+        if(context.hasEnumArrayCast) {
+            if(context.hasEnumArrayCastToNative) appendLine("""
                 
                 private fun <T: Enum<T>> toNativeEnumArray(of: Array<T>?, pure: Boolean = false): Int {
                     if(of == null) return 0
@@ -334,7 +334,7 @@ class KotlinJsPrinter(
                     return _module.intarray_new(data, of.size, false)
                 }
             """.trimIndent())
-            if(context.hasEnumArrayToKotlinCast) appendLine("""
+            if(context.hasEnumArrayCastToKotlin) appendLine("""
                 
                 private inline fun <reified T: Enum<T>> toKotlinEnumArray(arr: Int, free: Boolean): Array<T>? {
                     if(arr == 0) return null
@@ -346,23 +346,23 @@ class KotlinJsPrinter(
         }
 
         // Typed arrays
-        if(context.hasObjectArrays) {
+        if(context.hasObjectArraysCast) {
             printLabel("Typed arrays")
             buildList {
                 context.dictionaries.mapTo(this) { dictionary ->
                     Triple(dictionary.kname,
-                        dictionary in context.usedObjectArrayToNativeCast,
-                        dictionary in context.usedObjectArrayToKotlinCast)
+                        dictionary in context.usedObjectArrayCastToNative,
+                        dictionary in context.usedObjectArrayCastToKotlin)
                 }
                 context.interfaces.mapTo(this) { inter ->
                     Triple(inter.kname,
-                        inter in context.usedObjectArrayToNativeCast,
-                        inter in context.usedObjectArrayToKotlinCast)
+                        inter in context.usedObjectArrayCastToNative,
+                        inter in context.usedObjectArrayCastToKotlin)
                 }
-                if (context.hasStringArray) {
+                if (context.hasStringArrayCast) {
                     add(Triple("String",
-                        context.hasStringArrayToNativeCast,
-                        context.hasStringArrayToKotlinCast))
+                        context.hasStringArrayCastToNative,
+                        context.hasStringArrayCastToKotlin))
                 }
             }.forEach { (name, hasToNativeCast, hasToKotlinCast) ->
                 val lower = name.lowercase()
@@ -396,7 +396,7 @@ class KotlinJsPrinter(
     }
 
     private fun StringBuilder.printCallbacks() {
-        if(!context.hasCallbacks)
+        if(!context.hasCallbackCast)
             return
         printLabel("Callbacks")
 
@@ -407,7 +407,7 @@ class KotlinJsPrinter(
                     _equals
                     _free
             """.trimIndent())
-            context.usedCallbacks.joinTo(this, "") { "\n\t_invoke${it.kname}" }
+            context.castedCallbacks.joinTo(this, "") { "\n\t_invoke${it.kname}" }
             append("\n}\n")
         }
 
@@ -461,7 +461,7 @@ class KotlinJsPrinter(
             """.trimIndent())
         }
 
-        context.usedCallbacks.forEach { callback ->
+        context.castedCallbacks.forEach { callback ->
             val name = callback.kname
             val lower = name.lowercase()
 
@@ -476,7 +476,7 @@ class KotlinJsPrinter(
                 castToKotlin(it.type, it.kname, free = true)
             }
 
-            if(callback in context.toNativeDeclarations) {
+            if(callback in context.toNativeDeclarationCasts) {
                 when (context.language) {
                     Language.RUST -> appendLine("""
                         
@@ -513,7 +513,7 @@ class KotlinJsPrinter(
                     }
                 """.trimIndent())
             }
-            if(callback in context.toKotlinDeclarations) {
+            if(callback in context.toKotlinDeclarationCasts) {
                 appendLine("""
                     
                     private fun toKotlin$name(of: Int, free: Boolean): $name? {
@@ -567,12 +567,12 @@ class KotlinJsPrinter(
             @JsName("${jsMangle("dealloc")}") fun dealloc(ptr: Int, size: Int)
         """.replaceIndent("\t"))
 
-        if(context.hasString) {
-            if(context.hasStringToNativeCast) append("""
+        if(context.hasStringCast) {
+            if(context.hasStringCastToNative) append("""
                 
                 @JsName("${jsMangle("string_new")}") fun string_new(data: Int, length: Int, size: Int, makeCopy: Boolean): Int
             """.replaceIndent("\t"))
-            if(context.hasStringToKotlinCast) append("""
+            if(context.hasStringCastToKotlin) append("""
                 
                 @JsName("${jsMangle("string_data")}") fun string_data(self: Int): Int
                 @JsName("${jsMangle("string_size")}") fun string_size(self: Int): Int
@@ -583,25 +583,25 @@ class KotlinJsPrinter(
         // Primitive arrays
         buildList {
             add(Triple("char",
-                context.hasCharArrayToNativeCast,
-                context.hasCharArrayToKotlinCast))
+                context.hasCharArrayCastToNative,
+                context.hasCharArrayCastToKotlin))
             add(Triple("boolean",
-                context.hasBooleanArrayToNativeCast,
-                context.hasBooleanArrayToKotlinCast))
+                context.hasBooleanArrayCastToNative,
+                context.hasBooleanArrayCastToKotlin))
             add(Triple("byte",
-                context.hasByteArrayToNativeCast || context.hasUByteArrayToNativeCast || context.hasCriticalString || context.hasCriticalStringOpt,
-                context.hasByteArrayToKotlinCast || context.hasUByteArrayToKotlinCast))
+                context.hasByteArrayCastToNative || context.hasUByteArrayCastToNative || context.hasCriticalStringCast || context.hasCriticalStringOptCast,
+                context.hasByteArrayCastToKotlin || context.hasUByteArrayCastToKotlin))
             add(Triple("short",
-                context.hasShortArrayToNativeCast || context.hasUShortArrayToNativeCast,
-                context.hasShortArrayToKotlinCast || context.hasUShortArrayToKotlinCast))
+                context.hasShortArrayCastToNative || context.hasUShortArrayCastToNative,
+                context.hasShortArrayCastToKotlin || context.hasUShortArrayCastToKotlin))
             add(Triple("int",
-                context.hasIntArrayToNativeCast || context.hasUIntArrayToNativeCast || context.hasEnumArrayToNativeCast,
-                context.hasIntArrayToKotlinCast || context.hasUIntArrayToKotlinCast || context.hasEnumArrayToKotlinCast))
+                context.hasIntArrayCastToNative || context.hasUIntArrayCastToNative || context.hasEnumArrayCastToNative,
+                context.hasIntArrayCastToKotlin || context.hasUIntArrayCastToKotlin || context.hasEnumArrayCastToKotlin))
             add(Triple("long",
-                context.hasLongArrayToNativeCast || context.hasULongArrayToNativeCast,
-                context.hasLongArrayToKotlinCast || context.hasULongArrayToKotlinCast))
-            add(Triple("float", context.hasFloatArrayToNativeCast, context.hasFloatArrayToKotlinCast))
-            add(Triple("double", context.hasDoubleArrayToNativeCast, context.hasDoubleArrayToKotlinCast))
+                context.hasLongArrayCastToNative || context.hasULongArrayCastToNative,
+                context.hasLongArrayCastToKotlin || context.hasULongArrayCastToKotlin))
+            add(Triple("float", context.hasFloatArrayCastToNative, context.hasFloatArrayCastToKotlin))
+            add(Triple("double", context.hasDoubleArrayCastToNative, context.hasDoubleArrayCastToKotlin))
         }.forEach { (name, hasToNativeCast, hasToKotlinCast) ->
             val name = "${name}array"
             if(hasToNativeCast) append("""
@@ -619,44 +619,44 @@ class KotlinJsPrinter(
         buildList {
             context.dictionaries.mapTo(this) { dictionary ->
                 Triple(dictionary.name.camelCase().lowercase(),
-                    dictionary in context.usedObjectArrayToNativeCast,
-                    dictionary in context.usedObjectArrayToKotlinCast)
+                    dictionary in context.usedObjectArrayCastToNative,
+                    dictionary in context.usedObjectArrayCastToKotlin)
             }
             context.interfaces.mapTo(this) { inter ->
                 Triple(inter.name.camelCase().lowercase(),
-                    inter in context.usedObjectArrayToNativeCast,
-                    inter in context.usedObjectArrayToKotlinCast)
+                    inter in context.usedObjectArrayCastToNative,
+                    inter in context.usedObjectArrayCastToKotlin)
             }
-            if (context.hasStringArray) {
+            if (context.hasStringArrayCast) {
                 add(Triple("string",
-                    context.hasStringArrayToNativeCast,
-                    context.hasStringArrayToKotlinCast))
+                    context.hasStringArrayCastToNative,
+                    context.hasStringArrayCastToKotlin))
             }
         }.forEach { (name, hasToNativeCast, hasToKotlinCast) ->
             if(hasToNativeCast) append("""
                 
                 @JsName("${jsMangle("array_${name}_new")}") fun array_${name}_new(capacity: Int, nullable_elements: Boolean): Int
+                @JsName("${jsMangle("array_${name}_push")}") fun array_${name}_push(arr: Int, element: Int, nullable_elements: Boolean)
             """.replaceIndent("\t"))
             if(hasToKotlinCast) append("""
                 
                 @JsName("${jsMangle("array_${name}_length")}") fun array_${name}_length(arr: Int, nullable_elements: Boolean): Int
-                @JsName("${jsMangle("array_${name}_push")}") fun array_${name}_push(arr: Int, element: Int, nullable_elements: Boolean)
                 @JsName("${jsMangle("array_${name}_get")}") fun array_${name}_get(arr: Int, index: Int, nullable_elements: Boolean): Int
                 @JsName("${jsMangle("array_${name}_free")}") fun array_${name}_free(self: Int, nullable_elements: Boolean)
             """.replaceIndent("\t"))
         }
 
         // Dictionaries
-        context.usedDictionaries.forEach { dictionary ->
+        context.castedDictionaries.forEach { dictionary ->
             val name = dictionary.name.camelCase().lowercase()
             val fields = dictionary.allFields()
             val args = fields.joinToString { "${it.kname}: ${it.type.toKtJsType()}" }
 
-            if(dictionary in context.toNativeDeclarations) append("""
+            if(dictionary in context.toNativeDeclarationCasts) append("""
                 
                 @JsName("${jsMangle("${name}_new")}") fun ${name}_new($args): Int
             """.replaceIndent("\t"))
-            if(dictionary in context.toKotlinDeclarations) {
+            if(dictionary in context.toKotlinDeclarationCasts) {
                 append("""
                     
                     @JsName("${jsMangle("${name}_free")}") fun ${name}_free(self: Int)
@@ -669,7 +669,7 @@ class KotlinJsPrinter(
         }
 
         // Callbacks
-        context.usedCallbacks.forEach { callback ->
+        context.castedCallbacks.forEach { callback ->
             val name = callback.name.camelCase().lowercase()
             val useFuncDesc = context.language == Language.RUST
 
@@ -683,13 +683,13 @@ class KotlinJsPrinter(
             val equals = if(useFuncDesc) "(Int, Int) -> Boolean" else "Int"
             val free = if(useFuncDesc) "(Int) -> Unit" else "Int"
 
-            if(callback in context.toNativeDeclarations) {
+            if(callback in context.toNativeDeclarationCasts) {
                 append("""
                     
                     @JsName("${jsMangle("${name}_new")}") fun ${name}_new(id: Int, hash_code: Int, invoke: $invoke, equals: $equals, free: $free): Int
                 """.replaceIndent("\t"))
             }
-            if(callback in context.toKotlinDeclarations) {
+            if(callback in context.toKotlinDeclarationCasts) {
                 append("""
                     @JsName("${jsMangle("${name}_id")}") fun ${name}_id(self: Int): Int
                     @JsName("${jsMangle("${name}_free")}") fun ${name}_free(self: Int): Int
@@ -719,16 +719,16 @@ class KotlinJsPrinter(
     }
 
     private fun StringBuilder.printDictionaries() {
-        if(!context.hasDictionaries)
+        if(!context.hasDictionaryCast)
             return
         printLabel("Dictionaries")
 
-        context.usedDictionaries.forEach { dictionary ->
+        context.castedDictionaries.forEach { dictionary ->
             val name = dictionary.kname
             val lower = name.lowercase()
             val fields = context.allFields[dictionary]!!
 
-            if(dictionary in context.toNativeDeclarations) {
+            if(dictionary in context.toNativeDeclarationCasts) {
                 append("""
                     
                     private fun toNative$name(of: $name?) = of?.run {
@@ -742,7 +742,7 @@ class KotlinJsPrinter(
                 }
                 append(")\n} ?: 0\n")
             }
-            if(dictionary in context.toKotlinDeclarations) {
+            if(dictionary in context.toKotlinDeclarationCasts) {
                 append("""
                     
                     private fun toKotlin$name(of: Int, free: Boolean): $name? {
@@ -751,7 +751,7 @@ class KotlinJsPrinter(
                 """.trimIndent())
                 fields.forEachIndexed { i, it ->
                     append("\n\t\t")
-                    append(castToKotlin(it.type, "_module.${lower}__${it.kname}(of)")).append(",")
+                    append(castToKotlin(it.type, "_module.${lower}__${it.name.camelCase().lowercase()}(of)")).append(",")
                     if(i == fields.lastIndex)
                         append("\n\t")
                 }
@@ -856,7 +856,7 @@ class KotlinJsPrinter(
     }
 
     private fun StringBuilder.printInterfaces() {
-        if(context.usedInterfaces.isEmpty())
+        if(context.castedInterfaces.isEmpty())
             return
         printLabel("Interfaces")
 
@@ -867,17 +867,17 @@ class KotlinJsPrinter(
                 js("(function() { let registry = new FinalizationRegistry(callback); registry.register(target, heldValue); return registry; })()")
         """.trimIndent())
 
-        context.usedInterfaces.forEach { inter ->
+        context.interfaces.forEach { inter ->
             val name = inter.kname
 
-            if(inter in context.toNativeDeclarations) appendLine("""
+            if(inter in context.toNativeDeclarationCasts) appendLine("""
                 
                 private fun toNative$name(obj: $name?): Int {
                     if(obj == null) return 0
                 	return _interface${name}Clone(obj._ptr)
                 }
             """.trimIndent())
-            if(inter in context.toKotlinDeclarations) appendLine("""
+            if(inter in context.toKotlinDeclarationCasts) appendLine("""
                 
                 private fun toKotlin$name(ptr: Int, free: Boolean): $name? {
                     if(ptr == 0) return null

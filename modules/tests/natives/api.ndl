@@ -406,26 +406,26 @@ dictionary TypeDictionary {
     string a13;
     MyEnum a14;
     MyDictionary a15;
-    MyInterface a16;
-
-    VoidCallback a17;
-
-    Array<char> a18;
-    Array<boolean> a19;
-    Array<byte> a20;
-    Array<ubyte> a21;
-    Array<short> a22;
-    Array<ushort> a23;
-    Array<int> a24;
-    Array<uint> a25;
-    Array<long> a26;
-    Array<ulong> a27;
-    Array<float> a28;
-    Array<double> a29;
-    Array<string> a30;
-    Array<MyEnum> a31;
-    Array<MyDictionary> a32;
-    Array<MyInterface> a33;
+    MyDictionary? a16;
+    MyInterface a17;
+    MyInterface? a18;
+    VoidCallback a19;
+    Array<char> a20;
+    Array<boolean> a21;
+    Array<byte> a22;
+    Array<ubyte> a23;
+    Array<short> a24;
+    Array<ushort> a25;
+    Array<int> a26;
+    Array<uint> a27;
+    Array<long> a28;
+    Array<ulong> a29;
+    Array<float> a30;
+    Array<double> a31;
+    Array<string> a32;
+    Array<MyEnum> a33;
+    Array<MyDictionary> a34;
+    Array<MyInterface> a35;
 };
 
 interface MyInterface {

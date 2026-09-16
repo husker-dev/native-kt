@@ -50,16 +50,16 @@ class CppApiImplPrinter(
     }
 
     private fun StringBuilder.printStdLib() {
-        if(!context.hasInterfaces &&
-            !context.hasCallbacks &&
-            !context.hasString &&
-            !context.hasPrimitiveArray &&
-            !context.hasObjectArrays
+        if(!context.hasInterfaceCast &&
+            !context.hasCallbackCast &&
+            !context.hasStringCast &&
+            !context.hasPrimitiveArrayCast &&
+            !context.hasObjectArraysCast
         ) return
 
         printLabel("Types")
 
-        if(context.hasInterfaces || context.hasCallbacks) appendLine("""
+        if(context.hasInterfaceCast || context.hasCallbackCast) appendLine("""
             
             template <typename T>
             std::shared_ptr<T> arc_unwrap(std::shared_ptr<T>* _Nonnull arg) {
@@ -75,10 +75,10 @@ class CppApiImplPrinter(
         """.trimIndent())
 
         // String
-        if(context.hasString) {
+        if(context.hasStringCast) {
             append("\n// String\n")
 
-            if(context.hasStringToNativeCast) appendLine("""
+            if(context.hasStringCastToNative) appendLine("""
                 
                 KString kstring_unwrap(KString* _Nonnull arg) {
                     KString result = std::move(*arg);
@@ -86,7 +86,7 @@ class CppApiImplPrinter(
                     return result;
                 }
             """.trimIndent())
-            if(context.hasStringToKotlinCast) appendLine("""
+            if(context.hasStringCastToKotlin) appendLine("""
                 
                 KString* _Nonnull kstring_wrap(KString value) { 
                     return new KString(std::move(value)); 
@@ -165,13 +165,13 @@ class CppApiImplPrinter(
                 }
             """.trimIndent())
 
-            if(context.hasStringToNativeCast) appendLine("""
+            if(context.hasStringCastToNative) appendLine("""
                 
                 LIB_EXPORT void* _Nonnull ${context.mangle("string_new")}(char* _Nonnull data, int32_t length, size_t size, bool make_copy) {
                     return new KString(data, length, size, make_copy);
                 }
             """.trimIndent())
-            if(context.hasStringToKotlinCast) appendLine("""
+            if(context.hasStringCastToKotlin) appendLine("""
                 
                 LIB_EXPORT const char* _Nonnull ${context.mangle("string_data")}(void* _Nonnull self) {
                     return static_cast<KString*>(self)->get_data();
@@ -193,7 +193,7 @@ class CppApiImplPrinter(
         }
 
         // Primitive arrays
-        if(context.hasPrimitiveArray) {
+        if(context.hasPrimitiveArrayCast) {
             appendLine("""
                 
                 // Primitive arrays
@@ -213,14 +213,14 @@ class CppApiImplPrinter(
                 }
             """.trimIndent())
             listOf(
-                Triple("Char", "uint16_t", context.hasCharArray),
-                Triple("Boolean", "bool", context.hasBooleanArray),
-                Triple("Byte", "int8_t", context.hasByteArray || context.hasUByteArray),
-                Triple("Short", "int16_t", context.hasShortArray || context.hasUShortArray),
-                Triple("Int", "int32_t", context.hasIntArray || context.hasEnums || context.hasUIntArray),
-                Triple("Long", "int64_t", context.hasLongArray || context.hasULongArray),
-                Triple("Float", "float", context.hasFloatArray),
-                Triple("Double", "double", context.hasDoubleArray)
+                Triple("Char", "uint16_t", context.hasCharArrayCast),
+                Triple("Boolean", "bool", context.hasBooleanArrayCast),
+                Triple("Byte", "int8_t", context.hasByteArrayCast || context.hasUByteArrayCast),
+                Triple("Short", "int16_t", context.hasShortArrayCast || context.hasUShortArrayCast),
+                Triple("Int", "int32_t", context.hasIntArrayCast || context.hasEnumsCast || context.hasUIntArrayCast),
+                Triple("Long", "int64_t", context.hasLongArrayCast || context.hasULongArrayCast),
+                Triple("Float", "float", context.hasFloatArrayCast),
+                Triple("Double", "double", context.hasDoubleArrayCast)
             ).filter { it.third }
                 .forEach {
                     val name = "${it.first.lowercase()}array"
@@ -238,7 +238,7 @@ class CppApiImplPrinter(
         }
 
         // Typed arrays
-        if(context.hasObjectArrays) {
+        if(context.hasObjectArraysCast) {
             appendLine("""
     
                 // Typed array macros
@@ -279,9 +279,13 @@ class CppApiImplPrinter(
                 }
             """.trimIndent())
             buildList {
-                context.usedDictionaries.mapTo(this) { it.cppName to it.cname.lowercase() }
-                context.usedInterfaces.mapTo(this) { "std::shared_ptr<${it.cppName}>" to it.cname.lowercase() }
-                if(context.hasStringArray)
+                context.dictionaries
+                    .filter { it in context.usedObjectArrayCast }
+                    .mapTo(this) { it.cppName to it.cname.lowercase() }
+                context.castedInterfaces
+                    .filter { it in context.usedObjectArrayCast }
+                    .mapTo(this) { "std::shared_ptr<${it.cppName}>" to it.cname.lowercase() }
+                if(context.hasStringArrayCast)
                     add("KString" to "string")
             }.forEach {
                 appendLine("""
@@ -300,24 +304,24 @@ class CppApiImplPrinter(
     }
 
     private fun StringBuilder.printPreDefs() {
-        if(!context.hasDictionaries)
+        if(!context.hasDictionaryCast)
             return
         printLabel("Pre-definitions")
 
-        context.usedDictionaries.forEach { dictionary ->
+        context.castedDictionaries.forEach { dictionary ->
             val name = dictionary.cppName
             val lower = dictionary.name.camelCase().lowercase()
 
-            if(dictionary in context.toNativeDeclarations)
+            if(dictionary in context.toNativeDeclarationCasts)
                 append("\n$name ${lower}_unwrap($name* _Nonnull arg);")
-            if(dictionary in context.toKotlinDeclarations)
+            if(dictionary in context.toKotlinDeclarationCasts)
                 append("\n$name* _Nonnull ${lower}_wrap($name value);")
         }
         append("\n")
     }
 
     private fun StringBuilder.printCallbacks() {
-        if(!context.hasCallbacks)
+        if(context.callbacks.isEmpty())
             return
         printLabel("Callbacks")
 
@@ -347,7 +351,7 @@ class CppApiImplPrinter(
                                                                                                     \
             LIB_EXPORT std::shared_ptr<Name>* FUNC_NEW(                                             \
                 const size_t id,                                                                    \
-                const int32_t hash_code,                                                               \
+                const int32_t hash_code,                                                            \
                 void* _Nonnull invoke,                                                              \
                 bool (* _Nonnull equals)(size_t, size_t),                                           \
                 void (* _Nonnull free)(size_t)                                                      \
@@ -363,7 +367,7 @@ class CppApiImplPrinter(
             
         """.trimIndent())
 
-        context.usedCallbacks.forEach { callback ->
+        context.callbacks.forEach { callback ->
             val name = callback.cppName
             val lower = callback.name.camelCase().lowercase()
             val type = callback.type.toCppType()
@@ -400,10 +404,10 @@ class CppApiImplPrinter(
     }
 
     private fun StringBuilder.printStructs() {
-        if(!context.hasDictionaries)
+        if(context.dictionaries.isEmpty())
             return
 
-        context.usedDictionaries.forEach { dictionary ->
+        context.dictionaries.forEach { dictionary ->
             val name = dictionary.cppName
             val allFields = dictionary.allFields()
             val localFields = dictionary.fields
@@ -448,7 +452,7 @@ class CppApiImplPrinter(
             """.trimIndent())
 
             // Unwrap
-            if(dictionary in context.toNativeDeclarations) appendLine("""
+            if(dictionary in context.toNativeDeclarationCasts) appendLine("""
                 
                 $name ${dictionary.name.camelCase().lowercase()}_unwrap($name* _Nonnull arg) {
                     $name result = std::move(*arg);
@@ -458,7 +462,7 @@ class CppApiImplPrinter(
             """.trimIndent())
 
             // Wrap
-            if(dictionary in context.toKotlinDeclarations) appendLine("""
+            if(dictionary in context.toKotlinDeclarationCasts) appendLine("""
                 
                 $name* _Nonnull ${dictionary.name.camelCase().lowercase()}_wrap($name value) {
                     return new $name(std::move(value));
@@ -466,13 +470,13 @@ class CppApiImplPrinter(
             """.trimIndent())
 
             // Default
-            if(dictionary in context.toNativeDeclarations) appendLine("""
+            if(dictionary in context.toNativeDeclarationCasts) appendLine("""
                 
                 LIB_EXPORT void* ${dictionary.subCFunc(context, "new")}($allNativeArgs) {
                     return new $name($castedArgs);
                 }
             """.trimIndent())
-            if(dictionary in context.toKotlinDeclarations) {
+            if(dictionary in context.toKotlinDeclarationCasts) {
                 appendLine("""
                     
                     LIB_EXPORT void ${dictionary.subCFunc(context, "free")}(void* self) {
@@ -482,8 +486,15 @@ class CppApiImplPrinter(
                 allFields.forEach { field ->
                     val nativeType = if(field.type.isReleasable()) "void*" else field.type.toCType()
                     val funcName = dictionary.subFieldCFunc(context, field)
-                    val ref = if(field.type.isReleasable()) "&" else ""
-                    append("\nLIB_EXPORT $nativeType $funcName(void* self) { return ${ref}static_cast<$name*>(self)->${field.cppName}; }")
+
+                    val ref = "static_cast<$name*>(self)->${field.cppName}"
+
+                    val call = when {
+                        field.type.isNullable -> "$ref.get_ptr()"
+                        field.type.isReleasable() -> "&$ref"
+                        else -> ref
+                    }
+                    append("\nLIB_EXPORT $nativeType $funcName(void* self) { return $call; }")
                 }
                 append("\n")
             }

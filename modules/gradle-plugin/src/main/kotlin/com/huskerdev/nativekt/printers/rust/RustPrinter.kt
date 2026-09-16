@@ -19,7 +19,7 @@ class RustPrinter(
             printStringDef(context)
             printArraysDef(context)
             printCriticalFuncDef(context)
-            printStructs()
+            printDictionaries()
             printCallbacks()
             printEnums()
             printFunctions()
@@ -89,12 +89,12 @@ class RustPrinter(
         append("\n\n=============================================================== */\n\n")
     }
 
-    private fun StringBuilder.printStructs() {
-        if(!context.hasDictionaries)
+    private fun StringBuilder.printDictionaries() {
+        if(context.dictionaries.isEmpty())
             return
 
         printLabel("Structs")
-        context.usedDictionaries.forEach { dictionary ->
+        context.dictionaries.forEach { dictionary ->
             val name = dictionary.rustName
             val fields = context.allFields[dictionary]!!
 
@@ -114,55 +114,58 @@ class RustPrinter(
             }
             append("\n}\n")
 
-            append("export_fn! {")
+            if(dictionary in context.castedDeclarations) {
+                append("export_fn! {")
 
-            if(dictionary in context.toNativeDeclarations) {
-                // new
-                append("\n\tfn $funcNew(")
-                fields.joinTo(this) {
-                    "${it.rustName}: ${it.type.toNativeRustType()}"
-                }
-
-                append(") -> *mut $name as $funcNewJs {")
-                append("\n\t\tinto_raw($name { ")
-
-                fields.joinTo(this) {
-                    val key = it.rustName
-                    val value = toRustType(it.type, it.rustName)
-                    if (key != value)
-                        "$key: $value"
-                    else value
-                }
-                append(" })\n\t}")
-            }
-            if(dictionary in context.toKotlinDeclarations) {
-                // free
-                append("\n\tfn $funcFree(of: *mut $name) -> () as $funcFreeJs { from_raw(of); }")
-
-                // field getters
-                fields.joinTo(this, separator = "") {
-                    val funcName = dictionary.subFieldCFunc(context, it)
-                    val funcNameJs = context.jsMangle["${name.camelCase().lowercase()}__${it.name.camelCase().lowercase()}"]
-
-                    val type = it.type.toNativeRustType(ptrType = "const")
-                    val call = "(*of).${it.rustName}"
-                    val castedCall = when {
-                        it.type.isEnum() -> "$call.clone()"
-                        it.type.isReleasable() -> "&$call"
-                        else -> call
+                if(dictionary in context.toNativeDeclarationCasts) {
+                    // new
+                    append("\n\tfn $funcNew(")
+                    fields.joinTo(this) {
+                        "${it.rustName}: ${it.type.toNativeRustType()}"
                     }
-                    "\n\tfn $funcName(of: *mut $name) -> $type as $funcNameJs { unsafe { $castedCall } }"
+
+                    append(") -> *mut $name as $funcNewJs {")
+                    append("\n\t\tinto_raw($name { ")
+
+                    fields.joinTo(this) {
+                        val key = it.rustName
+                        val value = toRustType(it.type, it.rustName)
+                        if (key != value)
+                            "$key: $value"
+                        else value
+                    }
+                    append(" })\n\t}")
                 }
+                if(dictionary in context.toKotlinDeclarationCasts) {
+                    // free
+                    append("\n\tfn $funcFree(of: *mut $name) -> () as $funcFreeJs { from_raw(of); }")
+
+                    // field getters
+                    fields.joinTo(this, separator = "") {
+                        val funcName = dictionary.subFieldCFunc(context, it)
+                        val funcNameJs = context.jsMangle["${name.camelCase().lowercase()}__${it.name.camelCase().lowercase()}"]
+
+                        val type = it.type.toNativeRustType(ptrType = "const")
+                        val call = "(*of).${it.rustName}"
+                        val castedCall = when {
+                            it.type.isEnum() -> "$call.clone()"
+                            it.type.isNullable -> "(&$call).as_ref().map_or(core::ptr::null(), |it| it as $type)"
+                            it.type.isReleasable() -> "&$call"
+                            else -> call
+                        }
+                        "\n\tfn $funcName(of: *mut $name) -> $type as $funcNameJs { unsafe { $castedCall } }"
+                    }
+                }
+                append("\n}\n")
             }
-            append("\n}\n")
         }
     }
 
     private fun StringBuilder.printCallbacks() {
-        if(!context.hasCallbacks)
+        if(context.callbacks.isEmpty())
             return
-
         printLabel("Callbacks")
+
         append($$"""
             
             macro_rules! impl_callback {
@@ -213,7 +216,7 @@ class RustPrinter(
             
         """.trimIndent())
 
-        context.usedCallbacks.forEach { callback ->
+        context.callbacks.forEach { callback ->
             val name = callback.rustName
             val lower = callback.name.camelCase().lowercase()
             val returnType = callback.type.toNativeRustType()
@@ -265,23 +268,29 @@ class RustPrinter(
     }
 
     private fun StringBuilder.printEnums() {
-        if(!context.hasEnums)
+        if(context.enums.isEmpty())
             return
         printLabel("Enums")
 
-        context.usedEnums.forEach { enum ->
+        context.enums.forEach { enum ->
             val name = enum.rustName
+            val defaultValue = enum.defaultValue()
+            val defaultValueExt = if(defaultValue != null)
+                ", Default" else ""
 
             append("""
                 
                 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
                 #[repr(C)]
-                #[derive(PartialEq, Eq, Clone)]
+                #[derive(PartialEq, Eq, Clone, Copy, Debug$defaultValueExt)]
                 pub enum $name {
             """.trimIndent())
 
             enum.elements.mapIndexed { index, value ->
-                "\n\t$value = $index"
+                if(value == defaultValue)
+                    "\n\t#[default]\n\t$value = $index"
+                else
+                    "\n\t$value = $index"
             }.joinTo(this, ",")
             append("\n}\n")
 

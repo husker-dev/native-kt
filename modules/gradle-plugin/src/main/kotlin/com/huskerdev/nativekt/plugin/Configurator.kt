@@ -156,7 +156,7 @@ private fun configureSinglePlatform(
     // Apply runtime
     if(context.extension.applyRuntime) {
         sourceSet.dependencies {
-            implementation(RUNTIME_DEPENDENCY)
+            api(RUNTIME_DEPENDENCY)
         }
     }
 
@@ -185,7 +185,7 @@ private fun configureMultiplatform(
     // Apply runtime to common source set
     if(context.extension.applyRuntime) {
         commonSourceSet.dependencies {
-            implementation(RUNTIME_DEPENDENCY)
+            api(RUNTIME_DEPENDENCY)
         }
     }
 

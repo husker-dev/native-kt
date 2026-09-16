@@ -63,8 +63,8 @@ class KotlinJvmJniPrinter(
                 .map { it.second }
         """.replaceIndent(indent2)
 
-        val classes = (context.usedEnums + context.usedDictionaries + context.usedInterfaces)
-            .filter { it in context.toKotlinDeclarations }
+        val classes = (context.castedEnums + context.castedDictionaries + context.castedInterfaces)
+            .filter { it in context.toKotlinDeclarationCasts }
             .map { "${it.kname}::class.java" }
             .chunked(3)
             .joinListToString(prefix = "${indent2}val classes = listOf<Class<*>>(", postfix = ")", baseIndent = indent2) {
@@ -151,26 +151,26 @@ class KotlinJvmJniPrinter(
         val staticFunctions = arrayListOf<String>()
 
         // Enum
-        context.usedEnums.forEach { enum ->
-            if (enum in context.toKotlinDeclarations) {
+        context.castedEnums.forEach { enum ->
+            if (enum in context.toKotlinDeclarationCasts) {
                 append("\n$indent@Marker(${i++}) @JvmStatic fun cast_${enum.name.camelCase().lowercase()}(of: Int) = ${enum.kname}.entries[of]")
                 staticFunctions += "cast_${enum.name.camelCase().lowercase()}"
             }
         }
 
         // Dictionaries
-        context.usedDictionaries.forEach { dictionary ->
+        context.castedDictionaries.forEach { dictionary ->
             val fields = dictionary.allFields()
             val name = dictionary.kname
             val lower = dictionary.name.camelCase().lowercase()
 
-            if(dictionary in context.toKotlinDeclarations) {
+            if(dictionary in context.toKotlinDeclarationCasts) {
                 val args = fields.joinToString { "${it.kname}: ${it.type.toKotlinType()}" }
                 val argNames = fields.joinToString { it.kname }
                 append("\n$indent@Marker(${i++}) @JvmStatic fun constructor_$lower($args) = ${dictionary.kname}($argNames)")
                 staticFunctions += "constructor_$lower"
             }
-            if(dictionary in context.toNativeDeclarations) {
+            if(dictionary in context.toNativeDeclarationCasts) {
                 fields.forEach {
                     val fieldLower = it.name.camelCase().lowercase()
                     append("\n$indent@Marker(${i++}) @JvmStatic fun field_${lower}_$fieldLower(of: $name) = of.${it.kname}")
@@ -180,13 +180,13 @@ class KotlinJvmJniPrinter(
         }
 
         // Interfaces
-        if(context.hasInterfaces) {
-            if(context.hasInterfaceToNativeCast) {
+        if(context.hasInterfaceCast) {
+            if(context.hasInterfaceCastToNative) {
                 append("\n$indent@Marker(${i++}) @JvmStatic fun interface_ptr(of: NativeKtRcObject) = of.rcPtr")
                 staticFunctions += "interface_ptr"
             }
-            context.usedInterfaces.forEach { inter ->
-                if(inter in context.toNativeDeclarations) {
+            context.castedInterfaces.forEach { inter ->
+                if(inter in context.toNativeDeclarationCasts) {
                     append("\n$indent@Marker(${i++}) @JvmStatic fun constructor_${inter.name.camelCase().lowercase()}(ptr: Long) = ${inter.kname}(Unit, ptr)")
                     staticFunctions += "constructor_${inter.name.camelCase().lowercase()}"
                 }
@@ -194,14 +194,14 @@ class KotlinJvmJniPrinter(
         }
 
         // Callbacks
-        if(context.hasCallbacks) {
+        if(context.hasCallbackCast) {
             append("\n$indent@Marker(${i++}) @JvmStatic fun callback_equals(c1: Any, c2: Any) = c1 == c2")
             append("\n$indent@Marker(${i++}) @JvmStatic fun callback_hashCode(c: Any) = c.hashCode()")
 
             staticFunctions += "callback_equals"
             staticFunctions += "callback_hashCode"
 
-            context.usedCallbacks.forEach { callback ->
+            context.castedCallbacks.forEach { callback ->
                 val lower = callback.name.camelCase().lowercase()
                 val args = buildList {
                     add("of: ${callback.kname}")

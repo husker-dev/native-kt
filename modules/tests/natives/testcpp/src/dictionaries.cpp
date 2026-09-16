@@ -16,20 +16,16 @@ bool pass_big_dictionary(const TypeDictionary& arg) {
         std::string(arg.a13.get_data(), arg.a13.get_size()) == "test string" &&
         arg.a14 == CASE2 &&
         arg.a15.a == 1 && arg.a15.b == 2 && arg.a15.c == 3 && arg.a15.d == 4 &&
-        arg.a16->test() &&
+        arg.a16.is_none() &&
+        arg.a17->test() &&
+        arg.a18.is_none() &&
         // callback (a17) is skipped
-        arg.a18.get_length() == 2 &&
-            arg.a18[0] == 'a' &&
-            arg.a18[1] == 'b' &&
-        arg.a19.get_length() == 2 &&
-            arg.a19[0] == true &&
-            arg.a19[1] == false &&
         arg.a20.get_length() == 2 &&
-            arg.a20[0] == 1 &&
-            arg.a20[1] == 2 &&
+            arg.a20[0] == 'a' &&
+            arg.a20[1] == 'b' &&
         arg.a21.get_length() == 2 &&
-            arg.a21[0] == 1 &&
-            arg.a21[1] == 2 &&
+            arg.a21[0] == true &&
+            arg.a21[1] == false &&
         arg.a22.get_length() == 2 &&
             arg.a22[0] == 1 &&
             arg.a22[1] == 2 &&
@@ -49,29 +45,35 @@ bool pass_big_dictionary(const TypeDictionary& arg) {
             arg.a27[0] == 1 &&
             arg.a27[1] == 2 &&
         arg.a28.get_length() == 2 &&
-            arg.a28[0] == 1.2f &&
-            arg.a28[1] == 3.4f &&
+            arg.a28[0] == 1 &&
+            arg.a28[1] == 2 &&
         arg.a29.get_length() == 2 &&
-            arg.a29[0] == 1.2 &&
-            arg.a29[1] == 3.4 &&
+            arg.a29[0] == 1 &&
+            arg.a29[1] == 2 &&
         arg.a30.get_length() == 2 &&
-            std::string(arg.a30[0].get_data(), arg.a30[0].get_size()) == "string1" &&
-            std::string(arg.a30[1].get_data(), arg.a30[1].get_size()) == "string2" &&
+            arg.a30[0] == 1.2f &&
+            arg.a30[1] == 3.4f &&
         arg.a31.get_length() == 2 &&
-            arg.a31[0] == CASE1 &&
-            arg.a31[1] == CASE2 &&
+            arg.a31[0] == 1.2 &&
+            arg.a31[1] == 3.4 &&
         arg.a32.get_length() == 2 &&
-            arg.a32[0].a == 1 &&
-            arg.a32[0].b == 2 &&
-            arg.a32[0].c == 3 &&
-            arg.a32[0].d == 4 &&
-            arg.a32[1].a == 5 &&
-            arg.a32[1].b == 6 &&
-            arg.a32[1].c == 7 &&
-            arg.a32[1].d == 8 &&
+            std::string(arg.a32[0].get_data(), arg.a32[0].get_size()) == "string1" &&
+            std::string(arg.a32[1].get_data(), arg.a32[1].get_size()) == "string2" &&
         arg.a33.get_length() == 2 &&
-            arg.a33[0]->test() &&
-            arg.a33[1]->test()
+            arg.a33[0] == CASE1 &&
+            arg.a33[1] == CASE2 &&
+        arg.a34.get_length() == 2 &&
+            arg.a34[0].a == 1 &&
+            arg.a34[0].b == 2 &&
+            arg.a34[0].c == 3 &&
+            arg.a34[0].d == 4 &&
+            arg.a34[1].a == 5 &&
+            arg.a34[1].b == 6 &&
+            arg.a34[1].c == 7 &&
+            arg.a34[1].d == 8 &&
+        arg.a35.get_length() == 2 &&
+            arg.a35[0]->test() &&
+            arg.a35[1]->test()
     ;
 }
 
@@ -95,7 +97,9 @@ TypeDictionary return_big_dictionary(
         KString("test string"),
         CASE2,
         MyDictionary(1, 2, 3, 4),
+        KOptional<MyDictionary>(),
         inter,
+        KOptional<std::shared_ptr<IMyInterface>>(),
         callback,
         KArray<uint16_t>{'a', 'b'},
         KArray{true, false},

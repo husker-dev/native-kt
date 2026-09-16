@@ -1273,33 +1273,36 @@ pub fn pass_big_dictionary(
         arg.a13.as_str() == "test string" &&
         arg.a14 == MyEnum::CASE2 &&
         arg.a15.a == 1 && arg.a15.b == 2 && arg.a15.c == 3 && arg.a15.d == 4 &&
-        arg.a16.test() &&
+        arg.a16.is_none() &&
+        arg.a17.test() &&
+        arg.a18.is_none() &&
+        
         // callback (a16) is skipped
-        arg.a18.as_slice() == ['a' as u16, 'b' as u16] &&
-        arg.a19.as_slice() == [true, false] &&
-        arg.a20.as_slice() == [1, 2] &&
-        arg.a21.as_slice() == [1, 2] &&
+        arg.a20.as_slice() == ['a' as u16, 'b' as u16] &&
+        arg.a21.as_slice() == [true, false] &&
         arg.a22.as_slice() == [1, 2] &&
         arg.a23.as_slice() == [1, 2] &&
         arg.a24.as_slice() == [1, 2] &&
         arg.a25.as_slice() == [1, 2] &&
         arg.a26.as_slice() == [1, 2] &&
         arg.a27.as_slice() == [1, 2] &&
-        arg.a28.as_slice() == [1.2, 3.4] &&
-        arg.a29.as_slice() == [1.2, 3.4] &&
-        arg.a30.as_slice()[0].as_str() == "string1" &&
-        arg.a30.as_slice()[1].as_str() == "string2" &&
-        arg.a31.as_slice() == [MyEnum::CASE1, MyEnum::CASE2] &&
-        arg.a32.as_slice()[0].a == 1 &&
-        arg.a32.as_slice()[0].b == 2 &&
-        arg.a32.as_slice()[0].c == 3 &&
-        arg.a32.as_slice()[0].d == 4 &&
-        arg.a32.as_slice()[1].a == 5 &&
-        arg.a32.as_slice()[1].b == 6 &&
-        arg.a32.as_slice()[1].c == 7 &&
-        arg.a32.as_slice()[1].d == 8 &&
-        arg.a33.as_slice()[0].test() &&
-        arg.a33.as_slice()[1].test()
+        arg.a28.as_slice() == [1, 2] &&
+        arg.a29.as_slice() == [1, 2] &&
+        arg.a30.as_slice() == [1.2, 3.4] &&
+        arg.a31.as_slice() == [1.2, 3.4] &&
+        arg.a32.as_slice()[0].as_str() == "string1" &&
+        arg.a32.as_slice()[1].as_str() == "string2" &&
+        arg.a33.as_slice() == [MyEnum::CASE1, MyEnum::CASE2] &&
+        arg.a34.as_slice()[0].a == 1 &&
+        arg.a34.as_slice()[0].b == 2 &&
+        arg.a34.as_slice()[0].c == 3 &&
+        arg.a34.as_slice()[0].d == 4 &&
+        arg.a34.as_slice()[1].a == 5 &&
+        arg.a34.as_slice()[1].b == 6 &&
+        arg.a34.as_slice()[1].c == 7 &&
+        arg.a34.as_slice()[1].d == 8 &&
+        arg.a35.as_slice()[0].test() &&
+        arg.a35.as_slice()[1].test()
 }
 
 pub fn return_big_dictionary(
@@ -1322,30 +1325,32 @@ pub fn return_big_dictionary(
         a13: "test string".to_string(),
         a14: MyEnum::CASE2,
         a15: MyDictionary { a: 1, b: 2, c: 3, d: 4 },
-        a16: inter.clone(),
-        a17: callback.clone(),
-        a18: vec!('a' as u16, 'b' as u16),
-        a19: vec!(true, false),
-        a20: vec!(1, 2),
-        a21: vec!(1, 2),
+        a16: None,
+        a17: inter.clone(),
+        a18: None,
+        a19: callback.clone(),
+        a20: vec!('a' as u16, 'b' as u16),
+        a21: vec!(true, false),
         a22: vec!(1, 2),
         a23: vec!(1, 2),
         a24: vec!(1, 2),
         a25: vec!(1, 2),
         a26: vec!(1, 2),
         a27: vec!(1, 2),
-        a28: vec!(1.2, 3.4),
-        a29: vec!(1.2, 3.4),
-        a30: vec!(
+        a28: vec!(1, 2),
+        a29: vec!(1, 2),
+        a30: vec!(1.2, 3.4),
+        a31: vec!(1.2, 3.4),
+        a32: vec!(
             "string1".to_string(),
             "string2".to_string()
         ),
-        a31: vec!(MyEnum::CASE1, MyEnum::CASE2),
-        a32: vec!(
+        a33: vec!(MyEnum::CASE1, MyEnum::CASE2),
+        a34: vec!(
             MyDictionary { a: 1, b: 2, c: 3, d: 4 },
             MyDictionary { a: 5, b: 6, c: 7, d: 8 }
         ),
-        a33: vec!(
+        a35: vec!(
             inter.clone(),
             inter.clone()
         )

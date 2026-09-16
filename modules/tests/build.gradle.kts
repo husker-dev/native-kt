@@ -137,17 +137,17 @@ natives {
         val ndl = File(casesDir, "tc_$i.ndl")
         create("tc_${i}_rust") {
             ndlFile = ndl
-            projectDir = File(casesDir, "rust/tc_$i")
+            dir = File(casesDir, "rust/tc_$i")
             cargo()
         }
         create("tc_${i}_c") {
             ndlFile = ndl
-            projectDir = File(casesDir, "c/tc_$i")
+            dir = File(casesDir, "c/tc_$i")
             cmake()
         }
         create("tc_${i}_cpp") {
             ndlFile = ndl
-            projectDir = File(casesDir, "cpp/tc_$i")
+            dir = File(casesDir, "cpp/tc_$i")
             cmake(Language.CPP)
         }
     }

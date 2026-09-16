@@ -43,7 +43,7 @@ macro_rules! export_fn {
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[repr(C)]
-#[derive(PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum MyEnum {
 	A = 0
 }

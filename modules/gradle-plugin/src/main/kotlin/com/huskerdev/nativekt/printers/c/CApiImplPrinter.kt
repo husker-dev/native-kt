@@ -39,7 +39,7 @@ class CApiImplPrinter(
     }
 
     private fun StringBuilder.printStdLib() {
-        if(context.hasCallbacks || context.hasInterfaces) {
+        if(context.callbacks.isNotEmpty() || context.interfaces.isNotEmpty()) {
             printLabel("RefCounted")
             append("""
                 
@@ -66,7 +66,7 @@ class CApiImplPrinter(
                 
             """.trimIndent())
 
-            context.usedInterfaces.forEach { inter ->
+            context.interfaces.forEach { inter ->
                 val name = inter.cname
                 val lower = inter.name.lowercase()
                 append("""
@@ -86,7 +86,7 @@ class CApiImplPrinter(
                 """.trimIndent())
             }
 
-            context.usedCallbacks.forEach { inter ->
+            context.callbacks.forEach { inter ->
                 val name = inter.cname
                 val lower = inter.name.lowercase()
                 append("""
@@ -107,7 +107,7 @@ class CApiImplPrinter(
             }
         }
 
-        if(context.hasString) {
+        if(context.hasStringCast) {
             printLabel("String")
             append("""
                     
@@ -150,13 +150,13 @@ class CApiImplPrinter(
                 }
                 
             """.trimIndent())
-            if(context.hasStringToNativeCast) append("""
+            if(context.hasStringCastToNative) append("""
                 
                 KString* ${context.mangle("string_new")}(const char* data, const int32_t length, const int32_t size, bool make_copy) {
                     return kstring_new(data, .length = length, .size = size, .make_copy = make_copy);
                 }
             """.trimIndent())
-            if(context.hasStringToKotlinCast) append("""
+            if(context.hasStringCastToKotlin) append("""
                 
                 const char* ${context.mangle("string_data")}(const KString* self) {
                     return self->data;
@@ -178,45 +178,45 @@ class CApiImplPrinter(
             append("\n")
         }
 
-        if(context.hasPrimitiveArray) {
+        if(context.hasPrimitiveArrayCast) {
             printLabel("Primitive arrays")
             listOf(
                 Triple(Triple("Char", "uint16_t", "int32_t"),
-                    context.hasCharArrayToNativeCast,
-                    context.hasCharArrayToKotlinCast),
+                    context.hasCharArrayCastToNative,
+                    context.hasCharArrayCastToKotlin),
                 Triple(Triple("Boolean", "bool", "int32_t"),
-                    context.hasBooleanArrayToNativeCast,
-                    context.hasBooleanArrayToKotlinCast),
+                    context.hasBooleanArrayCastToNative,
+                    context.hasBooleanArrayCastToKotlin),
                 Triple(Triple("Byte", "int8_t", "int32_t"),
-                    context.hasByteArrayToNativeCast || context.hasUByteArrayToNativeCast,
-                    context.hasByteArrayToKotlinCast || context.hasUByteArrayToKotlinCast),
+                    context.hasByteArrayCastToNative || context.hasUByteArrayCastToNative,
+                    context.hasByteArrayCastToKotlin || context.hasUByteArrayCastToKotlin),
                 Triple(Triple("UByte", "uint8_t", "int32_t"),
-                    context.hasUByteArrayToNativeCast,
-                    context.hasUByteArrayToKotlinCast),
+                    context.hasUByteArrayCastToNative,
+                    context.hasUByteArrayCastToKotlin),
                 Triple(Triple("Short", "int16_t", "int32_t"),
-                    context.hasShortArrayToNativeCast || context.hasUShortArrayToNativeCast,
-                    context.hasShortArrayToKotlinCast || context.hasUShortArrayToKotlinCast),
+                    context.hasShortArrayCastToNative || context.hasUShortArrayCastToNative,
+                    context.hasShortArrayCastToKotlin || context.hasUShortArrayCastToKotlin),
                 Triple(Triple("UShort", "uint16_t", "int32_t"),
-                    context.hasUShortArrayToNativeCast,
-                    context.hasUShortArrayToKotlinCast),
+                    context.hasUShortArrayCastToNative,
+                    context.hasUShortArrayCastToKotlin),
                 Triple(Triple("Int", "int32_t", "int32_t"),
-                    context.hasIntArrayToNativeCast || context.hasEnumArrayToNativeCast || context.hasUIntArrayToNativeCast,
-                    context.hasIntArrayToKotlinCast || context.hasEnumArrayToKotlinCast || context.hasUIntArrayToKotlinCast),
+                    context.hasIntArrayCastToNative || context.hasEnumArrayCastToNative || context.hasUIntArrayCastToNative,
+                    context.hasIntArrayCastToKotlin || context.hasEnumArrayCastToKotlin || context.hasUIntArrayCastToKotlin),
                 Triple(Triple("UInt", "uint32_t", "int32_t"),
-                    context.hasUIntArrayToNativeCast,
-                    context.hasUIntArrayToKotlinCast),
+                    context.hasUIntArrayCastToNative,
+                    context.hasUIntArrayCastToKotlin),
                 Triple(Triple("Long", "int64_t", "int64_t"),
-                    context.hasLongArrayToNativeCast || context.hasULongArrayToNativeCast,
-                    context.hasLongArrayToKotlinCast || context.hasULongArrayToKotlinCast),
+                    context.hasLongArrayCastToNative || context.hasULongArrayCastToNative,
+                    context.hasLongArrayCastToKotlin || context.hasULongArrayCastToKotlin),
                 Triple(Triple("ULong", "uint64_t", "int64_t"),
-                    context.hasULongArrayToNativeCast,
-                    context.hasULongArrayToKotlinCast),
+                    context.hasULongArrayCastToNative,
+                    context.hasULongArrayCastToKotlin),
                 Triple(Triple("Float", "float", "double"),
-                    context.hasFloatArrayToNativeCast,
-                    context.hasFloatArrayToKotlinCast),
+                    context.hasFloatArrayCastToNative,
+                    context.hasFloatArrayCastToKotlin),
                 Triple(Triple("Double", "double", "double"),
-                    context.hasDoubleArrayToNativeCast,
-                    context.hasDoubleArrayToKotlinCast),
+                    context.hasDoubleArrayCastToNative,
+                    context.hasDoubleArrayCastToKotlin),
             ).forEach { (desc, hasToNativeCast, hasToKotlinCast) ->
                 if(!hasToNativeCast && !hasToKotlinCast)
                     return@forEach
@@ -294,7 +294,7 @@ class CApiImplPrinter(
             }
         }
 
-        if(context.hasObjectArrays) {
+        if(context.hasObjectArraysCast) {
             printLabel("Object array")
             append("""
                 
@@ -378,22 +378,22 @@ class CApiImplPrinter(
             """.trimIndent())
 
             buildList {
-                context.usedDictionaries.mapTo(this) {
+                context.castedDictionaries.mapTo(this) {
                     Triple(it.cname, it.cname.lowercase(), it in context.usedObjectArrayCast)
                 }
-                context.usedInterfaces.mapTo(this) {
+                context.castedInterfaces.mapTo(this) {
                     Triple("void", it.cname.lowercase(), it in context.usedObjectArrayCast)
                 }
-                add(Triple("KString", "string", context.hasStringArray))
-            }.filter { it.third }.joinTo(this, separator = "") {
+                add(Triple("KString", "string", context.hasStringArrayCast))
+            }.filter { it.third }.joinTo(this, separator = "") { (type, name, _) ->
                 """
         
-                    IMPL_OBJECT_ARRAY(${it.first},
-                        ${context.mangle("array_${it.second}_new")},
-                        ${context.mangle("array_${it.second}_length")},
-                        ${context.mangle("array_${it.second}_push")},
-                        ${context.mangle("array_${it.second}_get")},
-                        ${context.mangle("array_${it.second}_free")}
+                    IMPL_OBJECT_ARRAY($type,
+                        ${context.mangle("array_${name}_new")},
+                        ${context.mangle("array_${name}_length")},
+                        ${context.mangle("array_${name}_push")},
+                        ${context.mangle("array_${name}_get")},
+                        ${context.mangle("array_${name}_free")}
                     )
                 """.trimIndent()
             }
@@ -402,11 +402,11 @@ class CApiImplPrinter(
     }
 
     private fun StringBuilder.printStructs() {
-        if(!context.hasDictionaries)
+        if(context.dictionaries.isEmpty())
             return
-
         printLabel("Struct functions")
-        context.usedDictionaries.forEach { dictionary ->
+
+        context.dictionaries.forEach { dictionary ->
             val name = dictionary.cname
             val fields = dictionary.allFields()
 
@@ -449,19 +449,19 @@ class CApiImplPrinter(
                 
             """.trimIndent())
 
-            if(dictionary in context.toNativeDeclarations) append("""
+            if(dictionary in context.toNativeDeclarationCasts) append("""
                 
                 LIB_EXPORT $name* $funcNew(${args.joinToString()}) {
                     return ${name}_new(${argNames.joinToString()});
                 }
             """.trimIndent())
-            if(dictionary in context.usedDeclarations) append("""
+            if(dictionary in context.castedDeclarations) append("""
                 
                 LIB_EXPORT void $funcFree($name* self) {
                     ${name}_free(self);
                 }
             """.trimIndent())
-            if(dictionary in context.toKotlinDeclarations) {
+            if(dictionary in context.toKotlinDeclarationCasts) {
                 fields.forEach { field ->
                     val type = field.type.toCType(printNullable = true)
                     val func = dictionary.subFieldCFunc(context, field)
@@ -477,9 +477,8 @@ class CApiImplPrinter(
     }
 
     private fun StringBuilder.printCallbacks() {
-        if(!context.hasCallbacks)
+        if(context.callbacks.isEmpty())
             return
-
         printLabel("Callbacks")
 
         append("""
@@ -507,7 +506,7 @@ class CApiImplPrinter(
             
         """.trimIndent())
 
-        context.usedCallbacks.forEach { callback ->
+        context.callbacks.forEach { callback ->
             val name = callback.cname
             val lower = callback.name.camelCase().lowercase()
             append("KCallbackImpl(")
@@ -598,7 +597,7 @@ class CApiImplPrinter(
                 function.isInterfaceOperationFree() ->
                     "if(_self != NULL) _self->free(_self);"
                 function.isInterfaceOperationClone() ->
-                    "_self->clone(_self);"
+                    "_self == NULL ? NULL : _self->clone(_self);"
                 function.isInterfaceOperationAddress() ->
                     "(int64_t) _self->pointed;"
                 else -> call

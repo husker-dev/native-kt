@@ -49,15 +49,15 @@ class CppApiHeaderPrinter(
     }
 
     private fun StringBuilder.printStdLib() {
-        if(!context.hasNullable &&
-            !context.hasString &&
-            !context.hasObjectArrays &&
-            !context.hasPrimitiveArray
+        if(!context.hasNullableCast &&
+            !context.hasStringCast &&
+            !context.hasObjectArraysCast &&
+            !context.hasPrimitiveArrayCast
         ) return
 
         printLabel("Types")
 
-        if(context.hasNullable) append("""
+        if(context.hasNullableCast) append("""
             
             template <typename T> class KOptional {
                 bool is_empty;
@@ -74,11 +74,11 @@ class CppApiHeaderPrinter(
                 T& operator*() &;
                 T&& operator*() &&;
                 bool is_none() const;
-                T* _Nonnull get_ptr();
-                const T* _Nonnull get_ptr() const;
+                T* _Nullable get_ptr();
+                const T* _Nullable get_ptr() const;
             };
         """.trimIndent())
-        if(context.hasString) append("""
+        if(context.hasStringCast) append("""
             
             class KString {
                 char* _Nonnull data;
@@ -98,7 +98,7 @@ class CppApiHeaderPrinter(
                 explicit operator const char* _Nonnull() const;
             };
         """.trimIndent())
-        if(context.hasObjectArrays || context.hasPrimitiveArray) append("""
+        if(context.hasObjectArraysCast || context.hasPrimitiveArrayCast) append("""
             
             template <typename T> class KArray {
                 T* _Nonnull elements;
@@ -124,15 +124,17 @@ class CppApiHeaderPrinter(
     }
 
     private fun StringBuilder.printTypeDefs() {
-        if(!context.hasCallbacks && !context.hasDictionaries && !context.hasInterfaces)
-            return
+        if(context.callbacks.isEmpty() &&
+            context.dictionaries.isEmpty() &&
+            context.interfaces.isEmpty()
+        ) return
 
         printLabel("Type definitions")
 
         buildList {
-            addAll(context.usedDictionaries)
-            addAll(context.usedCallbacks)
-            addAll(context.usedInterfaces)
+            addAll(context.dictionaries)
+            addAll(context.callbacks)
+            addAll(context.interfaces)
         }.map { it.cppName }.joinTo(this, separator = "") {
             "\nstruct $it;"
         }
@@ -140,11 +142,11 @@ class CppApiHeaderPrinter(
     }
 
     private fun StringBuilder.printEnums() {
-        if(!context.hasEnums)
+        if(context.enums.isEmpty())
             return
-
         printLabel("Enums")
-        context.usedEnums.forEach { enum ->
+
+        context.enums.forEach { enum ->
             append("\nenum ${enum.cppName} {")
             enum.elements.joinTo(this) { "\n\t$it" }
             append("\n};\n")
@@ -152,12 +154,11 @@ class CppApiHeaderPrinter(
     }
 
     private fun StringBuilder.printInterfaces() {
-        if(!context.hasInterfaces)
+        if(context.interfaces.isEmpty())
             return
-
         printLabel("Interfaces")
 
-        context.usedInterfaces.forEach { inter ->
+        context.interfaces.forEach { inter ->
             val interName = inter.cppName
 
             append("\nstruct $interName {")
@@ -185,7 +186,7 @@ class CppApiHeaderPrinter(
     }
 
     private fun StringBuilder.printCallbacks() {
-        if (!context.hasCallbacks)
+        if (context.callbacks.isEmpty())
             return
         printLabel("Callbacks")
 
@@ -218,7 +219,7 @@ class CppApiHeaderPrinter(
             
         """.trimIndent())
 
-        context.usedCallbacks.forEach { callback ->
+        context.callbacks.forEach { callback ->
             val params = buildList {
                 add(callback.cppName)
                 add(callback.type.toCppType())
@@ -232,11 +233,11 @@ class CppApiHeaderPrinter(
     }
 
     private fun StringBuilder.printStructs() {
-        if(!context.hasDictionaries)
+        if(context.dictionaries.isEmpty())
             return
         printLabel("Structs")
 
-        context.usedDictionaries.sortedWith { d1, d2 ->
+        context.dictionaries.sortedWith { d1, d2 ->
             when {
                 d1 == d2.implements -> -1
                 d1.implements == d2 -> 1
@@ -304,9 +305,9 @@ class CppApiHeaderPrinter(
             
         """.trimIndent())
 
-        if(context.hasNullable) {
+        if(context.hasNullableCast) {
             printLabel("Tools")
-            if(context.hasNullableToKotlin) appendLine("""
+            if(context.hasNullableCastToKotlin) appendLine("""
                 
                 template<typename T>
                 T* _Nullable obj_opt(KOptional<T> opt, T* _Nonnull (* _Nonnull wrap)(T)) {
@@ -314,7 +315,7 @@ class CppApiHeaderPrinter(
                     return wrap(std::move(*opt.get_ptr()));
                 }
             """.trimIndent())
-            if(context.hasNullableToNative) appendLine("""
+            if(context.hasNullableCastToNative) appendLine("""
                 
                 template<typename T>
                 KOptional<T> ptr_opt(T* _Nullable arg, T (* _Nonnull unwrap)(T* _Nonnull)) {
@@ -425,12 +426,14 @@ class CppApiHeaderPrinter(
                 }
     
                 template<typename T>
-                T* _Nonnull KOptional<T>::get_ptr() {
+                T* _Nullable KOptional<T>::get_ptr() {
+                    if (is_empty) return nullptr;
                     return reinterpret_cast<T*>(storage);
                 }
     
                 template<typename T>
-                const T* _Nonnull KOptional<T>::get_ptr() const {
+                const T* _Nullable KOptional<T>::get_ptr() const {
+                    if (is_empty) return nullptr;
                     return reinterpret_cast<const T*>(storage);
                 }
     
@@ -441,7 +444,7 @@ class CppApiHeaderPrinter(
             """.trimIndent())
         }
 
-        if(context.hasPrimitiveArray || context.hasObjectArrays) {
+        if(context.hasPrimitiveArrayCast || context.hasObjectArraysCast) {
             printLabel("Array")
             append("""
                 

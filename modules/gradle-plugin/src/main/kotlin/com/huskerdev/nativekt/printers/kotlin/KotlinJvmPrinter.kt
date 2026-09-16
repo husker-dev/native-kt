@@ -203,11 +203,11 @@ class KotlinJvmPrinter(
 }
 
 internal fun StringBuilder.printJvmInterfaces(context: NativeModuleContext) {
-    if(!context.hasInterfaces)
+    if(context.interfaces.isEmpty())
         return
     printLabel("Interfaces")
 
-    context.usedInterfaces.forEach(::printJvmInterface)
+    context.interfaces.forEach(::printJvmInterface)
 }
 
 internal fun StringBuilder.printJvmInterface(inter: ResolvedIdlInterface) {
@@ -231,7 +231,7 @@ internal fun StringBuilder.printJvmInterface(inter: ResolvedIdlInterface) {
             operation.isInterfaceOperationConstructor() ->
                 "\n\tactual constructor(${args.joinToString()}): this(Unit, ${operation.kname}(${argNames.joinToString()}))"
             operation.isInterfaceOperationFn() -> {
-                val name = operation.interfaceFunctionName()
+                val name = operation.interfaceFunctionName().camelCase()
                 val args = args.drop(1).joinToString()
                 val argNames = argNames.toMutableList()
                     .apply { set(0, "rcPtr") }

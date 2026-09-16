@@ -58,13 +58,13 @@ internal fun StringBuilder.printHeaderDef(context: NativeModuleContext) {
             Box::into_raw(Box::new(of))
         }
     """.trimIndent())
-    if(context.hasNullableToNative) appendLine("""
+    if(context.hasNullableCastToNative) appendLine("""
         
         fn ptr_opt<T, R>(ptr: *mut T, f: fn(*mut T) -> R) -> Option<R> {
             if ptr.is_null() { None } else { Some(f(ptr)) }
         }
     """.trimIndent())
-    if(context.hasNullableToKotlin) appendLine("""
+    if(context.hasNullableCastToKotlin) appendLine("""
         
         fn obj_opt<T, R>(ptr: Option<R>, f: fn(R) -> *mut T) -> *mut T {
             if ptr.is_none() { null_mut() } else { f(ptr.unwrap()) }
@@ -156,12 +156,12 @@ internal fun StringBuilder.printHeaderDef(context: NativeModuleContext) {
 }
 
 internal fun StringBuilder.printStringDef(context: NativeModuleContext) {
-    if(!context.hasString)
+    if(!context.hasStringCast)
         return
     printLabel("String")
 
     append("\nexport_fn! {")
-    if(context.hasStringToNativeCast) appendLine($$"""
+    if(context.hasStringCastToNative) appendLine($$"""
         
         fn $${context.mangle("string_new")}(data: *mut u8, _length: i32, size: i32, make_copy: bool) -> *mut String as $${context.jsMangle["string_new"]} {
             if make_copy {
@@ -171,7 +171,7 @@ internal fun StringBuilder.printStringDef(context: NativeModuleContext) {
             }
         }
     """.replaceIndent("\t"))
-    if(context.hasStringToKotlinCast) appendLine("""
+    if(context.hasStringCastToKotlin) appendLine("""
         
         fn ${context.mangle("string_data")}(str: *mut String) -> *mut u8 as ${context.jsMangle["string_data"]} {
             unsafe { (&*str).as_ptr().cast_mut() }
@@ -190,7 +190,7 @@ internal fun StringBuilder.printStringDef(context: NativeModuleContext) {
 }
 
 internal fun StringBuilder.printArraysDef(context: NativeModuleContext) {
-    if(context.hasPrimitiveArray) {
+    if(context.hasPrimitiveArrayCast) {
         printLabel("Primitive arrays")
         append($$"""
             
@@ -223,14 +223,14 @@ internal fun StringBuilder.printArraysDef(context: NativeModuleContext) {
         """.trimIndent())
 
         listOf(
-            Triple("char", "u16", context.hasCharArray),
-            Triple("boolean", "bool", context.hasBooleanArray),
-            Triple("byte", "i8", context.hasByteArray || context.hasUByteArray),
-            Triple("short", "i16", context.hasShortArray || context.hasUShortArray),
-            Triple("int", "i32", context.hasIntArray || context.hasEnums || context.hasUIntArray),
-            Triple("long", "i64", context.hasLongArray || context.hasULongArray),
-            Triple("float", "f32", context.hasFloatArray),
-            Triple("double", "f64", context.hasDoubleArray)
+            Triple("char", "u16", context.hasCharArrayCast),
+            Triple("boolean", "bool", context.hasBooleanArrayCast),
+            Triple("byte", "i8", context.hasByteArrayCast || context.hasUByteArrayCast),
+            Triple("short", "i16", context.hasShortArrayCast || context.hasUShortArrayCast),
+            Triple("int", "i32", context.hasIntArrayCast || context.hasEnumsCast || context.hasUIntArrayCast),
+            Triple("long", "i64", context.hasLongArrayCast || context.hasULongArrayCast),
+            Triple("float", "f32", context.hasFloatArrayCast),
+            Triple("double", "f64", context.hasDoubleArrayCast)
         ).forEach { (name, type, has) ->
             if(!has)
                 return@forEach
@@ -247,7 +247,7 @@ internal fun StringBuilder.printArraysDef(context: NativeModuleContext) {
         append("\n")
     }
 
-    if(context.hasObjectArrays) {
+    if(context.hasObjectArraysCast) {
         printLabel("Object array")
         append($$"""
             
@@ -310,19 +310,17 @@ internal fun StringBuilder.printArraysDef(context: NativeModuleContext) {
         """.trimIndent())
 
         buildList {
-            context.usedDictionaries.mapTo(this) {
-                it.rustName to it.name.camelCase().lowercase()
-            }
-            context.usedInterfaces.mapTo(this) {
-                "Arc<${it.rustName}>" to it.name.camelCase().lowercase()
-            }
-            /*
-            context.usedCallbacks.mapTo(this) {
-                "Arc<${it.rustName}>" to it.name.camelCase().lowercase()
-            }
-
-             */
-            if(context.hasStringArray)
+            context.dictionaries
+                .filter { it in context.usedObjectArrayCast }
+                .mapTo(this) {
+                    it.rustName to it.name.camelCase().lowercase()
+                }
+            context.interfaces
+                .filter { it in context.usedObjectArrayCast }
+                .mapTo(this) {
+                    "Arc<${it.rustName}>" to it.name.camelCase().lowercase()
+                }
+            if(context.hasStringArrayCast)
                 add("String" to "string")
         }.joinTo(this, separator = "") {
             val lower = it.second
@@ -342,21 +340,21 @@ internal fun StringBuilder.printArraysDef(context: NativeModuleContext) {
 }
 
 internal fun StringBuilder.printCriticalFuncDef(context: NativeModuleContext) {
-    if(!context.hasCriticalString &&
-        !context.hasCriticalStringOpt &&
-        !context.hasCriticalArray && !
-        context.hasCriticalArrayOpt
+    if(!context.hasCriticalStringCast &&
+        !context.hasCriticalStringOptCast &&
+        !context.hasCriticalArrayCast && !
+        context.hasCriticalArrayOptCast
     ) return
 
     printLabel("Critical functions")
 
-    if(context.hasCriticalString) appendLine("""
+    if(context.hasCriticalStringCast) appendLine("""
         
         fn critical_string(data: *mut u8, size: i32) -> ManuallyDrop<String> {
             unsafe { ManuallyDrop::new(String::from_raw_parts(data, size as usize, size as usize)) }
         }
     """.trimIndent())
-    if(context.hasCriticalStringOpt) appendLine("""
+    if(context.hasCriticalStringOptCast) appendLine("""
         
         fn critical_string_opt(data: *mut u8, length: i32, size: i32) -> ManuallyDrop<Option<String>> {
             ManuallyDrop::new(if length != -1 {
@@ -364,13 +362,13 @@ internal fun StringBuilder.printCriticalFuncDef(context: NativeModuleContext) {
             } else { None })
         }
     """.trimIndent())
-    if(context.hasCriticalArray) appendLine("""
+    if(context.hasCriticalArrayCast) appendLine("""
         
         fn critical_array<T>(data: *mut T, size: i32) -> ManuallyDrop<Vec<T>> {
             unsafe { ManuallyDrop::new(Vec::from_raw_parts(data, size as usize, size as usize)) }
         }
     """.trimIndent())
-    if(context.hasCriticalArrayOpt) appendLine("""
+    if(context.hasCriticalArrayOptCast) appendLine("""
         
         fn critical_array_opt<T>(data: *mut T, size: i32) -> ManuallyDrop<Option<Vec<T>>> {
             ManuallyDrop::new(if size != -1 {

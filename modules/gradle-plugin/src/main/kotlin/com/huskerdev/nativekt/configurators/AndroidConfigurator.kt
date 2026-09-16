@@ -91,7 +91,7 @@ internal fun configureAndroidSourceSet(
         PrepareNativesAndroid::class.java
     )
     prepareTask.get().also {
-        it.inputs.dir(context.module.projectDir)
+        it.inputs.dir(context.module.dir)
         it.inputs.file(context.module.ndlFile())
         it.outputs.dirs(nativesBuildSourcesDir, srcDir)
 
@@ -120,7 +120,7 @@ internal fun configureAndroidSourceSet(
         CompileNativesAndroid::class.java
     )
     compileTask.get().also {
-        it.inputs.dir(context.module.projectDir)
+        it.inputs.dir(context.module.dir)
         it.inputs.file(context.module.ndlFile())
         it.outputs.dirs(nativesBuildOutDir)
 
@@ -167,7 +167,7 @@ private abstract class PrepareNativesAndroid: DefaultTask() {
 
         val nativesBuildSourcesDir = File(nativesBuildSourcesDir).fresh()
         val nativesBuildOutDir = File(nativesBuildOutDir)
-        val projectDir = File(context.module.projectDir.absolutePath)
+        val projectDir = File(context.module.dir.absolutePath)
 
         // Kotlin bindings
         KotlinAndroidPrinter(
@@ -274,7 +274,7 @@ private abstract class CompileNativesAndroid @Inject constructor(
 
         val nativesBuildSourcesDir = File(nativesBuildSourcesDir)
         val nativesBuildOutDir = File(nativesBuildOutDir).fresh()
-        val projectDir = File(context.module.projectDir.absolutePath)
+        val projectDir = File(context.module.dir.absolutePath)
 
         // Find toolchain
         val toolchainDir = File(ndkDir, "toolchains/llvm/prebuilt")

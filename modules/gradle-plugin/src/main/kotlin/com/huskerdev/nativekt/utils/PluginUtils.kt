@@ -153,7 +153,7 @@ fun validateIDL(idl: IdlResolver) {
                     BYTE_SEQUENCE,
                     OBJECT -> throw UnsupportedOperationException("Unsupported type: ${declaration.kind}")
                     STRING,
-                    VOID,
+                    VOID -> Unit
                     BOOLEAN,
                     CHAR,
                     INT,
@@ -165,7 +165,10 @@ fun validateIDL(idl: IdlResolver) {
                     SHORT,
                     UNSIGNED_SHORT,
                     LONG,
-                    UNSIGNED_LONG -> Unit // ok
+                    UNSIGNED_LONG -> {
+                        if(type.isNullable)
+                            throw UnsupportedOperationException("Nullable primitives are not supported: $type")
+                    }
                     LIST -> {
                         if(isInsideArray)
                             throw UnsupportedOperationException("Nested arrays are not supported: $type")
@@ -176,9 +179,12 @@ fun validateIDL(idl: IdlResolver) {
                     if(isInsideArray)
                         throw UnsupportedOperationException("Callback arrays are not supported yet")
                 }
+                is ResolvedIdlEnum -> {
+                    if(type.isNullable)
+                        throw UnsupportedOperationException("Nullable enums are not supported: ${type.declaration.name}")
+                }
                 is ResolvedIdlInterface,
                 is ResolvedIdlDictionary,
-                is ResolvedIdlEnum,
                 is ResolvedIdlNamespace,
                 is ResolvedIdlTypeDef -> Unit // ok
             }

@@ -76,7 +76,7 @@ internal fun configureNative(
     )
     prepareTask.get().let {
         it.defFile.set(defFile)
-        it.inputs.dir(context.module.projectDir)
+        it.inputs.dir(context.module.dir)
         it.inputs.file(context.module.ndlFile())
         it.outputs.dirs(nativesBuildSourcesDir)
 
@@ -109,7 +109,7 @@ internal fun configureNative(
         CompileNativesKn::class.java
     )
     compilationTask.get().let {
-        it.inputs.dir(context.module.projectDir)
+        it.inputs.dir(context.module.dir)
         it.inputs.file(context.module.ndlFile())
         it.outputs.dirs(nativesBuildOutDir)
 
@@ -131,7 +131,7 @@ internal fun configureNative(
 
     // Force Kotlin re-linking when native files are changed
     project.tasks.matching { it is KotlinNativeLink && it.project == project }.forEach {
-        it.inputs.dir(context.module.projectDir)
+        it.inputs.dir(context.module.dir)
         it.inputs.file(context.module.ndlFile())
     }
 
@@ -244,7 +244,7 @@ private abstract class PrepareNativesKn @Inject constructor(
                     
                     add_compile_options(-Wno-initializer-overrides)
                     
-                    add_subdirectory("$${context.module.projectDir.posixPath}" "$${File(nativesBuildOutDir, "common").posixPath}")
+                    add_subdirectory("$${context.module.dir.posixPath}" "$${File(nativesBuildOutDir, "common").posixPath}")
                         
                     add_library(lib_$$moduleName SHARED api.$$sourceExtension)
                     target_link_libraries(lib_$$moduleName PUBLIC $$moduleName)
@@ -280,7 +280,7 @@ private abstract class PrepareNativesKn @Inject constructor(
             is BuildSystem.Cargo -> {
                 if(shouldInit) {
                     val rustFlags = cargoLinkerFlags(execOps, context,
-                        project = context.module.projectDir,
+                        project = context.module.dir,
                         buildType = buildSystem.buildType,
                         buildDir = nativesBuildOutDir,
                         target = getCargoTarget(targetType),
@@ -300,7 +300,7 @@ private abstract class PrepareNativesKn @Inject constructor(
             }
         }
 
-        if(DebugKind.PRINT_LINKER_OPTIONS in context.debug)
+        if(shouldInit && DebugKind.PRINT_LINKER_OPTIONS in context.debug)
             logger.error("[nativekt] Linker options for '$moduleName':\n\t${linkerOpts.joinToString("\n\t")}")
 
         // Create .def file
@@ -352,7 +352,7 @@ private abstract class CompileNativesKn @Inject constructor(
             }
             is BuildSystem.Cargo -> {
                 cargoBuild(execOps, context,
-                    project = context.module.projectDir,
+                    project = context.module.dir,
                     buildType = buildSystem.buildType,
                     buildDir = nativesBuildOutDir,
                     target = getCargoTarget(targetType)

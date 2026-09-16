@@ -32,7 +32,7 @@ internal fun configureStub(
     )
     prepareTask.get().let {
         it.srcDir.set(srcDir)
-        it.inputs.dir(context.module.projectDir)
+        it.inputs.dir(context.module.dir)
 
         it.context = context
         it.targetFile = File(classPathFile, "${context.moduleName}.kt").absolutePath
