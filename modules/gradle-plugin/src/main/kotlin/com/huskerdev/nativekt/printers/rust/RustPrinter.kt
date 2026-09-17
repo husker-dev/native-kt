@@ -275,7 +275,7 @@ class RustPrinter(
         context.enums.forEach { enum ->
             val name = enum.rustName
             val defaultValue = enum.defaultValue()
-            val defaultValueExt = if(defaultValue != null)
+            val defaultValueExt = if(defaultValue != null && defaultValue in enum.elements)
                 ", Default" else ""
 
             append("""
@@ -293,27 +293,6 @@ class RustPrinter(
                     "\n\t$value = $index"
             }.joinTo(this, ",")
             append("\n}\n")
-
-            append("""
-                
-                impl $name {
-                    pub fn from_int(value: i32) -> Self {
-                        match value {
-            """.trimIndent())
-            enum.elements.mapIndexed { index, value ->
-                "\n\t\t\t$index => $name::$value,"
-            }.joinTo(this, "")
-            append("""
-            
-                        _ => panic!()
-                    }
-                }
-                pub fn to_int(&self) -> i32 {
-                    self.clone() as i32
-                }
-            }
-            
-            """.trimIndent())
         }
     }
 

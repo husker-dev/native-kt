@@ -1186,19 +1186,6 @@ pub enum MyEnum {
 	CASE2 = 1
 }
 
-impl MyEnum {
-    pub fn from_int(value: i32) -> Self {
-        match value {
-			0 => MyEnum::CASE1,
-			1 => MyEnum::CASE2,
-            _ => panic!()
-        }
-    }
-    pub fn to_int(&self) -> i32 {
-        self.clone() as i32
-    }
-}
-
 // ╔═══════════════════╗
 // ║     Functions     ║
 // ╚═══════════════════╝

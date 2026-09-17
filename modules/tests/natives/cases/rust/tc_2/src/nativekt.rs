@@ -48,18 +48,6 @@ pub enum MyEnum {
 	A = 0
 }
 
-impl MyEnum {
-    pub fn from_int(value: i32) -> Self {
-        match value {
-			0 => MyEnum::A,
-            _ => panic!()
-        }
-    }
-    pub fn to_int(&self) -> i32 {
-        self.clone() as i32
-    }
-}
-
 // ╔═══════════════════╗
 // ║     Functions     ║
 // ╚═══════════════════╝
