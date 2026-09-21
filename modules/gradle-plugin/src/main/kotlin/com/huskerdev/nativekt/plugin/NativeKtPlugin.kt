@@ -12,8 +12,10 @@ import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.targets.js.dsl.KotlinJsTargetDsl
 import java.io.File
 
+
 internal const val NATIVE_TASK_GROUP = "natives"
 internal const val RUNTIME_DEPENDENCY = "com.huskerdev:native-kt-runtime:${NativeKtInfo.VERSION}"
+internal const val LOCAL_RUN_CONFIGURATION = "_localNativeJvmRun"
 
 @Suppress("unused")
 class NativeKtPlugin: Plugin<Project> {
@@ -57,7 +59,7 @@ class NativeKtPlugin: Plugin<Project> {
         project.afterEvaluate {
             File(project.layout.buildDirectory.get().asFile, "nativekt.txt").apply {
                 val content = extension?.joinToString(separator = "\n") {
-                    (it as NativeProject).dir.absolutePath
+                    (it as WrappedNativeProject<*>).dir.absolutePath
                 } ?: ""
 
                 if(content.isNotEmpty()) {

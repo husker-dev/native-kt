@@ -46,7 +46,8 @@ abstract class CallingConvention {
         protected val meta: MetaAccessProvider = jvmci.metaAccess
         protected val config = HotSpotVMConfigAccess(HotSpotJVMCIRuntime.runtime().getConfigStore())
 
-        val ENTRY_BARRIER_PATCH: Long = config.getConstant("CodeInstaller::ENTRY_BARRIER_PATCH", Long::class.javaObjectType)
+        @JvmStatic
+        protected val ENTRY_BARRIER_PATCH: Long = config.getConstant("CodeInstaller::ENTRY_BARRIER_PATCH", Long::class.javaObjectType)
 
         val current: CallingConvention = when (Arch.current) {
             Arch.ARM64 -> ARM64CallingConvention()
@@ -58,24 +59,29 @@ abstract class CallingConvention {
             else -> throw UnsupportedOperationException("Unsupported CPU architecture")
         }
 
-        fun getArrayOffset(javaClass: Class<*>): Int {
+        @JvmStatic
+        protected fun getArrayOffset(javaClass: Class<*>): Int {
             val elementKind = JavaKind.fromJavaClass(javaClass.componentType)
             return meta.getArrayBaseOffset(elementKind)
         }
 
-        fun isFloatingPointType(type: Class<*>): Boolean =
+        @JvmStatic
+        protected fun isFloatingPointType(type: Class<*>): Boolean =
             type == Float::class.java || type == Double::class.java
 
-        fun isIntegerType(type: Class<*>): Boolean =
+        @JvmStatic
+        protected fun isIntegerType(type: Class<*>): Boolean =
             type == Byte::class.java || type == Short::class.java ||
             type == Int::class.java || type == Long::class.java ||
             type == Boolean::class.java || type == Char::class.java ||
             !type.isPrimitive
 
-        fun isDouble(type: Class<*>): Boolean =
+        @JvmStatic
+        protected fun isDouble(type: Class<*>): Boolean =
             type == Double::class.java
 
-        fun align16(v: Int): Int =
+        @JvmStatic
+        protected fun align16(v: Int): Int =
             (v + 15) and -16
     }
 }

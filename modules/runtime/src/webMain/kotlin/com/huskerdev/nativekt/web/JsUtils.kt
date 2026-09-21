@@ -25,7 +25,6 @@ fun wrapModule(mod: WebAssemblyModule): JsAny =
     js("(function(a){ return { module: mod }; })(mod)")
 
 fun compileWasmFromFileAsync(name: String): Promise<WebAssemblyModule> {
-    println(getWasmPath(name))
     val stream = createReadStream(getWasmPath(name))
     val response = makeResponse(stream)
     return compileWasm(response)

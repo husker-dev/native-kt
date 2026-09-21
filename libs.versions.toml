@@ -5,24 +5,27 @@ kotlin = "2.4.20"
 kotlin_serialization = "1.11.0"
 kotlin_coroutines = "1.11.0"
 kotlin_benchmark = "0.5.0"
+kotlinx_io = "0.9.1"
 
 # == Android ==
-android_plugin = "9.4.0"
+android_plugin = "9.4.1"
 # noinspection GradleDependency
 android_test_runner = "1.2.0" # old versions to allow testing on SDK < 21
 # noinspection GradleDependency
 android_test_juint = "1.1.5"  # old versions to allow testing on SDK < 21
 
 # == Tools ==
-intellij_platform = "2.18.1"
-webidl = "1.0.4"
+intellij_platform = "2.19.0"
+webidl = "1.0.5"
 osutils = "1.0.0"
+filekit = "0.16.0"
+env_var = "1.0.6"
 
 # == Other FFI gen ==
 gobley = "0.3.7"
 
 # == Publish ==
-gradle_plugin_publish = "2.2.0"
+gradle_plugin_publish = "2.2.1"
 maven_publish = "0.37.0"
 
 [libraries]
@@ -31,6 +34,7 @@ kotlinx-coroutines      = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-c
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlin_coroutines" }
 kotlinx-benchmark       = { module = "org.jetbrains.kotlinx:kotlinx-benchmark-runtime", version.ref = "kotlin_benchmark" }
 kotlinx-serialization   = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlin_serialization" }
+kotlinx-io              = { module = "org.jetbrains.kotlinx:kotlinx-io-core", version.ref = "kotlinx_io" }
 kotlin-gradle-plugin    = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 
 android-gradle          = { module = "com.android.tools.build:gradle", version.ref = "android_plugin" }
@@ -39,6 +43,8 @@ androidx-test-ext-junit = { module = "androidx.test.ext:junit", version.ref = "a
 
 webidl                  = { module = "com.huskerdev:webidl-kt", version.ref = "webidl" }
 osutils                 = { module = "com.huskerdev:os-utils", version.ref = "osutils" }
+filekit                 = { module = "io.github.vinceglb:filekit-core", version.ref = "filekit" }
+envvar                  = { module = "dev.scottpierce:kotlin-env-var", version.ref = "env_var" }
 
 [plugins]
 
@@ -46,8 +52,9 @@ kotlin-multiplatform         = { id = "org.jetbrains.kotlin.multiplatform", vers
 kotlin-jvm                   = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-js                    = { id = "org.jetbrains.kotlin.js", version.ref = "kotlin" }
 kotlin-android               = { id = "com.android.kotlin.multiplatform.library", version.ref = "android_plugin" }
-kotlinx-benchmark            = { id = "org.jetbrains.kotlinx.benchmark", version.ref = "kotlin_benchmark" }
+kotlin-serialization         = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 kotlin-atomicfu              = { id = "org.jetbrains.kotlin.plugin.atomicfu", version.ref = "kotlin" }
+kotlinx-benchmark            = { id = "org.jetbrains.kotlinx.benchmark", version.ref = "kotlin_benchmark" }
 
 intellij-platform            = { id = "org.jetbrains.intellij.platform", version.ref = "intellij_platform" }
 intellij-platform-grammarkit = { id = "org.jetbrains.intellij.platform.grammarkit", version.ref = "intellij_platform" }

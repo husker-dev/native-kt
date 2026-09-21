@@ -13,6 +13,8 @@ include("modules:benchmarks")
 include("modules:examples:glfw")
 include("modules:examples:freetype")
 
+includeBuild("modules/core")
+
 pluginManagement {
     includeBuild("modules/gradle-plugin")
 

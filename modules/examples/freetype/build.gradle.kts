@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalKotlinGradlePluginApi::class)
 
-import com.huskerdev.nativekt.plugin.JsTarget
+import com.huskerdev.nativekt.JsTarget
 import com.huskerdev.nativekt.plugin.currentNativeDesktopTargets
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JsModuleKind

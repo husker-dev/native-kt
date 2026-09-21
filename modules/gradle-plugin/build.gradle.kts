@@ -25,11 +25,15 @@ java {
 }
 
 dependencies {
-    implementation(libs.kotlin.gradle.plugin)
-    implementation(libs.kotlinx.serialization)
     implementation(libs.webidl)
     implementation(libs.osutils)
+    implementation(libs.filekit)
+
+    implementation(libs.kotlin.gradle.plugin)
+    implementation(libs.kotlinx.serialization)
+
     compileOnly(libs.android.gradle)
+    implementation("$group:core")
 }
 
 tasks.jar {
@@ -48,14 +52,4 @@ gradlePlugin {
             tags.set(listOf("kotlin", "multiplatform", "native"))
         }
     }
-}
-
-project.afterEvaluate {
-    file("src/main/kotlin/com/huskerdev/nativekt/plugin/NativeKtInfo.kt").writeText("""
-        package com.huskerdev.nativekt.plugin
-        
-        object NativeKtInfo {
-            const val VERSION = "$version"
-        }
-    """.trimIndent().replace("\n", System.lineSeparator()))
 }

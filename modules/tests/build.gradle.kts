@@ -1,6 +1,7 @@
 @file:Suppress("UnstableApiUsage")
 
 import com.huskerdev.nativekt.plugin.*
+import com.huskerdev.nativekt.*
 import org.jetbrains.kotlin.gradle.dsl.*
 import org.jetbrains.kotlin.gradle.tasks.KotlinNativeLink
 
@@ -29,7 +30,11 @@ kotlin {
     }
 
     webTargets {
-        browser()
+        browser {
+            testTask {
+                useMocha()
+            }
+        }
         nodejs()
 
         compilerOptions {
@@ -82,15 +87,6 @@ kotlin {
     }
 }
 
-private fun NativeProject.configureNodeJsTests() {
-    gradle.taskGraph.whenReady {
-        gradle.taskGraph.allTasks.forEach {
-            if(it.name == "jsNodeTest" || it.name == "wasmJsNodeTest")
-                jsTarget = JsTarget.NODE
-        }
-    }
-}
-
 natives {
     debug += listOf(
         DebugKind.PRINT_LINKER_OPTIONS,
@@ -102,6 +98,10 @@ natives {
 
     useJsBigInt = true
     useJvmRecord = false
+
+    val currentJsTarget = if(project.hasProperty("useNode"))
+        JsTarget.NODE else JsTarget.WEB
+    println("Using JS/Wasm target: $currentJsTarget")
 
     if(project.hasProperty("disableForeign")) {
         println("Disable: Foreign")
@@ -118,17 +118,17 @@ natives {
     create("test") {
         cmake(Language.C)
         ndlFile = commonNdl
-        configureNodeJsTests()
+        jsTarget = currentJsTarget
     }
     create("testcpp") {
         cmake(Language.CPP)
         ndlFile = commonNdl
-        configureNodeJsTests()
+        jsTarget = currentJsTarget
     }
     create("testrs") {
         cargo()
         ndlFile = commonNdl
-        configureNodeJsTests()
+        jsTarget = currentJsTarget
     }
 
     // Test cases

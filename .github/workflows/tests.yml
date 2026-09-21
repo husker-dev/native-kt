@@ -165,31 +165,31 @@ jobs:
 
       - name: Kotlin Node tests
         if: runner.os == 'Linux'
-        run: ./gradlew :modules:tests:jsNodeTest :modules:tests:wasmJsNodeTest --continue --stacktrace
+        run: ./gradlew :modules:tests:jsNodeTest :modules:tests:wasmJsNodeTest -PuseNode=1 --continue --stacktrace
 
       - name: Kotlin/JVM tests (Linux x64)
         if: runner.os == 'Linux'
         run: |
           ./gradlew :modules:tests:jvmTest --continue --stacktrace
-          ./gradlew :modules:tests:jvmTest -DdisableForeign --continue --stacktrace
-          ./gradlew :modules:tests:jvmTest -DdisableJVMCI --continue --stacktrace
-          ./gradlew :modules:tests:jvmTest -DdisableJVMCI -DdisableForeign --continue --stacktrace
+          ./gradlew :modules:tests:jvmTest -PdisableForeign=1 --continue --stacktrace
+          ./gradlew :modules:tests:jvmTest -PdisableJVMCI=1 --continue --stacktrace
+          ./gradlew :modules:tests:jvmTest -PdisableJVMCI=1 -PdisableForeign=1 --continue --stacktrace
 
       - name: Kotlin/JVM tests (macOS arm64)
         if: runner.os == 'macOS'
         run: |
           ./gradlew :modules:tests:jvmTest --continue --stacktrace
-          ./gradlew :modules:tests:jvmTest -DdisableForeign --continue --stacktrace
-          ./gradlew :modules:tests:jvmTest -DdisableJVMCI --continue --stacktrace
-          ./gradlew :modules:tests:jvmTest -DdisableJVMCI -DdisableForeign --continue --stacktrace
+          ./gradlew :modules:tests:jvmTest -PdisableForeign=1 --continue --stacktrace
+          ./gradlew :modules:tests:jvmTest -PdisableJVMCI=1 --continue --stacktrace
+          ./gradlew :modules:tests:jvmTest -PdisableJVMCI=1 -PdisableForeign=1 --continue --stacktrace
 
       - name: Kotlin/JVM tests (Windows x64)
         if: runner.os == 'Windows'
         run: |
           ./gradlew :modules:tests:jvmTest --continue --stacktrace
-          ./gradlew :modules:tests:jvmTest -DdisableForeign --continue --stacktrace
-          ./gradlew :modules:tests:jvmTest -DdisableJVMCI --continue --stacktrace
-          ./gradlew :modules:tests:jvmTest -DdisableJVMCI -DdisableForeign --continue --stacktrace
+          ./gradlew :modules:tests:jvmTest -PdisableForeign=1 --continue --stacktrace
+          ./gradlew :modules:tests:jvmTest -PdisableJVMCI=1 --continue --stacktrace
+          ./gradlew :modules:tests:jvmTest -PdisableJVMCI=1 -PdisableForeign=1 --continue --stacktrace
 
       - name: Stop Gradle deamon
         run: ./gradlew --stop

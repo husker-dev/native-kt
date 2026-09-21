@@ -1,13 +1,12 @@
 package com.huskerdev.nativekt.plugin
 
 import com.android.build.api.variant.KotlinMultiplatformAndroidComponentsExtension
+import com.huskerdev.nativekt.Multiplatform
 import com.huskerdev.nativekt.NativeModuleContext
+import com.huskerdev.nativekt.SinglePlatform
 import com.huskerdev.nativekt.TargetType
-import com.huskerdev.nativekt.configurators.*
-import com.huskerdev.nativekt.createContext
+import com.huskerdev.nativekt.plugin.configurators.*
 import com.huskerdev.nativekt.plugin.tasks.ApiGenTask
-import com.huskerdev.nativekt.plugin.tasks.InitTask
-import com.huskerdev.nativekt.utils.dependsOnProjectReload
 import com.huskerdev.nativekt.utils.upperCamelCase
 import org.gradle.api.ExtensiblePolymorphicDomainObjectContainer
 import org.gradle.api.Project
@@ -41,8 +40,9 @@ internal fun configureKotlin(
     extension: ExtensiblePolymorphicDomainObjectContainer<*>
 ){
     project.afterEvaluate {
-        extension.forEach { module ->
-            val context = createContextWithProject(project, extension, module as NativeProject, false)
+        extension.forEach { wrappedModule ->
+            val module = (wrappedModule as WrappedNativeProject<*>).instance
+            val context = createContextWithProject(project, extension, module, false)
                 ?: return@forEach
 
             val apiGenTask = project.tasks.register(
@@ -50,13 +50,13 @@ internal fun configureKotlin(
                 ApiGenTask::class.java
             )
             apiGenTask.get().let {
-                it.context = context
+                it.context = context.serialize()
                 it.dependsOnProjectReload()
             }
 
             when(module) {
-                is Multiplatform -> configureMultiplatform(project, context, apiGenTask)
-                is SinglePlatform -> configureSinglePlatform(project, context, apiGenTask)
+                is Multiplatform -> configureMultiplatform(project, context, extension as JarTaskContainer, apiGenTask)
+                is SinglePlatform -> configureSinglePlatform(project, context, extension as JarTaskContainer, apiGenTask)
             }
         }
     }
@@ -81,8 +81,8 @@ internal fun configureAndroid(
             return@finalizeDsl
         }
 
-        extension.forEach { module ->
-            module as NativeProject
+        extension.forEach { wrappedModule ->
+            val module = (wrappedModule as WrappedNativeProject<*>).instance
 
             // If module is not valid, then skip.
             // INFO:
@@ -110,62 +110,29 @@ internal fun configureAndroid(
     }
 }
 
-private fun createContextWithProject(
-    project: Project,
-    extension: ExtensiblePolymorphicDomainObjectContainer<*>,
-    module: NativeProject,
-    muteError: Boolean
-): NativeModuleContext? {
-    val buildDir = project.layout.buildDirectory.asFile.get()
-
-    val context = createContext(
-        buildDir = buildDir,
-        extension = extension as NativeKtCommonInterface,
-        module = module
-    )
-
-    val initTaskName = "init${module.name.upperCamelCase()}"
-    val initTask = project.tasks.findByName(initTaskName)
-        ?: project.tasks.register(initTaskName, InitTask::class.java).get().also {
-            it.extension = extension
-            it.module = module
-            it.buildDir = buildDir.absolutePath
-        }
-    project.gradle.taskGraph.whenReady {
-        if (context == null && !muteError && !hasTask(initTask)) {
-            project.logger.error("""
-                Native module '${module.name}' is not loaded:
-                  'api.ndl' file not found.
-                
-                To initialize module: 
-                  ./gradlew ${initTask.path}
-            """.trimIndent())
-        }
-    }
-    return context
-}
-
 private fun configureSinglePlatform(
     project: Project,
     context: NativeModuleContext,
+    jarTaskContainer: JarTaskContainer,
     apiGenTask: TaskProvider<ApiGenTask>
 ){
     val kotlin = project.the<KotlinProjectExtension>()
     val sourceSet = kotlin.findSourceSet((context.module as SinglePlatform).targetSourceSet)
 
     // Apply runtime
-    if(context.extension.applyRuntime) {
+    if(context.configuration.applyRuntime) {
         sourceSet.dependencies {
             api(RUNTIME_DEPENDENCY)
         }
     }
 
-    configureKotlinSourceSet(project, apiGenTask, context, sourceSet, false)
+    configureKotlinSourceSet(project, apiGenTask, context, jarTaskContainer, sourceSet, false)
 }
 
 private fun configureMultiplatform(
     project: Project,
     context: NativeModuleContext,
+    jarTaskContainer: JarTaskContainer,
     apiGenTask: TaskProvider<ApiGenTask>
 ){
     val module = context.module as Multiplatform
@@ -183,7 +150,7 @@ private fun configureMultiplatform(
     commonTask.get().dependsOn(apiGenTask)
 
     // Apply runtime to common source set
-    if(context.extension.applyRuntime) {
+    if(context.configuration.applyRuntime) {
         commonSourceSet.dependencies {
             api(RUNTIME_DEPENDENCY)
         }
@@ -201,12 +168,12 @@ private fun configureMultiplatform(
 
     // Configure targets (not stubs)
     targetSourceSets.forEach { sourceSet ->
-        configureKotlinSourceSet(project, commonTask, context, sourceSet, true)
+        configureKotlinSourceSet(project, commonTask, context, jarTaskContainer, sourceSet, true)
     }
 
     // Configure stubs
-    stubSourceSets.forEach {
-        configureStub(project, commonTask, context, it)
+    stubSourceSets.forEach { sourceSet ->
+        configureStub(project, commonTask, context, sourceSet, getTargetType(project, sourceSet))
     }
 }
 
@@ -214,12 +181,15 @@ private fun configureKotlinSourceSet(
     project: Project,
     commonTask: TaskProvider<*>?,
     context: NativeModuleContext,
+    jarTaskContainer: JarTaskContainer,
     sourceSet: KotlinSourceSet,
     expectActual: Boolean
 ) = when(val targetType = getTargetType(project, sourceSet)) {
-    TargetType.JVM -> configureJvm(project, commonTask, context, sourceSet, expectActual)
-    TargetType.JS -> configureJs(project, commonTask, context, sourceSet, expectActual, false)
-    TargetType.WASM_JS -> configureJs(project, commonTask, context, sourceSet, expectActual, true)
+    TargetType.JVM -> configureJvm(project, commonTask, context, jarTaskContainer, sourceSet, expectActual)
+
+    TargetType.JS, TargetType.WASM_JS ->
+        configureJs(project, commonTask, context, sourceSet, expectActual, targetType)
+
     TargetType.ANDROID -> { }
     else -> configureNative(project, commonTask, context, sourceSet, targetType, expectActual)
 }
