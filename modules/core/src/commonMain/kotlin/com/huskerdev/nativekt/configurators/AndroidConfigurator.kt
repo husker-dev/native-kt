@@ -81,7 +81,7 @@ fun prepareAndroid(
                 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
                 add_compile_options(-Wno-initializer-overrides)
                 
-                add_subdirectory("$${context.module.dir.posixPath}" "$${layout.nativeBuildDir.posixPath}/sub/${ANDROID_ABI}")
+                add_subdirectory("$${context.module.dir.posixPath}" "$${layout.nativeBuildDir.posixPath}/${ANDROID_ABI}/cmake/sub")
             
                 add_library(lib$$moduleName SHARED $<TARGET_OBJECTS:$$moduleName> api.$${context.language.sourceExtension})
                 
@@ -159,13 +159,14 @@ fun compileAndroid(
 
         val libFile = when (val buildSystem = context.buildSystem) {
             is BuildSystem.CMake -> {
+                val cmakeBuildDir = targetBuildDir.resolve("cmake")
                 val cmakeToolchain = ndkDir.resolve("build/cmake/android.toolchain.cmake")
 
                 // Generate CMake build
                 cmakeGen(
                     context,
                     dir = layout.nativeSourcesDir,
-                    buildDir = targetBuildDir,
+                    buildDir = cmakeBuildDir,
                     buildType = buildSystem.buildType,
                     args = LinkedHashSet(buildSystem.args).apply {
                         this += "-DCMAKE_TOOLCHAIN_FILE=\"$cmakeToolchain\""
@@ -176,17 +177,19 @@ fun compileAndroid(
                 )
 
                 // Build
-                cmakeBuild(context, targetBuildDir)
+                cmakeBuild(context, cmakeBuildDir)
 
-                targetBuildDir.resolve("liblib${context.moduleName}.so")
+                cmakeBuildDir.resolve("liblib${context.moduleName}.so")
             }
 
             is BuildSystem.Cargo -> {
+                val rustBuildDir = targetBuildDir.resolve("rust")
+
                 val rustTarget = toAndroidLlvmTarget(target, rustc = true)
-                val rustBuildDir = cargoBuild(
+                val rustOutDir = cargoBuild(
                     context,
                     project = context.module.dir,
-                    buildDir = layout.nativeBuildDir.resolve("rust"),
+                    buildDir = rustBuildDir,
                     buildType = buildSystem.buildType,
                     target = rustTarget,
                     env = mapOf(
@@ -198,7 +201,7 @@ fun compileAndroid(
                     context,
                     project = context.module.dir,
                     buildType = buildSystem.buildType,
-                    buildDir = layout.nativeBuildDir.resolve("rust"),
+                    buildDir = rustBuildDir,
                     target = rustTarget,
                     env = mapOf(
                         "CARGO_TARGET_${rustTarget.replace("-", "_").uppercase()}_LINKER" to ndkClang.posixPath
@@ -211,7 +214,7 @@ fun compileAndroid(
                         "-Wl,--whole-archive",
                         libJni.posixPath,
                         "-Wl,--no-whole-archive",
-                        "$rustBuildDir/lib$${context.moduleName}.a",
+                        rustOutDir.resolve("lib${context.moduleName}.a").posixPath,
                         *rustLinkerFlags.toTypedArray()
                     ),
                     dynamicLib = true,

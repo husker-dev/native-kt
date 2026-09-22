@@ -11,13 +11,14 @@ internal fun getNdkDir(
     val sdk = existingSdkDir
         ?: EnvVar["ANDROID_SDK_ROOT"]?.run { PlatformFile(this) }
         ?: throw NullPointerException("Could not find Android SDK. Environment variable 'ANDROID_SDK_ROOT' is not specified.")
+    val ndk = sdk.resolve("ndk")
 
     return if(extension.ndkVersion == null) {
-        sdk.list()
+        ndk.list()
             .maxByOrNull { it.name }
             ?: throw UnsupportedOperationException("Can not get latest NDK, because no NDK are installed")
     } else {
-        val dir = sdk.resolve("ndk/${extension.ndkVersion}")
+        val dir = ndk.resolve(extension.ndkVersion!!)
 
         if (!dir.exists()) {
             val available = arrayListOf<String>()
