@@ -33,7 +33,7 @@ abstract class BoltFFIJar @Inject constructor(
             dir: File,
             command: String
         ) {
-            println(command)
+            logger.info(command)
             execOps.exec {
                 workingDir = dir
                 if(Os.isFamily(Os.FAMILY_WINDOWS))

@@ -110,7 +110,7 @@ fun compileAndroid(
 
     // Compile each target
     extension.androidTargets.forEach { target ->
-        println("Compiling Android target: $target")
+        context.logger!!.info("Compiling Android target: $target")
 
         val llvmTarget = toAndroidLlvmTarget(target)
         val ndkClang = toolchainBinDir.list()

@@ -38,7 +38,7 @@ internal fun ensureTargetInstalled(
             it.startsWith(target)
         }?.run {
             if(!endsWith("(installed)")) {
-                println("Installing rust target: $target...")
+                context.logger!!.info("Installing rust target: $target...")
                 context.execute("rustup target add $target")
             }
         } ?: throw Exception("The $target is not supported on the current system (maybe try the nightly build?).")
@@ -51,7 +51,7 @@ internal fun ensureWasmBindgenInstalled(context: NativeModuleContext) {
             silent = true
         )
     } catch (_: Exception) {
-        println("Installing wasm-bindgen...")
+        context.logger!!.info("Installing wasm-bindgen...")
         context.execute(
             command = "cargo install wasm-bindgen-cli",
             silent = true
@@ -66,7 +66,7 @@ internal fun ensureWasmOptInstalled(context: NativeModuleContext) {
             silent = true
         )
     } catch (_: Exception) {
-        println("Installing wasm-opt...")
+        context.logger!!.info("Installing wasm-opt...")
         context.execute(
             command = "cargo install wasm-opt",
             silent = true

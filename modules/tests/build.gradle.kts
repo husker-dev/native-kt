@@ -97,15 +97,15 @@ natives {
 
     val currentJsTarget = if(project.hasProperty("useNode"))
         JsTarget.NODE else JsTarget.WEB
-    println("Using JS/Wasm target: $currentJsTarget")
+    logger.info("Using JS/Wasm target: $currentJsTarget")
 
     if(project.hasProperty("disableForeign")) {
-        println("Disable: Foreign")
+        logger.info("Disable: Foreign")
         useForeignApi = false
     }
 
     if(project.hasProperty("disableJVMCI")) {
-        println("Disable: JVMCI")
+        logger.info("Disable: JVMCI")
         useJVMCI = false
     }
 
