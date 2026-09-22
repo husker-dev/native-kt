@@ -52,6 +52,7 @@ class KotlinAndroidPrinter(
 
         appendLine("""
             
+            private lateinit var _instance: $jniClassName
             private var _$isLibLoadedField = false
 
             ${actual}val $isLibLoadedField: Boolean
@@ -62,7 +63,7 @@ class KotlinAndroidPrinter(
                 if(_$isLibLoadedField) return
                 _$isLibLoadedField = true
                 
-                $jniClassName("${context.moduleName}")
+                _instance = $jniClassName("${context.moduleName}")
             }
             
             ${actual}fun ${asyncLoadFunctionName(context)}(onReady: () -> Unit) {
@@ -103,7 +104,7 @@ class KotlinAndroidPrinter(
             val modifiers = if(operation.isInterfaceOperation())
                 "private " else actual
 
-            val call = "$jniClassName.$name($argNames)"
+            val call = "_instance.$name($argNames)"
             val casted = when {
                 isCritical && operation.type.isEnum() ->
                     "${(operation.type as ResolvedIdlType.Default).declaration.kname}.entries[$call]"

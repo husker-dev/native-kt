@@ -4,6 +4,7 @@ import com.huskerdev.nativekt.*
 import com.huskerdev.nativekt.printers.kotlin.*
 import com.huskerdev.nativekt.utils.*
 import com.huskerdev.webidl.*
+import com.huskerdev.webidl.resolver.ResolvedIdlType
 
 class KotlinJvmJniPrinter(
     val context: NativeModuleContext,
@@ -26,32 +27,21 @@ class KotlinJvmJniPrinter(
 
             append("$indent${private}class $name(libraryPath: String)$parentClass {")
 
-            if(isAndroid) {
-                append("\n${indent1}companion object {")
-                printFunctions(indent2, isStatic = true)
-                val utils = printUtilFunctions(indent2)
-                append("\n${indent1}}")
-                printInit(utils)
-            } else {
-                val utilsContent = StringBuilder()
-                val utils = utilsContent.printUtilFunctions(indent2)
+            append("\n${indent1}companion object {")
+            printFunctions()
+            val utils = printUtilFunctions()
+            append("\n${indent1}}")
 
-                if(utilsContent.isNotEmpty()) {
-                    append("\n${indent1}companion object {")
-                    append(utilsContent)
-                    append("\n${indent1}}")
-                }
-                printFunctions(indent1, isStatic = false)
-                printInit(utils)
-            }
+            printInit(utils)
+            printFunctionLinks()
 
-            if(!isAndroid) builder.appendLine("""
+            if(!isAndroid) builder.append("""
                 
                 override fun _address(name: String): Long =
                     NativeKtUtils.findAddress(name)
             """.replaceIndent(indent1))
 
-            builder.append("${indent}}")
+            builder.append("\n${indent}}")
         }
     }
 
@@ -107,17 +97,16 @@ class KotlinJvmJniPrinter(
         }
 
         // End
-        append("\n${indent1}}\n")
+        append("\n${indent1}}")
     }
 
-    private fun StringBuilder.printFunctions(indent: String, isStatic: Boolean) {
+    private fun StringBuilder.printFunctionLinks() {
         if(context.allOperations.isEmpty())
             return
 
-        context.allOperations.forEachIndexed { i, function ->
-            val isAndroidFastNative = isAndroidCriticalEnabled && function.isCritical() && !function.isAndroidCriticalCapable()
+        context.allOperations.forEach { function ->
+            val critical = function.isCritical()
             val isAndroidCriticalNative = isAndroidCriticalEnabled && function.isCritical() && function.isAndroidCriticalCapable()
-
             val type = when {
                 isAndroidCriticalNative && function.type.isInterface() -> ": Long"
                 isAndroidCriticalNative && function.type.isEnum() -> ": Int"
@@ -133,22 +122,81 @@ class KotlinJvmJniPrinter(
                 }
             }
 
-            val modifiers = if(isStatic) {
-                val androidCritical = when {
-                    isAndroidFastNative -> "@FastNative "
-                    isAndroidCriticalNative -> "@CriticalNative "
-                    else -> ""
+            val casts = arrayListOf<String>()
+            val castedArgs = function.args.joinToString {
+                when {
+                    critical && it.type.isString() -> {
+                        if(it.type.isNullable) {
+                            casts += "val _${it.kname}_bytes = ${it.kname}?.encodeToByteArray()"
+                            "_${it.kname}_bytes, _${it.kname}_bytes?.size ?: -1"
+                        } else {
+                            casts += "val _${it.kname}_bytes = ${it.kname}.encodeToByteArray()"
+                            "_${it.kname}_bytes, _${it.kname}_bytes.size"
+                        }
+                    }
+                    critical && it.type.isArray() ->
+                        if(it.type.isNullable) "${it.kname}, ${it.kname}?.size ?: -1"
+                        else "${it.kname}, ${it.kname}.size"
+                    else -> castToNative(it.type, it.kname)
                 }
-                "@JvmStatic ${androidCritical}external"
-            } else "external override"
+            }
 
-            append("\n${indent}@Marker($i) $modifiers fun ${function.kname}($args)$type")
+            val override = if(isAndroid) "" else "override "
+
+            val call = castToKotlin(function.type, "_${function.kname}($castedArgs)")
+
+            append("\n$indent1${override}fun ${function.kname}($args)$type")
+
+            if(casts.isNotEmpty()) {
+                append(" {")
+                casts.forEach { append("\n$indent2$it") }
+                append("\n$indent2")
+                if(!function.type.isVoid()) append("return ")
+                append(call)
+                append("\n$indent1}")
+            } else append(" = $call")
         }
-        if(!isStatic)
-            append("\n")
+        append("\n")
     }
 
-    private fun StringBuilder.printUtilFunctions(indent: String): List<String> {
+    private fun StringBuilder.printFunctions() {
+        if(context.allOperations.isEmpty())
+            return
+
+        context.allOperations.forEachIndexed { i, function ->
+            val critical = function.isCritical()
+            val isAndroidFastNative = isAndroidCriticalEnabled && function.isCritical() && !function.isAndroidCriticalCapable()
+            val isAndroidCriticalNative = isAndroidCriticalEnabled && function.isCritical() && function.isAndroidCriticalCapable()
+
+            val type = when {
+                isAndroidCriticalNative && function.type.isInterface() -> ": Long"
+                isAndroidCriticalNative && function.type.isEnum() -> ": Int"
+                !function.type.isVoid() -> ": ${function.type.toKotlinType(stringAsBytes = true)}"
+                else -> ""
+            }
+
+            val args = function.args.joinToString {
+                when {
+                    isAndroidCriticalNative && it.type.isInterface() -> "${it.kname}: Long"
+                    isAndroidCriticalNative && it.type.isEnum() -> "${it.kname}: Int"
+                    critical && it.type.isString() -> "${it.kname}: ${it.type.toKotlinType(stringAsBytes = true)}, _${it.kname}_size: Int"
+                    critical && it.type.isArray() -> "${it.kname}: ${it.type.toKotlinType(stringAsBytes = true)}, _${it.kname}_length: Int"
+                    else -> "${it.kname}: ${it.type.toKotlinType(stringAsBytes = true)}"
+                }
+            }
+
+            val androidCritical = when {
+                isAndroidFastNative -> "@FastNative "
+                isAndroidCriticalNative -> "@CriticalNative "
+                else -> ""
+            }
+            val modifiers = "@JvmStatic ${androidCritical}external"
+
+            append("\n${indent2}@Marker($i) $modifiers fun _${function.kname}($args)$type")
+        }
+    }
+
+    private fun StringBuilder.printUtilFunctions(): List<String> {
         // Util functions
         var i = context.allOperations.size
         val staticFunctions = arrayListOf<String>()
@@ -156,8 +204,8 @@ class KotlinJvmJniPrinter(
         // Enum
         context.castedEnums.forEach { enum ->
             if (enum in context.toKotlinDeclarationCasts) {
-                append("\n$indent@Marker(${i++}) @JvmStatic fun cast_${enum.name.camelCase().lowercase()}(of: Int) = ${enum.kname}.entries[of]")
-                staticFunctions += "cast_${enum.name.camelCase().lowercase()}"
+                append("\n$indent2@Marker(${i++}) @JvmStatic fun _cast_${enum.name.camelCase().lowercase()}(of: Int) = ${enum.kname}.entries[of]")
+                staticFunctions += "_cast_${enum.name.camelCase().lowercase()}"
             }
         }
 
@@ -168,16 +216,20 @@ class KotlinJvmJniPrinter(
             val lower = dictionary.name.camelCase().lowercase()
 
             if(dictionary in context.toKotlinDeclarationCasts) {
-                val args = fields.joinToString { "${it.kname}: ${it.type.toKotlinType()}" }
-                val argNames = fields.joinToString { it.kname }
-                append("\n$indent@Marker(${i++}) @JvmStatic fun constructor_$lower($args) = ${dictionary.kname}($argNames)")
-                staticFunctions += "constructor_$lower"
+                val args = fields.joinToString {
+                    "${it.kname}: ${it.type.toKotlinType(stringAsBytes = true)}"
+                }
+                val argNames = fields.joinToString {
+                    castToKotlin(it.type, it.kname)
+                }
+                append("\n$indent2@Marker(${i++}) @JvmStatic fun _constructor_$lower($args) = ${dictionary.kname}($argNames)")
+                staticFunctions += "_constructor_$lower"
             }
             if(dictionary in context.toNativeDeclarationCasts) {
                 fields.forEach {
                     val fieldLower = it.name.camelCase().lowercase()
-                    append("\n$indent@Marker(${i++}) @JvmStatic fun field_${lower}_$fieldLower(of: $name) = of.${it.kname}")
-                    staticFunctions += "field_${lower}_$fieldLower"
+                    append("\n$indent2@Marker(${i++}) @JvmStatic fun _field_${lower}_$fieldLower(of: $name) = ${castToNative(it.type, "of.${it.kname}")}")
+                    staticFunctions += "_field_${lower}_$fieldLower"
                 }
             }
         }
@@ -185,37 +237,67 @@ class KotlinJvmJniPrinter(
         // Interfaces
         if(context.hasInterfaceCast) {
             if(context.hasInterfaceCastToNative) {
-                append("\n$indent@Marker(${i++}) @JvmStatic fun interface_ptr(of: NativeKtRcObject) = of.rcPtr")
-                staticFunctions += "interface_ptr"
+                append("\n$indent2@Marker(${i++}) @JvmStatic fun _interface_ptr(of: NativeKtRcObject) = of.rcPtr")
+                staticFunctions += "_interface_ptr"
             }
             context.castedInterfaces.forEach { inter ->
                 if(inter in context.toNativeDeclarationCasts) {
-                    append("\n$indent@Marker(${i++}) @JvmStatic fun constructor_${inter.name.camelCase().lowercase()}(ptr: Long) = ${inter.kname}(Unit, ptr)")
-                    staticFunctions += "constructor_${inter.name.camelCase().lowercase()}"
+                    append("\n$indent2@Marker(${i++}) @JvmStatic fun _constructor_${inter.name.camelCase().lowercase()}(ptr: Long) = ${inter.kname}(Unit, ptr)")
+                    staticFunctions += "_constructor_${inter.name.camelCase().lowercase()}"
                 }
             }
         }
 
         // Callbacks
         if(context.hasCallbackCast) {
-            append("\n$indent@Marker(${i++}) @JvmStatic fun callback_equals(c1: Any, c2: Any) = c1 == c2")
-            append("\n$indent@Marker(${i++}) @JvmStatic fun callback_hashCode(c: Any) = c.hashCode()")
+            append("\n$indent2@Marker(${i++}) @JvmStatic fun _callback_equals(c1: Any, c2: Any) = c1 == c2")
+            append("\n$indent2@Marker(${i++}) @JvmStatic fun _callback_hashCode(c: Any) = c.hashCode()")
 
-            staticFunctions += "callback_equals"
-            staticFunctions += "callback_hashCode"
+            staticFunctions += "_callback_equals"
+            staticFunctions += "_callback_hashCode"
 
             context.castedCallbacks.forEach { callback ->
                 val lower = callback.name.camelCase().lowercase()
                 val args = buildList {
                     add("of: ${callback.kname}")
-                    callback.args.mapTo(this){ "${it.kname}: ${it.type.toKotlinType()}" }
+                    callback.args.mapTo(this){
+                        "${it.kname}: ${it.type.toKotlinType(stringAsBytes = true)}"
+                    }
                 }.joinToString()
-                val argNames = callback.args.joinToString { it.kname }
+                val argNames = callback.args.joinToString {
+                    castToKotlin(it.type, it.kname)
+                }
 
-                append("\n$indent@Marker(${i++}) @JvmStatic fun invoke_$lower($args) = of($argNames)")
-                staticFunctions += "invoke_$lower"
+                append("\n$indent2@Marker(${i++}) @JvmStatic fun _invoke_$lower($args) = ${castToNative(callback.type, "of($argNames)")}")
+                staticFunctions += "_invoke_$lower"
             }
         }
         return staticFunctions
+    }
+
+    private fun castToNative(
+        type: ResolvedIdlType,
+        content: String
+    ) = when {
+        type.isString() ->
+            if(type.isNullable) "$content?.encodeToByteArray()"
+            else "$content.encodeToByteArray()"
+        type.isStringArray() ->
+            if(type.isNullable) "JniUtils.stringsToBytes($content)"
+            else "JniUtils.stringsToBytes($content)!!"
+        else -> content
+    }
+
+    private fun castToKotlin(
+        type: ResolvedIdlType,
+        content: String
+    ) = when {
+        type.isString() ->
+            if(type.isNullable) "$content?.decodeToString()"
+            else "$content.decodeToString()"
+        type.isStringArray() ->
+            if(type.isNullable) "JniUtils.bytesToStrings($content)"
+            else "JniUtils.bytesToStrings($content)!!"
+        else -> content
     }
 }

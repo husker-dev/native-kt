@@ -15,11 +15,11 @@
 ## Docs
 https://native-kt.com/
 
-## Benchmark
+## JVM Benchmark
 
-Tested on Apple M4 Pro:
-- BoltFFI
-- Gobley/UniFFI
+Tested on Apple M4 Pro (GraalVM 23):
+- [BoltFFI](https://github.com/boltffi/boltffi)
+- [Gobley/UniFFI](https://github.com/gobley/gobley)
 - native-kt (this project)
 - JVM
 
@@ -30,30 +30,30 @@ Cases:
 
 ```agsl
 Benchmark                         Mode  Cnt     Score      Error  Units
-boltffi_empty                     avgt    5     2,245 ±    0,003  ns/op
-boltffi_add                       avgt    5     2,246 ±    0,007  ns/op
-boltffi_string                    avgt    5    77,523 ±    0,981  ns/op
+boltffi_empty                     avgt    5     2,253 ±    0,012  ns/op
+boltffi_add                       avgt    5     2,332 ±    0,618  ns/op
+boltffi_string                    avgt    5    78,223 ±    0,334  ns/op
 
-gobley_empty                      avgt    5  2594,781 ±  649,496  ns/op
-gobley_add                        avgt    5  2773,574 ± 1258,296  ns/op
-gobley_string                     avgt    5  7089,865 ± 1244,831  ns/op
+gobley_empty                      avgt    5  2490,096 ±  684,183  ns/op
+gobley_add                        avgt    5  2951,996 ± 2526,199  ns/op
+gobley_string                     avgt    5  7155,289 ± 3574,407  ns/op
 
-nativekt_foreign_empty            avgt    5     3,379 ±    0,015  ns/op
-nativekt_foreign_add              avgt    5     3,750 ±    0,008  ns/op
-nativekt_foreign_string           avgt    5    26,740 ±    0,260  ns/op
+nativekt_foreign_empty            avgt    5     3,408 ±    0,223  ns/op
+nativekt_foreign_add              avgt    5     3,753 ±    0,022  ns/op
+nativekt_foreign_string           avgt    5    26,302 ±    0,872  ns/op
 
-nativekt_foreign_critical_empty   avgt    5     2,999 ±    0,005  ns/op
-nativekt_foreign_critical_add     avgt    5     3,246 ±    0,015  ns/op
-nativekt_foreign_critical_string  avgt    5     7,617 ±    0,047  ns/op
+nativekt_foreign_critical_empty   avgt    5     3,000 ±    0,014  ns/op
+nativekt_foreign_critical_add     avgt    5     3,254 ±    0,019  ns/op
+nativekt_foreign_critical_string  avgt    5     7,403 ±    0,183  ns/op
 
-nativekt_jni_empty                avgt    5     2,494 ±    0,016  ns/op
-nativekt_jni_add                  avgt    5     2,606 ±    0,046  ns/op
-nativekt_jni_string               avgt    5   231,412 ±    3,335  ns/op
-nativekt_jni_critical_string      avgt    5   210,009 ±    3,698  ns/op
+nativekt_jni_empty                avgt    5     2,499 ±    0,006  ns/op
+nativekt_jni_add                  avgt    5     2,522 ±    0,092  ns/op
+nativekt_jni_string               avgt    5    83,313 ±    0,808  ns/op
+nativekt_jni_critical_string      avgt    5    62,610 ±    0,813  ns/op
 
-nativekt_jvmci_empty              avgt    5     1,240 ±    0,005  ns/op
-nativekt_jvmci_add                avgt    5     1,247 ±    0,012  ns/op
-nativekt_jvmci_string             avgt    5     2,836 ±    0,151  ns/op
+nativekt_jvmci_empty              avgt    5     1,249 ±    0,011  ns/op
+nativekt_jvmci_add                avgt    5     1,254 ±    0,021  ns/op
+nativekt_jvmci_string             avgt    5     2,998 ±    0,044  ns/op
 
-jvm_add                           avgt    5     0,348 ±    0,114  ns/op
+jvm_add                           avgt    5     0,348 ±    0,116  ns/op
 ```

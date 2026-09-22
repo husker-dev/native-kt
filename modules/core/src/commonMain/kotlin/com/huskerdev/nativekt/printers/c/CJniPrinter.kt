@@ -51,13 +51,8 @@ class CJniPrinter(
         val objects = arrayListOf<String>()
 
         // String
-        if (context.hasStringCast) {
+        if (context.hasStringCast)
             classes += "class_string"
-            objects += "string_utf8_const"
-        }
-        if (context.hasStringCastToKotlin)
-            methods += "string_constructor"
-        if (context.hasStringCastToNative) methods += "string_get_bytes"
 
         // Enums
         if (context.hasEnumsCast) {
@@ -232,14 +227,7 @@ class CJniPrinter(
             appendLine("""
                 
                 // String
-                class_string = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "java/lang/String"));
-                string_utf8_const = (*env)->NewGlobalRef(env, (*env)->NewStringUTF(env, "UTF-8"));
-            """.replaceIndent("\t"))
-            if (context.hasStringCastToKotlin) appendLine("""
-                string_constructor = (*env)->GetMethodID(env, class_string, "<init>", "([BLjava/lang/String;)V");
-            """.replaceIndent("\t"))
-            if (context.hasStringCastToNative) appendLine("""
-                string_get_bytes = (*env)->GetMethodID(env, class_string, "getBytes", "(Ljava/lang/String;)[B");
+                class_string = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "[B"));
             """.replaceIndent("\t"))
         }
 
@@ -325,16 +313,17 @@ class CJniPrinter(
             if (context.hasStringCastToNative) {
                 appendLine("""
                     
-                    static void* JNI_to_native_string(JNIEnv *env, jstring obj) {
+                    static void* JNI_to_native_string(JNIEnv *env, jbyteArray obj) {
                         if(obj == NULL) return NULL;
-    
-                        jbyteArray bytes = (jbyteArray) (*env)->CallObjectMethod(env, obj, string_get_bytes, string_utf8_const);
-                        jsize size = (*env)->GetArrayLength(env, bytes);
+                        jsize size = (*env)->GetArrayLength(env, obj);
                         jbyte* data = (jbyte*) ${context.mangle("alloc")}(size);
-                        (*env)->GetByteArrayRegion(env, bytes, 0, size, data);
-                        void* result = ${context.mangle("string_new")}((const char*) data, size, false);
-                        (*env)->DeleteLocalRef(env, bytes);
-                        return result;
+                        
+                        if (size > 1024) {
+                            jbyte* raw = (jbyte*) (*env)->GetPrimitiveArrayCritical(env, obj, NULL);
+                            memcpy(data, raw, (size_t) size);
+                            (*env)->ReleasePrimitiveArrayCritical(env, obj, raw, JNI_ABORT);
+                        } else (*env)->GetByteArrayRegion(env, obj, 0, size, data);
+                        return ${context.mangle("string_new")}((const char*) data, size, false);
                     }
                 """.trimIndent())
                 castsFunctions += "static void* JNI_to_native_string(JNIEnv *env, jstring obj);"
@@ -342,15 +331,13 @@ class CJniPrinter(
             if (context.hasStringCastToKotlin) {
                 appendLine("""
                     
-                    static jstring JNI_to_kotlin_string(JNIEnv *env, void* str, bool free) {
+                    static jbyteArray JNI_to_kotlin_string(JNIEnv *env, void* str, bool free) {
                         if(str == NULL) return NULL;
     
                         jint size = (jint) ${context.mangle("string_size")}(str);
-                        jbyteArray bytes = (*env)->NewByteArray(env, size);
-                        (*env)->SetByteArrayRegion(env, bytes, 0, size, (jbyte*) ${context.mangle("string_data")}(str));
-    
-                        jstring result = (jstring) (*env)->NewObject(env, class_string, string_constructor, bytes, string_utf8_const);
-                        (*env)->DeleteLocalRef(env, bytes);
+                        jbyteArray result = (*env)->NewByteArray(env, size);
+                        (*env)->SetByteArrayRegion(env, result, 0, size, (jbyte*) ${context.mangle("string_data")}(str));
+                        
                         if (free) ${context.mangle("string_free")}(str);
                         return result;
                     }
@@ -419,8 +406,14 @@ class CJniPrinter(
                     static void* JNI_to_native_${name}array(JNIEnv *env, const j${name}Array arr) {
                         if(arr == NULL) return NULL;
                         jint length = (*env)->GetArrayLength(env, arr);
-                        j$name* elements = (j$name*) ${context.mangle("alloc")}(length * sizeof(j$name));
-                        (*env)->Get${capitalized}ArrayRegion(env, arr, 0, length, elements);
+                        size_t size = length * sizeof(j$name);
+                        j$name* elements = (j$name*) ${context.mangle("alloc")}(size);
+
+                        if (size > 1024) {
+                            j$name* raw = (j$name*) (*env)->GetPrimitiveArrayCritical(env, arr, NULL);
+                            memcpy(elements, raw, size);
+                            (*env)->ReleasePrimitiveArrayCritical(env, arr, raw, JNI_ABORT);
+                        } else (*env)->Get${capitalized}ArrayRegion(env, arr, 0, length, elements);
                         return ${context.mangle("${name}array_new")}(${kCast}elements, length, false);
                     }
                 """.trimIndent())
@@ -744,7 +737,11 @@ class CJniPrinter(
                 add("JNIEnv *_env")
                 add("jclass _")
                 function.args.mapTo(this) {
-                    "${it.type.toJniType()} ${it.cname}"
+                    when {
+                        critical && it.type.isString() -> "${it.type.toJniType()} ${it.cname}, jint _${it.cname}_size"
+                        critical && it.type.isArray() -> "${it.type.toJniType()} ${it.cname}, jint _${it.cname}_length"
+                        else -> "${it.type.toJniType()} ${it.cname}"
+                    }
                 }
             }.joinToString()
 
@@ -753,15 +750,11 @@ class CJniPrinter(
                 val nullable = if (it.type.isNullable) "${it.cname} ? " else ""
                 val nullableIf = if (it.type.isNullable) "if(${it.cname}) " else ""
                 val nullObj = if (it.type.isNullable) " : NULL" else ""
-                val nullNum = if (it.type.isNullable) " : -1" else ""
                 when {
                     critical && it.type.isString() -> listOf(
-                        "jbyteArray _${name}_bytes = $nullable(jbyteArray) (*_env)->CallObjectMethod(_env, $name, string_get_bytes, string_utf8_const)$nullObj;",
-                        "char* _${name}_data = $nullable(*_env)->GetPrimitiveArrayCritical(_env, _${name}_bytes, JNI_FALSE)$nullObj;",
-                        "jint _${name}_size = $nullable(*_env)->GetArrayLength(_env, _${name}_bytes)$nullNum;"
+                        "char* _${name}_data = $nullable(*_env)->GetPrimitiveArrayCritical(_env, $name, JNI_FALSE)$nullObj;",
                     )
                     critical && it.type.isEnumArray() -> listOf(
-                        "jint _${name}_length = $nullable(*_env)->GetArrayLength(_env, $name)$nullNum;",
                         "int32_t* _${name}_ints = $nullable(int32_t*) malloc(_${name}_length * sizeof(int32_t))$nullObj;",
                         "${nullableIf}for (int i = 0; i < _${name}_length; i++) {",
                         "\tjobject el = (*_env)->GetObjectArrayElement(_env, $name, i);",
@@ -771,7 +764,6 @@ class CJniPrinter(
                     )
                     critical && it.type.isArray() -> listOf(
                         "${it.type.arrayTypeOrNull()!!.toJniType()}* _${it.cname}_elements = $nullable(*_env)->GetPrimitiveArrayCritical(_env, ${it.cname}, JNI_FALSE)$nullObj;",
-                        "jint _${it.cname}_length = $nullable(*_env)->GetArrayLength(_env, ${it.cname})$nullNum;",
                     )
                     else -> null
                 }
@@ -793,7 +785,7 @@ class CJniPrinter(
             val free = function.args.mapNotNull {
                 val nullableIf = if (it.type.isNullable) "if(${it.cname}) " else ""
                 when {
-                    critical && it.type.isString() -> "${nullableIf}(*_env)->ReleasePrimitiveArrayCritical(_env, _${it.cname}_bytes, _${it.cname}_data, JNI_ABORT);"
+                    critical && it.type.isString() -> "${nullableIf}(*_env)->ReleasePrimitiveArrayCritical(_env, ${it.cname}, _${it.cname}_data, JNI_ABORT);"
                     critical && it.type.isEnumArray() -> "${nullableIf}free((void*) _${it.cname}_ints);"
                     critical && it.type.isArray() -> "${nullableIf}(*_env)->ReleasePrimitiveArrayCritical(_env, ${it.cname}, _${it.cname}_elements, JNI_ABORT);"
                     else -> null
@@ -918,7 +910,7 @@ class CJniPrinter(
         isLong() || isRawInterface() -> "jlong"
         isFloat() -> "jfloat"
         isDouble() -> "jdouble"
-        isString() -> "jstring"
+        isString() -> "jbyteArray"
         isArray() -> arrayType { type ->
             when {
                 type.isPrimitive() -> "${type.toJniType()}Array"
