@@ -30,11 +30,7 @@ kotlin {
     }
 
     webTargets {
-        browser {
-            testTask {
-                useMocha()
-            }
-        }
+        browser()
         nodejs()
 
         compilerOptions {
