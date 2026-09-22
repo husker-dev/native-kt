@@ -280,7 +280,7 @@ class CppApiHeaderPrinter(
             val name = function.cppName
             val type = function.type.toCppType()
             val args = function.args.joinToString {
-                val type = if(it.type.isReleasable())
+                val type = if(it.type.isReleasable() && function.isCritical())
                     "const ${it.type.toCppType()}&"
                 else it.type.toCppType()
                 "$type ${it.cppName}"

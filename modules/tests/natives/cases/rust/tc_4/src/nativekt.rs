@@ -60,10 +60,10 @@ export_fn! {
 // ╚═══════════════════╝
 
 export_fn!{ fn nativekt_natives_tc_4_rust_tc_4_rust_stub1(e: *mut Arc<crate::EmptyInterface>) -> () as M_ {
-    crate::stub1(&from_raw(e))
+    crate::stub1(from_raw(e))
 }}
 export_fn!{ fn nativekt_natives_tc_4_rust_tc_4_rust_stub2(e: *mut Arc<crate::MyInterface>) -> () as N_ {
-    crate::stub2(&from_raw(e))
+    crate::stub2(from_raw(e))
 }}
 export_fn!{ fn nativekt_natives_tc_4_rust_tc_4_rust__interface_emptyinterface_free(_self: *mut Arc<crate::EmptyInterface>) -> () as O_ {
     from_raw(_self);

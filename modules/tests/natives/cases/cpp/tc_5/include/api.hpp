@@ -53,6 +53,6 @@ KCallbackDef(VoidCallback, void)
 // ║     Functions     ║
 // ╚═══════════════════╝
 
-void stub(const std::shared_ptr<VoidCallback>& e);
+void stub(std::shared_ptr<VoidCallback> e);
 
 #include "api.tpp"

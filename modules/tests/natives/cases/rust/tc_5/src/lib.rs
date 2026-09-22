@@ -3,6 +3,6 @@ use crate::nativekt::*;
 
 mod nativekt;
 
-fn stub(_e: &Arc<VoidCallback>) {
+fn stub(_e: Arc<VoidCallback>) {
 
 }

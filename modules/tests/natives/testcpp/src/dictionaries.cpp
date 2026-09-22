@@ -1,6 +1,6 @@
 #include <api.hpp>
 
-bool pass_big_dictionary(const TypeDictionary& arg) {
+bool pass_big_dictionary(const TypeDictionary arg) {
     return arg.a1 == 'a' &&
         arg.a2 == true &&
         arg.a3 == 123 &&
@@ -78,8 +78,8 @@ bool pass_big_dictionary(const TypeDictionary& arg) {
 }
 
 TypeDictionary return_big_dictionary(
-    const std::shared_ptr<VoidCallback>& callback,
-    const std::shared_ptr<IMyInterface>& inter
+    const std::shared_ptr<VoidCallback> callback,
+    const std::shared_ptr<IMyInterface> inter
 ) {
     return TypeDictionary(
         'a',
@@ -123,11 +123,11 @@ TypeDictionary return_big_dictionary(
     );
 }
 
-TypeDictionary ping_big_dictionary(const TypeDictionary& arg) {
+TypeDictionary ping_big_dictionary(const TypeDictionary arg) {
     return arg;
 }
 
-bool pass_big_dictionary_n(const KOptional<TypeDictionary>& arg) {
+bool pass_big_dictionary_n(const KOptional<TypeDictionary> arg) {
     return arg.is_none();
 }
 
@@ -135,6 +135,6 @@ KOptional<TypeDictionary> return_big_dictionary_n() {
     return KOptional<TypeDictionary>();
 }
 
-KOptional<TypeDictionary> ping_big_dictionary_n(const KOptional<TypeDictionary>& arg) {
+KOptional<TypeDictionary> ping_big_dictionary_n(const KOptional<TypeDictionary> arg) {
     return arg;
 }

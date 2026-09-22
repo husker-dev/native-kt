@@ -323,7 +323,7 @@ class RustPrinter(
 
             val castedArgs = operation.args.map {
                 val name = it.rustName
-                (if (it.type.isReleasable()) "&" else "") + when {
+                (if (it.type.isReleasable() && operation.isCritical()) "&" else "") + when {
                     critical && it.type.isString() ->
                         if(it.type.isNullable) "critical_string_opt($name, _${name}_length, _${name}_size)"
                         else "critical_string($name, _${name}_size)"

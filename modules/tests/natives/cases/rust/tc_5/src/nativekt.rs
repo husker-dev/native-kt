@@ -176,5 +176,5 @@ impl_callback!(
 // ╚═══════════════════╝
 
 export_fn!{ fn nativekt_natives_tc_5_rust_tc_5_rust_stub(e: *mut Arc<VoidCallback>) -> () as D_ {
-    crate::stub(&from_raw(e))
+    crate::stub(from_raw(e))
 }}

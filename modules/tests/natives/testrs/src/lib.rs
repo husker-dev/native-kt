@@ -21,6 +21,7 @@ impl MyInterface {
         true
     }
     fn pass_interface(&self, _: &Arc<MyInterface>) {
+
     }
     fn return_interface(&self) -> Arc<MyInterface> {
         Arc::new(MyInterface::new())
@@ -118,13 +119,13 @@ pub fn pass_double(
 }
 
 pub fn pass_string(
-    arg: &String
+    arg: String
 ) -> bool {
     arg == "test string"
 }
 
 pub fn pass_string_n(
-    arg: &Option<String>
+    arg: Option<String>
 ) -> bool {
     arg.is_none()
 }
@@ -136,7 +137,7 @@ pub fn pass_enum(
 }
 
 pub fn pass_dictionary(
-    arg: &MyDictionary
+    arg: MyDictionary
 ) -> bool {
     arg.a == 1 &&
     arg.b == 2 &&
@@ -145,19 +146,19 @@ pub fn pass_dictionary(
 }
 
 pub fn pass_dictionary_n(
-    arg: &Option<MyDictionary>
+    arg: Option<MyDictionary>
 ) -> bool {
     arg.is_none()
 }
 
 pub fn pass_interface(
-    arg: &Arc<MyInterface>
+    arg: Arc<MyInterface>
 ) -> bool {
     arg.test()
 }
 
 pub fn pass_interface_n(
-    arg: &Option<Arc<MyInterface>>
+    arg: Option<Arc<MyInterface>>
 ) -> bool {
     arg.is_none()
 }
@@ -305,15 +306,15 @@ pub fn ping_double(
 }
 
 pub fn ping_string(
-    arg: &String
+    arg: String
 ) -> String {
-    arg.clone()
+    arg
 }
 
 pub fn ping_string_n(
-    arg: &Option<String>
+    arg: Option<String>
 ) -> Option<String> {
-    arg.clone()
+    arg
 }
 
 pub fn ping_enum(
@@ -323,273 +324,273 @@ pub fn ping_enum(
 }
 
 pub fn ping_dictionary(
-    arg: &MyDictionary
+    arg: MyDictionary
 ) -> MyDictionary {
-    arg.clone()
+    arg
 }
 
 pub fn ping_dictionary_n(
-    arg: &Option<MyDictionary>
+    arg: Option<MyDictionary>
 ) -> Option<MyDictionary> {
-    arg.clone()
+    arg
 }
 
 pub fn ping_interface(
-    arg: &Arc<MyInterface>
+    arg: Arc<MyInterface>
 ) -> Arc<MyInterface> {
-    arg.clone()
+    arg
 }
 
 pub fn ping_interface_n(
-    arg: &Option<Arc<MyInterface>>
+    arg: Option<Arc<MyInterface>>
 ) -> Option<Arc<MyInterface>> {
-    arg.clone()
+    arg
 }
 
 pub fn callback_void(
-    arg: &Arc<VoidCallback>
+    arg: Arc<VoidCallback>
 ) {
     arg.invoke()
 }
 
 pub fn callback_void_n(
-    arg: &Option<Arc<VoidCallback>>
+    arg: Option<Arc<VoidCallback>>
 ) -> bool {
     arg.is_none()
 }
 
 pub fn callback_arg_char(
-    arg: &Arc<CallbackPassChar>
+    arg: Arc<CallbackPassChar>
 ) -> bool {
     arg.invoke('a' as u16)
 }
 
 pub fn callback_arg_boolean(
-    arg: &Arc<CallbackPassBoolean>
+    arg: Arc<CallbackPassBoolean>
 ) -> bool {
     arg.invoke(true)
 }
 
 pub fn callback_arg_byte(
-    arg: &Arc<CallbackPassByte>
+    arg: Arc<CallbackPassByte>
 ) -> bool {
     arg.invoke(1)
 }
 
 pub fn callback_arg_ubyte(
-    arg: &Arc<CallbackPassUByte>
+    arg: Arc<CallbackPassUByte>
 ) -> bool {
     arg.invoke(255)
 }
 
 pub fn callback_arg_short(
-    arg: &Arc<CallbackPassShort>
+    arg: Arc<CallbackPassShort>
 ) -> bool {
     arg.invoke(1)
 }
 
 pub fn callback_arg_ushort(
-    arg: &Arc<CallbackPassUShort>
+    arg: Arc<CallbackPassUShort>
 ) -> bool {
     arg.invoke(65535)
 }
 
 pub fn callback_arg_int(
-    arg: &Arc<CallbackPassInt>
+    arg: Arc<CallbackPassInt>
 ) -> bool {
     arg.invoke(1)
 }
 
 pub fn callback_arg_uint(
-    arg: &Arc<CallbackPassUInt>
+    arg: Arc<CallbackPassUInt>
 ) -> bool {
     arg.invoke(4294967295)
 }
 
 pub fn callback_arg_long(
-    arg: &Arc<CallbackPassLong>
+    arg: Arc<CallbackPassLong>
 ) -> bool {
     arg.invoke(1)
 }
 
 pub fn callback_arg_ulong(
-    arg: &Arc<CallbackPassULong>
+    arg: Arc<CallbackPassULong>
 ) -> bool {
     arg.invoke(18446744073709551615)
 }
 
 pub fn callback_arg_float(
-    arg: &Arc<CallbackPassFloat>
+    arg: Arc<CallbackPassFloat>
 ) -> bool {
     arg.invoke(1.1)
 }
 
 pub fn callback_arg_double(
-    arg: &Arc<CallbackPassDouble>
+    arg: Arc<CallbackPassDouble>
 ) -> bool {
     arg.invoke(1.1)
 }
 
 pub fn callback_arg_string(
-    arg: &Arc<CallbackPassString>
+    arg: Arc<CallbackPassString>
 ) -> bool {
     arg.invoke("test string".to_string())
 }
 
 pub fn callback_arg_string_n(
-    arg: &Arc<CallbackPassStringN>
+    arg: Arc<CallbackPassStringN>
 ) -> bool {
     arg.invoke(None)
 }
 
 pub fn callback_arg_callback(
-    pass: &Arc<VoidCallback>,
-    arg: &Arc<CallbackPassCallback>
+    pass: Arc<VoidCallback>,
+    arg: Arc<CallbackPassCallback>
 ) -> bool {
     arg.invoke(pass.clone())
 }
 
 pub fn callback_arg_callback_n(
-    arg: &Arc<CallbackPassCallbackN>
+    arg: Arc<CallbackPassCallbackN>
 ) -> bool {
     arg.invoke(None)
 }
 
 pub fn callback_arg_enum(
-    arg: &Arc<CallbackPassEnum>
+    arg: Arc<CallbackPassEnum>
 ) -> bool {
     arg.invoke(MyEnum::CASE2)
 }
 
 pub fn callback_arg_dictionary(
-    arg: &Arc<CallbackPassDictionary>
+    arg: Arc<CallbackPassDictionary>
 ) -> bool {
     arg.invoke(MyDictionary { a: 1, b: 2, c: 3, d: 4 })
 }
 
 pub fn callback_arg_dictionary_n(
-    arg: &Arc<CallbackPassDictionaryN>
+    arg: Arc<CallbackPassDictionaryN>
 ) -> bool {
     arg.invoke(None)
 }
 
 pub fn callback_arg_interface(
-    pass: &Arc<MyInterface>,
-    arg: &Arc<CallbackPassInterface>
+    pass: Arc<MyInterface>,
+    arg: Arc<CallbackPassInterface>
 ) -> bool {
     arg.invoke(pass.clone())
 }
 
 pub fn callback_arg_interface_n(
-    arg: &Arc<CallbackPassInterfaceN>
+    arg: Arc<CallbackPassInterfaceN>
 ) -> bool {
     arg.invoke(None)
 }
 
 pub fn callback_return_char(
-    arg: &Arc<CallbackReturnChar>
+    arg: Arc<CallbackReturnChar>
 ) -> bool {
     arg.invoke() == 'a' as u16
 }
 
 pub fn callback_return_boolean(
-    arg: &Arc<CallbackReturnBoolean>
+    arg: Arc<CallbackReturnBoolean>
 ) -> bool {
     arg.invoke() == true
 }
 
 pub fn callback_return_byte(
-    arg: &Arc<CallbackReturnByte>
+    arg: Arc<CallbackReturnByte>
 ) -> bool {
     arg.invoke() == 1
 }
 
 pub fn callback_return_ubyte(
-    arg: &Arc<CallbackReturnUByte>
+    arg: Arc<CallbackReturnUByte>
 ) -> bool {
     arg.invoke() == 255
 }
 
 pub fn callback_return_short(
-    arg: &Arc<CallbackReturnShort>
+    arg: Arc<CallbackReturnShort>
 ) -> bool {
     arg.invoke() == 1
 }
 
 pub fn callback_return_ushort(
-    arg: &Arc<CallbackReturnUShort>
+    arg: Arc<CallbackReturnUShort>
 ) -> bool {
     arg.invoke() == 65535
 }
 
 pub fn callback_return_int(
-    arg: &Arc<CallbackReturnInt>
+    arg: Arc<CallbackReturnInt>
 ) -> bool {
     arg.invoke() == 1
 }
 
 pub fn callback_return_uint(
-    arg: &Arc<CallbackReturnUInt>
+    arg: Arc<CallbackReturnUInt>
 ) -> bool {
     arg.invoke() == 4294967295
 }
 
 pub fn callback_return_long(
-    arg: &Arc<CallbackReturnLong>
+    arg: Arc<CallbackReturnLong>
 ) -> bool {
     arg.invoke() == 1
 }
 
 pub fn callback_return_ulong(
-    arg: &Arc<CallbackReturnULong>
+    arg: Arc<CallbackReturnULong>
 ) -> bool {
     arg.invoke() == 18446744073709551615
 }
 
 pub fn callback_return_float(
-    arg: &Arc<CallbackReturnFloat>
+    arg: Arc<CallbackReturnFloat>
 ) -> bool {
     arg.invoke() == 1.1
 }
 
 pub fn callback_return_double(
-    arg: &Arc<CallbackReturnDouble>
+    arg: Arc<CallbackReturnDouble>
 ) -> bool {
     arg.invoke() == 1.1
 }
 
 pub fn callback_return_string(
-    arg: &Arc<CallbackReturnString>
+    arg: Arc<CallbackReturnString>
 ) -> bool {
     arg.invoke().as_str() == "test string"
 }
 
 pub fn callback_return_string_n(
-    arg: &Arc<CallbackReturnStringN>
+    arg: Arc<CallbackReturnStringN>
 ) -> bool {
     arg.invoke().is_none()
 }
 
 pub fn callback_return_callback(
-    arg: &Arc<CallbackReturnCallback>
+    arg: Arc<CallbackReturnCallback>
 ) -> Arc<VoidCallback> {
     arg.invoke()
 }
 
 pub fn callback_return_callback_n(
-    arg: &Arc<CallbackReturnCallbackN>
+    arg: Arc<CallbackReturnCallbackN>
 ) -> bool {
     arg.invoke().is_none()
 }
 
 pub fn callback_return_enum(
-    arg: &Arc<CallbackReturnEnum>
+    arg: Arc<CallbackReturnEnum>
 ) -> bool {
     arg.invoke() == MyEnum::CASE2
 }
 
 pub fn callback_return_dictionary(
-    arg: &Arc<CallbackReturnDictionary>
+    arg: Arc<CallbackReturnDictionary>
 ) -> bool {
     let result = arg.invoke();
     result.a == 1 &&
@@ -599,124 +600,124 @@ pub fn callback_return_dictionary(
 }
 
 pub fn callback_return_dictionary_n(
-    arg: &Arc<CallbackReturnDictionaryN>
+    arg: Arc<CallbackReturnDictionaryN>
 ) -> bool {
     arg.invoke().is_none()
 }
 
 pub fn callback_return_interface(
-    arg: &Arc<CallbackReturnInterface>
+    arg: Arc<CallbackReturnInterface>
 ) -> bool {
     arg.invoke().test()
 }
 
 pub fn callback_return_interface_n(
-    arg: &Arc<CallbackReturnInterfaceN>
+    arg: Arc<CallbackReturnInterfaceN>
 ) -> bool {
     arg.invoke().is_none()
 }
 
 pub fn pass_char_array(
-    arg: &Vec<u16>
+    arg: Vec<u16>
 ) -> bool {
     arg.as_slice() == ['a' as u16, 'b' as u16]
 }
 
 pub fn pass_char_array_n(
-    arg: &Option<Vec<u16>>
+    arg: Option<Vec<u16>>
 ) -> bool {
     arg.is_none()
 }
 
 pub fn pass_boolean_array(
-    arg: &Vec<bool>
+    arg: Vec<bool>
 ) -> bool {
     arg.as_slice() == [true, false]
 }
 
 pub fn pass_byte_array(
-    arg: &Vec<i8>
+    arg: Vec<i8>
 ) -> bool {
     arg.as_slice() == [1, 2]
 }
 
 pub fn pass_ubyte_array(
-    arg: &Vec<u8>
+    arg: Vec<u8>
 ) -> bool {
     arg.as_slice() == [1, 255]
 }
 
 pub fn pass_short_array(
-    arg: &Vec<i16>
+    arg: Vec<i16>
 ) -> bool {
     arg.as_slice() == [1, 2]
 }
 
 pub fn pass_ushort_array(
-    arg: &Vec<u16>
+    arg: Vec<u16>
 ) -> bool {
     arg.as_slice() == [1, 65535]
 }
 
 pub fn pass_int_array(
-    arg: &Vec<i32>
+    arg: Vec<i32>
 ) -> bool {
     arg.as_slice() == [1, 2]
 }
 
 pub fn pass_uint_array(
-    arg: &Vec<u32>
+    arg: Vec<u32>
 ) -> bool {
     arg.as_slice() == [1, 4294967295]
 }
 
 pub fn pass_long_array(
-    arg: &Vec<i64>
+    arg: Vec<i64>
 ) -> bool {
     arg.as_slice() == [1, 2]
 }
 
 pub fn pass_ulong_array(
-    arg: &Vec<u64>
+    arg: Vec<u64>
 ) -> bool {
     arg.as_slice() == [1, 18446744073709551615]
 }
 
 pub fn pass_float_array(
-    arg: &Vec<f32>
+    arg: Vec<f32>
 ) -> bool {
     arg.as_slice() == [1.1, 2.2]
 }
 
 pub fn pass_double_array(
-    arg: &Vec<f64>
+    arg: Vec<f64>
 ) -> bool {
     arg.as_slice() == [1.1, 2.2]
 }
 
 pub fn pass_string_array(
-    arg: &Vec<String>
+    arg: Vec<String>
 ) -> bool {
     arg.as_slice()[0].as_str() == "string1" &&
     arg.as_slice()[1].as_str() == "string2"
 }
 
 pub fn pass_string_array_n(
-    arg: &Vec<Option<String>>
+    arg: Vec<Option<String>>
 ) -> bool {
     arg.as_slice()[0].is_none() &&
     arg.as_slice()[1].is_none()
 }
 
 pub fn pass_enum_array(
-    arg: &Vec<MyEnum>
+    arg: Vec<MyEnum>
 ) -> bool {
     arg.as_slice()[0] == MyEnum::CASE1 &&
     arg.as_slice()[1] == MyEnum::CASE2
 }
 
 pub fn pass_dictionary_array(
-    arg: &Vec<MyDictionary>
+    arg: Vec<MyDictionary>
 ) -> bool {
     let elements = arg.as_slice();
     elements[0].a == 1 &&
@@ -730,20 +731,20 @@ pub fn pass_dictionary_array(
 }
 
 pub fn pass_dictionary_array_n(
-    arg: &Vec<Option<MyDictionary>>
+    arg: Vec<Option<MyDictionary>>
 ) -> bool {
     arg.as_slice()[0].is_none() && arg.as_slice()[1].is_none()
 }
 
 pub fn pass_interface_array(
-    arg: &Vec<Arc<MyInterface>>
+    arg: Vec<Arc<MyInterface>>
 ) -> bool {
     let elements = arg.as_slice();
     elements[0].test() && elements[1].test()
 }
 
 pub fn pass_interface_array_n(
-    arg: &Vec<Option<Arc<MyInterface>>>
+    arg: Vec<Option<Arc<MyInterface>>>
 ) -> bool {
     arg.as_slice()[0].is_none() && arg.as_slice()[1].is_none()
 }
@@ -824,205 +825,205 @@ pub fn return_dictionary_array_n() -> Vec<Option<MyDictionary>> {
 }
 
 pub fn ping_char_array(
-    arg: &Vec<u16>
+    arg: Vec<u16>
 ) -> Vec<u16> {
     arg.clone()
 }
 
 pub fn ping_char_array_n(
-    arg: &Option<Vec<u16>>
+    arg: Option<Vec<u16>>
 ) -> Option<Vec<u16>> {
     arg.clone()
 }
 
 pub fn ping_boolean_array(
-    arg: &Vec<bool>
+    arg: Vec<bool>
 ) -> Vec<bool> {
     arg.clone()
 }
 
 pub fn ping_byte_array(
-    arg: &Vec<i8>
+    arg: Vec<i8>
 ) -> Vec<i8> {
     arg.clone()
 }
 
 pub fn ping_ubyte_array(
-    arg: &Vec<u8>
+    arg: Vec<u8>
 ) -> Vec<u8> {
     arg.clone()
 }
 
 pub fn ping_short_array(
-    arg: &Vec<i16>
+    arg: Vec<i16>
 ) -> Vec<i16> {
     arg.clone()
 }
 
 pub fn ping_ushort_array(
-    arg: &Vec<u16>
+    arg: Vec<u16>
 ) -> Vec<u16> {
     arg.clone()
 }
 
 pub fn ping_int_array(
-    arg: &Vec<i32>
+    arg: Vec<i32>
 ) -> Vec<i32> {
     arg.clone()
 }
 
 pub fn ping_uint_array(
-    arg: &Vec<u32>
+    arg: Vec<u32>
 ) -> Vec<u32> {
     arg.clone()
 }
 
 pub fn ping_long_array(
-    arg: &Vec<i64>
+    arg: Vec<i64>
 ) -> Vec<i64> {
     arg.clone()
 }
 
 pub fn ping_ulong_array(
-    arg: &Vec<u64>
+    arg: Vec<u64>
 ) -> Vec<u64> {
     arg.clone()
 }
 
 pub fn ping_float_array(
-    arg: &Vec<f32>
+    arg: Vec<f32>
 ) -> Vec<f32> {
     arg.clone()
 }
 
 pub fn ping_double_array(
-    arg: &Vec<f64>
+    arg: Vec<f64>
 ) -> Vec<f64> {
     arg.clone()
 }
 
 pub fn ping_string_array(
-    arg: &Vec<String>
+    arg: Vec<String>
 ) -> Vec<String> {
     arg.clone()
 }
 
 pub fn ping_string_array_n(
-    arg: &Vec<Option<String>>
+    arg: Vec<Option<String>>
 ) -> Vec<Option<String>> {
     arg.clone()
 }
 
 pub fn ping_enum_array(
-    arg: &Vec<MyEnum>
+    arg: Vec<MyEnum>
 ) -> Vec<MyEnum> {
     arg.clone()
 }
 
 pub fn ping_dictionary_array(
-    arg: &Vec<MyDictionary>
+    arg: Vec<MyDictionary>
 ) -> Vec<MyDictionary> {
     arg.clone()
 }
 
 pub fn ping_dictionary_array_n(
-    arg: &Vec<Option<MyDictionary>>
+    arg: Vec<Option<MyDictionary>>
 ) -> Vec<Option<MyDictionary>> {
     arg.clone()
 }
 
 pub fn ping_interface_array(
-    arg: &Vec<Arc<MyInterface>>
+    arg: Vec<Arc<MyInterface>>
 ) -> Vec<Arc<MyInterface>> {
     arg.clone()
 }
 
 pub fn ping_interface_array_n(
-    arg: &Vec<Option<Arc<MyInterface>>>
+    arg: Vec<Option<Arc<MyInterface>>>
 ) -> Vec<Option<Arc<MyInterface>>> {
     arg.clone()
 }
 
 pub fn callback_arg_char_array(
-    arg: &Arc<CallbackPassCharArray>
+    arg: Arc<CallbackPassCharArray>
 ) -> bool {
     arg.invoke(vec!('a' as u16, 'b' as u16))
 }
 
 pub fn callback_arg_char_array_n(
-    arg: &Arc<CallbackPassCharArrayN>
+    arg: Arc<CallbackPassCharArrayN>
 ) -> bool {
     arg.invoke(None)
 }
 
 pub fn callback_arg_boolean_array(
-    arg: &Arc<CallbackPassBooleanArray>
+    arg: Arc<CallbackPassBooleanArray>
 ) -> bool {
     arg.invoke(vec!(true, false))
 }
 
 pub fn callback_arg_byte_array(
-    arg: &Arc<CallbackPassByteArray>
+    arg: Arc<CallbackPassByteArray>
 ) -> bool {
     arg.invoke(vec!(1, 2))
 }
 
 pub fn callback_arg_ubyte_array(
-    arg: &Arc<CallbackPassUByteArray>
+    arg: Arc<CallbackPassUByteArray>
 ) -> bool {
     arg.invoke(vec!(1, 255))
 }
 
 pub fn callback_arg_short_array(
-    arg: &Arc<CallbackPassShortArray>
+    arg: Arc<CallbackPassShortArray>
 ) -> bool {
     arg.invoke(vec!(1, 2))
 }
 
 pub fn callback_arg_ushort_array(
-    arg: &Arc<CallbackPassUShortArray>
+    arg: Arc<CallbackPassUShortArray>
 ) -> bool {
     arg.invoke(vec!(1, 65535))
 }
 
 pub fn callback_arg_int_array(
-    arg: &Arc<CallbackPassIntArray>
+    arg: Arc<CallbackPassIntArray>
 ) -> bool {
     arg.invoke(vec!(1, 2))
 }
 
 pub fn callback_arg_uint_array(
-    arg: &Arc<CallbackPassUIntArray>
+    arg: Arc<CallbackPassUIntArray>
 ) -> bool {
     arg.invoke(vec!(1, 4294967295))
 }
 
 pub fn callback_arg_long_array(
-    arg: &Arc<CallbackPassLongArray>
+    arg: Arc<CallbackPassLongArray>
 ) -> bool {
     arg.invoke(vec!(1, 2))
 }
 
 pub fn callback_arg_ulong_array(
-    arg: &Arc<CallbackPassULongArray>
+    arg: Arc<CallbackPassULongArray>
 ) -> bool {
     arg.invoke(vec!(1, 18446744073709551615))
 }
 
 pub fn callback_arg_float_array(
-    arg: &Arc<CallbackPassFloatArray>
+    arg: Arc<CallbackPassFloatArray>
 ) -> bool {
     arg.invoke(vec!(1.1, 2.2))
 }
 
 pub fn callback_arg_double_array(
-    arg: &Arc<CallbackPassDoubleArray>
+    arg: Arc<CallbackPassDoubleArray>
 ) -> bool {
     arg.invoke(vec!(1.1, 2.2))
 }
 
 pub fn callback_arg_string_array(
-    arg: &Arc<CallbackPassStringArray>
+    arg: Arc<CallbackPassStringArray>
 ) -> bool {
     arg.invoke(vec!(
         "string1".to_string(),
@@ -1031,13 +1032,13 @@ pub fn callback_arg_string_array(
 }
 
 pub fn callback_arg_string_array_n(
-    arg: &Arc<CallbackPassStringArrayN>
+    arg: Arc<CallbackPassStringArrayN>
 ) -> bool {
     arg.invoke(vec!(None, None))
 }
 
 pub fn callback_arg_enum_array(
-    arg: &Arc<CallbackPassEnumArray>
+    arg: Arc<CallbackPassEnumArray>
 ) -> bool {
     arg.invoke(vec!(
         MyEnum::CASE1,
@@ -1046,7 +1047,7 @@ pub fn callback_arg_enum_array(
 }
 
 pub fn callback_arg_dictionary_array(
-    arg: &Arc<CallbackPassDictionaryArray>
+    arg: Arc<CallbackPassDictionaryArray>
 ) -> bool {
     arg.invoke(vec!(
         MyDictionary { a: 1, b: 2, c: 3, d: 4 },
@@ -1055,13 +1056,13 @@ pub fn callback_arg_dictionary_array(
 }
 
 pub fn callback_arg_dictionary_array_n(
-    arg: &Arc<CallbackPassDictionaryArrayN>
+    arg: Arc<CallbackPassDictionaryArrayN>
 ) -> bool {
     arg.invoke(vec!(None, None))
 }
 
 pub fn callback_arg_interface_array(
-    arg: &Arc<CallbackPassInterfaceArray>
+    arg: Arc<CallbackPassInterfaceArray>
 ) -> bool {
     arg.invoke(vec!(
         Arc::new(MyInterface::new()),
@@ -1070,13 +1071,13 @@ pub fn callback_arg_interface_array(
 }
 
 pub fn callback_arg_interface_array_n(
-    arg: &Arc<CallbackPassInterfaceArrayN>
+    arg: Arc<CallbackPassInterfaceArrayN>
 ) -> bool {
     arg.invoke(vec!(None, None))
 }
 
 pub fn callback_return_char_array(
-    arg: &Arc<CallbackReturnCharArray>
+    arg: Arc<CallbackReturnCharArray>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1084,13 +1085,13 @@ pub fn callback_return_char_array(
 }
 
 pub fn callback_return_char_array_n(
-    arg: &Arc<CallbackReturnCharArrayN>
+    arg: Arc<CallbackReturnCharArrayN>
 ) -> bool {
     arg.invoke().is_none()
 }
 
 pub fn callback_return_boolean_array(
-    arg: &Arc<CallbackReturnBooleanArray>
+    arg: Arc<CallbackReturnBooleanArray>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1099,7 +1100,7 @@ pub fn callback_return_boolean_array(
 }
 
 pub fn callback_return_byte_array(
-    arg: &Arc<CallbackReturnByteArray>
+    arg: Arc<CallbackReturnByteArray>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1108,7 +1109,7 @@ pub fn callback_return_byte_array(
 }
 
 pub fn callback_return_ubyte_array(
-    arg: &Arc<CallbackReturnUByteArray>
+    arg: Arc<CallbackReturnUByteArray>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1117,7 +1118,7 @@ pub fn callback_return_ubyte_array(
 }
 
 pub fn callback_return_short_array(
-    arg: &Arc<CallbackReturnShortArray>
+    arg: Arc<CallbackReturnShortArray>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1126,7 +1127,7 @@ pub fn callback_return_short_array(
 }
 
 pub fn callback_return_ushort_array(
-    arg: &Arc<CallbackReturnUShortArray>
+    arg: Arc<CallbackReturnUShortArray>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1135,7 +1136,7 @@ pub fn callback_return_ushort_array(
 }
 
 pub fn callback_return_int_array(
-    arg: &Arc<CallbackReturnIntArray>
+    arg: Arc<CallbackReturnIntArray>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1144,7 +1145,7 @@ pub fn callback_return_int_array(
 }
 
 pub fn callback_return_uint_array(
-    arg: &Arc<CallbackReturnUIntArray>
+    arg: Arc<CallbackReturnUIntArray>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1153,7 +1154,7 @@ pub fn callback_return_uint_array(
 }
 
 pub fn callback_return_long_array(
-    arg: &Arc<CallbackReturnLongArray>
+    arg: Arc<CallbackReturnLongArray>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1162,7 +1163,7 @@ pub fn callback_return_long_array(
 }
 
 pub fn callback_return_ulong_array(
-    arg: &Arc<CallbackReturnULongArray>
+    arg: Arc<CallbackReturnULongArray>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1171,7 +1172,7 @@ pub fn callback_return_ulong_array(
 }
 
 pub fn callback_return_float_array(
-    arg: &Arc<CallbackReturnFloatArray>
+    arg: Arc<CallbackReturnFloatArray>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1180,7 +1181,7 @@ pub fn callback_return_float_array(
 }
 
 pub fn callback_return_double_array(
-    arg: &Arc<CallbackReturnDoubleArray>
+    arg: Arc<CallbackReturnDoubleArray>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1189,7 +1190,7 @@ pub fn callback_return_double_array(
 }
 
 pub fn callback_return_string_array(
-    arg: &Arc<CallbackReturnStringArray>
+    arg: Arc<CallbackReturnStringArray>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1198,7 +1199,7 @@ pub fn callback_return_string_array(
 }
 
 pub fn callback_return_string_array_n(
-    arg: &Arc<CallbackReturnStringArrayN>
+    arg: Arc<CallbackReturnStringArrayN>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1207,7 +1208,7 @@ pub fn callback_return_string_array_n(
 }
 
 pub fn callback_return_enum_array(
-    arg: &Arc<CallbackReturnEnumArray>
+    arg: Arc<CallbackReturnEnumArray>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1216,7 +1217,7 @@ pub fn callback_return_enum_array(
 }
 
 pub fn callback_return_dictionary_array(
-    arg: &Arc<CallbackReturnDictionaryArray>
+    arg: Arc<CallbackReturnDictionaryArray>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1231,7 +1232,7 @@ pub fn callback_return_dictionary_array(
 }
 
 pub fn callback_return_dictionary_array_n(
-    arg: &Arc<CallbackReturnDictionaryArrayN>
+    arg: Arc<CallbackReturnDictionaryArrayN>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1240,7 +1241,7 @@ pub fn callback_return_dictionary_array_n(
 }
 
 pub fn callback_return_interface_array(
-    arg: &Arc<CallbackReturnInterfaceArray>
+    arg: Arc<CallbackReturnInterfaceArray>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1248,7 +1249,7 @@ pub fn callback_return_interface_array(
 }
 
 pub fn callback_return_interface_array_n(
-    arg: &Arc<CallbackReturnInterfaceArrayN>
+    arg: Arc<CallbackReturnInterfaceArrayN>
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
@@ -1256,7 +1257,7 @@ pub fn callback_return_interface_array_n(
 }
 
 pub fn pass_big_dictionary(
-    arg: &TypeDictionary
+    arg: TypeDictionary
 ) -> bool {
     arg.a1 == 'a' as u16 &&
         arg.a2 == true &&
@@ -1306,8 +1307,8 @@ pub fn pass_big_dictionary(
 }
 
 pub fn return_big_dictionary(
-    callback: &Arc<VoidCallback>,
-    inter: &Arc<MyInterface>
+    callback: Arc<VoidCallback>,
+    inter: Arc<MyInterface>
 ) -> TypeDictionary {
     TypeDictionary {
         a1: 'a' as u16,
@@ -1358,13 +1359,13 @@ pub fn return_big_dictionary(
 }
 
 pub fn ping_big_dictionary(
-    arg: &TypeDictionary
+    arg: TypeDictionary
 ) -> TypeDictionary {
     arg.clone()
 }
 
 pub fn pass_big_dictionary_n(
-    arg: &Option<TypeDictionary>
+    arg: Option<TypeDictionary>
 ) -> bool {
     arg.is_none()
 }
@@ -1374,7 +1375,7 @@ pub fn return_big_dictionary_n() -> Option<TypeDictionary> {
 }
 
 pub fn ping_big_dictionary_n(
-    arg: &Option<TypeDictionary>
+    arg: Option<TypeDictionary>
 ) -> Option<TypeDictionary> {
     arg.clone()
 }

@@ -114,8 +114,8 @@ pub enum MyEnum {
 // ╚═══════════════════╝
 
 export_fn!{ fn nativekt_natives_tc_6_rust_tc_6_rust_stub1(e: *mut Vec<i64>) -> () as K_ {
-    crate::stub1(&from_raw(e))
+    crate::stub1(from_raw(e))
 }}
 export_fn!{ fn nativekt_natives_tc_6_rust_tc_6_rust_stub2(e: *mut Vec<MyEnum>) -> () as L_ {
-    crate::stub2(&from_raw(e))
+    crate::stub2(from_raw(e))
 }}

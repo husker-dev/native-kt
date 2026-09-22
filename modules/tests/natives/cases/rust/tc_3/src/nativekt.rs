@@ -82,8 +82,8 @@ export_fn! {
 // ╚═══════════════════╝
 
 export_fn!{ fn nativekt_natives_tc_3_rust_tc_3_rust_stub1(e: *mut EmptyDictionary1) -> () as S_ {
-    crate::stub1(&from_raw(e))
+    crate::stub1(from_raw(e))
 }}
 export_fn!{ fn nativekt_natives_tc_3_rust_tc_3_rust_stub2(e: *mut MyDictionary) -> () as T_ {
-    crate::stub2(&from_raw(e))
+    crate::stub2(from_raw(e))
 }}

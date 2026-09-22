@@ -89,7 +89,7 @@ export_fn!{ fn nativekt_natives_foreignbindings_foreign_bindings_call_foreign_ad
     crate::call_foreign_add(a, b)
 }}
 export_fn!{ fn nativekt_natives_foreignbindings_foreign_bindings_call_foreign_string(arg: *mut String) -> () as N_ {
-    crate::call_foreign_string(&from_raw(arg))
+    crate::call_foreign_string(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_foreignbindings_foreign_bindings_call_critical_foreign() -> () as O_ {
     crate::call_critical_foreign()

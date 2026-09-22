@@ -1230,25 +1230,25 @@ export_fn!{ fn nativekt_natives_testrs_testrs_pass_double(arg: f64) -> bool as H
     crate::pass_double(arg)
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_pass_string(arg: *mut String) -> bool as HJ_ {
-    crate::pass_string(&from_raw(arg))
+    crate::pass_string(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_pass_string_n(arg: *mut String) -> bool as HK_ {
-    crate::pass_string_n(&ptr_opt(arg, from_raw))
+    crate::pass_string_n(ptr_opt(arg, from_raw))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_pass_enum(arg: MyEnum) -> bool as HL_ {
     crate::pass_enum(arg)
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_pass_dictionary(arg: *mut MyDictionary) -> bool as HM_ {
-    crate::pass_dictionary(&from_raw(arg))
+    crate::pass_dictionary(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_pass_dictionary_n(arg: *mut MyDictionary) -> bool as HN_ {
-    crate::pass_dictionary_n(&ptr_opt(arg, from_raw))
+    crate::pass_dictionary_n(ptr_opt(arg, from_raw))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_pass_interface(arg: *mut Arc<crate::MyInterface>) -> bool as HO_ {
-    crate::pass_interface(&from_raw(arg))
+    crate::pass_interface(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_pass_interface_n(arg: *mut Arc<crate::MyInterface>) -> bool as HP_ {
-    crate::pass_interface_n(&ptr_opt(arg, from_raw))
+    crate::pass_interface_n(ptr_opt(arg, from_raw))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_return_void() -> () as HQ_ {
     crate::return_void()
@@ -1341,217 +1341,217 @@ export_fn!{ fn nativekt_natives_testrs_testrs_ping_double(arg: f64) -> f64 as Ht
     crate::ping_double(arg)
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_ping_string(arg: *mut String) -> *mut String as Hu_ {
-    into_raw(crate::ping_string(&from_raw(arg)))
+    into_raw(crate::ping_string(from_raw(arg)))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_ping_string_n(arg: *mut String) -> *mut String as Hv_ {
-    obj_opt(crate::ping_string_n(&ptr_opt(arg, from_raw)), into_raw)
+    obj_opt(crate::ping_string_n(ptr_opt(arg, from_raw)), into_raw)
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_ping_enum(arg: MyEnum) -> MyEnum as Hw_ {
     crate::ping_enum(arg)
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_ping_dictionary(arg: *mut MyDictionary) -> *mut MyDictionary as Hx_ {
-    into_raw(crate::ping_dictionary(&from_raw(arg)))
+    into_raw(crate::ping_dictionary(from_raw(arg)))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_ping_dictionary_n(arg: *mut MyDictionary) -> *mut MyDictionary as Hy_ {
-    obj_opt(crate::ping_dictionary_n(&ptr_opt(arg, from_raw)), into_raw)
+    obj_opt(crate::ping_dictionary_n(ptr_opt(arg, from_raw)), into_raw)
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_ping_interface(arg: *mut Arc<crate::MyInterface>) -> *mut Arc<crate::MyInterface> as Hz_ {
-    into_raw(crate::ping_interface(&from_raw(arg)))
+    into_raw(crate::ping_interface(from_raw(arg)))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_ping_interface_n(arg: *mut Arc<crate::MyInterface>) -> *mut Arc<crate::MyInterface> as IA_ {
-    obj_opt(crate::ping_interface_n(&ptr_opt(arg, from_raw)), into_raw)
+    obj_opt(crate::ping_interface_n(ptr_opt(arg, from_raw)), into_raw)
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_void(arg: *mut Arc<VoidCallback>) -> () as IB_ {
-    crate::callback_void(&from_raw(arg))
+    crate::callback_void(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_void_n(arg: *mut Arc<VoidCallback>) -> bool as IC_ {
-    crate::callback_void_n(&ptr_opt(arg, from_raw))
+    crate::callback_void_n(ptr_opt(arg, from_raw))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_char(arg: *mut Arc<CallbackPassChar>) -> bool as ID_ {
-    crate::callback_arg_char(&from_raw(arg))
+    crate::callback_arg_char(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_boolean(arg: *mut Arc<CallbackPassBoolean>) -> bool as IE_ {
-    crate::callback_arg_boolean(&from_raw(arg))
+    crate::callback_arg_boolean(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_byte(arg: *mut Arc<CallbackPassByte>) -> bool as IF_ {
-    crate::callback_arg_byte(&from_raw(arg))
+    crate::callback_arg_byte(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_ubyte(arg: *mut Arc<CallbackPassUByte>) -> bool as IG_ {
-    crate::callback_arg_ubyte(&from_raw(arg))
+    crate::callback_arg_ubyte(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_short(arg: *mut Arc<CallbackPassShort>) -> bool as IH_ {
-    crate::callback_arg_short(&from_raw(arg))
+    crate::callback_arg_short(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_ushort(arg: *mut Arc<CallbackPassUShort>) -> bool as II_ {
-    crate::callback_arg_ushort(&from_raw(arg))
+    crate::callback_arg_ushort(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_int(arg: *mut Arc<CallbackPassInt>) -> bool as IJ_ {
-    crate::callback_arg_int(&from_raw(arg))
+    crate::callback_arg_int(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_uint(arg: *mut Arc<CallbackPassUInt>) -> bool as IK_ {
-    crate::callback_arg_uint(&from_raw(arg))
+    crate::callback_arg_uint(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_long(arg: *mut Arc<CallbackPassLong>) -> bool as IL_ {
-    crate::callback_arg_long(&from_raw(arg))
+    crate::callback_arg_long(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_ulong(arg: *mut Arc<CallbackPassULong>) -> bool as IM_ {
-    crate::callback_arg_ulong(&from_raw(arg))
+    crate::callback_arg_ulong(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_float(arg: *mut Arc<CallbackPassFloat>) -> bool as IN_ {
-    crate::callback_arg_float(&from_raw(arg))
+    crate::callback_arg_float(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_double(arg: *mut Arc<CallbackPassDouble>) -> bool as IO_ {
-    crate::callback_arg_double(&from_raw(arg))
+    crate::callback_arg_double(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_string(arg: *mut Arc<CallbackPassString>) -> bool as IP_ {
-    crate::callback_arg_string(&from_raw(arg))
+    crate::callback_arg_string(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_string_n(arg: *mut Arc<CallbackPassStringN>) -> bool as IQ_ {
-    crate::callback_arg_string_n(&from_raw(arg))
+    crate::callback_arg_string_n(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_callback(pass: *mut Arc<VoidCallback>, arg: *mut Arc<CallbackPassCallback>) -> bool as IR_ {
-    crate::callback_arg_callback(&from_raw(pass), &from_raw(arg))
+    crate::callback_arg_callback(from_raw(pass), from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_callback_n(arg: *mut Arc<CallbackPassCallbackN>) -> bool as IS_ {
-    crate::callback_arg_callback_n(&from_raw(arg))
+    crate::callback_arg_callback_n(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_enum(arg: *mut Arc<CallbackPassEnum>) -> bool as IT_ {
-    crate::callback_arg_enum(&from_raw(arg))
+    crate::callback_arg_enum(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_dictionary(arg: *mut Arc<CallbackPassDictionary>) -> bool as IU_ {
-    crate::callback_arg_dictionary(&from_raw(arg))
+    crate::callback_arg_dictionary(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_dictionary_n(arg: *mut Arc<CallbackPassDictionaryN>) -> bool as IV_ {
-    crate::callback_arg_dictionary_n(&from_raw(arg))
+    crate::callback_arg_dictionary_n(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_interface(pass: *mut Arc<crate::MyInterface>, arg: *mut Arc<CallbackPassInterface>) -> bool as IW_ {
-    crate::callback_arg_interface(&from_raw(pass), &from_raw(arg))
+    crate::callback_arg_interface(from_raw(pass), from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_interface_n(arg: *mut Arc<CallbackPassInterfaceN>) -> bool as IX_ {
-    crate::callback_arg_interface_n(&from_raw(arg))
+    crate::callback_arg_interface_n(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_char(arg: *mut Arc<CallbackReturnChar>) -> bool as IY_ {
-    crate::callback_return_char(&from_raw(arg))
+    crate::callback_return_char(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_boolean(arg: *mut Arc<CallbackReturnBoolean>) -> bool as IZ_ {
-    crate::callback_return_boolean(&from_raw(arg))
+    crate::callback_return_boolean(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_byte(arg: *mut Arc<CallbackReturnByte>) -> bool as Ia_ {
-    crate::callback_return_byte(&from_raw(arg))
+    crate::callback_return_byte(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_ubyte(arg: *mut Arc<CallbackReturnUByte>) -> bool as Ib_ {
-    crate::callback_return_ubyte(&from_raw(arg))
+    crate::callback_return_ubyte(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_short(arg: *mut Arc<CallbackReturnShort>) -> bool as Ic_ {
-    crate::callback_return_short(&from_raw(arg))
+    crate::callback_return_short(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_ushort(arg: *mut Arc<CallbackReturnUShort>) -> bool as Id_ {
-    crate::callback_return_ushort(&from_raw(arg))
+    crate::callback_return_ushort(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_int(arg: *mut Arc<CallbackReturnInt>) -> bool as Ie_ {
-    crate::callback_return_int(&from_raw(arg))
+    crate::callback_return_int(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_uint(arg: *mut Arc<CallbackReturnUInt>) -> bool as If_ {
-    crate::callback_return_uint(&from_raw(arg))
+    crate::callback_return_uint(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_long(arg: *mut Arc<CallbackReturnLong>) -> bool as Ig_ {
-    crate::callback_return_long(&from_raw(arg))
+    crate::callback_return_long(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_ulong(arg: *mut Arc<CallbackReturnULong>) -> bool as Ih_ {
-    crate::callback_return_ulong(&from_raw(arg))
+    crate::callback_return_ulong(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_float(arg: *mut Arc<CallbackReturnFloat>) -> bool as Ii_ {
-    crate::callback_return_float(&from_raw(arg))
+    crate::callback_return_float(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_double(arg: *mut Arc<CallbackReturnDouble>) -> bool as Ij_ {
-    crate::callback_return_double(&from_raw(arg))
+    crate::callback_return_double(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_string(arg: *mut Arc<CallbackReturnString>) -> bool as Ik_ {
-    crate::callback_return_string(&from_raw(arg))
+    crate::callback_return_string(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_string_n(arg: *mut Arc<CallbackReturnStringN>) -> bool as Il_ {
-    crate::callback_return_string_n(&from_raw(arg))
+    crate::callback_return_string_n(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_callback(arg: *mut Arc<CallbackReturnCallback>) -> *mut Arc<VoidCallback> as Im_ {
-    into_raw(crate::callback_return_callback(&from_raw(arg)))
+    into_raw(crate::callback_return_callback(from_raw(arg)))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_callback_n(arg: *mut Arc<CallbackReturnCallbackN>) -> bool as In_ {
-    crate::callback_return_callback_n(&from_raw(arg))
+    crate::callback_return_callback_n(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_enum(arg: *mut Arc<CallbackReturnEnum>) -> bool as Io_ {
-    crate::callback_return_enum(&from_raw(arg))
+    crate::callback_return_enum(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_dictionary(arg: *mut Arc<CallbackReturnDictionary>) -> bool as Ip_ {
-    crate::callback_return_dictionary(&from_raw(arg))
+    crate::callback_return_dictionary(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_dictionary_n(arg: *mut Arc<CallbackReturnDictionaryN>) -> bool as Iq_ {
-    crate::callback_return_dictionary_n(&from_raw(arg))
+    crate::callback_return_dictionary_n(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_interface(arg: *mut Arc<CallbackReturnInterface>) -> bool as Ir_ {
-    crate::callback_return_interface(&from_raw(arg))
+    crate::callback_return_interface(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_interface_n(arg: *mut Arc<CallbackReturnInterfaceN>) -> bool as Is_ {
-    crate::callback_return_interface_n(&from_raw(arg))
+    crate::callback_return_interface_n(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_pass_char_array(arg: *mut Vec<u16>) -> bool as It_ {
-    crate::pass_char_array(&from_raw(arg))
+    crate::pass_char_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_pass_char_array_n(arg: *mut Vec<u16>) -> bool as Iu_ {
-    crate::pass_char_array_n(&ptr_opt(arg, from_raw))
+    crate::pass_char_array_n(ptr_opt(arg, from_raw))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_pass_boolean_array(arg: *mut Vec<bool>) -> bool as Iv_ {
-    crate::pass_boolean_array(&from_raw(arg))
+    crate::pass_boolean_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_pass_byte_array(arg: *mut Vec<i8>) -> bool as Iw_ {
-    crate::pass_byte_array(&from_raw(arg))
+    crate::pass_byte_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_pass_ubyte_array(arg: *mut Vec<u8>) -> bool as Ix_ {
-    crate::pass_ubyte_array(&from_raw(arg))
+    crate::pass_ubyte_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_pass_short_array(arg: *mut Vec<i16>) -> bool as Iy_ {
-    crate::pass_short_array(&from_raw(arg))
+    crate::pass_short_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_pass_ushort_array(arg: *mut Vec<u16>) -> bool as Iz_ {
-    crate::pass_ushort_array(&from_raw(arg))
+    crate::pass_ushort_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_pass_int_array(arg: *mut Vec<i32>) -> bool as JA_ {
-    crate::pass_int_array(&from_raw(arg))
+    crate::pass_int_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_pass_uint_array(arg: *mut Vec<u32>) -> bool as JB_ {
-    crate::pass_uint_array(&from_raw(arg))
+    crate::pass_uint_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_pass_long_array(arg: *mut Vec<i64>) -> bool as JC_ {
-    crate::pass_long_array(&from_raw(arg))
+    crate::pass_long_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_pass_ulong_array(arg: *mut Vec<u64>) -> bool as JD_ {
-    crate::pass_ulong_array(&from_raw(arg))
+    crate::pass_ulong_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_pass_float_array(arg: *mut Vec<f32>) -> bool as JE_ {
-    crate::pass_float_array(&from_raw(arg))
+    crate::pass_float_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_pass_double_array(arg: *mut Vec<f64>) -> bool as JF_ {
-    crate::pass_double_array(&from_raw(arg))
+    crate::pass_double_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_pass_string_array(arg: *mut Vec<String>) -> bool as JG_ {
-    crate::pass_string_array(&from_raw(arg))
+    crate::pass_string_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_pass_string_array_n(arg: *mut Vec<Option<String>>) -> bool as JH_ {
-    crate::pass_string_array_n(&from_raw(arg))
+    crate::pass_string_array_n(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_pass_enum_array(arg: *mut Vec<MyEnum>) -> bool as JI_ {
-    crate::pass_enum_array(&from_raw(arg))
+    crate::pass_enum_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_pass_dictionary_array(arg: *mut Vec<MyDictionary>) -> bool as JJ_ {
-    crate::pass_dictionary_array(&from_raw(arg))
+    crate::pass_dictionary_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_pass_dictionary_array_n(arg: *mut Vec<Option<MyDictionary>>) -> bool as JK_ {
-    crate::pass_dictionary_array_n(&from_raw(arg))
+    crate::pass_dictionary_array_n(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_pass_interface_array(arg: *mut Vec<Arc<crate::MyInterface>>) -> bool as JL_ {
-    crate::pass_interface_array(&from_raw(arg))
+    crate::pass_interface_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_pass_interface_array_n(arg: *mut Vec<Option<Arc<crate::MyInterface>>>) -> bool as JM_ {
-    crate::pass_interface_array_n(&from_raw(arg))
+    crate::pass_interface_array_n(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_return_char_array() -> *mut Vec<u16> as JN_ {
     into_raw(crate::return_char_array())
@@ -1608,202 +1608,202 @@ export_fn!{ fn nativekt_natives_testrs_testrs_return_dictionary_array_n() -> *mu
     into_raw(crate::return_dictionary_array_n())
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_ping_char_array(arg: *mut Vec<u16>) -> *mut Vec<u16> as Jf_ {
-    into_raw(crate::ping_char_array(&from_raw(arg)))
+    into_raw(crate::ping_char_array(from_raw(arg)))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_ping_char_array_n(arg: *mut Vec<u16>) -> *mut Vec<u16> as Jg_ {
-    obj_opt(crate::ping_char_array_n(&ptr_opt(arg, from_raw)), into_raw)
+    obj_opt(crate::ping_char_array_n(ptr_opt(arg, from_raw)), into_raw)
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_ping_boolean_array(arg: *mut Vec<bool>) -> *mut Vec<bool> as Jh_ {
-    into_raw(crate::ping_boolean_array(&from_raw(arg)))
+    into_raw(crate::ping_boolean_array(from_raw(arg)))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_ping_byte_array(arg: *mut Vec<i8>) -> *mut Vec<i8> as Ji_ {
-    into_raw(crate::ping_byte_array(&from_raw(arg)))
+    into_raw(crate::ping_byte_array(from_raw(arg)))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_ping_ubyte_array(arg: *mut Vec<u8>) -> *mut Vec<u8> as Jj_ {
-    into_raw(crate::ping_ubyte_array(&from_raw(arg)))
+    into_raw(crate::ping_ubyte_array(from_raw(arg)))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_ping_short_array(arg: *mut Vec<i16>) -> *mut Vec<i16> as Jk_ {
-    into_raw(crate::ping_short_array(&from_raw(arg)))
+    into_raw(crate::ping_short_array(from_raw(arg)))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_ping_ushort_array(arg: *mut Vec<u16>) -> *mut Vec<u16> as Jl_ {
-    into_raw(crate::ping_ushort_array(&from_raw(arg)))
+    into_raw(crate::ping_ushort_array(from_raw(arg)))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_ping_int_array(arg: *mut Vec<i32>) -> *mut Vec<i32> as Jm_ {
-    into_raw(crate::ping_int_array(&from_raw(arg)))
+    into_raw(crate::ping_int_array(from_raw(arg)))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_ping_uint_array(arg: *mut Vec<u32>) -> *mut Vec<u32> as Jn_ {
-    into_raw(crate::ping_uint_array(&from_raw(arg)))
+    into_raw(crate::ping_uint_array(from_raw(arg)))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_ping_long_array(arg: *mut Vec<i64>) -> *mut Vec<i64> as Jo_ {
-    into_raw(crate::ping_long_array(&from_raw(arg)))
+    into_raw(crate::ping_long_array(from_raw(arg)))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_ping_ulong_array(arg: *mut Vec<u64>) -> *mut Vec<u64> as Jp_ {
-    into_raw(crate::ping_ulong_array(&from_raw(arg)))
+    into_raw(crate::ping_ulong_array(from_raw(arg)))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_ping_float_array(arg: *mut Vec<f32>) -> *mut Vec<f32> as Jq_ {
-    into_raw(crate::ping_float_array(&from_raw(arg)))
+    into_raw(crate::ping_float_array(from_raw(arg)))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_ping_double_array(arg: *mut Vec<f64>) -> *mut Vec<f64> as Jr_ {
-    into_raw(crate::ping_double_array(&from_raw(arg)))
+    into_raw(crate::ping_double_array(from_raw(arg)))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_ping_string_array(arg: *mut Vec<String>) -> *mut Vec<String> as Js_ {
-    into_raw(crate::ping_string_array(&from_raw(arg)))
+    into_raw(crate::ping_string_array(from_raw(arg)))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_ping_string_array_n(arg: *mut Vec<Option<String>>) -> *mut Vec<Option<String>> as Jt_ {
-    into_raw(crate::ping_string_array_n(&from_raw(arg)))
+    into_raw(crate::ping_string_array_n(from_raw(arg)))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_ping_enum_array(arg: *mut Vec<MyEnum>) -> *mut Vec<MyEnum> as Ju_ {
-    into_raw(crate::ping_enum_array(&from_raw(arg)))
+    into_raw(crate::ping_enum_array(from_raw(arg)))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_ping_dictionary_array(arg: *mut Vec<MyDictionary>) -> *mut Vec<MyDictionary> as Jv_ {
-    into_raw(crate::ping_dictionary_array(&from_raw(arg)))
+    into_raw(crate::ping_dictionary_array(from_raw(arg)))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_ping_dictionary_array_n(arg: *mut Vec<Option<MyDictionary>>) -> *mut Vec<Option<MyDictionary>> as Jw_ {
-    into_raw(crate::ping_dictionary_array_n(&from_raw(arg)))
+    into_raw(crate::ping_dictionary_array_n(from_raw(arg)))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_ping_interface_array(arg: *mut Vec<Arc<crate::MyInterface>>) -> *mut Vec<Arc<crate::MyInterface>> as Jx_ {
-    into_raw(crate::ping_interface_array(&from_raw(arg)))
+    into_raw(crate::ping_interface_array(from_raw(arg)))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_ping_interface_array_n(arg: *mut Vec<Option<Arc<crate::MyInterface>>>) -> *mut Vec<Option<Arc<crate::MyInterface>>> as Jy_ {
-    into_raw(crate::ping_interface_array_n(&from_raw(arg)))
+    into_raw(crate::ping_interface_array_n(from_raw(arg)))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_char_array(arg: *mut Arc<CallbackPassCharArray>) -> bool as Jz_ {
-    crate::callback_arg_char_array(&from_raw(arg))
+    crate::callback_arg_char_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_char_array_n(arg: *mut Arc<CallbackPassCharArrayN>) -> bool as KA_ {
-    crate::callback_arg_char_array_n(&from_raw(arg))
+    crate::callback_arg_char_array_n(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_boolean_array(arg: *mut Arc<CallbackPassBooleanArray>) -> bool as KB_ {
-    crate::callback_arg_boolean_array(&from_raw(arg))
+    crate::callback_arg_boolean_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_byte_array(arg: *mut Arc<CallbackPassByteArray>) -> bool as KC_ {
-    crate::callback_arg_byte_array(&from_raw(arg))
+    crate::callback_arg_byte_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_ubyte_array(arg: *mut Arc<CallbackPassUByteArray>) -> bool as KD_ {
-    crate::callback_arg_ubyte_array(&from_raw(arg))
+    crate::callback_arg_ubyte_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_short_array(arg: *mut Arc<CallbackPassShortArray>) -> bool as KE_ {
-    crate::callback_arg_short_array(&from_raw(arg))
+    crate::callback_arg_short_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_ushort_array(arg: *mut Arc<CallbackPassUShortArray>) -> bool as KF_ {
-    crate::callback_arg_ushort_array(&from_raw(arg))
+    crate::callback_arg_ushort_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_int_array(arg: *mut Arc<CallbackPassIntArray>) -> bool as KG_ {
-    crate::callback_arg_int_array(&from_raw(arg))
+    crate::callback_arg_int_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_uint_array(arg: *mut Arc<CallbackPassUIntArray>) -> bool as KH_ {
-    crate::callback_arg_uint_array(&from_raw(arg))
+    crate::callback_arg_uint_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_long_array(arg: *mut Arc<CallbackPassLongArray>) -> bool as KI_ {
-    crate::callback_arg_long_array(&from_raw(arg))
+    crate::callback_arg_long_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_ulong_array(arg: *mut Arc<CallbackPassULongArray>) -> bool as KJ_ {
-    crate::callback_arg_ulong_array(&from_raw(arg))
+    crate::callback_arg_ulong_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_float_array(arg: *mut Arc<CallbackPassFloatArray>) -> bool as KK_ {
-    crate::callback_arg_float_array(&from_raw(arg))
+    crate::callback_arg_float_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_double_array(arg: *mut Arc<CallbackPassDoubleArray>) -> bool as KL_ {
-    crate::callback_arg_double_array(&from_raw(arg))
+    crate::callback_arg_double_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_string_array(arg: *mut Arc<CallbackPassStringArray>) -> bool as KM_ {
-    crate::callback_arg_string_array(&from_raw(arg))
+    crate::callback_arg_string_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_string_array_n(arg: *mut Arc<CallbackPassStringArrayN>) -> bool as KN_ {
-    crate::callback_arg_string_array_n(&from_raw(arg))
+    crate::callback_arg_string_array_n(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_enum_array(arg: *mut Arc<CallbackPassEnumArray>) -> bool as KO_ {
-    crate::callback_arg_enum_array(&from_raw(arg))
+    crate::callback_arg_enum_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_dictionary_array(arg: *mut Arc<CallbackPassDictionaryArray>) -> bool as KP_ {
-    crate::callback_arg_dictionary_array(&from_raw(arg))
+    crate::callback_arg_dictionary_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_dictionary_array_n(arg: *mut Arc<CallbackPassDictionaryArrayN>) -> bool as KQ_ {
-    crate::callback_arg_dictionary_array_n(&from_raw(arg))
+    crate::callback_arg_dictionary_array_n(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_interface_array(arg: *mut Arc<CallbackPassInterfaceArray>) -> bool as KR_ {
-    crate::callback_arg_interface_array(&from_raw(arg))
+    crate::callback_arg_interface_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_interface_array_n(arg: *mut Arc<CallbackPassInterfaceArrayN>) -> bool as KS_ {
-    crate::callback_arg_interface_array_n(&from_raw(arg))
+    crate::callback_arg_interface_array_n(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_char_array(arg: *mut Arc<CallbackReturnCharArray>) -> bool as KT_ {
-    crate::callback_return_char_array(&from_raw(arg))
+    crate::callback_return_char_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_char_array_n(arg: *mut Arc<CallbackReturnCharArrayN>) -> bool as KU_ {
-    crate::callback_return_char_array_n(&from_raw(arg))
+    crate::callback_return_char_array_n(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_boolean_array(arg: *mut Arc<CallbackReturnBooleanArray>) -> bool as KV_ {
-    crate::callback_return_boolean_array(&from_raw(arg))
+    crate::callback_return_boolean_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_byte_array(arg: *mut Arc<CallbackReturnByteArray>) -> bool as KW_ {
-    crate::callback_return_byte_array(&from_raw(arg))
+    crate::callback_return_byte_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_ubyte_array(arg: *mut Arc<CallbackReturnUByteArray>) -> bool as KX_ {
-    crate::callback_return_ubyte_array(&from_raw(arg))
+    crate::callback_return_ubyte_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_short_array(arg: *mut Arc<CallbackReturnShortArray>) -> bool as KY_ {
-    crate::callback_return_short_array(&from_raw(arg))
+    crate::callback_return_short_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_ushort_array(arg: *mut Arc<CallbackReturnUShortArray>) -> bool as KZ_ {
-    crate::callback_return_ushort_array(&from_raw(arg))
+    crate::callback_return_ushort_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_int_array(arg: *mut Arc<CallbackReturnIntArray>) -> bool as Ka_ {
-    crate::callback_return_int_array(&from_raw(arg))
+    crate::callback_return_int_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_uint_array(arg: *mut Arc<CallbackReturnUIntArray>) -> bool as Kb_ {
-    crate::callback_return_uint_array(&from_raw(arg))
+    crate::callback_return_uint_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_long_array(arg: *mut Arc<CallbackReturnLongArray>) -> bool as Kc_ {
-    crate::callback_return_long_array(&from_raw(arg))
+    crate::callback_return_long_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_ulong_array(arg: *mut Arc<CallbackReturnULongArray>) -> bool as Kd_ {
-    crate::callback_return_ulong_array(&from_raw(arg))
+    crate::callback_return_ulong_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_float_array(arg: *mut Arc<CallbackReturnFloatArray>) -> bool as Ke_ {
-    crate::callback_return_float_array(&from_raw(arg))
+    crate::callback_return_float_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_double_array(arg: *mut Arc<CallbackReturnDoubleArray>) -> bool as Kf_ {
-    crate::callback_return_double_array(&from_raw(arg))
+    crate::callback_return_double_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_string_array(arg: *mut Arc<CallbackReturnStringArray>) -> bool as Kg_ {
-    crate::callback_return_string_array(&from_raw(arg))
+    crate::callback_return_string_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_string_array_n(arg: *mut Arc<CallbackReturnStringArrayN>) -> bool as Kh_ {
-    crate::callback_return_string_array_n(&from_raw(arg))
+    crate::callback_return_string_array_n(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_enum_array(arg: *mut Arc<CallbackReturnEnumArray>) -> bool as Ki_ {
-    crate::callback_return_enum_array(&from_raw(arg))
+    crate::callback_return_enum_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_dictionary_array(arg: *mut Arc<CallbackReturnDictionaryArray>) -> bool as Kj_ {
-    crate::callback_return_dictionary_array(&from_raw(arg))
+    crate::callback_return_dictionary_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_dictionary_array_n(arg: *mut Arc<CallbackReturnDictionaryArrayN>) -> bool as Kk_ {
-    crate::callback_return_dictionary_array_n(&from_raw(arg))
+    crate::callback_return_dictionary_array_n(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_interface_array(arg: *mut Arc<CallbackReturnInterfaceArray>) -> bool as Kl_ {
-    crate::callback_return_interface_array(&from_raw(arg))
+    crate::callback_return_interface_array(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_interface_array_n(arg: *mut Arc<CallbackReturnInterfaceArrayN>) -> bool as Km_ {
-    crate::callback_return_interface_array_n(&from_raw(arg))
+    crate::callback_return_interface_array_n(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_pass_big_dictionary(arg: *mut TypeDictionary) -> bool as Kn_ {
-    crate::pass_big_dictionary(&from_raw(arg))
+    crate::pass_big_dictionary(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_return_big_dictionary(callback: *mut Arc<VoidCallback>, inter: *mut Arc<crate::MyInterface>) -> *mut TypeDictionary as Ko_ {
-    into_raw(crate::return_big_dictionary(&from_raw(callback), &from_raw(inter)))
+    into_raw(crate::return_big_dictionary(from_raw(callback), from_raw(inter)))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_ping_big_dictionary(arg: *mut TypeDictionary) -> *mut TypeDictionary as Kp_ {
-    into_raw(crate::ping_big_dictionary(&from_raw(arg)))
+    into_raw(crate::ping_big_dictionary(from_raw(arg)))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_pass_big_dictionary_n(arg: *mut TypeDictionary) -> bool as Kq_ {
-    crate::pass_big_dictionary_n(&ptr_opt(arg, from_raw))
+    crate::pass_big_dictionary_n(ptr_opt(arg, from_raw))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_return_big_dictionary_n() -> *mut TypeDictionary as Kr_ {
     obj_opt(crate::return_big_dictionary_n(), into_raw)
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_ping_big_dictionary_n(arg: *mut TypeDictionary) -> *mut TypeDictionary as Ks_ {
-    obj_opt(crate::ping_big_dictionary_n(&ptr_opt(arg, from_raw)), into_raw)
+    obj_opt(crate::ping_big_dictionary_n(ptr_opt(arg, from_raw)), into_raw)
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_critical_primitives(a1: u16, a2: bool, a3: i8, a4: u8, a5: i16, a6: u16, a7: i32, a8: u32, a9: i64, a10: u64, a11: f32, a12: f64) -> bool as Kt_ {
     crate::critical_primitives(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12)

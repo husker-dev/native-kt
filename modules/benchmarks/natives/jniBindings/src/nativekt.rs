@@ -89,7 +89,7 @@ export_fn!{ fn nativekt_natives_jnibindings_jni_bindings_call_jni_add(a: i32, b:
     crate::call_jni_add(a, b)
 }}
 export_fn!{ fn nativekt_natives_jnibindings_jni_bindings_call_jni_string(arg: *mut String) -> () as N_ {
-    crate::call_jni_string(&from_raw(arg))
+    crate::call_jni_string(from_raw(arg))
 }}
 export_fn!{ fn nativekt_natives_jnibindings_jni_bindings_call_critical_jni_string(arg: *mut u8, _arg_length: i32, _arg_size: i32) -> () as O_ {
     crate::call_critical_jni_string(&critical_string(arg, _arg_size))

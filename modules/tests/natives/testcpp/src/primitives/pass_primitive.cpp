@@ -54,11 +54,11 @@ bool pass_double(double arg) {
     return arg == 1.1;
 }
 
-bool pass_string(const KString& arg) {
+bool pass_string(KString arg) {
     return std::string(arg.get_data(), arg.get_size()) == "test string";
 }
 
-bool pass_string_n(const KOptional<KString>& arg) {
+bool pass_string_n(KOptional<KString> arg) {
     return arg.is_none();
 }
 
@@ -66,21 +66,21 @@ bool pass_enum(MyEnum arg) {
     return arg == CASE2;
 }
 
-bool pass_dictionary(const MyDictionary& arg) {
+bool pass_dictionary(MyDictionary arg) {
     return arg.a == 1 &&
         arg.b == 2 &&
         arg.c == 3 &&
         arg.d == 4;
 }
 
-bool pass_dictionary_n(const KOptional<MyDictionary>& arg) {
+bool pass_dictionary_n(KOptional<MyDictionary> arg) {
     return arg.is_none();
 }
 
-bool pass_interface(const std::shared_ptr<IMyInterface>& arg) {
+bool pass_interface(std::shared_ptr<IMyInterface> arg) {
     return arg->test();
 }
 
-bool pass_interface_n(const KOptional<std::shared_ptr<IMyInterface>>& arg) {
+bool pass_interface_n(KOptional<std::shared_ptr<IMyInterface>> arg) {
     return arg.is_none();
 }

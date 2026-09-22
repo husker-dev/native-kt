@@ -581,14 +581,6 @@ class CApiImplPrinter(
                 }
             }
 
-            val releases = function.args.mapNotNull {
-                when {
-                    it.type.isRawInterface() -> null
-                    critical -> null
-                    else -> freeFuncFor(context, it.type, it.cname)
-                }
-            }
-
             // Print
 
             var call = "$name(${argNames.joinToString()});"
@@ -607,18 +599,9 @@ class CApiImplPrinter(
 
             append("\nLIB_EXPORT $type $mangledName($args) {")
             append("\n\t")
-            if(releases.isNotEmpty()) {
-                if(!function.type.isVoid())
-                    append("${function.type.toCType()} _result = ")
-                append(call)
-                releases.joinTo(this, separator = "") { "\n\t$it;" }
-                if(!function.type.isVoid())
-                    append("\n\treturn _result;")
-            } else {
-                if(!function.type.isVoid())
-                    append("return ")
-                append(call)
-            }
+            if(!function.type.isVoid())
+                append("return ")
+            append(call)
             append("\n}")
         }
         append("\n")

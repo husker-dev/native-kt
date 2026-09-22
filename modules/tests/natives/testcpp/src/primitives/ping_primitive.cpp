@@ -48,11 +48,11 @@ double ping_double(double arg) {
     return arg;
 }
 
-KString ping_string(const KString& arg) {
+KString ping_string(KString arg) {
     return arg;
 }
 
-KOptional<KString> ping_string_n(const KOptional<KString>& arg) {
+KOptional<KString> ping_string_n(KOptional<KString> arg) {
     return arg;
 }
 
@@ -60,18 +60,18 @@ MyEnum ping_enum(MyEnum arg) {
     return arg;
 }
 
-MyDictionary ping_dictionary(const MyDictionary& arg) {
+MyDictionary ping_dictionary(MyDictionary arg) {
     return arg;
 }
 
-KOptional<MyDictionary> ping_dictionary_n(const KOptional<MyDictionary>& arg) {
+KOptional<MyDictionary> ping_dictionary_n(KOptional<MyDictionary> arg) {
     return arg;
 }
 
-std::shared_ptr<IMyInterface> ping_interface(const std::shared_ptr<IMyInterface>& arg) {
+std::shared_ptr<IMyInterface> ping_interface(std::shared_ptr<IMyInterface> arg) {
     return arg;
 }
 
-KOptional<std::shared_ptr<IMyInterface>> ping_interface_n(const KOptional<std::shared_ptr<IMyInterface>>& arg) {
+KOptional<std::shared_ptr<IMyInterface>> ping_interface_n(KOptional<std::shared_ptr<IMyInterface>> arg) {
     return arg;
 }

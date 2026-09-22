@@ -539,6 +539,8 @@ class CppApiImplPrinter(
                         if(it.type.isNullable) "_${name}_length == -1 ? $newOptional<KArray<$type>>() : $newOptional($newArray(const_cast<$type*>($name), _${name}_length, false))"
                         else "$newArray(const_cast<$type*>($name), _${name}_length, false)"
                     }
+                    it.type.isReleasable() && !function.isCritical() ->
+                        "std::move(${toCppType(it.type, it.cppName)})"
                     else -> toCppType(it.type, it.cppName)
                 }
             }
