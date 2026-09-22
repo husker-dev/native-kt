@@ -79,7 +79,7 @@ bool jvmci10(
     KString* a1, const double a2, const float a3, const int64_t a4,
     const int64_t a5, const double a6, KString* a7, const float a8, const int32_t a9
 ) {
-    printf("jvmci10 | a1: %s, a2: %f, a3: %f, a4: %" PRId64 ", a5: %" PRId64 ", a6: %f, a7: %s (%d, %d), a8: %f, a9: %d\n", a1->data, a2, a3, a4, a5, a6, a7->data, a7->length, a7->size, a8, a9);
+    printf("jvmci10 | a1: %s, a2: %f, a3: %f, a4: %" PRId64 ", a5: %" PRId64 ", a6: %f, a7: %s (%d), a8: %f, a9: %d\n", a1->data, a2, a3, a4, a5, a6, a7->data, a7->size, a8, a9);
     fflush(stdout);
     return strncmp(a1->data, "string1", 7) == 0 && a2 == 2.0 && a3 == 3.0 && a4 == 4 && a5 == 5 && a6 == 6.0 && strncmp(a7->data, "string7", 7) == 0 && a8 == 8.0 && a9 == 9;
 }

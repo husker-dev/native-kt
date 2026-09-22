@@ -329,11 +329,10 @@ class CJniPrinter(
                         if(obj == NULL) return NULL;
     
                         jbyteArray bytes = (jbyteArray) (*env)->CallObjectMethod(env, obj, string_get_bytes, string_utf8_const);
-                        jsize length = (*env)->GetStringLength(env, obj);
                         jsize size = (*env)->GetArrayLength(env, bytes);
                         jbyte* data = (jbyte*) ${context.mangle("alloc")}(size);
                         (*env)->GetByteArrayRegion(env, bytes, 0, size, data);
-                        void* result = ${context.mangle("string_new")}((const char*) data, length, size, false);
+                        void* result = ${context.mangle("string_new")}((const char*) data, size, false);
                         (*env)->DeleteLocalRef(env, bytes);
                         return result;
                     }
@@ -759,8 +758,7 @@ class CJniPrinter(
                     critical && it.type.isString() -> listOf(
                         "jbyteArray _${name}_bytes = $nullable(jbyteArray) (*_env)->CallObjectMethod(_env, $name, string_get_bytes, string_utf8_const)$nullObj;",
                         "char* _${name}_data = $nullable(*_env)->GetPrimitiveArrayCritical(_env, _${name}_bytes, JNI_FALSE)$nullObj;",
-                        "jint _${name}_size = $nullable(*_env)->GetArrayLength(_env, _${name}_bytes)$nullNum;",
-                        "jint _${name}_length = $nullable(*_env)->GetStringLength(_env, $name)$nullNum;",
+                        "jint _${name}_size = $nullable(*_env)->GetArrayLength(_env, _${name}_bytes)$nullNum;"
                     )
                     critical && it.type.isEnumArray() -> listOf(
                         "jint _${name}_length = $nullable(*_env)->GetArrayLength(_env, $name)$nullNum;",
@@ -781,7 +779,7 @@ class CJniPrinter(
 
             val castedArgs = function.args.joinToString {
                 when {
-                    critical && it.type.isString() -> "_${it.cname}_data, _${it.cname}_length, _${it.cname}_size"
+                    critical && it.type.isString() -> "_${it.cname}_data, _${it.cname}_size"
                     critical && it.type.isEnumArray() -> "_${it.cname}_ints, _${it.cname}_length"
                     critical && it.type.isArray() -> {
                         val cast = if (it.type.isBooleanArray() || it.type.isUnsigned() || it.type.isLongArray())

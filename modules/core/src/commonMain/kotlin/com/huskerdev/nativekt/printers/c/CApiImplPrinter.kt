@@ -115,26 +115,15 @@ class CApiImplPrinter(
                     
                 // String
                 
-                static size_t utf8_strlen(const char *s) {
-                    size_t count = 0;
-                    while (*s) {
-                        if ((*s & 0xC0) != 0x80)
-                            count++;
-                        s++;
-                    }
-                    return count;
-                }
-                
                 KString* _kstring_new(const char* data, _KStringNewArgs args) {
                     const int32_t size = args.size != -1 ? args.size : strlen(data);
-                    const int32_t length = args.length != -1 ? args.length : utf8_strlen(data);
                     const char* actual_data = data;
                     if (args.make_copy) {
                         actual_data = (const char*) malloc(size);
                         memcpy((void*) actual_data, data, size);
                     }
                     KString* result = (KString*) malloc(sizeof(KString));
-                    *result = (KString) { kstring_clone, kstring_free, actual_data, length, size };
+                    *result = (KString) { kstring_clone, kstring_free, actual_data, size };
                     return result;
                 }
                 
@@ -142,7 +131,18 @@ class CApiImplPrinter(
                     const size_t size = of->size;
                     void* data = malloc(size);
                     memcpy(data, of->data, size);
-                    return kstring_new((const char*) data, .length = of->length, .size = size, .make_copy = false);
+                    return kstring_new((const char*) data, .size = size, .make_copy = false);
+                }
+                
+                int32_t kstring_length(const KString* _Nonnull self) {
+                    const char* s = self->data;
+                    size_t count = 0;
+                    while (*s) {
+                        if ((*s & 0xC0) != 0x80)
+                            count++;
+                        s++;
+                    }
+                    return count;
                 }
                 
                 void kstring_free(KString* self) {
@@ -154,17 +154,14 @@ class CApiImplPrinter(
             """.trimIndent())
             if(context.hasStringCastToNative) append("""
                 
-                KString* ${context.mangle("string_new")}(const char* data, const int32_t length, const int32_t size, bool make_copy) {
-                    return kstring_new(data, .length = length, .size = size, .make_copy = make_copy);
+                KString* ${context.mangle("string_new")}(const char* data, const int32_t size, bool make_copy) {
+                    return kstring_new(data, .size = size, .make_copy = make_copy);
                 }
             """.trimIndent())
             if(context.hasStringCastToKotlin) append("""
                 
                 const char* ${context.mangle("string_data")}(const KString* self) {
                     return self->data;
-                }
-                int32_t ${context.mangle("string_length")}(const KString* self) {
-                    return self->length;
                 }
                 size_t ${context.mangle("string_size")}(const KString* self) {
                     return self->size;
@@ -552,7 +549,7 @@ class CApiImplPrinter(
                 val name = it.cname
                 when {
                     critical && it.type.isString() ->
-                        "const char* _Nullable $name, int32_t _${name}_length, int32_t _${name}_size"
+                        "const char* _Nullable $name, int32_t _${name}_size"
                     critical && it.type.isArray() ->
                         "const ${it.type.arrayTypeOrNull()!!.toCType()}* _Nullable $name, int32_t _${name}_length"
                     else -> "${it.type.toCType(printNullable = true)} ${it.cname}"
@@ -565,8 +562,8 @@ class CApiImplPrinter(
                     it.type.isRawInterface() ->
                         "$name->pointed"
                     critical && it.type.isString() ->
-                        if(it.type.isNullable) "_${name}_length == -1 ? NULL : &(KString){ kstring_clone, kstring_free, $name, _${name}_length, _${name}_size }"
-                        else "&(KString){ kstring_clone, kstring_free, $name, _${name}_length, _${name}_size }"
+                        if(it.type.isNullable) "_${name}_size == -1 ? NULL : &(KString){ kstring_clone, kstring_free, $name, _${name}_size }"
+                        else "&(KString){ kstring_clone, kstring_free, $name, _${name}_size }"
                     critical && it.type.isArray() -> {
                         val type = it.type.toCType(ptr = false)
                         val lower = type.snakeCase()

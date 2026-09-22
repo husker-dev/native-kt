@@ -95,8 +95,8 @@ bool callback_return_string_array(RC_CallbackReturnStringArray* arg) {
     const KString* el2 = (KString*) array->elements[1];
 
     return array->length == 2 &&
-        strncmp(el1->data, "string1", el1->length) == 0 &&
-        strncmp(el2->data, "string2", el2->length) == 0;
+        strncmp(el1->data, "string1", el1->size) == 0 &&
+        strncmp(el2->data, "string2", el2->size) == 0;
 }
 
 bool callback_return_string_array_n(RC_CallbackReturnStringArrayN* arg) {

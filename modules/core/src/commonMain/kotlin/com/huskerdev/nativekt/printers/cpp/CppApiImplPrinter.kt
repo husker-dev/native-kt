@@ -104,28 +104,25 @@ class CppApiImplPrinter(
                         this->data = new char[size];
                         std::memcpy(this->data, data, size);
                     } else this->data = const_cast<char*>(data);
-                    this->length = length;
                     this->size = length;
                 }
     
-                KString::KString(const char *data, int32_t length, size_t size, bool copy) {
+                KString::KString(const char *data, size_t size, bool copy) {
                     if (copy) {
                         this->data = new char[size];
                         std::memcpy(this->data, data, size);
                     } else this->data = const_cast<char*>(data);
                     this->size = size;
-                    this->length = length;
                 }
     
-                KString::KString(const KString& other): length(other.length), size(other.size) {
+                KString::KString(const KString& other): size(other.size) {
                     this->data = new char[other.size];
                     std::memcpy(this->data, other.data, other.size);
                 }
     
                 KString::KString(KString&& other) noexcept
-                    : data(other.data), length(other.length), size(other.size) {
+                    : data(other.data), size(other.size) {
                     other.data = nullptr;
-                    other.length = 0;
                     other.size = 0;
                 }
     
@@ -133,10 +130,8 @@ class CppApiImplPrinter(
                     if (this != &other) {
                         delete[] data;
                         data = other.data;
-                        length = other.length;
                         size = other.size;
                         other.data = nullptr;
-                        other.length = 0;
                         other.size = 0;
                     }
                     return *this;
@@ -159,7 +154,14 @@ class CppApiImplPrinter(
                 }
     
                 int32_t KString::get_length() const {
-                    return length;
+                    const char* s = data;
+                    size_t count = 0;
+                    while (*s) {
+                        if ((*s & 0xC0) != 0x80)
+                            count++;
+                        s++;
+                    }
+                    return count;
                 }
     
                 size_t KString::get_size() const {
@@ -169,8 +171,8 @@ class CppApiImplPrinter(
 
             if(context.hasStringCastToNative) appendLine("""
                 
-                LIB_EXPORT void* _Nonnull ${context.mangle("string_new")}(char* _Nonnull data, int32_t length, size_t size, bool make_copy) {
-                    return new KString(data, length, size, make_copy);
+                LIB_EXPORT void* _Nonnull ${context.mangle("string_new")}(char* _Nonnull data, size_t size, bool make_copy) {
+                    return new KString(data, size, make_copy);
                 }
             """.trimIndent())
             if(context.hasStringCastToKotlin) appendLine("""
@@ -181,10 +183,6 @@ class CppApiImplPrinter(
                 
                 LIB_EXPORT size_t ${context.mangle("string_size")}(void* _Nonnull self) {
                     return static_cast<KString*>(self)->get_size();
-                }
-                
-                LIB_EXPORT int32_t ${context.mangle("string_length")}(void* _Nonnull self) {
-                    return static_cast<KString*>(self)->get_length();
                 }
                 
                 LIB_EXPORT void ${context.mangle("string_free")}(void* _Nonnull self) {
@@ -250,7 +248,7 @@ class CppApiImplPrinter(
                     if (ne) return new KArray<KOptional<T>>(capacity);                    \
                     return new KArray<T>(capacity);                                       \
                 }                                                                         \
-                LIB_EXPORT int32_t FUNC_LENGTH(void* arr, bool ne) {                         \
+                LIB_EXPORT int32_t FUNC_LENGTH(void* arr, bool ne) {                      \
                     if (ne) return static_cast<KArray<KOptional<T>>*>(arr)->get_length(); \
                     return static_cast<KArray<T>*>(arr)->get_length();                    \
                 }                                                                         \
@@ -265,7 +263,7 @@ class CppApiImplPrinter(
                         arr->push(std::move(*el)); delete el;                             \
                     }                                                                     \
                 }                                                                         \
-                LIB_EXPORT void* FUNC_GET(void* array, int32_t index, bool ne) {             \
+                LIB_EXPORT void* FUNC_GET(void* array, int32_t index, bool ne) {          \
                     if (ne) {                                                             \
                         const auto arr = static_cast<KArray<KOptional<T>>*>(array);       \
                         const KOptional<T>* opt = arr->get_elements() + index;            \
@@ -516,7 +514,7 @@ class CppApiImplPrinter(
             val args = function.args.joinToString {
                 val name = it.cppName
                 when {
-                    critical && it.type.isString() -> "const char* $name, int32_t _${name}_length, int32_t _${name}_size"
+                    critical && it.type.isString() -> "const char* $name, int32_t _${name}_size"
                     critical && it.type.isArray() -> "const ${it.type.arrayTypeOrNull()!!.toCppType(ptr = false)}* $name, int32_t _${name}_length"
                     else -> "${it.type.toCppType(printOption = false, ptr = true)} $name"
                 }
@@ -528,8 +526,8 @@ class CppApiImplPrinter(
                         val newString = "*new (alloca(sizeof(KString))) KString"
                         val newOptional = "*new (alloca(sizeof(KOptional<KString>))) KOptional"
 
-                        if (it.type.isNullable) "_${name}_length == -1 ? $newOptional<KString>() : $newOptional($newString($name, _${name}_length, _${name}_size, false))"
-                        else "$newString($name, _${name}_length, _${name}_size, false)"
+                        if (it.type.isNullable) "_${name}_size == -1 ? $newOptional<KString>() : $newOptional($newString($name, _${name}_size, false))"
+                        else "$newString($name, _${name}_size, false)"
                     }
                     critical && it.type.isArray() -> {
                         val type = it.type.arrayTypeOrNull()!!.toCppType(ptr = false)

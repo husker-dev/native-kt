@@ -14,7 +14,7 @@ bool pass_big_dictionary(TypeDictionary* arg) {
         arg->a10 == 9223372036854775807L &&
         arg->a11 == 123.0f &&
         arg->a12 == 123.4 &&
-        strncmp(arg->a13->data, "test string", arg->a13->length) == 0 &&
+        strncmp(arg->a13->data, "test string", arg->a13->size) == 0 &&
         arg->a14 == MyEnum_CASE2 &&
         arg->a15->a == 1 && arg->a15->b == 2 && arg->a15->c == 3 && arg->a15->d == 4 &&
         arg->a16 == NULL &&
@@ -58,8 +58,8 @@ bool pass_big_dictionary(TypeDictionary* arg) {
             arg->a31->elements[0] == 1.2 &&
             arg->a31->elements[1] == 3.4 &&
         arg->a32->length == 2 &&
-            strncmp(((KString*)arg->a32->elements[0])->data, "string1", ((KString*)arg->a32->elements[0])->length) == 0 &&
-            strncmp(((KString*)arg->a32->elements[1])->data, "string2", ((KString*)arg->a32->elements[1])->length) == 0 &&
+            strncmp(((KString*)arg->a32->elements[0])->data, "string1", ((KString*)arg->a32->elements[0])->size) == 0 &&
+            strncmp(((KString*)arg->a32->elements[1])->data, "string2", ((KString*)arg->a32->elements[1])->size) == 0 &&
         arg->a33->length == 2 &&
             arg->a33->elements[0] == MyEnum_CASE1 &&
             arg->a33->elements[1] == MyEnum_CASE2 &&

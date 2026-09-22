@@ -83,10 +83,9 @@ class CppApiHeaderPrinter(
             
             class KString {
                 char* _Nonnull data;
-                int32_t length;
                 size_t size;
             public:
-                explicit KString(const char* _Nonnull data, int32_t length, size_t size, bool copy = true);
+                explicit KString(const char* _Nonnull data, size_t size, bool copy = true);
                 explicit KString(const char* _Nonnull data, bool copy = true);
                 KString(const KString& other);
                 KString(KString&& other) noexcept;

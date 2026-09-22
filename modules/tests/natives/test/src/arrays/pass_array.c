@@ -83,8 +83,8 @@ bool pass_string_array(KArray* arg) {
     const KString* el2 = (KString*) arg->elements[1];
 
     return arg->length == 2 &&
-        strncmp(el1->data, "string1", el1->length) == 0 &&
-        strncmp(el2->data, "string2", el2->length) == 0;
+        strncmp(el1->data, "string1", el1->size) == 0 &&
+        strncmp(el2->data, "string2", el2->size) == 0;
 }
 
 bool pass_string_array_n(KArray* arg) {

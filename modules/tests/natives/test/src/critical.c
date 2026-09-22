@@ -29,7 +29,7 @@ bool critical_enum(MyEnum a1) {
 }
 
 bool critical_string(KString* a1) {
-    return a1->length == 11 && strncmp(a1->data, "test string", a1->length) == 0;
+    return a1->size == 11 && strncmp(a1->data, "test string", a1->size) == 0;
 }
 
 bool critical_string_n(KString* a1) {

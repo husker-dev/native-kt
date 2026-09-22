@@ -163,7 +163,7 @@ internal fun StringBuilder.printStringDef(context: NativeModuleContext) {
     append("\nexport_fn! {")
     if(context.hasStringCastToNative) appendLine($$"""
         
-        fn $${context.mangle("string_new")}(data: *mut u8, _length: i32, size: i32, make_copy: bool) -> *mut String as $${context.jsMangle["string_new"]} {
+        fn $${context.mangle("string_new")}(data: *mut u8, size: i32, make_copy: bool) -> *mut String as $${context.jsMangle["string_new"]} {
             if make_copy {
                 unsafe { into_raw(String::from_utf8_unchecked(std::slice::from_raw_parts(data, size as usize).to_vec())) }
             } else {
@@ -175,9 +175,6 @@ internal fun StringBuilder.printStringDef(context: NativeModuleContext) {
         
         fn ${context.mangle("string_data")}(str: *mut String) -> *mut u8 as ${context.jsMangle["string_data"]} {
             unsafe { (&*str).as_ptr().cast_mut() }
-        }
-        fn ${context.mangle("string_length")}(str: *mut String) -> i32 as ${context.jsMangle["string_length"]} {
-            unsafe { (&*str).chars().count() as i32 }
         }
         fn ${context.mangle("string_size")}(str: *mut String) -> i32 as ${context.jsMangle["string_size"]} {
             unsafe { (&*str).len() as i32 }
@@ -356,8 +353,8 @@ internal fun StringBuilder.printCriticalFuncDef(context: NativeModuleContext) {
     """.trimIndent())
     if(context.hasCriticalStringOptCast) appendLine("""
         
-        fn critical_string_opt(data: *mut u8, length: i32, size: i32) -> ManuallyDrop<Option<String>> {
-            ManuallyDrop::new(if length != -1 {
+        fn critical_string_opt(data: *mut u8, size: i32) -> ManuallyDrop<Option<String>> {
+            ManuallyDrop::new(if size != -1 {
                 Some(unsafe { String::from_raw_parts(data, size as usize, size as usize) })
             } else { None })
         }

@@ -158,21 +158,20 @@ class CApiHeaderPrinter(
                         KString* _Nullable (* _Nullable clone)(const KString* _Nullable);
                         void (* _Nullable free)(KString* _Nullable);
                         const char* _Nonnull data;
-                        int32_t length;
                         int32_t size;
                     };
                     
                     typedef struct _KStringNewArgs {
-                        const int32_t length;
                         const int32_t size;
                         bool make_copy;
                     } _KStringNewArgs;
                     
                     #define kstring_new(data, ...) \
-                        _kstring_new(data, (_KStringNewArgs){ .length = -1, .size = -1, .make_copy = true, __VA_ARGS__ })
+                        _kstring_new(data, (_KStringNewArgs){ .size = -1, .make_copy = true, __VA_ARGS__ })
                     
                     KString* _Nonnull _kstring_new(const char* _Nonnull data, _KStringNewArgs args);
                     KString* _Nonnull kstring_clone(const KString* _Nonnull self);
+                    int32_t kstring_length(const KString* _Nonnull self);
                     void kstring_free(KString* _Nonnull self);
                     
                 """.trimIndent())
@@ -181,13 +180,12 @@ class CApiHeaderPrinter(
                 val typeName = if (language == Language.C) "KString" else "void"
                 if (context.hasStringCastToNative) append("""
                     
-                    LIB_EXPORT $typeName* _Nonnull ${context.mangle("string_new")}(const char* _Nonnull data, int32_t length, int32_t size, bool make_copy);
+                    LIB_EXPORT $typeName* _Nonnull ${context.mangle("string_new")}(const char* _Nonnull data, int32_t size, bool make_copy);
                 """.trimIndent())
                 if (context.hasStringCastToKotlin) append("""
                     
                     LIB_EXPORT const char* _Nonnull ${context.mangle("string_data")}(const $typeName* _Nonnull self);
                     LIB_EXPORT size_t ${context.mangle("string_size")}(const $typeName* _Nonnull self);
-                    LIB_EXPORT int32_t ${context.mangle("string_length")}(const $typeName* _Nonnull self);
                     LIB_EXPORT void ${context.mangle("string_free")}($typeName* _Nonnull self);
                 """.trimIndent())
                 append("\n")
@@ -544,7 +542,6 @@ class CApiHeaderPrinter(
                     when {
                         critical && it.type.isString() -> listOf(
                             "const char* _Nullable $name",
-                            "int32_t _${name}_length",
                             "int32_t _${name}_size"
                         )
                         critical && it.type.isArray() -> listOf(

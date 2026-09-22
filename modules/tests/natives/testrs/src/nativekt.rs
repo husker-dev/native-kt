@@ -136,7 +136,7 @@ macro_rules! external_fn_call {
 // ╚════════════════╝
 
 export_fn! {	
-	fn nativekt_natives_testrs_testrs__string_new(data: *mut u8, _length: i32, size: i32, make_copy: bool) -> *mut String as C_ {
+	fn nativekt_natives_testrs_testrs__string_new(data: *mut u8, size: i32, make_copy: bool) -> *mut String as C_ {
 	    if make_copy {
 	        unsafe { into_raw(String::from_utf8_unchecked(std::slice::from_raw_parts(data, size as usize).to_vec())) }
 	    } else {
@@ -146,9 +146,6 @@ export_fn! {
 	
 	fn nativekt_natives_testrs_testrs__string_data(str: *mut String) -> *mut u8 as D_ {
 	    unsafe { (&*str).as_ptr().cast_mut() }
-	}
-	fn nativekt_natives_testrs_testrs__string_length(str: *mut String) -> i32 as F_ {
-	    unsafe { (&*str).chars().count() as i32 }
 	}
 	fn nativekt_natives_testrs_testrs__string_size(str: *mut String) -> i32 as E_ {
 	    unsafe { (&*str).len() as i32 }
@@ -328,8 +325,8 @@ fn critical_string(data: *mut u8, size: i32) -> ManuallyDrop<String> {
     unsafe { ManuallyDrop::new(String::from_raw_parts(data, size as usize, size as usize)) }
 }
 
-fn critical_string_opt(data: *mut u8, length: i32, size: i32) -> ManuallyDrop<Option<String>> {
-    ManuallyDrop::new(if length != -1 {
+fn critical_string_opt(data: *mut u8, size: i32) -> ManuallyDrop<Option<String>> {
+    ManuallyDrop::new(if size != -1 {
         Some(unsafe { String::from_raw_parts(data, size as usize, size as usize) })
     } else { None })
 }
@@ -1811,11 +1808,11 @@ export_fn!{ fn nativekt_natives_testrs_testrs_critical_primitives(a1: u16, a2: b
 export_fn!{ fn nativekt_natives_testrs_testrs_critical_enum(a1: MyEnum) -> bool as Ku_ {
     crate::critical_enum(a1)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_critical_string(a1: *mut u8, _a1_length: i32, _a1_size: i32) -> bool as Kv_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_critical_string(a1: *mut u8, _a1_size: i32) -> bool as Kv_ {
     crate::critical_string(&critical_string(a1, _a1_size))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_critical_string_n(a1: *mut u8, _a1_length: i32, _a1_size: i32) -> bool as Kw_ {
-    crate::critical_string_n(&critical_string_opt(a1, _a1_length, _a1_size))
+export_fn!{ fn nativekt_natives_testrs_testrs_critical_string_n(a1: *mut u8, _a1_size: i32) -> bool as Kw_ {
+    crate::critical_string_n(&critical_string_opt(a1, _a1_size))
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_critical_interface(a1: *mut Arc<crate::MyInterface>) -> bool as Kx_ {
     crate::critical_interface(&from_raw(a1))
@@ -1904,7 +1901,7 @@ export_fn!{ fn nativekt_natives_testrs_testrs_jvmci8(a1: i32, a2: f64, a3: f32, 
 export_fn!{ fn nativekt_natives_testrs_testrs_jvmci9(a1: i32, a2: f64, a3: f32, a4: i64, a5: i64, a6: f64, a7: f32, a8: f32, a9: i32) -> bool as LZ_ {
     crate::jvmci9(a1, a2, a3, a4, a5, a6, a7, a8, a9)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_jvmci10(a1: *mut u8, _a1_length: i32, _a1_size: i32, a2: f64, a3: f32, a4: i64, a5: i64, a6: f64, a7: *mut u8, _a7_length: i32, _a7_size: i32, a8: f32, a9: i32) -> bool as La_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_jvmci10(a1: *mut u8, _a1_size: i32, a2: f64, a3: f32, a4: i64, a5: i64, a6: f64, a7: *mut u8, _a7_size: i32, a8: f32, a9: i32) -> bool as La_ {
     crate::jvmci10(&critical_string(a1, _a1_size), a2, a3, a4, a5, a6, &critical_string(a7, _a7_size), a8, a9)
 }}
 export_fn!{ fn nativekt_natives_testrs_testrs_jvmci11(a1: f32, a2: i32, a3: f32, a4: i32, a5: f32, a6: i32, a7: f32, a8: i32, a9: f32, a10: i32, a11: f32, a12: i32, a13: f32, a14: i32, a15: f32, a16: i32, a17: f32) -> bool as Lb_ {

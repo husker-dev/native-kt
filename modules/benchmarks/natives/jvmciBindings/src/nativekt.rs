@@ -60,7 +60,7 @@ export_fn! {
 // ╚════════════════╝
 
 export_fn! {	
-	fn nativekt_natives_jvmcibindings_jvmci_bindings__string_new(data: *mut u8, _length: i32, size: i32, make_copy: bool) -> *mut String as C_ {
+	fn nativekt_natives_jvmcibindings_jvmci_bindings__string_new(data: *mut u8, size: i32, make_copy: bool) -> *mut String as C_ {
 	    if make_copy {
 	        unsafe { into_raw(String::from_utf8_unchecked(std::slice::from_raw_parts(data, size as usize).to_vec())) }
 	    } else {
@@ -88,6 +88,6 @@ export_fn!{ fn nativekt_natives_jvmcibindings_jvmci_bindings_call_critical_jvmci
 export_fn!{ fn nativekt_natives_jvmcibindings_jvmci_bindings_call_critical_jvmci_add(a: i32, b: i32) -> i32 as M_ {
     crate::call_critical_jvmci_add(a, b)
 }}
-export_fn!{ fn nativekt_natives_jvmcibindings_jvmci_bindings_call_critical_jvmci_string(arg: *mut u8, _arg_length: i32, _arg_size: i32) -> () as N_ {
+export_fn!{ fn nativekt_natives_jvmcibindings_jvmci_bindings_call_critical_jvmci_string(arg: *mut u8, _arg_size: i32) -> () as N_ {
     crate::call_critical_jvmci_string(&critical_string(arg, _arg_size))
 }}

@@ -51,7 +51,7 @@ bool callback_return_double(RC_CallbackReturnDouble* arg) {
 
 bool callback_return_string(RC_CallbackReturnString* arg) {
     const KString* str = callbackreturnstring_invoke(arg);
-    return strncmp(str->data, "test string", str->length) == 0;
+    return strncmp(str->data, "test string", str->size) == 0;
 }
 
 bool callback_return_string_n(RC_CallbackReturnStringN* arg) {

@@ -64,10 +64,9 @@ class KotlinJvmForeignPrinter(
 
         // String
         if(context.hasStringCastToNative)
-            printHandle("string_new", true, TYPE_ADDRESS, TYPE_ADDRESS, TYPE_INT, TYPE_INT, TYPE_BOOLEAN)
+            printHandle("string_new", true, TYPE_ADDRESS, TYPE_ADDRESS, TYPE_INT, TYPE_BOOLEAN)
         if(context.hasStringCastToKotlin) {
             printHandle("string_data", true, TYPE_ADDRESS, TYPE_ADDRESS)
-            printHandle("string_length", true, TYPE_INT, TYPE_ADDRESS)
             printHandle("string_size", true, TYPE_LONG, TYPE_ADDRESS)
             printHandle("string_free", true, TYPE_VOID, TYPE_ADDRESS)
         }
@@ -161,7 +160,7 @@ class KotlinJvmForeignPrinter(
                 add(operation.type.toForeignType())
                 operation.args.mapTo(this) {
                     when {
-                        critical && it.type.isString() -> "$TYPE_ADDRESS, $TYPE_INT, $TYPE_INT"
+                        critical && it.type.isString() -> "$TYPE_ADDRESS, $TYPE_INT"
                         critical && it.type.isArray() -> "$TYPE_ADDRESS, $TYPE_INT"
                         else -> it.type.toForeignType()
                     }
@@ -181,7 +180,7 @@ class KotlinJvmForeignPrinter(
                 private fun toNativeString(of: String?): MemorySegment {
                     of ?: return MemorySegment.NULL
                     val bytes = of.toByteArray()
-                    return _stringNew(MemorySegment.ofArray(bytes), of.length, bytes.size, true) as MemorySegment
+                    return _stringNew(MemorySegment.ofArray(bytes), bytes.size, true) as MemorySegment
                 }
             """.replaceIndent(indent1))
             if (context.hasStringCastToKotlin) appendLine("""
@@ -653,8 +652,8 @@ class KotlinJvmForeignPrinter(
             val castedArgs = operation.args.joinToString {
                 when {
                     critical && it.type.isString() ->
-                        if(it.type.isNullable) "_${it.kname}_data, ${it.kname}?.length ?: -1, _${it.kname}_bytes?.size ?: -1"
-                        else "_${it.kname}_data, ${it.kname}.length, _${it.kname}_bytes.size"
+                        if(it.type.isNullable) "_${it.kname}_data, _${it.kname}_bytes?.size ?: -1"
+                        else "_${it.kname}_data, _${it.kname}_bytes.size"
                     critical && it.type.isArray() ->
                         if(it.type.isNullable) "_${it.kname}_elements, ${it.kname}?.size ?: -1"
                         else "_${it.kname}_elements, ${it.kname}.size"

@@ -64,7 +64,7 @@ class KotlinNativePrinter(
             if(context.hasStringCastToNative) appendLine("""
                 
                 private fun toNativeString(str: String?): COpaquePointer? = str?.encodeToByteArray()?.usePinned {
-                    ${context.mangle("string_new")}(it.addressOf(0), str.length, it.get().size.convert(), true)
+                    ${context.mangle("string_new")}(it.addressOf(0), it.get().size.convert(), true)
                 }
             """.trimIndent())
             if(context.hasStringCastToKotlin) appendLine("""
@@ -460,8 +460,8 @@ class KotlinNativePrinter(
                 val name = it.kname
                 when {
                     critical && it.type.isString() ->
-                        if(it.type.isNullable) "_${name}_pinned?.addressOf(0), $name?.length ?: -1, _${name}_bytes?.size ?: -1"
-                        else "_${name}_pinned.addressOf(0), $name.length, _${name}_bytes.size"
+                        if(it.type.isNullable) "_${name}_pinned?.addressOf(0), _${name}_bytes?.size ?: -1"
+                        else "_${name}_pinned.addressOf(0), _${name}_bytes.size"
                     critical && (it.type.isCharArray() || it.type.isBooleanArray()) ->
                         if(it.type.isNullable) "_${name}_pinned?.addressOf(0)?.reinterpret(), $name?.size ?: -1"
                         else "_${name}_pinned.addressOf(0).reinterpret(), $name.size"

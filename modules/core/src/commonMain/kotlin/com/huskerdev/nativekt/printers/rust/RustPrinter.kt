@@ -315,7 +315,7 @@ class RustPrinter(
             val args = operation.args.joinToString {
                 val name = it.rustName
                 when {
-                    critical && it.type.isString() -> "$name: *mut u8, _${name}_length: i32, _${name}_size: i32"
+                    critical && it.type.isString() -> "$name: *mut u8, _${name}_size: i32"
                     critical && it.type.isArray() -> "$name: *mut ${it.type.arrayTypeOrNull()!!.toRustType()}, _${name}_length: i32"
                     else -> "$name: ${it.type.toNativeRustType()}"
                 }
@@ -325,7 +325,7 @@ class RustPrinter(
                 val name = it.rustName
                 (if (it.type.isReleasable() && operation.isCritical()) "&" else "") + when {
                     critical && it.type.isString() ->
-                        if(it.type.isNullable) "critical_string_opt($name, _${name}_length, _${name}_size)"
+                        if(it.type.isNullable) "critical_string_opt($name, _${name}_size)"
                         else "critical_string($name, _${name}_size)"
                     critical && it.type.isArray() ->
                         if(it.type.isNullable) "critical_array_opt($name, _${name}_length)"

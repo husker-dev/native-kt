@@ -62,7 +62,7 @@ class KotlinJvmCIPrinter(
                 val name = arg.kname
                 val result = "$name: ${arg.type.toCriticalKotlinType()}"
                 when {
-                    arg.type.isString() -> "$result, __len_$name: Int, __size_$name: Int"
+                    arg.type.isString() -> "$result, __size_$name: Int"
                     arg.type.isArray()  -> "$result, __len_$name: Int"
                     else -> result
                 }
@@ -126,7 +126,7 @@ class KotlinJvmCIPrinter(
                     interfaceAsLong = true
                 )}::class.java"
                 when {
-                    it.type.isString() -> listOf(clazz, "Int::class.java", "Int::class.java")
+                    it.type.isString() -> listOf(clazz, "Int::class.java")
                     it.type.isArray() -> listOf(clazz, "Int::class.java")
                     else -> listOf(clazz)
                 }
@@ -223,7 +223,9 @@ internal fun toNativeCriticalType(
     val nullable = if(type.isNullable) "?" else ""
     val elseNum = if(type.isNullable) " ?: -1" else ""
     return when {
-        type.isString() -> "_bytes_$name, $name$nullable.length$elseNum, _bytes_$name.size"
+        type.isString() ->
+            if(type.isNullable) "_bytes_$name, if($name == null) -1 else _bytes_$name.size"
+            else "_bytes_$name, _bytes_$name.size"
         type.isEnum() -> "$name.ordinal"
         type.isEnumArray() -> "_ints_$name, $name$nullable.size$elseNum"
         type.isRawInterface() -> name

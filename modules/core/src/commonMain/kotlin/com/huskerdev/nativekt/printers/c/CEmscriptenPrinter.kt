@@ -48,8 +48,8 @@ class CEmscriptenPrinter(
 
         if(context.hasStringCastToNative) appendLine("""
             
-            EMSCRIPTEN_KEEPALIVE void* ${context.jsMangle["string_new"]}(const char* _Nullable data, const int32_t length, const int32_t size, const bool make_copy) {
-                return ${context.mangle("string_new")}(data, length, size, make_copy);
+            EMSCRIPTEN_KEEPALIVE void* ${context.jsMangle["string_new"]}(const char* _Nullable data, const int32_t size, const bool make_copy) {
+                return ${context.mangle("string_new")}(data, size, make_copy);
             }
         """.trimIndent())
         if(context.hasStringCastToKotlin) appendLine("""
@@ -59,9 +59,6 @@ class CEmscriptenPrinter(
             }
             EMSCRIPTEN_KEEPALIVE size_t ${context.jsMangle["string_size"]}(const void* _Nullable self) {
                 return ${context.mangle("string_size")}(self);
-            }
-            EMSCRIPTEN_KEEPALIVE int32_t ${context.jsMangle["string_length"]}(const void* _Nullable self) {
-                return ${context.mangle("string_length")}(self);
             }
             EMSCRIPTEN_KEEPALIVE void ${context.jsMangle["string_free"]}(void* _Nullable self) {
                 ${context.mangle("string_free")}(self);
@@ -242,7 +239,7 @@ class CEmscriptenPrinter(
                 val name = it.cname
                 when {
                     critical && it.type.isString() ->
-                        "const char* _Nullable $name, int32_t _${name}_size, int32_t _${name}_length"
+                        "const char* _Nullable $name, int32_t _${name}_size"
                     critical && it.type.isArray() ->
                         "const ${it.type.arrayTypeOrNull()!!.toLangType()}* _Nullable $name, int32_t _${name}_length"
                     else -> "${it.type.toLangType()} $name"
@@ -252,7 +249,7 @@ class CEmscriptenPrinter(
                 val name = it.cname
                 when {
                     critical && it.type.isString() ->
-                        "$name, _${name}_size, _${name}_length"
+                        "$name, _${name}_size"
                     critical && it.type.isArray() ->
                         "$name, _${name}_length"
                     else -> name

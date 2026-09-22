@@ -149,7 +149,7 @@ class KotlinJsPrinter(
                     val bytes = of.encodeToByteArray()
                     val data = _module.alloc(bytes.size)
                     bytes.forEachIndexed(Int8Array(_memory, data, bytes.size)::set)
-                    return _module.string_new(data, of.length, bytes.size, false)
+                    return _module.string_new(data, bytes.size, false)
                 }
             """.trimIndent())
             if (context.hasStringCastToKotlin) appendLine("""
@@ -570,7 +570,7 @@ class KotlinJsPrinter(
         if(context.hasStringCast) {
             if(context.hasStringCastToNative) append("""
                 
-                @JsName("${jsMangle("string_new")}") fun string_new(data: Int, length: Int, size: Int, makeCopy: Boolean): Int
+                @JsName("${jsMangle("string_new")}") fun string_new(data: Int, size: Int, makeCopy: Boolean): Int
             """.replaceIndent("\t"))
             if(context.hasStringCastToKotlin) append("""
                 
@@ -708,7 +708,7 @@ class KotlinJsPrinter(
             val critical = operation.isCritical()
             val args = operation.args.joinToString {
                 when {
-                    critical && it.type.isString() -> "${it.kname}: ${it.type.toKtJsType()}, _${it.kname}_size: Int, _${it.kname}_length: Int"
+                    critical && it.type.isString() -> "${it.kname}: ${it.type.toKtJsType()}, _${it.kname}_size: Int"
                     critical && it.type.isArray() -> "${it.kname}: ${it.type.toKtJsType()}, _${it.kname}_length: Int"
                     else -> "${it.kname}: ${it.type.toKtJsType()}"
                 }
@@ -783,8 +783,8 @@ class KotlinJsPrinter(
                 val name = it.kname
                 when {
                     critical && it.type.isString() ->
-                        if(it.type.isNullable) "_${name}_native, $name?.length ?: -1, _${name}_bytes?.size ?: -1"
-                        else "_${name}_native, $name.length, _${name}_bytes.size"
+                        if(it.type.isNullable) "_${name}_native, _${name}_bytes?.size ?: -1"
+                        else "_${name}_native, _${name}_bytes.size"
                     critical && it.type.isArray() ->
                         if(it.type.isNullable) "_${name}_native, $name?.size ?: -1"
                         else "_${name}_native, $name.size"
