@@ -33,10 +33,8 @@ kotlin {
             implementation(project(":modules:runtime"))
         }
         jvmMain {
-            java.sourceSets.getByName("jvmMain").apply {
-                java.srcDirs(boltFfiJar.flatMap { it.sourcesDir })
-                resources.srcDir(boltFfiJar.flatMap { it.resourcesDir })
-            }
+            kotlin.srcDirs(boltFfiJar.flatMap { it.sourcesDir })
+            resources.srcDirs(boltFfiJar.flatMap { it.resourcesDir })
         }
     }
 }
