@@ -1,7 +1,7 @@
 
 namespace global {
     void callJni();
-    int callJniAdd(int a, int b);
+    i32 callJniAdd(i32 a, i32 b);
     void callJniString(string arg);
 
     [Critical] void callCriticalJniString(string arg);

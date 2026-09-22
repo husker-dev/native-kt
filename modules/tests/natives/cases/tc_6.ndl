@@ -1,5 +1,5 @@
 namespace global {
-    void stub1(Array<long> e);
+    void stub1(Array<i64> e);
     void stub2(Array<MyEnum> e);
 };
 

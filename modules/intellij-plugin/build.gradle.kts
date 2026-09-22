@@ -56,6 +56,6 @@ tasks {
 
     generateLexer {
         sourceFile = File("src/main/kotlin/com/huskerdev/nativekt/intellij/lexer/ndl.flex")
-        targetRootOutputDir = File("src/main/gen/com/huskerdev/nativekt/intellij/lexer")
+        targetRootOutputDir = File("src/main/gen")
     }
 }

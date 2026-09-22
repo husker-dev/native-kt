@@ -1,10 +1,10 @@
 
 namespace global {
     void callForeign();
-    int callForeignAdd(int a, int b);
+    i32 callForeignAdd(i32 a, i32 b);
     void callForeignString(string arg);
 
     [Critical] void callCriticalForeign();
-    [Critical] int callCriticalForeignAdd(int a, int b);
+    [Critical] i32 callCriticalForeignAdd(i32 a, i32 b);
     [Critical] void callCriticalForeignString(string arg);
 };

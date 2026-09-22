@@ -10,5 +10,5 @@ dictionary EmptyDictionary1: EmptyDictionary {
 };
 
 dictionary MyDictionary {
-    int a;
+    i32 a;
 };
