@@ -125,7 +125,7 @@ class KotlinJvmJniPrinter(
             val casts = arrayListOf<String>()
             val castedArgs = function.args.joinToString {
                 when {
-                    critical && it.type.isString() -> {
+                    it.type.isString() -> {
                         if(it.type.isNullable) {
                             casts += "val _${it.kname}_bytes = ${it.kname}?.encodeToByteArray()"
                             "_${it.kname}_bytes, _${it.kname}_bytes?.size ?: -1"
@@ -134,7 +134,7 @@ class KotlinJvmJniPrinter(
                             "_${it.kname}_bytes, _${it.kname}_bytes.size"
                         }
                     }
-                    critical && it.type.isArray() ->
+                    it.type.isPrimitiveArray() || it.type.isEnumArray() ->
                         if(it.type.isNullable) "${it.kname}, ${it.kname}?.size ?: -1"
                         else "${it.kname}, ${it.kname}.size"
                     else -> castToNative(it.type, it.kname)
@@ -164,7 +164,6 @@ class KotlinJvmJniPrinter(
             return
 
         context.allOperations.forEachIndexed { i, function ->
-            val critical = function.isCritical()
             val isAndroidFastNative = isAndroidCriticalEnabled && function.isCritical() && !function.isAndroidCriticalCapable()
             val isAndroidCriticalNative = isAndroidCriticalEnabled && function.isCritical() && function.isAndroidCriticalCapable()
 
@@ -179,8 +178,9 @@ class KotlinJvmJniPrinter(
                 when {
                     isAndroidCriticalNative && it.type.isInterface() -> "${it.kname}: Long"
                     isAndroidCriticalNative && it.type.isEnum() -> "${it.kname}: Int"
-                    critical && it.type.isString() -> "${it.kname}: ${it.type.toKotlinType(stringAsBytes = true)}, _${it.kname}_size: Int"
-                    critical && it.type.isArray() -> "${it.kname}: ${it.type.toKotlinType(stringAsBytes = true)}, _${it.kname}_length: Int"
+                    it.type.isString() -> "${it.kname}: ${it.type.toKotlinType(stringAsBytes = true)}, _${it.kname}_size: Int"
+                    it.type.isPrimitiveArray() || it.type.isEnumArray() ->
+                        "${it.kname}: ${it.type.toKotlinType(stringAsBytes = true)}, _${it.kname}_length: Int"
                     else -> "${it.kname}: ${it.type.toKotlinType(stringAsBytes = true)}"
                 }
             }

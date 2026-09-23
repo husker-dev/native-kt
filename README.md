@@ -48,8 +48,8 @@ nativekt_foreign_critical_string  avgt    5     7,403 ±    0,183  ns/op
 
 nativekt_jni_empty                avgt    5     2,499 ±    0,006  ns/op
 nativekt_jni_add                  avgt    5     2,522 ±    0,092  ns/op
-nativekt_jni_string               avgt    5    83,313 ±    0,808  ns/op
-nativekt_jni_critical_string      avgt    5    62,610 ±    0,813  ns/op
+nativekt_jni_string               avgt    5    52,576 ±    0,437  ns/op
+nativekt_jni_critical_string      avgt    5    36,366 ±    0,314  ns/op
 
 nativekt_jvmci_empty              avgt    5     1,249 ±    0,011  ns/op
 nativekt_jvmci_add                avgt    5     1,254 ±    0,021  ns/op
