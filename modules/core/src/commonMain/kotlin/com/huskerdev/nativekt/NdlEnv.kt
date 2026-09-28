@@ -3,7 +3,7 @@ package com.huskerdev.nativekt
 import com.huskerdev.webidl.WebIDLEnv
 import com.huskerdev.webidl.resolver.WebIDLBuiltinKind
 
-class NdlEnv: WebIDLEnv {
+object NdlEnv: WebIDLEnv {
     override val builtinTypes = hashMapOf(
         "void" to WebIDLBuiltinKind.VOID,
         "char" to WebIDLBuiltinKind.CHAR,
@@ -21,4 +21,5 @@ class NdlEnv: WebIDLEnv {
         "string" to WebIDLBuiltinKind.STRING,
         "Array" to WebIDLBuiltinKind.LIST,
     )
+    override val overloadingSupport: Boolean = false
 }

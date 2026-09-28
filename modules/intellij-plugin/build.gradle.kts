@@ -1,10 +1,10 @@
+import org.jetbrains.intellij.platform.gradle.tasks.PrepareSandboxTask
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     id("java")
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.intellij.platform)
-    alias(libs.plugins.intellij.platform.grammarkit)
 }
 
 group = "com.huskerdev"
@@ -19,14 +19,13 @@ repositories {
     }
 }
 
-sourceSets["main"].java.srcDirs("src/main/gen")
-
 dependencies {
     intellijPlatform {
         intellijIdea("2025.3.3")
 
         bundledPlugin("org.jetbrains.kotlin")
     }
+    implementation("$group:core")
 }
 
 tasks {
@@ -44,6 +43,10 @@ tasks {
         untilBuild = provider { null }
     }
 
+    named<PrepareSandboxTask>("prepareSandbox_runIde") {
+        disabledPlugins.add("com.intellij.kubernetes") // Throws an exception every run
+    }
+
     signPlugin {
         certificateChain.set(System.getenv("CERTIFICATE_CHAIN"))
         privateKey.set(System.getenv("PRIVATE_KEY"))
@@ -54,8 +57,4 @@ tasks {
         token.set(System.getenv("PUBLISH_TOKEN"))
     }
 
-    generateLexer {
-        sourceFile = File("src/main/kotlin/com/huskerdev/nativekt/intellij/lexer/ndl.flex")
-        targetRootOutputDir = File("src/main/gen")
-    }
 }

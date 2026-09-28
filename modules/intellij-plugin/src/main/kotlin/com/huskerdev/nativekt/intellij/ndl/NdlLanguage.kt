@@ -1,4 +1,4 @@
-package com.huskerdev.nativekt.intellij
+package com.huskerdev.nativekt.intellij.ndl
 
 import com.intellij.lang.Language
 

@@ -16,7 +16,7 @@ android_test_juint = "1.1.5"  # old versions to allow testing on SDK < 21
 
 # == Tools ==
 intellij_platform = "2.19.0"
-webidl = "1.0.5"
+webidl = "1.1.0"
 osutils = "1.0.0"
 filekit = "0.16.0"
 env_var = "1.0.6"
@@ -57,7 +57,6 @@ kotlin-atomicfu              = { id = "org.jetbrains.kotlin.plugin.atomicfu", ve
 kotlinx-benchmark            = { id = "org.jetbrains.kotlinx.benchmark", version.ref = "kotlin_benchmark" }
 
 intellij-platform            = { id = "org.jetbrains.intellij.platform", version.ref = "intellij_platform" }
-intellij-platform-grammarkit = { id = "org.jetbrains.intellij.platform.grammarkit", version.ref = "intellij_platform" }
 
 gobley-cargo                 = { id = "dev.gobley.cargo", version.ref = "gobley" }
 gobley-uniffy                = { id = "dev.gobley.uniffi", version.ref = "gobley" }

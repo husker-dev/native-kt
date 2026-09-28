@@ -30,7 +30,7 @@ fun <T> ResolvedIdlType.Default.arrayType(block: (type: ResolvedIdlType.Default)
 }
 
 private fun ResolvedIdlOperation.hasAttribute(name: String): Boolean =
-    attributes.any { it.name.lowercase() == name }
+    attributes?.any { it.name.text.lowercase() == name } ?: false
 
 
 internal fun ResolvedIdlOperation.getInterface(context: NativeModuleContext) =
@@ -38,24 +38,24 @@ internal fun ResolvedIdlOperation.getInterface(context: NativeModuleContext) =
 
 internal fun ResolvedIdlOperation.isInterfaceOperation() = hasAttribute("__interface")
 
-internal fun ResolvedIdlOperation.interfaceName(): String = attributes
+internal fun ResolvedIdlOperation.interfaceName(): String = attributes!!
     .filterIsInstance<IdlExtendedAttribute.StringValue>()
-    .first { it.name.lowercase() == "__interface" }
+    .first { it.name.text.lowercase() == "__interface" }
     .value
 
-internal fun ResolvedIdlOperation.interfaceFunctionName(): String = attributes
+internal fun ResolvedIdlOperation.interfaceFunctionName(): String = attributes!!
     .filterIsInstance<IdlExtendedAttribute.StringValue>()
-    .first { it.name.lowercase() == "__interface_fn" }
+    .first { it.name.text.lowercase() == "__interface_fn" }
     .value
 
-internal fun ResolvedIdlOperation.interfaceConstructorNameOrNull(): String? = attributes
+internal fun ResolvedIdlOperation.interfaceConstructorNameOrNull(): String? = attributes!!
     .filterIsInstance<IdlExtendedAttribute.IdentifierValue>()
-    .firstOrNull { it.name.lowercase() == "name" }
-    ?.identifier
+    .firstOrNull { it.name.text.lowercase() == "name" }
+    ?.identifier?.text
 
-internal fun ResolvedIdlOperation.interfaceConstructorIndex(): Int = attributes
+internal fun ResolvedIdlOperation.interfaceConstructorIndex(): Int = attributes!!
     .filterIsInstance<IdlExtendedAttribute.IntegerValue>()
-    .first { it.name.lowercase() == "__interface_new" }
+    .first { it.name.text.lowercase() == "__interface_new" }
     .value
 
 internal fun ResolvedIdlOperation.isInterfaceOperationConstructor() = hasAttribute("__interface_new")
@@ -80,8 +80,8 @@ internal fun ResolvedIdlOperation.isAndroidCriticalCapable(): Boolean =
             args.all { !it.type.isArray() && !it.type.isString() }
 
 internal fun ResolvedIdlEnum.defaultValue(): String? =
-    attributes.filterIsInstance<IdlExtendedAttribute.IdentifierValue>()
-        .firstOrNull { it.name == "default" }?.identifier
+    attributes?.filterIsInstance<IdlExtendedAttribute.IdentifierValue>()
+        ?.firstOrNull { it.name.text == "default" }?.identifier?.text
 
 fun checkForLongTypes(
     context: NativeModuleContext,

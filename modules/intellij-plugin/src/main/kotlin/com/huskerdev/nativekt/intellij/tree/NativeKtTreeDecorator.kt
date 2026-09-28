@@ -1,5 +1,6 @@
-package com.huskerdev.nativekt.intellij
+package com.huskerdev.nativekt.intellij.tree
 
+import com.huskerdev.nativekt.intellij.NativeKtIcons
 import com.intellij.ide.projectView.PresentationData
 import com.intellij.ide.projectView.ProjectViewNode
 import com.intellij.ide.projectView.ProjectViewNodeDecorator

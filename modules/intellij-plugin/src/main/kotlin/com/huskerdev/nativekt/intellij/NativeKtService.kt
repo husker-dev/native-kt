@@ -1,4 +1,4 @@
-package com.huskerdev.nativekt.intellij
+package com.huskerdev.nativekt.intellij.tree
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service

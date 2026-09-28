@@ -39,7 +39,7 @@ class NativeModuleContext(
 
     private val idl = WebIDL.resolve(
         text = module.resolveNdlFile().readSync(),
-        env = NdlEnv()
+        env = NdlEnv
     )
 
     val debug = configuration.debug
@@ -491,8 +491,8 @@ private fun createJsMangleMap(context: NativeModuleContext) = buildList {
 }.toMap()
 
 fun ResolvedIdlInterface.toOperations() = buildList {
-    val interfaceTagAttribute = IdlExtendedAttribute.StringValue("__interface", name)
-    val criticalAttribute = IdlExtendedAttribute.NoArgs("critical")
+    val interfaceTagAttribute = IdlExtendedAttribute.StringValue(IdlName("__interface"), name)
+    val criticalAttribute = IdlExtendedAttribute.NoArgs(IdlName("critical"))
 
     val longType = ResolvedIdlType.Default(
         BuiltinIdlDeclaration("long", LONG),
@@ -506,7 +506,7 @@ fun ResolvedIdlInterface.toOperations() = buildList {
     )
     val rawInterfaceArg = ResolvedIdlField.Argument(
         "_self", rawInterfaceType, null,
-        isOptional = false, isVariadic = false, attributes = listOf(interfaceTagAttribute)
+        isOptional = false, isVariadic = false, attributes = IdlAttributes(listOf(interfaceTagAttribute))
     )
 
     constructors.forEachIndexed { index, constructor ->
@@ -515,11 +515,11 @@ fun ResolvedIdlInterface.toOperations() = buildList {
             type = rawInterfaceType,
             args = constructor.args,
             isStatic = false,
-            attributes = buildList {
+            attributes = IdlAttributes(buildList {
                 add(interfaceTagAttribute)
-                add(IdlExtendedAttribute.IntegerValue("__interface_new", index))
-                addAll(constructor.attributes)
-            }
+                add(IdlExtendedAttribute.IntegerValue(IdlName("__interface_new"), index))
+                addAll(constructor.attributes ?: emptyList())
+            })
         ))
     }
     operations.forEach { operation ->
@@ -531,11 +531,11 @@ fun ResolvedIdlInterface.toOperations() = buildList {
                 addAll(operation.args)
             },
             isStatic = false,
-            attributes = buildList {
+            attributes = IdlAttributes(buildList {
                 add(interfaceTagAttribute)
-                add(IdlExtendedAttribute.StringValue("__interface_fn", operation.name))
-                addAll(operation.attributes)
-            }
+                add(IdlExtendedAttribute.StringValue(IdlName("__interface_fn"), operation.name))
+                addAll(operation.attributes ?: emptyList())
+            })
         ))
     }
 
@@ -545,7 +545,7 @@ fun ResolvedIdlInterface.toOperations() = buildList {
         type = ResolvedIdlType.Void("void"),
         args = listOf(rawInterfaceArg),
         isStatic = false,
-        attributes = listOf(interfaceTagAttribute, IdlExtendedAttribute.NoArgs("__interface_free"))
+        attributes = IdlAttributes(listOf(interfaceTagAttribute, IdlExtendedAttribute.NoArgs(IdlName(("__interface_free")))))
     ))
 
     // clone
@@ -554,7 +554,7 @@ fun ResolvedIdlInterface.toOperations() = buildList {
         type = rawInterfaceType,
         args = listOf(rawInterfaceArg),
         isStatic = false,
-        attributes = listOf(interfaceTagAttribute, criticalAttribute, IdlExtendedAttribute.NoArgs("__interface_clone"))
+        attributes = IdlAttributes(listOf(interfaceTagAttribute, criticalAttribute, IdlExtendedAttribute.NoArgs(IdlName("__interface_clone"))))
     ))
 
     // address
@@ -563,6 +563,6 @@ fun ResolvedIdlInterface.toOperations() = buildList {
         type = longType,
         args = listOf(rawInterfaceArg),
         isStatic = false,
-        attributes = listOf(interfaceTagAttribute, criticalAttribute, IdlExtendedAttribute.NoArgs("__interface_address"))
+        attributes = IdlAttributes(listOf(interfaceTagAttribute, criticalAttribute, IdlExtendedAttribute.NoArgs(IdlName("__interface_address"))))
     ))
 }

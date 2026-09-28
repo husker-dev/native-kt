@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlin.serialization)
@@ -7,7 +9,14 @@ group = "com.huskerdev"
 version = projectDir.parentFile.parentFile.resolve("VERSION").readText().trim()
 
 kotlin {
-    jvm()
+    jvm {
+        compilations.configureEach {
+            compileTaskProvider.get().compilerOptions {
+                jvmTarget = JvmTarget.JVM_11
+            }
+        }
+    }
+
     macosArm64()
     mingwX64()
     linuxX64()
@@ -15,9 +24,9 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation(libs.webidl)
-            implementation(libs.osutils)
-            implementation(libs.filekit)
+            api(libs.webidl)
+            api(libs.osutils)
+            api(libs.filekit)
             implementation(libs.envvar)
 
             implementation(libs.kotlinx.serialization)
@@ -28,6 +37,11 @@ kotlin {
             implementation(kotlin("test"))
         }
     }
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
 }
 
 project.afterEvaluate {

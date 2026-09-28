@@ -14,24 +14,95 @@
     </extensions>
 
     <extensions defaultExtensionNs="com.intellij">
-        <projectService
-                serviceImplementation="com.huskerdev.nativekt.intellij.NativeKtService"/>
-        <postStartupActivity
-                implementation="com.huskerdev.nativekt.intellij.StartupActivity"/>
-        <projectViewNodeDecorator
-                implementation="com.huskerdev.nativekt.intellij.NativeKtTreeDecorator"/>
-        <fileType
-                name="NDL File"
-                implementationClass="com.huskerdev.nativekt.intellij.NdlFileType"
-                fieldName="INSTANCE"
-                language="NDL"
-                extensions="ndl"/>
-        <lang.syntaxHighlighterFactory
-                implementationClass="com.huskerdev.nativekt.intellij.highlight.NdlSyntaxHighlighterFactory"
-                language="NDL"/>
         <dependencySupport
-                kind="kotlin"
-                coordinate="com.huskerdev:native-kt-runtime"
-                displayName="native-kt"/>
+            kind="kotlin"
+            coordinate="com.huskerdev:native-kt-runtime"
+            displayName="native-kt"/>
+
+        <projectService
+                serviceImplementation="com.huskerdev.nativekt.intellij.tree.NativeKtService"/>
+        <postStartupActivity
+                implementation="com.huskerdev.nativekt.intellij.tree.NativeKtStartupActivity"/>
+
+        <fileType
+            name="NDL"
+            implementationClass="com.huskerdev.nativekt.intellij.ndl.NdlFileType"
+            fieldName="INSTANCE"
+            language="NDL"
+            extensions="ndl"/>
+
+        <!-- Tree -->
+
+        <projectViewNodeDecorator
+            implementation="com.huskerdev.nativekt.intellij.tree.NativeKtTreeDecorator"/>
+
+        <!-- Completion -->
+
+        <completion.contributor
+            language="NDL"
+            implementationClass="com.huskerdev.nativekt.intellij.ndl.completion.NdlCompletionContributor"/>
+
+        <!-- Highlight -->
+
+        <lang.syntaxHighlighterFactory
+            implementationClass="com.huskerdev.nativekt.intellij.ndl.highlight.NdlSyntaxHighlighterFactory"
+            language="NDL"/>
+
+        <externalAnnotator
+            language="NDL"
+            implementationClass="com.huskerdev.nativekt.intellij.ndl.highlight.NdlSyntaxErrorAnnotator"/>
+
+        <annotator
+            language="NDL"
+            implementationClass="com.huskerdev.nativekt.intellij.ndl.highlight.NdlHighlightingAnnotator"/>
+
+        <!-- Navigation -->
+
+        <lang.findUsagesProvider
+            language="NDL"
+            implementationClass="com.huskerdev.nativekt.intellij.ndl.navigation.NdlFindUsagesProvider"/>
+
+        <gotoSymbolContributor
+            implementation="com.huskerdev.nativekt.intellij.ndl.navigation.NdlChooseByNameContributor"/>
+
+        <iconProvider
+            implementation="com.huskerdev.nativekt.intellij.ndl.navigation.NdlIconProvider"/>
+
+        <usageTypeProvider
+            language="NDL"
+            implementation="com.huskerdev.nativekt.intellij.ndl.navigation.NdlUsageTypeProvider"/>
+
+        <usageGroupingRuleProvider
+            language="NDL"
+            implementation="com.huskerdev.nativekt.intellij.ndl.navigation.NdlUsageGroupingRuleProvider"/>
+
+        <!-- Parser -->
+
+        <lang.parserDefinition
+            implementationClass="com.huskerdev.nativekt.intellij.ndl.parser.NdlParserDefinition"
+            language="NDL"/>
+
+        <!-- PSI -->
+
+        <lang.ast.factory
+            language="NDL"
+            implementationClass="com.huskerdev.nativekt.intellij.ndl.psi.NdlAstFactory"/>
+
+        <lang.refactoringSupport
+            language="NDL"
+            implementationClass="com.huskerdev.nativekt.intellij.ndl.psi.NdlRefactoringSupportProvider"/>
+
+        <lang.foldingBuilder
+            implementationClass="com.huskerdev.nativekt.intellij.ndl.psi.NdlFoldingBuilder"
+            language="NDL"/>
+
+        <lang.braceMatcher
+            language="NDL"
+            implementationClass="com.huskerdev.nativekt.intellij.ndl.highlight.NdlBraceMatcher"/>
+
+        <lang.psiStructureViewFactory
+            language="NDL"
+            implementationClass="com.huskerdev.nativekt.intellij.ndl.structure.NdlStructureViewFactory"/>
+
     </extensions>
 </idea-plugin>

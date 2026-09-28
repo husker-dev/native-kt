@@ -25,15 +25,12 @@ java {
 }
 
 dependencies {
-    implementation(libs.webidl)
-    implementation(libs.osutils)
-    implementation(libs.filekit)
+    implementation("$group:core")
 
     implementation(libs.kotlin.gradle.plugin)
     implementation(libs.kotlinx.serialization)
 
     compileOnly(libs.android.gradle)
-    implementation("$group:core")
 }
 
 tasks.jar {

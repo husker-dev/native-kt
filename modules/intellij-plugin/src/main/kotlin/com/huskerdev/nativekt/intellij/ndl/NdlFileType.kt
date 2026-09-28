@@ -1,4 +1,4 @@
-package com.huskerdev.nativekt.intellij
+package com.huskerdev.nativekt.intellij.ndl
 
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.fileTypes.LanguageFileType
@@ -13,7 +13,7 @@ class NdlFileType private constructor() : LanguageFileType(NdlLanguage.INSTANCE)
     }
 
     override fun getName(): String =
-        "NDL File"
+        "NDL"
 
     override fun getDescription(): String =
         "Native-kt description language file"
