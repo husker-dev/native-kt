@@ -36,7 +36,7 @@ internal val ResolvedIdlInterface.rustName: String
     get() = "crate::${name.upperCamelCase()}"
 
 internal fun ResolvedIdlType.toNativeRustType(ptrType: String = "mut"): String = when {
-    isReleasable() -> "*$ptrType ${toRustType(printOption = false)}"
+    isReleasable() || ((isPrimitive() || isEnum()) && isNullable) -> "*$ptrType ${toRustType(printOption = false)}"
     isRawInterface() -> "usize"
     else -> toRustType()
 }

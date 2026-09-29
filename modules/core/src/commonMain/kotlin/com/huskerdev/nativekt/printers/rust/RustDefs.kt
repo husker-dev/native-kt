@@ -58,6 +58,24 @@ internal fun StringBuilder.printHeaderDef(context: NativeModuleContext) {
             Box::into_raw(Box::new(of))
         }
     """.trimIndent())
+    if(context.hasNullablePrimitivesCast || context.hasEnumNullable) appendLine("""
+        
+        fn into_raw_primitive<T>(of: T) -> *mut T {
+        	unsafe {
+        		let result = alloc(Layout::from_size_align_unchecked(size_of::<T>(), align_of::<T>())) as *mut T;
+        		result.write(of);
+        		result
+        	}
+        }
+
+        fn from_raw_primitive<T>(of: *mut T) -> T {
+        	unsafe {
+        		let result = of.read();
+        		dealloc(of as *mut u8, Layout::from_size_align_unchecked(size_of::<T>(), align_of::<T>()));
+        		result
+        	}
+        }
+    """.trimIndent())
     if(context.hasNullableCastToNative) appendLine("""
         
         fn ptr_opt<T, R>(ptr: *mut T, f: fn(*mut T) -> R) -> Option<R> {

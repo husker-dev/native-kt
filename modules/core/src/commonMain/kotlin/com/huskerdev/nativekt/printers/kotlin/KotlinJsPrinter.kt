@@ -164,6 +164,57 @@ class KotlinJsPrinter(
             """.trimIndent())
         }
 
+        if(context.hasNullablePrimitivesCast || context.hasEnumNullable) {
+            printLabel("Nullable primitives")
+
+            listOf(
+                Triple("Char" to "Int16Array", context.hasCharNullableToNative, context.hasCharNullableToKotlin),
+                Triple("Boolean" to "Int8Array", context.hasBooleanNullableToNative, context.hasBooleanNullableToKotlin),
+                Triple("Byte" to "Int8Array",
+                    context.hasByteNullableToNative || context.hasUByteNullableToNative,
+                    context.hasByteNullableToKotlin || context.hasUByteNullableToKotlin),
+                Triple("Short" to "Int16Array",
+                    context.hasShortNullableToNative || context.hasUShortNullableToNative,
+                    context.hasShortNullableToKotlin || context.hasUShortNullableToKotlin),
+                Triple("Int" to "Int32Array",
+                    context.hasIntNullableToNative || context.hasUIntNullableToNative || context.hasEnumNullableToNative,
+                    context.hasIntNullableToKotlin || context.hasUIntNullableToKotlin || context.hasEnumNullableToKotlin),
+                Triple("Long" to "BigInt64Array",
+                    context.hasLongNullableToNative || context.hasULongNullableToNative,
+                    context.hasLongNullableToKotlin || context.hasULongNullableToKotlin),
+                Triple("Float" to "Float32Array", context.hasFloatNullableToNative, context.hasFloatNullableToKotlin),
+                Triple("Double" to "Float64Array", context.hasDoubleNullableToNative, context.hasDoubleNullableToKotlin),
+            ).forEach { (names, hasToNative, hasToKotlin) ->
+                val name = names.first
+                val arrType = names.second
+                val size = if(name == "Boolean")
+                    "1" else "$name.SIZE_BYTES"
+                val cast = when (name) {
+                    "Char" -> ".toInt().toChar()"
+                    "Boolean" -> ".toBoolean()"
+                    else -> ""
+                }
+
+                appendLine("\n// $name")
+                if(hasToNative) appendLine("""
+                    
+                    private fun toNative${name}Nullable(of: $name?): Int {
+                        if(of == null) return 0
+                        return _module.alloc($size)
+                            .also { $arrType(_memory, it, $size)[0] = of }
+                    }
+                """.trimIndent())
+                if(hasToKotlin) appendLine("""
+                    
+                    private fun toKotlin${name}Nullable(of: Int, free: Boolean): $name? {
+                        if(of == 0) return null
+                        return $arrType(_memory, of, $size)[0]$cast
+                            .also { if(free) _module.dealloc(of, $size) }
+                    }
+                """.trimIndent())
+            }
+        }
+
         if(context.hasPrimitiveArrayCast) {
             printLabel("Primitive arrays")
 
@@ -937,6 +988,11 @@ class KotlinJsPrinter(
         val isRust = context.language == Language.RUST
         val pure = if(pureArrayData) ", pure = true" else ""
         return when {
+            type.isPrimitive() && type.isNullable ->
+                "toNative${type.toKotlinType(ignoreUnsigned = true, printNullable = false)}Nullable(${castToSigned(type, content)})"
+            type.isEnum() ->
+                if(type.isNullable) "toNativeIntNullable($content?.ordinal)"
+                else "$content.ordinal"
             !isRust && type.isBoolean() -> "$content.toInt()"
             isRust && type.isUInt() -> "$content.toDouble()"
             type.isUByte() || type.isUShort() -> castToSigned(type, content, smallTypesAsInt = true)
@@ -972,6 +1028,11 @@ class KotlinJsPrinter(
         val isRust = context.language == Language.RUST
         val assert = if(type.isNullable) "" else "!!"
         return when {
+            type.isPrimitive() && type.isNullable ->
+                castToUnsigned(type, "toKotlin${type.toKotlinType(ignoreUnsigned = true, printNullable = false)}Nullable($content, free = $free)")
+            type.isEnum() ->
+                if(type.isNullable) "toKotlinIntNullable($content, free = $free)?.let { ${type.declaration.kname}.entries[it] }"
+                else "${type.declaration.kname}.entries[$content]"
             !isRust && type.isBoolean() -> "$content.toBoolean()"
             isRust && type.isULong() -> "$content.fromUnsignedBigInt()"
             type.isPrimitive() && type.isUnsigned() -> castToUnsigned(type, castToKotlin(type.toSignedType(), content, free))
@@ -1004,6 +1065,7 @@ class KotlinJsPrinter(
     private fun ResolvedIdlType.toKtJsType(): String {
         val isRust = context.language == Language.RUST
         return when {
+            (isPrimitive() || isEnum()) && isNullable -> "Int"
             isRust && isUInt() -> "Double"
             isRust && isBoolean() -> "Boolean"
             isVoid() -> "Unit"
@@ -1016,6 +1078,7 @@ class KotlinJsPrinter(
 
     private fun ResolvedIdlType.toInternalDesc(): String = when {
         isVoid() -> "v"
+        (isPrimitive() || isEnum()) && isNullable -> "i"
         isFloat() -> "f"
         isDouble() -> "d"
         isLong() || isULong() -> "j"

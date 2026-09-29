@@ -20,8 +20,18 @@ class Rust_ReturnPrimitive {
     }
 
     @Test
+    fun returnCharN() = withRustLib {
+        assertNull(natives.testrs.returnCharN())
+    }
+
+    @Test
     fun returnBoolean() = withRustLib {
         assertEquals(true, natives.testrs.returnBoolean())
+    }
+
+    @Test
+    fun returnBooleanN() = withRustLib {
+        assertEquals(true, natives.testrs.returnBooleanN())
     }
 
     @Test
@@ -30,8 +40,18 @@ class Rust_ReturnPrimitive {
     }
 
     @Test
+    fun returnByteN() = withRustLib {
+        assertNull(natives.testrs.returnByteN())
+    }
+
+    @Test
     fun returnUByte() = withRustLib {
         assertEquals(UByte.MAX_VALUE, natives.testrs.returnUByte())
+    }
+
+    @Test
+    fun returnUByteN() = withRustLib {
+        assertEquals(UByte.MAX_VALUE, natives.testrs.returnUByteN())
     }
 
     @Test
@@ -40,8 +60,18 @@ class Rust_ReturnPrimitive {
     }
 
     @Test
+    fun returnShortN() = withRustLib {
+        assertNull(natives.testrs.returnShortN())
+    }
+
+    @Test
     fun returnUShort() = withRustLib {
         assertEquals(UShort.MAX_VALUE, natives.testrs.returnUShort())
+    }
+
+    @Test
+    fun returnUShortN() = withRustLib {
+        assertEquals(UShort.MAX_VALUE, natives.testrs.returnUShortN())
     }
 
     @Test
@@ -50,8 +80,18 @@ class Rust_ReturnPrimitive {
     }
 
     @Test
+    fun returnIntN() = withRustLib {
+        assertNull(natives.testrs.returnIntN())
+    }
+
+    @Test
     fun returnUInt() = withRustLib {
         assertEquals(UInt.MAX_VALUE, natives.testrs.returnUInt())
+    }
+
+    @Test
+    fun returnUIntN() = withRustLib {
+        assertEquals(UInt.MAX_VALUE, natives.testrs.returnUIntN())
     }
 
     @Test
@@ -60,8 +100,18 @@ class Rust_ReturnPrimitive {
     }
 
     @Test
+    fun returnLongN() = withRustLib {
+        assertNull(natives.testrs.returnLongN())
+    }
+
+    @Test
     fun returnULong() = withRustLib {
         assertEquals(ULong.MAX_VALUE, natives.testrs.returnULong())
+    }
+
+    @Test
+    fun returnULongN() = withRustLib {
+        assertEquals(ULong.MAX_VALUE, natives.testrs.returnULongN())
     }
 
     @Test
@@ -70,8 +120,18 @@ class Rust_ReturnPrimitive {
     }
 
     @Test
+    fun returnFloatN() = withRustLib {
+        assertNull(natives.testrs.returnFloatN())
+    }
+
+    @Test
     fun returnDouble() = withRustLib {
         assertEquals(99.0, natives.testrs.returnDouble())
+    }
+
+    @Test
+    fun returnDoubleN() = withRustLib {
+        assertEquals(99.0, natives.testrs.returnDoubleN())
     }
 
     @Test
@@ -92,6 +152,11 @@ class Rust_ReturnPrimitive {
     @Test
     fun returnEnum() = withRustLib {
         assertEquals(MyEnum.CASE2, natives.testrs.returnEnum())
+    }
+
+    @Test
+    fun returnEnumN() = withRustLib {
+        assertEquals(MyEnum.CASE2, natives.testrs.returnEnumN())
     }
 
     @Test

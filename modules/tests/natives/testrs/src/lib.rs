@@ -52,10 +52,22 @@ pub fn pass_char(
     arg == 'a' as u16
 }
 
+pub fn pass_char_n(
+    arg: Option<u16>
+) -> bool {
+    arg.is_none() || arg.unwrap() == 'a' as u16
+}
+
 pub fn pass_boolean(
     arg: bool
 ) -> bool {
     arg == true
+}
+
+pub fn pass_boolean_n(
+    arg: Option<bool>
+) -> bool {
+    arg.is_none() || arg.unwrap() == true
 }
 
 pub fn pass_byte(
@@ -64,10 +76,22 @@ pub fn pass_byte(
     arg == 1
 }
 
+pub fn pass_byte_n(
+    arg: Option<i8>
+) -> bool {
+    arg.is_none() || arg.unwrap() == 1
+}
+
 pub fn pass_ubyte(
     arg: u8
 ) -> bool {
     arg == 255
+}
+
+pub fn pass_ubyte_n(
+    arg: Option<u8>
+) -> bool {
+    arg.is_none() || arg.unwrap() == 255
 }
 
 pub fn pass_short(
@@ -76,10 +100,22 @@ pub fn pass_short(
     arg == 1
 }
 
+pub fn pass_short_n(
+    arg: Option<i16>
+) -> bool {
+    arg.is_none() || arg.unwrap() == 1
+}
+
 pub fn pass_ushort(
     arg: u16
 ) -> bool {
     arg == 65535
+}
+
+pub fn pass_ushort_n(
+    arg: Option<u16>
+) -> bool {
+    arg.is_none() || arg.unwrap() == 65535
 }
 
 pub fn pass_int(
@@ -88,10 +124,22 @@ pub fn pass_int(
     arg == 99
 }
 
+pub fn pass_int_n(
+    arg: Option<i32>
+) -> bool {
+    arg.is_none() || arg.unwrap() == 99
+}
+
 pub fn pass_uint(
     arg: u32
 ) -> bool {
     arg == 4294967295
+}
+
+pub fn pass_uint_n(
+    arg: Option<u32>
+) -> bool {
+    arg.is_none() || arg.unwrap() == 4294967295
 }
 
 pub fn pass_long(
@@ -100,10 +148,22 @@ pub fn pass_long(
     arg == 9223372036854775805
 }
 
+pub fn pass_long_n(
+    arg: Option<i64>
+) -> bool {
+    arg.is_none() || arg.unwrap() == 9223372036854775805
+}
+
 pub fn pass_ulong(
     arg: u64
 ) -> bool {
     arg == 18446744073709551615
+}
+
+pub fn pass_ulong_n(
+    arg: Option<u64>
+) -> bool {
+    arg.is_none() || arg.unwrap() == 18446744073709551615
 }
 
 pub fn pass_float(
@@ -112,10 +172,22 @@ pub fn pass_float(
     f32_cmp(arg, 99.9)
 }
 
+pub fn pass_float_n(
+    arg: Option<f32>
+) -> bool {
+    arg.is_none() || arg.unwrap() == 99.9f32
+}
+
 pub fn pass_double(
     arg: f64
 ) -> bool {
     arg == 1.1
+}
+
+pub fn pass_double_n(
+    arg: Option<f64>
+) -> bool {
+    arg.is_none() || arg.unwrap() == 1.1
 }
 
 pub fn pass_string(
@@ -140,6 +212,12 @@ pub fn pass_enum(
     arg: MyEnum
 ) -> bool {
     arg == MyEnum::CASE2
+}
+
+pub fn pass_enum_n(
+    arg: Option<MyEnum>
+) -> bool {
+    arg.is_none() || arg.unwrap() == MyEnum::CASE2
 }
 
 pub fn pass_dictionary(
@@ -175,48 +253,96 @@ pub fn return_char() -> u16 {
     'a' as u16
 }
 
+pub fn return_char_n() -> Option<u16> {
+    None
+}
+
 pub fn return_boolean() -> bool {
     true
+}
+
+pub fn return_boolean_n() -> Option<bool> {
+    Some(true)
 }
 
 pub fn return_byte() -> i8 {
     99
 }
 
+pub fn return_byte_n() -> Option<i8> {
+    None
+}
+
 pub fn return_ubyte() -> u8 {
     255
+}
+
+pub fn return_ubyte_n() -> Option<u8> {
+    Some(255)
 }
 
 pub fn return_short() -> i16 {
     99
 }
 
+pub fn return_short_n() -> Option<i16> {
+    None
+}
+
 pub fn return_ushort() -> u16 {
     65535
+}
+
+pub fn return_ushort_n() -> Option<u16> {
+    Some(65535)
 }
 
 pub fn return_int() -> i32 {
     99
 }
 
+pub fn return_int_n() -> Option<i32> {
+    None
+}
+
 pub fn return_uint() -> u32 {
     4294967295
+}
+
+pub fn return_uint_n() -> Option<u32> {
+    Some(4294967295)
 }
 
 pub fn return_long() -> i64 {
     9223372036854775805
 }
 
+pub fn return_long_n() -> Option<i64> {
+    None
+}
+
 pub fn return_ulong() -> u64 {
     18446744073709551615
+}
+
+pub fn return_ulong_n() -> Option<u64> {
+    Some(18446744073709551615)
 }
 
 pub fn return_float() -> f32 {
     99.0
 }
 
+pub fn return_float_n() -> Option<f32> {
+    None
+}
+
 pub fn return_double() -> f64 {
     99.0
+}
+
+pub fn return_double_n() -> Option<f64> {
+    Some(99.0)
 }
 
 pub fn return_string() -> String {
@@ -233,6 +359,10 @@ pub fn return_string_n() -> Option<String> {
 
 pub fn return_enum() -> MyEnum {
     MyEnum::CASE2
+}
+
+pub fn return_enum_n() -> Option<MyEnum> {
+    Some(MyEnum::CASE2)
 }
 
 pub fn return_dictionary() -> MyDictionary {

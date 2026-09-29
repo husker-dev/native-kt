@@ -50,20 +50,20 @@ internal fun ResolvedIdlType.toKotlinType(
     val nullable = if(isNullable && printNullable) "?" else ""
     return when {
         isVoid() -> "Unit"
-        isChar() -> "Char"
-        isBoolean() -> "Boolean"
-        isByte() -> "Byte"
-        isUByte() -> if(smallUnsignedTypesAsInt) "Int" else if(ignoreUnsigned) "Byte" else "UByte"
-        isShort() -> "Short"
-        isUShort() -> if(smallUnsignedTypesAsInt) "Int" else if(ignoreUnsigned) "Short" else "UShort"
-        isInt() -> "Int"
-        isUInt() -> if(ignoreUnsigned) "Int" else "UInt"
-        isLong() -> "Long"
-        isULong() -> if(ignoreUnsigned) "Long" else "ULong"
-        isFloat() -> "Float"
-        isDouble() -> "Double"
+        isChar() -> "Char$nullable"
+        isBoolean() -> "Boolean$nullable"
+        isByte() -> "Byte$nullable"
+        isUByte() -> if(smallUnsignedTypesAsInt) "Int$nullable" else if(ignoreUnsigned) "Byte$nullable" else "UByte$nullable"
+        isShort() -> "Short$nullable"
+        isUShort() -> if(smallUnsignedTypesAsInt) "Int$nullable" else if(ignoreUnsigned) "Short$nullable" else "UShort$nullable"
+        isInt() -> "Int$nullable"
+        isUInt() -> if(ignoreUnsigned) "Int$nullable" else "UInt$nullable"
+        isLong() -> "Long$nullable"
+        isULong() -> if(ignoreUnsigned) "Long$nullable" else "ULong$nullable"
+        isFloat() -> "Float$nullable"
+        isDouble() -> "Double$nullable"
         isString() -> if(stringAsBytes) "ByteArray$nullable" else "String$nullable"
-        isEnum() -> if(enumAsInt) "Int" else declaration.kname
+        isEnum() -> if(enumAsInt) "Int$nullable" else "${declaration.kname}$nullable"
         isRawInterface() -> if(rawInterfaceAsInt) "Int" else "Long"
         isInterface() -> if(interfaceAsLong) "Long" else "${declaration.kname}$nullable"
         isArray() -> arrayType { type ->
@@ -85,10 +85,14 @@ internal fun castToSigned(
 ): String {
     val nullable = if(type.isNullable) "?" else ""
     return when {
-        type.isUByte() -> if(smallTypesAsInt) "$content.toInt() and 0x000000ff" else "$content.toByte()"
-        type.isUShort() -> if(smallTypesAsInt) "$content.toInt() and 0x0000ffff" else "$content.toShort()"
-        type.isUInt() -> "$content.toInt()"
-        type.isULong() -> "$content.toLong()"
+        type.isUByte() ->
+            if(smallTypesAsInt) "$content$nullable.toInt()$nullable.and(0x000000ff)"
+            else "$content$nullable.toByte()"
+        type.isUShort() ->
+            if(smallTypesAsInt) "$content$nullable.toInt()$nullable.and(0x0000ffff)"
+            else "$content$nullable.toShort()"
+        type.isUInt() -> "$content$nullable.toInt()"
+        type.isULong() -> "$content$nullable.toLong()"
         type.isArray() -> type.arrayType { type ->
             when {
                 type.isUByte() -> "$content$nullable.asByteArray()"

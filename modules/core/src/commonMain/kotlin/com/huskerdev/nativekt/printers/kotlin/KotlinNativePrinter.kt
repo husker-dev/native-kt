@@ -87,6 +87,56 @@ class KotlinNativePrinter(
             """.trimIndent())
         }
 
+        if(context.hasNullablePrimitivesCast || context.hasEnumNullable) {
+            printLabel("Nullable primitives")
+
+            listOf(
+                Triple("Char", context.hasCharNullableToNative, context.hasCharNullableToKotlin),
+                Triple("Boolean", context.hasBooleanNullableToNative, context.hasBooleanNullableToKotlin),
+                Triple("Byte",
+                    context.hasByteNullableToNative || context.hasUByteNullableToNative,
+                    context.hasByteNullableToKotlin || context.hasUByteNullableToKotlin),
+                Triple("Short",
+                    context.hasShortNullableToNative || context.hasUShortNullableToNative,
+                    context.hasShortNullableToKotlin || context.hasUShortNullableToKotlin),
+                Triple("Int",
+                    context.hasIntNullableToNative || context.hasUIntNullableToNative || context.hasEnumNullableToNative,
+                    context.hasIntNullableToKotlin || context.hasUIntNullableToKotlin || context.hasEnumNullableToKotlin),
+                Triple("Long",
+                    context.hasLongNullableToNative || context.hasULongNullableToNative,
+                    context.hasLongNullableToKotlin || context.hasULongNullableToKotlin),
+                Triple("Float", context.hasFloatNullableToNative, context.hasFloatNullableToKotlin),
+                Triple("Double", context.hasDoubleNullableToNative, context.hasDoubleNullableToKotlin),
+            ).forEach { (name, hasToNative, hasToKotlin) ->
+                val varType = if(name == "Char")
+                    "UShortVar" else "${name}Var"
+                val size = if(name == "Boolean")
+                    "1" else "$name.SIZE_BYTES"
+                val castToNative = if(name == "Char")
+                    ".code.toUShort()" else ""
+                val castToKotlin = if(name == "Char")
+                    ".toInt().toChar()" else ""
+
+                appendLine("\n// $name")
+                if(hasToNative) appendLine("""
+                    
+                    private fun toNative${name}Nullable(value: $name?): CPointer<$varType>? {
+                        if(value == null) return null
+                        return ${context.mangle("alloc")}($size.convert())!!.reinterpret<$varType>()
+                            .also { it.pointed.value = value$castToNative }
+                    }
+                """.trimIndent())
+                if(hasToKotlin) appendLine("""
+                    
+                    private fun toKotlin${name}Nullable(ptr: CPointer<$varType>?, free: Boolean): $name? {
+                        if(ptr == null) return null
+                        return ptr.pointed.value$castToKotlin
+                            .also { if(free) ${context.mangle("dealloc")}(ptr, $size.convert()) }
+                    }
+                """.trimIndent())
+            }
+        }
+
         if(context.hasPrimitiveArrayCast || context.hasEnumArrayCast) {
             printLabel("Primitive arrays")
 
@@ -651,8 +701,14 @@ class KotlinNativePrinter(
         val nullable1 = if(type.isNullable) "" else "!!"
         val freeArg = if(free) ", free = true" else ", free = false"
         return when {
+            type.isPrimitive() && type.isNullable -> {
+                val reinterpret = if(type.isUnsigned()) "?.reinterpret()" else ""
+                castToUnsigned(type, "toKotlin${type.toKotlinType(ignoreUnsigned = true, printNullable = false)}Nullable($content$reinterpret$freeArg)")
+            }
+            type.isEnum() ->
+                if(type.isNullable) "toKotlinIntNullable($content$freeArg)?.let { ${type.declaration.kname}.entries[it] }"
+                else "${type.declaration.kname}.entries[$content]"
             type.isChar() -> "$content.toInt().toChar()"
-            type.isEnum() -> "${type.declaration.kname}.entries[$content]"
             type.isString() -> "toKotlinString($content$freeArg)$nullable1"
             type.isCallback() -> "toKotlin${type.declaration.kname}($content$freeArg)$nullable1"
             type.isRawInterface() -> "$content!!.toLong()"
@@ -674,9 +730,14 @@ class KotlinNativePrinter(
         type: ResolvedIdlType,
         content: String
     ): String = when {
-        type.isArray() && type.isUnsigned() -> castToNative(type.toSignedType(), castToSigned(type, content))
+        type.isPrimitive() && type.isNullable -> {
+            val reinterpret = if(type.isUnsigned()) "?.reinterpret()" else ""
+            "toNative${type.toKotlinType(ignoreUnsigned = true, printNullable = false)}Nullable(${castToSigned(type, content)})$reinterpret"
+        }
+        type.isEnum() ->
+            if(type.isNullable) "toNativeIntNullable($content?.ordinal)"
+            else "$content.ordinal"
         type.isChar() -> "$content.code.toUShort()"
-        type.isEnum() -> "$content.ordinal"
         type.isString() -> "toNativeString($content)"
         type.isCallback() -> "toNative${type.declaration.kname}($content)"
         type.isRawInterface() -> "$content.toCPointer<CPointed>()"

@@ -56,7 +56,7 @@ class KotlinJvmJniPrinter(
                 .map { it.second }
         """.replaceIndent(indent2)
 
-        val classes = (context.castedEnums + context.castedDictionaries + context.castedInterfaces)
+        val classes = (context.castedDictionaries + context.castedInterfaces)
             .filter { it in context.toKotlinDeclarationCasts }
             .map { "${it.kname}::class.java" }
             .chunked(3)
@@ -105,11 +105,9 @@ class KotlinJvmJniPrinter(
             return
 
         context.allOperations.forEach { function ->
-            val critical = function.isCritical()
             val isAndroidCriticalNative = isAndroidCriticalEnabled && function.isCritical() && function.isAndroidCriticalCapable()
             val type = when {
                 isAndroidCriticalNative && function.type.isInterface() -> ": Long"
-                isAndroidCriticalNative && function.type.isEnum() -> ": Int"
                 !function.type.isVoid() -> ": ${function.type.toKotlinType()}"
                 else -> ""
             }
@@ -117,7 +115,6 @@ class KotlinJvmJniPrinter(
             val args = function.args.joinToString {
                 when {
                     isAndroidCriticalNative && it.type.isInterface() -> "${it.kname}: Long"
-                    isAndroidCriticalNative && it.type.isEnum() -> "${it.kname}: Int"
                     else -> "${it.kname}: ${it.type.toKotlinType()}"
                 }
             }
@@ -135,8 +132,8 @@ class KotlinJvmJniPrinter(
                         }
                     }
                     it.type.isPrimitiveArray() || it.type.isEnumArray() ->
-                        if(it.type.isNullable) "${it.kname}, ${it.kname}?.size ?: -1"
-                        else "${it.kname}, ${it.kname}.size"
+                        if(it.type.isNullable) "${castToNative(it.type, it.kname)}, ${it.kname}?.size ?: -1"
+                        else "${castToNative(it.type, it.kname)}, ${it.kname}.size"
                     else -> castToNative(it.type, it.kname)
                 }
             }
@@ -169,19 +166,17 @@ class KotlinJvmJniPrinter(
 
             val type = when {
                 isAndroidCriticalNative && function.type.isInterface() -> ": Long"
-                isAndroidCriticalNative && function.type.isEnum() -> ": Int"
-                !function.type.isVoid() -> ": ${function.type.toKotlinType(stringAsBytes = true)}"
+                !function.type.isVoid() -> ": ${function.type.toJniKotlinType()}"
                 else -> ""
             }
 
             val args = function.args.joinToString {
                 when {
                     isAndroidCriticalNative && it.type.isInterface() -> "${it.kname}: Long"
-                    isAndroidCriticalNative && it.type.isEnum() -> "${it.kname}: Int"
-                    it.type.isString() -> "${it.kname}: ${it.type.toKotlinType(stringAsBytes = true)}, _${it.kname}_size: Int"
+                    it.type.isString() -> "${it.kname}: ${it.type.toJniKotlinType()}, _${it.kname}_size: Int"
                     it.type.isPrimitiveArray() || it.type.isEnumArray() ->
-                        "${it.kname}: ${it.type.toKotlinType(stringAsBytes = true)}, _${it.kname}_length: Int"
-                    else -> "${it.kname}: ${it.type.toKotlinType(stringAsBytes = true)}"
+                        "${it.kname}: ${it.type.toJniKotlinType()}, _${it.kname}_length: Int"
+                    else -> "${it.kname}: ${it.type.toJniKotlinType()}"
                 }
             }
 
@@ -201,14 +196,6 @@ class KotlinJvmJniPrinter(
         var i = context.allOperations.size
         val staticFunctions = arrayListOf<String>()
 
-        // Enum
-        context.castedEnums.forEach { enum ->
-            if (enum in context.toKotlinDeclarationCasts) {
-                append("\n$indent2@Marker(${i++}) @JvmStatic fun _cast_${enum.name.camelCase().lowercase()}(of: Int) = ${enum.kname}.entries[of]")
-                staticFunctions += "_cast_${enum.name.camelCase().lowercase()}"
-            }
-        }
-
         // Dictionaries
         context.castedDictionaries.forEach { dictionary ->
             val fields = context.allFields[dictionary]!!
@@ -217,7 +204,7 @@ class KotlinJvmJniPrinter(
 
             if(dictionary in context.toKotlinDeclarationCasts) {
                 val args = fields.joinToString {
-                    "${it.kname}: ${it.type.toKotlinType(stringAsBytes = true)}"
+                    "${it.kname}: ${it.type.toJniKotlinType()}"
                 }
                 val argNames = fields.joinToString {
                     castToKotlin(it.type, it.kname)
@@ -261,7 +248,7 @@ class KotlinJvmJniPrinter(
                 val args = buildList {
                     add("of: ${callback.kname}")
                     callback.args.mapTo(this){
-                        "${it.kname}: ${it.type.toKotlinType(stringAsBytes = true)}"
+                        "${it.kname}: ${it.type.toJniKotlinType()}"
                     }
                 }.joinToString()
                 val argNames = callback.args.joinToString {
@@ -275,16 +262,32 @@ class KotlinJvmJniPrinter(
         return staticFunctions
     }
 
+    private fun ResolvedIdlType.toJniKotlinType() =
+        toKotlinType(stringAsBytes = true, ignoreUnsigned = true, enumAsInt = true)
+
     private fun castToNative(
         type: ResolvedIdlType,
         content: String
     ) = when {
+        type.isPrimitive() && type.isUnsigned() -> castToSigned(type, content)
+        type.isEnum() ->
+            if(type.isNullable) "$content?.ordinal"
+            else "$content.ordinal"
         type.isString() ->
             if(type.isNullable) "$content?.encodeToByteArray()"
             else "$content.encodeToByteArray()"
-        type.isStringArray() ->
-            if(type.isNullable) "JniUtils.stringsToBytes($content)"
-            else "JniUtils.stringsToBytes($content)!!"
+        type.isArray() -> type.arrayType { arrType ->
+            when  {
+                arrType.isPrimitive() && arrType.isUnsigned() -> castToSigned(type, content)
+                arrType.isEnum() ->
+                    if(type.isNullable) "JniUtils.enumToInts($content)"
+                    else "JniUtils.enumToInts($content)!!"
+                arrType.isString() ->
+                    if(type.isNullable) "JniUtils.stringsToBytes($content)"
+                    else "JniUtils.stringsToBytes($content)!!"
+                else -> content
+            }
+        }
         else -> content
     }
 
@@ -292,12 +295,25 @@ class KotlinJvmJniPrinter(
         type: ResolvedIdlType,
         content: String
     ) = when {
+        type.isPrimitive() && type.isUnsigned() -> castToUnsigned(type, content)
+        type.isEnum() ->
+            if(type.isNullable) "$content?.let { ${type.declaration.kname}.entries[it] }"
+            else "${type.declaration.kname}.entries[$content]"
         type.isString() ->
             if(type.isNullable) "$content?.decodeToString()"
             else "$content.decodeToString()"
-        type.isStringArray() ->
-            if(type.isNullable) "JniUtils.bytesToStrings($content)"
-            else "JniUtils.bytesToStrings($content)!!"
+        type.isArray() -> type.arrayType { arrType ->
+            when  {
+                arrType.isPrimitive() && arrType.isUnsigned() -> castToUnsigned(type, content)
+                arrType.isEnum() ->
+                    if(type.isNullable) "JniUtils.intsToEnum($content, ${arrType.toKotlinType()}::class.java)"
+                    else "JniUtils.intsToEnum($content, ${arrType.toKotlinType()}::class.java)!!"
+                arrType.isString() ->
+                    if(type.isNullable) "JniUtils.bytesToStrings($content)"
+                    else "JniUtils.bytesToStrings($content)!!"
+                else -> content
+            }
+        }
         else -> content
     }
 }

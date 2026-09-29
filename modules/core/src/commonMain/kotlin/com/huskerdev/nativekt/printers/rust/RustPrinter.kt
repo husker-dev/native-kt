@@ -364,14 +364,19 @@ class RustPrinter(
     }
 
     private fun toNativeType(type: ResolvedIdlType, content: String): String = when {
-        type.isVoid() || type.isPrimitive() || type.isEnum() -> content
-        type.isPrimitive() -> content
+        type.isVoid() -> content
+        type.isPrimitive() || type.isEnum() ->
+            if (type.isNullable) "obj_opt($content, into_raw_primitive)"
+            else content
         else -> if (type.isNullable) "obj_opt($content, into_raw)"
                 else "into_raw($content)"
     }
 
     private fun toRustType(type: ResolvedIdlType, content: String): String = when {
-        type.isVoid() || type.isPrimitive() || type.isEnum() -> content
+        type.isVoid() -> content
+        type.isPrimitive() || type.isEnum() ->
+            if (type.isNullable) "ptr_opt($content, from_raw_primitive)"
+            else content
         else -> if (type.isNullable) "ptr_opt($content, from_raw)"
                 else "from_raw($content)"
     }

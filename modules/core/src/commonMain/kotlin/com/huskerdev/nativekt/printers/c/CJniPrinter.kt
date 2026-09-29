@@ -42,6 +42,10 @@ class CJniPrinter(
             #include "api.h"
             
             static JavaVM *jvm;
+            
+            static jclass boxed_primitives_class[8];
+            static jmethodID boxed_primitives_create[8];
+            static jmethodID boxed_primitives_get[8];
         """.trimIndent())
 
         append("\nstatic void** JNI_functions(bool useCritical);\n")
@@ -53,18 +57,6 @@ class CJniPrinter(
         // String
         if (context.hasStringCast)
             classes += "class_string"
-
-        // Enums
-        if (context.hasEnumsCast) {
-            if (context.hasEnumToCastNative)
-                methods.add("enum_ordinal")
-            context.castedEnums.forEach { enum ->
-                if (enum in context.toKotlinDeclarationCasts) {
-                    classes += enum.className
-                    methods += enum.castMethod
-                }
-            }
-        }
 
         // Dictionaries
         if(context.hasDictionaryCast) {
@@ -222,7 +214,39 @@ class CJniPrinter(
                 for(jint i = 0; i < methods_count; i++)
                     jni_methods[i] = (JNINativeMethod) { names[i], signatures[i], functions[i] };
                 (*env)->RegisterNatives(env, _class, jni_methods, methods_count);
+                
         """.trimIndent())
+
+        // Primitives
+        if(context.hasNullablePrimitivesCast || context.hasEnumNullable) {
+            appendLine("\t// Get boxed primitives")
+
+            listOf(
+                Triple("Character", "C", context.hasCharNullable),
+                Triple("Boolean", "Z", context.hasBooleanNullable),
+                Triple("Byte", "B", context.hasByteNullable || context.hasUByteNullable),
+                Triple("Short", "S", context.hasShortNullable || context.hasUShortNullable),
+                Triple("Integer", "I", context.hasIntNullable || context.hasUIntNullable || context.hasEnumNullable),
+                Triple("Long", "J", context.hasLongNullable || context.hasULongNullable),
+                Triple("Float", "F", context.hasFloatNullable),
+                Triple("Double", "D", context.hasDoubleNullable),
+            ).forEachIndexed { i, (name, d, hasCast) ->
+                if (!hasCast) return@forEachIndexed
+                val lowerName = when (name) {
+                    "Character" -> "char"
+                    "Integer" -> "int"
+                    else -> name.lowercase()
+                }
+
+                val classField = "boxed_primitives_class[$i]"
+                appendLine("""
+                    
+                    $classField = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "java/lang/$name"));
+                    boxed_primitives_create[$i] = (*env)->GetStaticMethodID(env, $classField, "valueOf", "($d)Ljava/lang/$name;");
+                    boxed_primitives_get[$i] = (*env)->GetMethodID(env, $classField, "${lowerName}Value", "()$d");
+                """.replaceIndent("\t"))
+            }
+        }
 
         // String
         if (context.hasStringCast) {
@@ -231,20 +255,6 @@ class CJniPrinter(
                 // String
                 class_string = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "[B"));
             """.replaceIndent("\t"))
-        }
-
-        // Enums
-        if (context.hasEnumsCast) {
-            append("\n\t// Enums")
-            if (context.hasEnumToCastNative)
-                append("\n\tenum_ordinal = (*env)->GetMethodID(env, (*env)->FindClass(env, \"java/lang/Enum\"), \"ordinal\", \"()I\");")
-            context.castedEnums.forEach { enum ->
-                if (enum in context.toKotlinDeclarationCasts) {
-                    append("\n\t${enum.className} = $nextClass;")
-                    append("\n\t${enum.castMethod} = $nextFunc;")
-                }
-            }
-            append("\n")
         }
 
         // Dictionaries
@@ -356,26 +366,49 @@ class CJniPrinter(
             }
         }
 
-        // Enum
-        if (context.hasEnumsCast) {
-            append("\n// Enum\n")
-            if (context.hasEnumToCastNative) {
-                appendLine("""
+        if(context.hasNullablePrimitivesCast || context.hasEnumNullable) {
+            listOf(
+                Triple("Char" to 2, context.hasCharNullableToNative, context.hasCharNullableToKotlin),
+                Triple("Boolean" to 1, context.hasBooleanNullableToNative, context.hasBooleanNullableToKotlin),
+                Triple("Byte" to 1,
+                    context.hasByteNullableToNative || context.hasUByteNullableToNative,
+                    context.hasByteNullableToKotlin || context.hasUByteNullableToKotlin),
+                Triple("Short" to 2,
+                    context.hasShortNullableToNative || context.hasUShortNullableToNative,
+                    context.hasShortNullableToKotlin || context.hasUShortNullableToKotlin),
+                Triple("Int" to 4,
+                    context.hasIntNullableToNative || context.hasUIntNullableToNative || context.hasEnumNullableToNative,
+                    context.hasIntNullableToKotlin || context.hasUIntNullableToKotlin || context.hasEnumNullableToKotlin),
+                Triple("Long" to 8,
+                    context.hasLongNullableToNative || context.hasULongNullableToNative,
+                    context.hasLongNullableToKotlin || context.hasULongNullableToKotlin),
+                Triple("Float" to 4, context.hasFloatNullableToNative, context.hasFloatNullableToKotlin),
+                Triple("Double" to 8, context.hasDoubleNullableToNative, context.hasDoubleNullableToKotlin),
+            ).forEachIndexed { i, (names, hasToNative, hasToKotlin) ->
+                val name = names.first
+                val size = names.second
+                val lowercase = name.lowercase()
+                val jType = "j$lowercase"
+
+                appendLine("\n// $name")
+                if(hasToNative) appendLine("""
                     
-                    static int32_t JNI_to_native_enum(JNIEnv* env, const jobject of) {
-                        return (*env)->CallIntMethod(env, of, enum_ordinal);
+                    static $jType* JNI_to_native_${lowercase}_nullable(JNIEnv *env, jobject obj) {
+                        if(obj == NULL) return NULL;
+                        $jType* result = ($jType*) ${context.mangle("alloc")}($size);
+                        result[0] = (*env)->Call${name}Method(env, obj, boxed_primitives_get[$i]);
+                        return result;
                     }
                 """.trimIndent())
-                castsFunctions += "static int32_t JNI_to_native_enum(JNIEnv* env, const jobject of);"
-            }
-            if (context.hasEnumToCastKotlin) {
-                appendLine("""
+                if(hasToKotlin) appendLine("""
                     
-                    static jobject JNI_to_kotlin_enum(JNIEnv* env, const int32_t of, jmethodID cast_method) {
-                        return (*env)->CallStaticObjectMethod(env, _class, cast_method, of);
+                    static jobject JNI_to_kotlin_${lowercase}_nullable(JNIEnv *env, $jType* ptr, const bool free) {
+                        if(ptr == NULL) return NULL;
+                        jobject result = (*env)->CallStaticObjectMethod(env, boxed_primitives_class[$i], boxed_primitives_create[$i], (($jType*) ptr)[0]);
+                        ${context.mangle("dealloc")}((void*) ptr, $size);
+                        return result;
                     }
                 """.trimIndent())
-                castsFunctions += "static jobject JNI_to_kotlin_enum(JNIEnv* env, const int32_t of, jmethodID cast_method);"
             }
         }
 
@@ -390,8 +423,8 @@ class CJniPrinter(
                 context.hasShortArrayCastToNative || context.hasUShortArrayCastToNative,
                 context.hasShortArrayCastToKotlin || context.hasUShortArrayCastToKotlin),
             Triple("int",
-                context.hasIntArrayCastToNative || context.hasUIntArrayCastToNative,
-                context.hasIntArrayCastToKotlin || context.hasUIntArrayCastToKotlin),
+                context.hasIntArrayCastToNative || context.hasUIntArrayCastToNative || context.hasEnumArrayCastToNative,
+                context.hasIntArrayCastToKotlin || context.hasUIntArrayCastToKotlin || context.hasEnumArrayCastToKotlin),
             Triple("long",
                 context.hasLongArrayCastToNative || context.hasULongArrayCastToNative,
                 context.hasLongArrayCastToKotlin || context.hasULongArrayCastToKotlin),
@@ -451,54 +484,6 @@ class CJniPrinter(
                     }
                 """.trimIndent())
                 castsFunctions += "static j${name}Array JNI_to_kotlin_${name}array(JNIEnv *env, void* arr, const bool free);"
-            }
-        }
-
-        // Enum arrays
-        if (context.hasEnumArrayCast) {
-            append("\n// Array: Enum\n")
-
-            if (context.hasEnumArrayCastToNative) {
-                appendLine("""
-                    
-                    static void* JNI_to_native_enum_array(JNIEnv *env, jobjectArray src) {
-                        if(src == NULL) return NULL;
-                        jsize length = (*env)->GetArrayLength(env, src);
-                        int32_t* elements = NULL;
-                        if(length > 0) {
-                            elements = (int32_t*) malloc(length * sizeof(int32_t));
-                            for(int i = 0; i < length; i++) {
-                                jobject element = (*env)->GetObjectArrayElement(env, src, i);
-                                elements[i] = JNI_to_native_enum(env, element);
-                                (*env)->DeleteLocalRef(env, element);
-                            }
-                        }
-                        void* result = ${context.mangle("intarray_new")}(elements, length, true);
-                        if(length > 0)
-                            free(elements);
-                        return result;
-                    }
-                """.trimIndent())
-                castsFunctions += "static void* JNI_to_native_enum_array(JNIEnv *env, jobjectArray src);"
-            }
-            if (context.hasEnumArrayCastToKotlin) {
-                appendLine("""
-                    
-                    static jobjectArray JNI_to_kotlin_enum_array(JNIEnv *env, void* src, jclass class, jmethodID cast_method, bool free) {
-                        if(src == NULL) return NULL;
-                        const jint length = ${context.mangle("intarray_length")}(src);
-                        const jobjectArray result = (*env)->NewObjectArray(env, length, class, NULL);
-                        
-                        if(length > 0) {
-                            const int32_t* ints = ${context.mangle("intarray_elements")}(src);
-                            for (jint i = 0; i < length; i++)
-                                (*env)->SetObjectArrayElement(env, result, i, JNI_to_kotlin_enum(env, ints[i], cast_method));
-                        }
-                        if (free) ${context.mangle("intarray_free")}(src);
-                        return result;
-                    }
-                """.trimIndent())
-                castsFunctions += "static jobjectArray JNI_to_kotlin_enum_array(JNIEnv *env, void* src, jclass class, jmethodID cast_method, bool free);"
             }
         }
 
@@ -780,8 +765,6 @@ class CJniPrinter(
 
             val casts = function.args.mapNotNull {
                 val name = it.cname
-                val nullable = if (it.type.isNullable) "(${it.cname} && _${name}_length > 0) ? " else ""
-                val nullObj = if (it.type.isNullable) " : NULL" else ""
                 when {
                     critical && it.type.isString() -> """
                         char* _${name}_data = NULL;
@@ -793,11 +776,13 @@ class CJniPrinter(
                         }
                     """.trimIndent().split("\n")
                     critical && it.type.isEnumArray() -> """
-                        int32_t* _${name}_ints = $nullable(int32_t*) malloc(_${name}_length * sizeof(int32_t))$nullObj;
-                        for (int i = 0; i < _${name}_length; i++) {
-                            jobject el = (*_env)->GetObjectArrayElement(_env, $name, i);
-                            _${name}_ints[i] = (*_env)->CallIntMethod(_env, el, enum_ordinal);
-                            (*_env)->DeleteLocalRef(_env, el);
+                        jsize _${name}_size = _${it.cname}_length * sizeof(jint);
+                        jint* _${it.cname}_elements = NULL;
+                        if(_${name}_size > 1024) {
+                            _${name}_elements = (*_env)->GetPrimitiveArrayCritical(_env, $name, JNI_FALSE);
+                        } else if(_${name}_size > 0) {
+                            _${name}_elements = alloca(_${name}_size);
+                            (*_env)->GetIntArrayRegion(_env, $name, 0, _${name}_length, _${name}_elements);
                         }
                     """.trimIndent().split("\n")
                     critical && it.type.isArray() -> {
@@ -821,7 +806,6 @@ class CJniPrinter(
             val castedArgs = function.args.joinToString {
                 when {
                     critical && it.type.isString() -> "_${it.cname}_data, _${it.cname}_size"
-                    critical && it.type.isEnumArray() -> "_${it.cname}_ints, _${it.cname}_length"
                     critical && it.type.isArray() -> {
                         val cast = if (it.type.isBooleanArray() || it.type.isUnsigned() || it.type.isLongArray())
                             "(${it.type.arrayTypeOrNull()!!.toCommonNativeType()}*) " else ""
@@ -834,11 +818,11 @@ class CJniPrinter(
             }
 
             val free = function.args.mapNotNull {
-                val nullableIf = if (it.type.isNullable) "if(${it.cname}) " else ""
                 when {
-                    critical && it.type.isString() -> "if(_${it.cname}_size > 1024) (*_env)->ReleasePrimitiveArrayCritical(_env, ${it.cname}, _${it.cname}_data, JNI_ABORT);"
-                    critical && it.type.isEnumArray() -> "if(_${it.cname}_length > 0) ${nullableIf}free((void*) _${it.cname}_ints);"
-                    critical && it.type.isPrimitiveArray() -> "if(_${it.cname}_size > 1024) (*_env)->ReleasePrimitiveArrayCritical(_env, ${it.cname}, _${it.cname}_elements, JNI_ABORT);"
+                    critical && it.type.isString() ->
+                        "if(_${it.cname}_size > 1024) (*_env)->ReleasePrimitiveArrayCritical(_env, ${it.cname}, _${it.cname}_data, JNI_ABORT);"
+                    critical && (it.type.isPrimitiveArray() || it.type.isEnumArray()) ->
+                        "if(_${it.cname}_size > 1024) (*_env)->ReleasePrimitiveArrayCritical(_env, ${it.cname}, _${it.cname}_elements, JNI_ABORT);"
                     else -> null
                 }
             }
@@ -907,11 +891,17 @@ class CJniPrinter(
         content: String,
         free: Boolean
     ): String = when {
+        type.isPrimitive() && type.isNullable -> {
+            val lower = type.toKotlinType(ignoreUnsigned = true, printNullable = false).lowercase()
+            "JNI_to_kotlin_${lower}_nullable(_env, (j$lower*) $content, $free)"
+        }
+        type.isEnum() ->
+            if(type.isNullable) "JNI_to_kotlin_int_nullable(_env, $content, $free)"
+            else content
         type.isUByte() -> "(jbyte) $content"
         type.isUShort() -> "(jshort) $content"
         type.isUInt() -> "(jint) $content"
         type.isPrimitive() && type.isUnsigned() -> castToKotlin(type.toSignedType(), content, free)
-        type.isEnum() -> "JNI_to_kotlin_enum(_env, $content, ${(type.declaration as ResolvedIdlEnum).castMethod})"
         type.isString() -> "JNI_to_kotlin_string(_env, $content, $free)"
         type.isRawInterface() -> "(jlong) $content"
         type.isCallback() || type.isDictionary() || type.isInterface() ->
@@ -919,7 +909,7 @@ class CJniPrinter(
         type.isArray() -> type.arrayType { type ->
             when {
                 type.isPrimitive() -> "JNI_to_kotlin_${type.toKotlinType(ignoreUnsigned = true).lowercase()}array(_env, $content, $free)"
-                type.isEnum() -> "JNI_to_kotlin_enum_array(_env, $content, ${type.declaration.className}, ${(type.declaration as ResolvedIdlEnum).castMethod}, $free)"
+                type.isEnum() -> "JNI_to_kotlin_intarray(_env, $content, $free)"
                 type.isString() -> "JNI_to_kotlin_string_array(_env, $content, ${type.isNullable}, $free)"
                 else -> "JNI_to_kotlin_${type.declaration.name.camelCase().lowercase()}_array(_env, $content, ${type.isNullable}, $free)"
             }
@@ -932,8 +922,12 @@ class CJniPrinter(
         content: String,
         size: String? = null
     ): String = when {
+        type.isPrimitive() && type.isNullable ->
+            "(${type.toCommonNativeType()}) JNI_to_native_${type.toKotlinType(ignoreUnsigned = true, printNullable = false).lowercase()}_nullable(_env, $content)"
+        type.isEnum() ->
+            if(type.isNullable) "JNI_to_native_int_nullable(_env, $content)"
+            else content
         type.isPrimitive() && type.isUnsigned() -> castToNative(type.toSignedType(), content)
-        type.isEnum() -> "JNI_to_native_enum(_env, $content)"
         type.isString() ->
             if(size == null) "JNI_to_native_string(_env, $content)"
             else "JNI_to_native_string_sized(_env, $content, $size)"
@@ -945,7 +939,7 @@ class CJniPrinter(
                 type.isPrimitive() ->
                     if(size == null) "JNI_to_native_${type.toKotlinType(ignoreUnsigned = true).lowercase()}array(_env, $content)"
                     else "JNI_to_native_${type.toKotlinType(ignoreUnsigned = true).lowercase()}array_sized(_env, $content, $size)"
-                type.isEnum() -> "JNI_to_native_enum_array(_env, $content)"
+                type.isEnum() -> "JNI_to_native_intarray(_env, $content)"
                 type.isString() -> "JNI_to_native_string_array(_env, $content, ${type.isNullable})"
                 else -> "JNI_to_native_${
                     type.declaration.name.camelCase().lowercase()
@@ -956,13 +950,14 @@ class CJniPrinter(
     }
 
     private fun ResolvedIdlType.toJniType(): String = when {
+        (isPrimitive() || isEnum()) && isNullable -> "jobject"
         isPrimitive() && isUnsigned() -> toSignedType().toJniType()
         isVoid() -> "void"
         isChar() -> "jchar"
         isBoolean() -> "jboolean"
         isByte() -> "jbyte"
         isShort() -> "jshort"
-        isInt() -> "jint"
+        isInt() || isEnum() -> "jint"
         isLong() || isRawInterface() -> "jlong"
         isFloat() -> "jfloat"
         isDouble() -> "jdouble"
@@ -985,7 +980,7 @@ class CJniPrinter(
             isChar() -> "Call${static}CharMethod"
             isByte() -> "Call${static}ByteMethod"
             isShort() -> "Call${static}ShortMethod"
-            isInt() -> "Call${static}IntMethod"
+            isInt() || isEnum() -> "Call${static}IntMethod"
             isLong() -> "Call${static}LongMethod"
             isFloat() -> "Call${static}FloatMethod"
             isDouble() -> "Call${static}DoubleMethod"

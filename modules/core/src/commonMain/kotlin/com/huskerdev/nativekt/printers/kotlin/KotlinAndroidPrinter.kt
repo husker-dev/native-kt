@@ -96,7 +96,6 @@ class KotlinAndroidPrinter(
                     isCritical && it.type.isInterface() && !it.type.isRawInterface() ->
                         if(it.type.isNullable) "${it.kname}?.rcPtr ?: 0"
                         else "${it.kname}.rcPtr"
-                    isCritical && it.type.isEnum() -> "${it.kname}.ordinal"
                     else -> it.kname
                 }
             }
@@ -106,8 +105,6 @@ class KotlinAndroidPrinter(
 
             val call = "_instance.$name($argNames)"
             val casted = when {
-                isCritical && operation.type.isEnum() ->
-                    "${(operation.type as ResolvedIdlType.Default).declaration.kname}.entries[$call]"
                 isCritical && operation.type.isInterface() && !operation.isInterfaceOperationConstructor() ->
                     "${(operation.type as ResolvedIdlType.Default).declaration.kname}(Unit, $call)"
                 else -> call

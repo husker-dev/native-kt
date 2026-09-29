@@ -20,8 +20,18 @@ class C_ReturnPrimitive {
     }
 
     @Test
+    fun returnCharN() = withCLib {
+        assertNull(natives.test.returnCharN())
+    }
+
+    @Test
     fun returnBoolean() = withCLib {
         assertEquals(true, natives.test.returnBoolean())
+    }
+
+    @Test
+    fun returnBooleanN() = withCLib {
+        assertEquals(true, natives.test.returnBooleanN())
     }
 
     @Test
@@ -30,8 +40,18 @@ class C_ReturnPrimitive {
     }
 
     @Test
+    fun returnByteN() = withCLib {
+        assertNull(natives.test.returnByteN())
+    }
+
+    @Test
     fun returnUByte() = withCLib {
         assertEquals(UByte.MAX_VALUE, natives.test.returnUByte())
+    }
+
+    @Test
+    fun returnUByteN() = withCLib {
+        assertEquals(UByte.MAX_VALUE, natives.test.returnUByteN())
     }
 
     @Test
@@ -40,8 +60,18 @@ class C_ReturnPrimitive {
     }
 
     @Test
+    fun returnShortN() = withCLib {
+        assertNull(natives.test.returnShortN())
+    }
+
+    @Test
     fun returnUShort() = withCLib {
         assertEquals(UShort.MAX_VALUE, natives.test.returnUShort())
+    }
+
+    @Test
+    fun returnUShortN() = withCLib {
+        assertEquals(UShort.MAX_VALUE, natives.test.returnUShortN())
     }
 
     @Test
@@ -50,8 +80,18 @@ class C_ReturnPrimitive {
     }
 
     @Test
+    fun returnIntN() = withCLib {
+        assertNull(natives.test.returnIntN())
+    }
+
+    @Test
     fun returnUInt() = withCLib {
         assertEquals(UInt.MAX_VALUE, natives.test.returnUInt())
+    }
+
+    @Test
+    fun returnUIntN() = withCLib {
+        assertEquals(UInt.MAX_VALUE, natives.test.returnUIntN())
     }
 
     @Test
@@ -60,8 +100,18 @@ class C_ReturnPrimitive {
     }
 
     @Test
+    fun returnLongN() = withCLib {
+        assertNull(natives.test.returnLongN())
+    }
+
+    @Test
     fun returnULong() = withCLib {
         assertEquals(ULong.MAX_VALUE, natives.test.returnULong())
+    }
+
+    @Test
+    fun returnULongN() = withCLib {
+        assertEquals(ULong.MAX_VALUE, natives.test.returnULongN())
     }
 
     @Test
@@ -70,8 +120,18 @@ class C_ReturnPrimitive {
     }
 
     @Test
+    fun returnFloatN() = withCLib {
+        assertNull(natives.test.returnFloatN())
+    }
+
+    @Test
     fun returnDouble() = withCLib {
         assertEquals(99.0, natives.test.returnDouble())
+    }
+
+    @Test
+    fun returnDoubleN() = withCLib {
+        assertEquals(99.0, natives.test.returnDoubleN())
     }
 
     @Test
@@ -92,6 +152,11 @@ class C_ReturnPrimitive {
     @Test
     fun returnEnum() = withCLib {
         assertEquals(MyEnum.CASE2, natives.test.returnEnum())
+    }
+
+    @Test
+    fun returnEnumN() = withCLib {
+        assertEquals(MyEnum.CASE2, natives.test.returnEnumN())
     }
 
     @Test

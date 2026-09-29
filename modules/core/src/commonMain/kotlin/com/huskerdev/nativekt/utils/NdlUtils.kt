@@ -15,6 +15,18 @@ import kotlin.contracts.contract
 fun ResolvedIdlType.isReleasable(): Boolean =
     isArray() || isString() || isDictionary() || isCallback() || isInterface()
 
+fun ResolvedIdlType.isNullablePrimitive(): Boolean =
+    isPrimitive() && isNullable
+
+fun ResolvedIdlType.isNotNullPrimitive(): Boolean =
+    isPrimitive() && !isNullable
+
+fun ResolvedIdlType.isNullableEnum(): Boolean =
+    isEnum() && isNullable
+
+fun ResolvedIdlType.isNotNullEnum(): Boolean =
+    isEnum() && !isNullable
+
 fun ResolvedIdlType.isRawInterface(): Boolean {
     contract {
         returns(true) implies(this@isRawInterface is ResolvedIdlType.Default)
@@ -67,17 +79,17 @@ internal fun ResolvedIdlOperation.isInterfaceOperationAddress() = hasAttribute("
 internal fun ResolvedIdlOperation.isCritical(): Boolean = hasAttribute("critical")
 
 internal fun ResolvedIdlOperation.isCriticalCapable(): Boolean =
-    (type.isVoid() || type.isPrimitive() || type.isEnum() || type.isInterface()) &&
+    (type.isVoid() || type.isNotNullPrimitive() || type.isNotNullEnum() || type.isInterface()) &&
             args.all {
-                it.type.isPrimitive() || it.type.isEnum()
+                it.type.isNotNullPrimitive() || it.type.isEnum()
                         || it.type.isString() || it.type.isInterface()
                         || it.type.isPrimitiveArray() || it.type.isEnumArray()
             }
 
 // Same as default critical, but without array and string args
 internal fun ResolvedIdlOperation.isAndroidCriticalCapable(): Boolean =
-    !type.isArray() && !type.isString() && !type.isDictionary() &&
-            args.all { !it.type.isArray() && !it.type.isString() }
+    !type.isArray() && !type.isString() && !type.isDictionary() && !type.isNullablePrimitive() && !type.isNullableEnum() &&
+            args.all { !it.type.isArray() && !it.type.isString() && !it.type.isNullablePrimitive() && !it.type.isNullableEnum() }
 
 internal fun ResolvedIdlEnum.defaultValue(): String? =
     attributes?.filterIsInstance<IdlExtendedAttribute.IdentifierValue>()

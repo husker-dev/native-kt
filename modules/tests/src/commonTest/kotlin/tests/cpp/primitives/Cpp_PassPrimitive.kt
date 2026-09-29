@@ -20,8 +20,20 @@ class Cpp_PassPrimitive {
     }
 
     @Test
+    fun passCharN() = withCppLib {
+        assertTrue(natives.testcpp.passCharN(null))
+        assertTrue(natives.testcpp.passCharN('a'))
+    }
+
+    @Test
     fun passBoolean() = withCppLib {
         assertTrue(natives.testcpp.passBoolean(true))
+    }
+
+    @Test
+    fun passBooleanN() = withCppLib {
+        assertTrue(natives.testcpp.passBooleanN(null))
+        assertTrue(natives.testcpp.passBooleanN(true))
     }
 
     @Test
@@ -30,8 +42,20 @@ class Cpp_PassPrimitive {
     }
 
     @Test
+    fun passByteN() = withCppLib {
+        assertTrue(natives.testcpp.passByteN(null))
+        assertTrue(natives.testcpp.passByteN(1.toByte()))
+    }
+
+    @Test
     fun passUByte() = withCppLib {
         assertTrue(natives.testcpp.passUByte(UByte.MAX_VALUE))
+    }
+
+    @Test
+    fun passUByteN() = withCppLib {
+        assertTrue(natives.testcpp.passUByteN(null))
+        assertTrue(natives.testcpp.passUByteN(UByte.MAX_VALUE))
     }
 
     @Test
@@ -40,8 +64,20 @@ class Cpp_PassPrimitive {
     }
 
     @Test
+    fun passShortN() = withCppLib {
+        assertTrue(natives.testcpp.passShortN(null))
+        assertTrue(natives.testcpp.passShortN(1.toShort()))
+    }
+
+    @Test
     fun passUShort() = withCppLib {
         assertTrue(natives.testcpp.passUShort(UShort.MAX_VALUE))
+    }
+
+    @Test
+    fun passUShortN() = withCppLib {
+        assertTrue(natives.testcpp.passUShortN(null))
+        assertTrue(natives.testcpp.passUShortN(UShort.MAX_VALUE))
     }
 
     @Test
@@ -50,8 +86,20 @@ class Cpp_PassPrimitive {
     }
 
     @Test
+    fun passIntN() = withCppLib {
+        assertTrue(natives.testcpp.passIntN(null))
+        assertTrue(natives.testcpp.passIntN(99))
+    }
+
+    @Test
     fun passUInt() = withCppLib {
         assertTrue(natives.testcpp.passUInt(UInt.MAX_VALUE))
+    }
+
+    @Test
+    fun passUIntN() = withCppLib {
+        assertTrue(natives.testcpp.passUIntN(null))
+        assertTrue(natives.testcpp.passUIntN(UInt.MAX_VALUE))
     }
 
     @Test
@@ -60,8 +108,20 @@ class Cpp_PassPrimitive {
     }
 
     @Test
+    fun passLongN() = withCppLib {
+        assertTrue(natives.testcpp.passLongN(null))
+        assertTrue(natives.testcpp.passLongN(9223372036854775805L))
+    }
+
+    @Test
     fun passULong() = withCppLib {
         assertTrue(natives.testcpp.passULong(ULong.MAX_VALUE))
+    }
+
+    @Test
+    fun passULongN() = withCppLib {
+        assertTrue(natives.testcpp.passULongN(null))
+        assertTrue(natives.testcpp.passULongN(ULong.MAX_VALUE))
     }
 
     @Test
@@ -70,8 +130,20 @@ class Cpp_PassPrimitive {
     }
 
     @Test
+    fun passFloatN() = withCppLib {
+        assertTrue(natives.testcpp.passFloatN(null))
+        assertTrue(natives.testcpp.passFloatN(99.9f))
+    }
+
+    @Test
     fun passDouble() = withCppLib {
         assertTrue(natives.testcpp.passDouble(1.1))
+    }
+
+    @Test
+    fun passDoubleN() = withCppLib {
+        assertTrue(natives.testcpp.passDoubleN(null))
+        assertTrue(natives.testcpp.passDoubleN(1.1))
     }
 
     @Test
@@ -92,6 +164,12 @@ class Cpp_PassPrimitive {
     @Test
     fun passEnum() = withCppLib {
         assertTrue(natives.testcpp.passEnum(MyEnum.CASE2))
+    }
+
+    @Test
+    fun passEnumN() = withCppLib {
+        assertTrue(natives.testcpp.passEnumN(null))
+        assertTrue(natives.testcpp.passEnumN(MyEnum.CASE2))
     }
 
     @Test

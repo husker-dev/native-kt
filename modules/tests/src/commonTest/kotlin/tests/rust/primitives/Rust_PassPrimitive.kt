@@ -20,8 +20,20 @@ class Rust_PassPrimitive {
     }
 
     @Test
+    fun passCharN() = withRustLib {
+        assertTrue(natives.testrs.passCharN(null))
+        assertTrue(natives.testrs.passCharN('a'))
+    }
+
+    @Test
     fun passBoolean() = withRustLib {
         assertTrue(natives.testrs.passBoolean(true))
+    }
+
+    @Test
+    fun passBooleanN() = withRustLib {
+        assertTrue(natives.testrs.passBooleanN(null))
+        assertTrue(natives.testrs.passBooleanN(true))
     }
 
     @Test
@@ -30,8 +42,20 @@ class Rust_PassPrimitive {
     }
 
     @Test
+    fun passByteN() = withRustLib {
+        assertTrue(natives.testrs.passByteN(null))
+        assertTrue(natives.testrs.passByteN(1.toByte()))
+    }
+
+    @Test
     fun passUByte() = withRustLib {
         assertTrue(natives.testrs.passUByte(UByte.MAX_VALUE))
+    }
+
+    @Test
+    fun passUByteN() = withRustLib {
+        assertTrue(natives.testrs.passUByteN(null))
+        assertTrue(natives.testrs.passUByteN(UByte.MAX_VALUE))
     }
 
     @Test
@@ -40,8 +64,20 @@ class Rust_PassPrimitive {
     }
 
     @Test
+    fun passShortN() = withRustLib {
+        assertTrue(natives.testrs.passShortN(null))
+        assertTrue(natives.testrs.passShortN(1.toShort()))
+    }
+
+    @Test
     fun passUShort() = withRustLib {
         assertTrue(natives.testrs.passUShort(UShort.MAX_VALUE))
+    }
+
+    @Test
+    fun passUShortN() = withRustLib {
+        assertTrue(natives.testrs.passUShortN(null))
+        assertTrue(natives.testrs.passUShortN(UShort.MAX_VALUE))
     }
 
     @Test
@@ -50,8 +86,20 @@ class Rust_PassPrimitive {
     }
 
     @Test
+    fun passIntN() = withRustLib {
+        assertTrue(natives.testrs.passIntN(null))
+        assertTrue(natives.testrs.passIntN(99))
+    }
+
+    @Test
     fun passUInt() = withRustLib {
         assertTrue(natives.testrs.passUInt(UInt.MAX_VALUE))
+    }
+
+    @Test
+    fun passUIntN() = withRustLib {
+        assertTrue(natives.testrs.passUIntN(null))
+        assertTrue(natives.testrs.passUIntN(UInt.MAX_VALUE))
     }
 
     @Test
@@ -60,8 +108,20 @@ class Rust_PassPrimitive {
     }
 
     @Test
+    fun passLongN() = withRustLib {
+        assertTrue(natives.testrs.passLongN(null))
+        assertTrue(natives.testrs.passLongN(9223372036854775805L))
+    }
+
+    @Test
     fun passULong() = withRustLib {
         assertTrue(natives.testrs.passULong(ULong.MAX_VALUE))
+    }
+
+    @Test
+    fun passULongN() = withRustLib {
+        assertTrue(natives.testrs.passULongN(null))
+        assertTrue(natives.testrs.passULongN(ULong.MAX_VALUE))
     }
 
     @Test
@@ -70,8 +130,20 @@ class Rust_PassPrimitive {
     }
 
     @Test
+    fun passFloatN() = withRustLib {
+        assertTrue(natives.testrs.passFloatN(null))
+        assertTrue(natives.testrs.passFloatN(99.9f))
+    }
+
+    @Test
     fun passDouble() = withRustLib {
         assertTrue(natives.testrs.passDouble(1.1))
+    }
+
+    @Test
+    fun passDoubleN() = withRustLib {
+        assertTrue(natives.testrs.passDoubleN(null))
+        assertTrue(natives.testrs.passDoubleN(1.1))
     }
 
     @Test
@@ -92,6 +164,12 @@ class Rust_PassPrimitive {
     @Test
     fun passEnum() = withRustLib {
         assertTrue(natives.testrs.passEnum(MyEnum.CASE2))
+    }
+
+    @Test
+    fun passEnumN() = withRustLib {
+        assertTrue(natives.testrs.passEnumN(null))
+        assertTrue(natives.testrs.passEnumN(MyEnum.CASE2))
     }
 
     @Test

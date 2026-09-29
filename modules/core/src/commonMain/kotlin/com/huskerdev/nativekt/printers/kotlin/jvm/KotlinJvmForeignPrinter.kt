@@ -62,6 +62,12 @@ class KotlinJvmForeignPrinter(
             append("\n${indent1}private val _${name.camelCase()} = lookup(_handle, \"${context.mangle(name)}\", $isCritical, $args)")
         }
 
+        // alloc/dealloc
+        if(context.hasNullablePrimitivesCast || context.hasEnumNullable) {
+            printHandle("alloc", true, TYPE_ADDRESS, TYPE_LONG)
+            printHandle("dealloc", true, TYPE_VOID, TYPE_ADDRESS, TYPE_LONG)
+        }
+
         // String
         if(context.hasStringCastToNative)
             printHandle("string_new", true, TYPE_ADDRESS, TYPE_ADDRESS, TYPE_INT, TYPE_BOOLEAN)
@@ -194,6 +200,50 @@ class KotlinJvmForeignPrinter(
                         .also { if(free) _stringFree(of) }
                 }
             """.replaceIndent(indent1))
+        }
+
+        if(context.hasNullablePrimitivesCast || context.hasEnumNullable) {
+            printLabel("Nullable primitives", indent = indent1)
+
+            listOf(
+                Triple("Char", context.hasCharNullableToNative, context.hasCharNullableToKotlin),
+                Triple("Boolean", context.hasBooleanNullableToNative, context.hasBooleanNullableToKotlin),
+                Triple("Byte",
+                    context.hasByteNullableToNative || context.hasUByteNullableToNative,
+                    context.hasByteNullableToKotlin || context.hasUByteNullableToKotlin),
+                Triple("Short",
+                    context.hasShortNullableToNative || context.hasUShortNullableToNative,
+                    context.hasShortNullableToKotlin || context.hasUShortNullableToKotlin),
+                Triple("Int",
+                    context.hasIntNullableToNative || context.hasUIntNullableToNative || context.hasEnumNullableToNative,
+                    context.hasIntNullableToKotlin || context.hasUIntNullableToKotlin || context.hasEnumNullableToKotlin),
+                Triple("Long",
+                    context.hasLongNullableToNative || context.hasULongNullableToNative,
+                    context.hasLongNullableToKotlin || context.hasULongNullableToKotlin),
+                Triple("Float", context.hasFloatNullableToNative, context.hasFloatNullableToKotlin),
+                Triple("Double", context.hasDoubleNullableToNative, context.hasDoubleNullableToKotlin),
+            ).forEach { (name, hasToNative, hasToKotlin) ->
+                val size = if(name == "Boolean")
+                    "1" else "$name.SIZE_BYTES"
+
+                appendLine("\n$indent1// $name")
+                if(hasToNative) appendLine("""
+                    
+                    private fun toNative${name}Nullable(value: $name?): MemorySegment {
+                        if(value == null) return MemorySegment.NULL
+                        return (_alloc($size) as MemorySegment).reinterpret($size.toLong())
+                            .also { it.set(ValueLayout.JAVA_${name.uppercase()}, 0, value) }
+                    }
+                """.replaceIndent(indent1))
+                if(hasToKotlin) appendLine("""
+                    
+                    private fun toKotlin${name}Nullable(ptr: MemorySegment, free: Boolean): $name? {
+                        if(ptr == MemorySegment.NULL) return null
+                        return ptr.reinterpret($size.toLong()).get(ValueLayout.JAVA_${name.uppercase()}, 0)
+                            .also { if(free) _dealloc(ptr, $size) }
+                    }
+                """.replaceIndent(indent1))
+            }
         }
 
         if(context.hasPrimitiveArrayCast || context.hasEnumArrayCast) {
@@ -692,6 +742,11 @@ class KotlinJvmForeignPrinter(
         val freeArg = if(free) ", free = true" else ", free = false"
         val expr = if(brackets) "($content)" else content
         return when {
+            type.isPrimitive() && type.isNullable ->
+                castToUnsigned(type, "toKotlin${type.toKotlinType(ignoreUnsigned = true, printNullable = false)}Nullable($content$freeArg)")
+            type.isEnum() ->
+                if(type.isNullable) "toKotlinIntNullable($content$freeArg)?.let { ${type.declaration.kname}.entries[it] }"
+                else "${type.declaration.kname}.entries[$content]"
             type.isUByte() -> "$expr.toUByte()"
             type.isUShort() -> "$expr.toUShort()"
             type.isUInt() -> "$expr.toUInt()"
@@ -719,12 +774,16 @@ class KotlinJvmForeignPrinter(
         type: ResolvedIdlType,
         content: String
     ): String = when {
+        type.isPrimitive() && type.isNullable ->
+            "toNative${type.toKotlinType(ignoreUnsigned = true, printNullable = false)}Nullable(${castToSigned(type, content)})"
+        type.isEnum() ->
+            if(type.isNullable) "toNativeIntNullable($content?.ordinal)"
+            else "$content.ordinal"
         type.isUByte() -> "$content.toInt() and 0x000000ff"
         type.isUShort() -> "$content.toInt() and 0x0000ffff"
         type.isUInt() -> "$content.toInt()"
         type.isULong() -> "$content.toLong()"
         type.isPrimitive() && type.isUnsigned() -> castToNative(type.toSignedType(), castToSigned(type, content))
-        type.isEnum() -> "$content.ordinal"
         type.isString() -> "toNativeString($content)"
         type.isCallback() -> "toNative${type.declaration.kname}($content)"
         type.isRawInterface() -> "MemorySegment.ofAddress($content)"
@@ -742,6 +801,7 @@ class KotlinJvmForeignPrinter(
     }
 
     private fun ResolvedIdlType.toForeignKotlinType(): String = when {
+        (isPrimitive() || isEnum()) && isNullable -> "MemorySegment"
         isUByte() || isUShort() -> "Int"
         isVoid() -> "Unit"
         isPrimitive() && isUnsigned() -> toSignedType().toForeignKotlinType()
@@ -752,6 +812,7 @@ class KotlinJvmForeignPrinter(
 
     private fun ResolvedIdlType.toForeignType(): String = when {
         isVoid() -> TYPE_VOID
+        (isPrimitive() || isEnum()) && isNullable -> TYPE_ADDRESS
         isChar() -> TYPE_CHAR
         isBoolean() -> TYPE_BOOLEAN
         isByte() -> TYPE_BYTE

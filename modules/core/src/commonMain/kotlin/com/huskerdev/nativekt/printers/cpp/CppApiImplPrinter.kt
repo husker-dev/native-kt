@@ -75,6 +75,22 @@ class CppApiImplPrinter(
                 return new std::shared_ptr(value); 
             }
         """.trimIndent())
+        if(context.hasNullablePrimitivesCast || context.hasEnumNullable) appendLine("""
+            
+            template <typename T>
+            T primitive_unwrap(T* _Nonnull arg) {
+                T result = *arg;
+                free(arg);
+                return result;
+            }
+            
+            template <typename T>
+            T* _Nonnull primitive_wrap(T value) { 
+                T* result = (T*) malloc(sizeof(T));
+                *result = value;
+                return result;
+            }
+        """.trimIndent())
 
         // String
         if(context.hasStringCast) {
@@ -590,7 +606,10 @@ class CppApiImplPrinter(
     }
 
     private fun toNativeType(type: ResolvedIdlType, content: String): String = when {
-        type.isVoid() || type.isPrimitive() || type.isEnum() -> content
+        type.isVoid() -> content
+        type.isPrimitive() || type.isEnum() ->
+            if(type.isNullable) "obj_opt($content, primitive_wrap)"
+            else content
         type.isArray() ->
             if (type.isNullable) "obj_opt<${type.toCppType(printOption = false)}>($content, karray_wrap<${type.arrayTypeOrNull()!!.toCppType()}>)"
             else "karray_wrap<${type.arrayTypeOrNull()!!.toCppType()}>($content)"
@@ -607,7 +626,10 @@ class CppApiImplPrinter(
     }
 
     private fun toCppType(type: ResolvedIdlType, content: String): String = when {
-        type.isVoid() || type.isPrimitive() || type.isEnum() -> content
+        type.isVoid() -> content
+        type.isPrimitive() || type.isEnum() ->
+            if(type.isNullable) "ptr_opt($content, primitive_unwrap)"
+            else content
         type.isArray() ->
             if (type.isNullable) "ptr_opt<${type.toCppType(printOption = false)}>($content, karray_unwrap<${type.arrayTypeOrNull()!!.toCppType()}>)"
             else "karray_unwrap<${type.arrayTypeOrNull()!!.toCppType()}>($content)"

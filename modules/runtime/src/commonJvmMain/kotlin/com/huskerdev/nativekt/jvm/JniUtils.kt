@@ -50,4 +50,21 @@ object JniUtils {
     @JvmName("stringsToBytesNotNull")
     fun stringsToBytes(arr: Array<String>?): Array<ByteArray>? =
         stringsToBytes(arr as Array<String?>?) as Array<ByteArray>?
+
+    fun <T: Enum<T>> enumToInts(arr: Array<T>?): IntArray? {
+        if(arr == null)
+            return null
+        return IntArray(arr.size) { arr[it].ordinal }
+    }
+
+    @Suppress("unchecked_cast")
+    fun <T: Enum<T>> intsToEnum(arr: IntArray?, enumClass: Class<T>): Array<T>? {
+        if(arr == null)
+            return null
+        val enumConstants = enumClass.getEnumConstants()
+        val result = java.lang.reflect.Array.newInstance(enumClass, arr.size) as Array<T>
+        for (i in arr.indices)
+            result[i] = enumConstants[arr[i]]
+        return result
+    }
 }
