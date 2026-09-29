@@ -53,6 +53,10 @@ bool callback_return_string(std::shared_ptr<CallbackReturnString> arg) {
     return std::string(result.get_data(), result.get_size()) == "test string";
 }
 
+bool callback_return_string_empty(std::shared_ptr<CallbackReturnStringEmpty> arg) {
+    return arg->invoke().get_size() == 0;
+}
+
 bool callback_return_string_n(std::shared_ptr<CallbackReturnStringN> arg) {
     return arg->invoke().is_none();
 }

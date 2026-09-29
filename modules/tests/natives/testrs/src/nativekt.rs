@@ -296,25 +296,25 @@ macro_rules! impl_object_array {
 }
 
 impl_object_array!(MyDictionary,
-	nativekt_natives_testrs_testrs__array_mydictionary_new, n_,
-    nativekt_natives_testrs_testrs__array_mydictionary_length, o_,
-    nativekt_natives_testrs_testrs__array_mydictionary_push, p_,
-    nativekt_natives_testrs_testrs__array_mydictionary_get, q_,
-    nativekt_natives_testrs_testrs__array_mydictionary_free, r_
+	nativekt_natives_testrs_testrs__array_mydictionary_new, s_,
+    nativekt_natives_testrs_testrs__array_mydictionary_length, t_,
+    nativekt_natives_testrs_testrs__array_mydictionary_push, u_,
+    nativekt_natives_testrs_testrs__array_mydictionary_get, v_,
+    nativekt_natives_testrs_testrs__array_mydictionary_free, w_
 );
 impl_object_array!(Arc<crate::MyInterface>,
-	nativekt_natives_testrs_testrs__array_myinterface_new, BC_,
-    nativekt_natives_testrs_testrs__array_myinterface_length, BD_,
-    nativekt_natives_testrs_testrs__array_myinterface_push, BE_,
-    nativekt_natives_testrs_testrs__array_myinterface_get, BF_,
-    nativekt_natives_testrs_testrs__array_myinterface_free, BG_
+	nativekt_natives_testrs_testrs__array_myinterface_new, BH_,
+    nativekt_natives_testrs_testrs__array_myinterface_length, BI_,
+    nativekt_natives_testrs_testrs__array_myinterface_push, BJ_,
+    nativekt_natives_testrs_testrs__array_myinterface_get, BK_,
+    nativekt_natives_testrs_testrs__array_myinterface_free, BL_
 );
 impl_object_array!(String,
-	nativekt_natives_testrs_testrs__array_string_new, BH_,
-    nativekt_natives_testrs_testrs__array_string_length, BI_,
-    nativekt_natives_testrs_testrs__array_string_push, BJ_,
-    nativekt_natives_testrs_testrs__array_string_get, BK_,
-    nativekt_natives_testrs_testrs__array_string_free, BL_
+	nativekt_natives_testrs_testrs__array_string_new, BM_,
+    nativekt_natives_testrs_testrs__array_string_length, BN_,
+    nativekt_natives_testrs_testrs__array_string_push, BO_,
+    nativekt_natives_testrs_testrs__array_string_get, BP_,
+    nativekt_natives_testrs_testrs__array_string_free, BQ_
 );
 
 // ╔════════════════════════════╗
@@ -346,17 +346,27 @@ fn critical_array_opt<T>(data: *mut T, size: i32) -> ManuallyDrop<Option<Vec<T>>
 // ╚═════════════════╝
 
 #[derive(Clone)]
+pub struct EmptyDictionary {
+}
+export_fn! {
+	fn nativekt_natives_testrs_testrs__emptydictionary_new() -> *mut EmptyDictionary as BR_ {
+		into_raw(EmptyDictionary {  })
+	}
+	fn nativekt_natives_testrs_testrs__emptydictionary_free(of: *mut EmptyDictionary) -> () as BS_ { from_raw(of); }
+}
+
+#[derive(Clone)]
 pub struct ParentDictionary {
 	pub a: i32, 
 	pub b: i32
 }
 export_fn! {
-	fn nativekt_natives_testrs_testrs__parentdictionary_new(a: i32, b: i32) -> *mut ParentDictionary as BS_ {
+	fn nativekt_natives_testrs_testrs__parentdictionary_new(a: i32, b: i32) -> *mut ParentDictionary as BZ_ {
 		into_raw(ParentDictionary { a, b })
 	}
-	fn nativekt_natives_testrs_testrs__parentdictionary_free(of: *mut ParentDictionary) -> () as BT_ { from_raw(of); }
-	fn nativekt_natives_testrs_testrs__parentdictionary__a(of: *mut ParentDictionary) -> i32 as BU_ { unsafe { (*of).a } }
-	fn nativekt_natives_testrs_testrs__parentdictionary__b(of: *mut ParentDictionary) -> i32 as BV_ { unsafe { (*of).b } }
+	fn nativekt_natives_testrs_testrs__parentdictionary_free(of: *mut ParentDictionary) -> () as Ba_ { from_raw(of); }
+	fn nativekt_natives_testrs_testrs__parentdictionary__a(of: *mut ParentDictionary) -> i32 as Bb_ { unsafe { (*of).a } }
+	fn nativekt_natives_testrs_testrs__parentdictionary__b(of: *mut ParentDictionary) -> i32 as Bc_ { unsafe { (*of).b } }
 }
 
 #[derive(Clone)]
@@ -367,14 +377,14 @@ pub struct MyDictionary {
 	pub d: i32
 }
 export_fn! {
-	fn nativekt_natives_testrs_testrs__mydictionary_new(a: i32, b: i32, c: i32, d: i32) -> *mut MyDictionary as BM_ {
+	fn nativekt_natives_testrs_testrs__mydictionary_new(a: i32, b: i32, c: i32, d: i32) -> *mut MyDictionary as BT_ {
 		into_raw(MyDictionary { a, b, c, d })
 	}
-	fn nativekt_natives_testrs_testrs__mydictionary_free(of: *mut MyDictionary) -> () as BN_ { from_raw(of); }
-	fn nativekt_natives_testrs_testrs__mydictionary__a(of: *mut MyDictionary) -> i32 as BO_ { unsafe { (*of).a } }
-	fn nativekt_natives_testrs_testrs__mydictionary__b(of: *mut MyDictionary) -> i32 as BP_ { unsafe { (*of).b } }
-	fn nativekt_natives_testrs_testrs__mydictionary__c(of: *mut MyDictionary) -> i32 as BQ_ { unsafe { (*of).c } }
-	fn nativekt_natives_testrs_testrs__mydictionary__d(of: *mut MyDictionary) -> i32 as BR_ { unsafe { (*of).d } }
+	fn nativekt_natives_testrs_testrs__mydictionary_free(of: *mut MyDictionary) -> () as BU_ { from_raw(of); }
+	fn nativekt_natives_testrs_testrs__mydictionary__a(of: *mut MyDictionary) -> i32 as BV_ { unsafe { (*of).a } }
+	fn nativekt_natives_testrs_testrs__mydictionary__b(of: *mut MyDictionary) -> i32 as BW_ { unsafe { (*of).b } }
+	fn nativekt_natives_testrs_testrs__mydictionary__c(of: *mut MyDictionary) -> i32 as BX_ { unsafe { (*of).c } }
+	fn nativekt_natives_testrs_testrs__mydictionary__d(of: *mut MyDictionary) -> i32 as BY_ { unsafe { (*of).d } }
 }
 
 #[derive(Clone)]
@@ -416,45 +426,45 @@ pub struct TypeDictionary {
 	pub a35: Vec<Arc<crate::MyInterface>>
 }
 export_fn! {
-	fn nativekt_natives_testrs_testrs__typedictionary_new(a1: u16, a2: bool, a3: i8, a4: u8, a5: i16, a6: u16, a7: i32, a8: u32, a9: i64, a10: u64, a11: f32, a12: f64, a13: *mut String, a14: MyEnum, a15: *mut MyDictionary, a16: *mut MyDictionary, a17: *mut Arc<crate::MyInterface>, a18: *mut Arc<crate::MyInterface>, a19: *mut Arc<VoidCallback>, a20: *mut Vec<u16>, a21: *mut Vec<bool>, a22: *mut Vec<i8>, a23: *mut Vec<u8>, a24: *mut Vec<i16>, a25: *mut Vec<u16>, a26: *mut Vec<i32>, a27: *mut Vec<u32>, a28: *mut Vec<i64>, a29: *mut Vec<u64>, a30: *mut Vec<f32>, a31: *mut Vec<f64>, a32: *mut Vec<String>, a33: *mut Vec<MyEnum>, a34: *mut Vec<MyDictionary>, a35: *mut Vec<Arc<crate::MyInterface>>) -> *mut TypeDictionary as BW_ {
+	fn nativekt_natives_testrs_testrs__typedictionary_new(a1: u16, a2: bool, a3: i8, a4: u8, a5: i16, a6: u16, a7: i32, a8: u32, a9: i64, a10: u64, a11: f32, a12: f64, a13: *mut String, a14: MyEnum, a15: *mut MyDictionary, a16: *mut MyDictionary, a17: *mut Arc<crate::MyInterface>, a18: *mut Arc<crate::MyInterface>, a19: *mut Arc<VoidCallback>, a20: *mut Vec<u16>, a21: *mut Vec<bool>, a22: *mut Vec<i8>, a23: *mut Vec<u8>, a24: *mut Vec<i16>, a25: *mut Vec<u16>, a26: *mut Vec<i32>, a27: *mut Vec<u32>, a28: *mut Vec<i64>, a29: *mut Vec<u64>, a30: *mut Vec<f32>, a31: *mut Vec<f64>, a32: *mut Vec<String>, a33: *mut Vec<MyEnum>, a34: *mut Vec<MyDictionary>, a35: *mut Vec<Arc<crate::MyInterface>>) -> *mut TypeDictionary as Bd_ {
 		into_raw(TypeDictionary { a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13: from_raw(a13), a14, a15: from_raw(a15), a16: ptr_opt(a16, from_raw), a17: from_raw(a17), a18: ptr_opt(a18, from_raw), a19: from_raw(a19), a20: from_raw(a20), a21: from_raw(a21), a22: from_raw(a22), a23: from_raw(a23), a24: from_raw(a24), a25: from_raw(a25), a26: from_raw(a26), a27: from_raw(a27), a28: from_raw(a28), a29: from_raw(a29), a30: from_raw(a30), a31: from_raw(a31), a32: from_raw(a32), a33: from_raw(a33), a34: from_raw(a34), a35: from_raw(a35) })
 	}
-	fn nativekt_natives_testrs_testrs__typedictionary_free(of: *mut TypeDictionary) -> () as BX_ { from_raw(of); }
-	fn nativekt_natives_testrs_testrs__typedictionary__a1(of: *mut TypeDictionary) -> u16 as BY_ { unsafe { (*of).a1 } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a2(of: *mut TypeDictionary) -> bool as BZ_ { unsafe { (*of).a2 } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a3(of: *mut TypeDictionary) -> i8 as Ba_ { unsafe { (*of).a3 } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a4(of: *mut TypeDictionary) -> u8 as Bb_ { unsafe { (*of).a4 } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a5(of: *mut TypeDictionary) -> i16 as Bc_ { unsafe { (*of).a5 } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a6(of: *mut TypeDictionary) -> u16 as Bd_ { unsafe { (*of).a6 } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a7(of: *mut TypeDictionary) -> i32 as Be_ { unsafe { (*of).a7 } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a8(of: *mut TypeDictionary) -> u32 as Bf_ { unsafe { (*of).a8 } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a9(of: *mut TypeDictionary) -> i64 as Bg_ { unsafe { (*of).a9 } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a10(of: *mut TypeDictionary) -> u64 as Bh_ { unsafe { (*of).a10 } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a11(of: *mut TypeDictionary) -> f32 as Bi_ { unsafe { (*of).a11 } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a12(of: *mut TypeDictionary) -> f64 as Bj_ { unsafe { (*of).a12 } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a13(of: *mut TypeDictionary) -> *const String as Bk_ { unsafe { &(*of).a13 } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a14(of: *mut TypeDictionary) -> MyEnum as Bl_ { unsafe { (*of).a14.clone() } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a15(of: *mut TypeDictionary) -> *const MyDictionary as Bm_ { unsafe { &(*of).a15 } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a16(of: *mut TypeDictionary) -> *const MyDictionary as Bn_ { unsafe { (&(*of).a16).as_ref().map_or(core::ptr::null(), |it| it as *const MyDictionary) } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a17(of: *mut TypeDictionary) -> *const Arc<crate::MyInterface> as Bo_ { unsafe { &(*of).a17 } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a18(of: *mut TypeDictionary) -> *const Arc<crate::MyInterface> as Bp_ { unsafe { (&(*of).a18).as_ref().map_or(core::ptr::null(), |it| it as *const Arc<crate::MyInterface>) } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a19(of: *mut TypeDictionary) -> *const Arc<VoidCallback> as Bq_ { unsafe { &(*of).a19 } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a20(of: *mut TypeDictionary) -> *const Vec<u16> as Br_ { unsafe { &(*of).a20 } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a21(of: *mut TypeDictionary) -> *const Vec<bool> as Bs_ { unsafe { &(*of).a21 } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a22(of: *mut TypeDictionary) -> *const Vec<i8> as Bt_ { unsafe { &(*of).a22 } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a23(of: *mut TypeDictionary) -> *const Vec<u8> as Bu_ { unsafe { &(*of).a23 } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a24(of: *mut TypeDictionary) -> *const Vec<i16> as Bv_ { unsafe { &(*of).a24 } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a25(of: *mut TypeDictionary) -> *const Vec<u16> as Bw_ { unsafe { &(*of).a25 } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a26(of: *mut TypeDictionary) -> *const Vec<i32> as Bx_ { unsafe { &(*of).a26 } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a27(of: *mut TypeDictionary) -> *const Vec<u32> as By_ { unsafe { &(*of).a27 } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a28(of: *mut TypeDictionary) -> *const Vec<i64> as Bz_ { unsafe { &(*of).a28 } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a29(of: *mut TypeDictionary) -> *const Vec<u64> as CA_ { unsafe { &(*of).a29 } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a30(of: *mut TypeDictionary) -> *const Vec<f32> as CB_ { unsafe { &(*of).a30 } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a31(of: *mut TypeDictionary) -> *const Vec<f64> as CC_ { unsafe { &(*of).a31 } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a32(of: *mut TypeDictionary) -> *const Vec<String> as CD_ { unsafe { &(*of).a32 } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a33(of: *mut TypeDictionary) -> *const Vec<MyEnum> as CE_ { unsafe { &(*of).a33 } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a34(of: *mut TypeDictionary) -> *const Vec<MyDictionary> as CF_ { unsafe { &(*of).a34 } }
-	fn nativekt_natives_testrs_testrs__typedictionary__a35(of: *mut TypeDictionary) -> *const Vec<Arc<crate::MyInterface>> as CG_ { unsafe { &(*of).a35 } }
+	fn nativekt_natives_testrs_testrs__typedictionary_free(of: *mut TypeDictionary) -> () as Be_ { from_raw(of); }
+	fn nativekt_natives_testrs_testrs__typedictionary__a1(of: *mut TypeDictionary) -> u16 as Bf_ { unsafe { (*of).a1 } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a2(of: *mut TypeDictionary) -> bool as Bg_ { unsafe { (*of).a2 } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a3(of: *mut TypeDictionary) -> i8 as Bh_ { unsafe { (*of).a3 } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a4(of: *mut TypeDictionary) -> u8 as Bi_ { unsafe { (*of).a4 } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a5(of: *mut TypeDictionary) -> i16 as Bj_ { unsafe { (*of).a5 } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a6(of: *mut TypeDictionary) -> u16 as Bk_ { unsafe { (*of).a6 } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a7(of: *mut TypeDictionary) -> i32 as Bl_ { unsafe { (*of).a7 } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a8(of: *mut TypeDictionary) -> u32 as Bm_ { unsafe { (*of).a8 } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a9(of: *mut TypeDictionary) -> i64 as Bn_ { unsafe { (*of).a9 } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a10(of: *mut TypeDictionary) -> u64 as Bo_ { unsafe { (*of).a10 } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a11(of: *mut TypeDictionary) -> f32 as Bp_ { unsafe { (*of).a11 } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a12(of: *mut TypeDictionary) -> f64 as Bq_ { unsafe { (*of).a12 } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a13(of: *mut TypeDictionary) -> *const String as Br_ { unsafe { &(*of).a13 } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a14(of: *mut TypeDictionary) -> MyEnum as Bs_ { unsafe { (*of).a14.clone() } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a15(of: *mut TypeDictionary) -> *const MyDictionary as Bt_ { unsafe { &(*of).a15 } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a16(of: *mut TypeDictionary) -> *const MyDictionary as Bu_ { unsafe { (&(*of).a16).as_ref().map_or(core::ptr::null(), |it| it as *const MyDictionary) } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a17(of: *mut TypeDictionary) -> *const Arc<crate::MyInterface> as Bv_ { unsafe { &(*of).a17 } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a18(of: *mut TypeDictionary) -> *const Arc<crate::MyInterface> as Bw_ { unsafe { (&(*of).a18).as_ref().map_or(core::ptr::null(), |it| it as *const Arc<crate::MyInterface>) } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a19(of: *mut TypeDictionary) -> *const Arc<VoidCallback> as Bx_ { unsafe { &(*of).a19 } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a20(of: *mut TypeDictionary) -> *const Vec<u16> as By_ { unsafe { &(*of).a20 } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a21(of: *mut TypeDictionary) -> *const Vec<bool> as Bz_ { unsafe { &(*of).a21 } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a22(of: *mut TypeDictionary) -> *const Vec<i8> as CA_ { unsafe { &(*of).a22 } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a23(of: *mut TypeDictionary) -> *const Vec<u8> as CB_ { unsafe { &(*of).a23 } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a24(of: *mut TypeDictionary) -> *const Vec<i16> as CC_ { unsafe { &(*of).a24 } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a25(of: *mut TypeDictionary) -> *const Vec<u16> as CD_ { unsafe { &(*of).a25 } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a26(of: *mut TypeDictionary) -> *const Vec<i32> as CE_ { unsafe { &(*of).a26 } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a27(of: *mut TypeDictionary) -> *const Vec<u32> as CF_ { unsafe { &(*of).a27 } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a28(of: *mut TypeDictionary) -> *const Vec<i64> as CG_ { unsafe { &(*of).a28 } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a29(of: *mut TypeDictionary) -> *const Vec<u64> as CH_ { unsafe { &(*of).a29 } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a30(of: *mut TypeDictionary) -> *const Vec<f32> as CI_ { unsafe { &(*of).a30 } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a31(of: *mut TypeDictionary) -> *const Vec<f64> as CJ_ { unsafe { &(*of).a31 } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a32(of: *mut TypeDictionary) -> *const Vec<String> as CK_ { unsafe { &(*of).a32 } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a33(of: *mut TypeDictionary) -> *const Vec<MyEnum> as CL_ { unsafe { &(*of).a33 } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a34(of: *mut TypeDictionary) -> *const Vec<MyDictionary> as CM_ { unsafe { &(*of).a34 } }
+	fn nativekt_natives_testrs_testrs__typedictionary__a35(of: *mut TypeDictionary) -> *const Vec<Arc<crate::MyInterface>> as CN_ { unsafe { &(*of).a35 } }
 }
 
 // ╔═══════════════════╗
@@ -510,665 +520,697 @@ impl_callback!(
     CallbackPassBoolean,
 	external_fn_type!(bool; isize, bool),
 	pub fn invoke(&self, arg: bool) -> bool { external_fn_call!(bool; self.invoke; self.id, arg) },
-	nativekt_natives_testrs_testrs__callbackpassboolean_new, CH_,
-	nativekt_natives_testrs_testrs__callbackpassboolean_id, CI_,
-	nativekt_natives_testrs_testrs__callbackpassboolean_free, CJ_
+	nativekt_natives_testrs_testrs__callbackpassboolean_new, CO_,
+	nativekt_natives_testrs_testrs__callbackpassboolean_id, CP_,
+	nativekt_natives_testrs_testrs__callbackpassboolean_free, CQ_
 );
 impl_callback!(
     CallbackPassBooleanArray,
 	external_fn_type!(bool; isize, *mut Vec<bool>),
 	pub fn invoke(&self, arg: Vec<bool>) -> bool { external_fn_call!(bool; self.invoke; self.id, into_raw(arg)) },
-	nativekt_natives_testrs_testrs__callbackpassbooleanarray_new, CK_,
-	nativekt_natives_testrs_testrs__callbackpassbooleanarray_id, CL_,
-	nativekt_natives_testrs_testrs__callbackpassbooleanarray_free, CM_
+	nativekt_natives_testrs_testrs__callbackpassbooleanarray_new, CR_,
+	nativekt_natives_testrs_testrs__callbackpassbooleanarray_id, CS_,
+	nativekt_natives_testrs_testrs__callbackpassbooleanarray_free, CT_
 );
 impl_callback!(
     CallbackPassByte,
 	external_fn_type!(bool; isize, i8),
 	pub fn invoke(&self, arg: i8) -> bool { external_fn_call!(bool; self.invoke; self.id, arg) },
-	nativekt_natives_testrs_testrs__callbackpassbyte_new, CN_,
-	nativekt_natives_testrs_testrs__callbackpassbyte_id, CO_,
-	nativekt_natives_testrs_testrs__callbackpassbyte_free, CP_
+	nativekt_natives_testrs_testrs__callbackpassbyte_new, CU_,
+	nativekt_natives_testrs_testrs__callbackpassbyte_id, CV_,
+	nativekt_natives_testrs_testrs__callbackpassbyte_free, CW_
 );
 impl_callback!(
     CallbackPassByteArray,
 	external_fn_type!(bool; isize, *mut Vec<i8>),
 	pub fn invoke(&self, arg: Vec<i8>) -> bool { external_fn_call!(bool; self.invoke; self.id, into_raw(arg)) },
-	nativekt_natives_testrs_testrs__callbackpassbytearray_new, CQ_,
-	nativekt_natives_testrs_testrs__callbackpassbytearray_id, CR_,
-	nativekt_natives_testrs_testrs__callbackpassbytearray_free, CS_
+	nativekt_natives_testrs_testrs__callbackpassbytearray_new, CX_,
+	nativekt_natives_testrs_testrs__callbackpassbytearray_id, CY_,
+	nativekt_natives_testrs_testrs__callbackpassbytearray_free, CZ_
 );
 impl_callback!(
     CallbackPassCallback,
 	external_fn_type!(bool; isize, *mut Arc<VoidCallback>),
 	pub fn invoke(&self, arg: Arc<VoidCallback>) -> bool { external_fn_call!(bool; self.invoke; self.id, into_raw(arg)) },
-	nativekt_natives_testrs_testrs__callbackpasscallback_new, CT_,
-	nativekt_natives_testrs_testrs__callbackpasscallback_id, CU_,
-	nativekt_natives_testrs_testrs__callbackpasscallback_free, CV_
+	nativekt_natives_testrs_testrs__callbackpasscallback_new, Ca_,
+	nativekt_natives_testrs_testrs__callbackpasscallback_id, Cb_,
+	nativekt_natives_testrs_testrs__callbackpasscallback_free, Cc_
 );
 impl_callback!(
     CallbackPassCallbackN,
 	external_fn_type!(bool; isize, *mut Arc<VoidCallback>),
 	pub fn invoke(&self, arg: Option<Arc<VoidCallback>>) -> bool { external_fn_call!(bool; self.invoke; self.id, obj_opt(arg, into_raw)) },
-	nativekt_natives_testrs_testrs__callbackpasscallbackn_new, CW_,
-	nativekt_natives_testrs_testrs__callbackpasscallbackn_id, CX_,
-	nativekt_natives_testrs_testrs__callbackpasscallbackn_free, CY_
+	nativekt_natives_testrs_testrs__callbackpasscallbackn_new, Cd_,
+	nativekt_natives_testrs_testrs__callbackpasscallbackn_id, Ce_,
+	nativekt_natives_testrs_testrs__callbackpasscallbackn_free, Cf_
 );
 impl_callback!(
     CallbackPassChar,
 	external_fn_type!(bool; isize, u16),
 	pub fn invoke(&self, arg: u16) -> bool { external_fn_call!(bool; self.invoke; self.id, arg) },
-	nativekt_natives_testrs_testrs__callbackpasschar_new, CZ_,
-	nativekt_natives_testrs_testrs__callbackpasschar_id, Ca_,
-	nativekt_natives_testrs_testrs__callbackpasschar_free, Cb_
+	nativekt_natives_testrs_testrs__callbackpasschar_new, Cg_,
+	nativekt_natives_testrs_testrs__callbackpasschar_id, Ch_,
+	nativekt_natives_testrs_testrs__callbackpasschar_free, Ci_
 );
 impl_callback!(
     CallbackPassCharArray,
 	external_fn_type!(bool; isize, *mut Vec<u16>),
 	pub fn invoke(&self, arg: Vec<u16>) -> bool { external_fn_call!(bool; self.invoke; self.id, into_raw(arg)) },
-	nativekt_natives_testrs_testrs__callbackpasschararray_new, Cc_,
-	nativekt_natives_testrs_testrs__callbackpasschararray_id, Cd_,
-	nativekt_natives_testrs_testrs__callbackpasschararray_free, Ce_
+	nativekt_natives_testrs_testrs__callbackpasschararray_new, Cj_,
+	nativekt_natives_testrs_testrs__callbackpasschararray_id, Ck_,
+	nativekt_natives_testrs_testrs__callbackpasschararray_free, Cl_
+);
+impl_callback!(
+    CallbackPassCharArrayEmpty,
+	external_fn_type!(bool; isize, *mut Vec<u16>),
+	pub fn invoke(&self, arg: Vec<u16>) -> bool { external_fn_call!(bool; self.invoke; self.id, into_raw(arg)) },
+	nativekt_natives_testrs_testrs__callbackpasschararrayempty_new, Cm_,
+	nativekt_natives_testrs_testrs__callbackpasschararrayempty_id, Cn_,
+	nativekt_natives_testrs_testrs__callbackpasschararrayempty_free, Co_
 );
 impl_callback!(
     CallbackPassCharArrayN,
 	external_fn_type!(bool; isize, *mut Vec<u16>),
 	pub fn invoke(&self, arg: Option<Vec<u16>>) -> bool { external_fn_call!(bool; self.invoke; self.id, obj_opt(arg, into_raw)) },
-	nativekt_natives_testrs_testrs__callbackpasschararrayn_new, Cf_,
-	nativekt_natives_testrs_testrs__callbackpasschararrayn_id, Cg_,
-	nativekt_natives_testrs_testrs__callbackpasschararrayn_free, Ch_
+	nativekt_natives_testrs_testrs__callbackpasschararrayn_new, Cp_,
+	nativekt_natives_testrs_testrs__callbackpasschararrayn_id, Cq_,
+	nativekt_natives_testrs_testrs__callbackpasschararrayn_free, Cr_
 );
 impl_callback!(
     CallbackPassDictionary,
 	external_fn_type!(bool; isize, *mut MyDictionary),
 	pub fn invoke(&self, arg: MyDictionary) -> bool { external_fn_call!(bool; self.invoke; self.id, into_raw(arg)) },
-	nativekt_natives_testrs_testrs__callbackpassdictionary_new, Ci_,
-	nativekt_natives_testrs_testrs__callbackpassdictionary_id, Cj_,
-	nativekt_natives_testrs_testrs__callbackpassdictionary_free, Ck_
+	nativekt_natives_testrs_testrs__callbackpassdictionary_new, Cs_,
+	nativekt_natives_testrs_testrs__callbackpassdictionary_id, Ct_,
+	nativekt_natives_testrs_testrs__callbackpassdictionary_free, Cu_
 );
 impl_callback!(
     CallbackPassDictionaryArray,
 	external_fn_type!(bool; isize, *mut Vec<MyDictionary>),
 	pub fn invoke(&self, arg: Vec<MyDictionary>) -> bool { external_fn_call!(bool; self.invoke; self.id, into_raw(arg)) },
-	nativekt_natives_testrs_testrs__callbackpassdictionaryarray_new, Cl_,
-	nativekt_natives_testrs_testrs__callbackpassdictionaryarray_id, Cm_,
-	nativekt_natives_testrs_testrs__callbackpassdictionaryarray_free, Cn_
+	nativekt_natives_testrs_testrs__callbackpassdictionaryarray_new, Cv_,
+	nativekt_natives_testrs_testrs__callbackpassdictionaryarray_id, Cw_,
+	nativekt_natives_testrs_testrs__callbackpassdictionaryarray_free, Cx_
 );
 impl_callback!(
     CallbackPassDictionaryArrayN,
 	external_fn_type!(bool; isize, *mut Vec<Option<MyDictionary>>),
 	pub fn invoke(&self, arg: Vec<Option<MyDictionary>>) -> bool { external_fn_call!(bool; self.invoke; self.id, into_raw(arg)) },
-	nativekt_natives_testrs_testrs__callbackpassdictionaryarrayn_new, Co_,
-	nativekt_natives_testrs_testrs__callbackpassdictionaryarrayn_id, Cp_,
-	nativekt_natives_testrs_testrs__callbackpassdictionaryarrayn_free, Cq_
+	nativekt_natives_testrs_testrs__callbackpassdictionaryarrayn_new, Cy_,
+	nativekt_natives_testrs_testrs__callbackpassdictionaryarrayn_id, Cz_,
+	nativekt_natives_testrs_testrs__callbackpassdictionaryarrayn_free, DA_
 );
 impl_callback!(
     CallbackPassDictionaryN,
 	external_fn_type!(bool; isize, *mut MyDictionary),
 	pub fn invoke(&self, arg: Option<MyDictionary>) -> bool { external_fn_call!(bool; self.invoke; self.id, obj_opt(arg, into_raw)) },
-	nativekt_natives_testrs_testrs__callbackpassdictionaryn_new, Cr_,
-	nativekt_natives_testrs_testrs__callbackpassdictionaryn_id, Cs_,
-	nativekt_natives_testrs_testrs__callbackpassdictionaryn_free, Ct_
+	nativekt_natives_testrs_testrs__callbackpassdictionaryn_new, DB_,
+	nativekt_natives_testrs_testrs__callbackpassdictionaryn_id, DC_,
+	nativekt_natives_testrs_testrs__callbackpassdictionaryn_free, DD_
 );
 impl_callback!(
     CallbackPassDouble,
 	external_fn_type!(bool; isize, f64),
 	pub fn invoke(&self, arg: f64) -> bool { external_fn_call!(bool; self.invoke; self.id, arg) },
-	nativekt_natives_testrs_testrs__callbackpassdouble_new, Cu_,
-	nativekt_natives_testrs_testrs__callbackpassdouble_id, Cv_,
-	nativekt_natives_testrs_testrs__callbackpassdouble_free, Cw_
+	nativekt_natives_testrs_testrs__callbackpassdouble_new, DE_,
+	nativekt_natives_testrs_testrs__callbackpassdouble_id, DF_,
+	nativekt_natives_testrs_testrs__callbackpassdouble_free, DG_
 );
 impl_callback!(
     CallbackPassDoubleArray,
 	external_fn_type!(bool; isize, *mut Vec<f64>),
 	pub fn invoke(&self, arg: Vec<f64>) -> bool { external_fn_call!(bool; self.invoke; self.id, into_raw(arg)) },
-	nativekt_natives_testrs_testrs__callbackpassdoublearray_new, Cx_,
-	nativekt_natives_testrs_testrs__callbackpassdoublearray_id, Cy_,
-	nativekt_natives_testrs_testrs__callbackpassdoublearray_free, Cz_
+	nativekt_natives_testrs_testrs__callbackpassdoublearray_new, DH_,
+	nativekt_natives_testrs_testrs__callbackpassdoublearray_id, DI_,
+	nativekt_natives_testrs_testrs__callbackpassdoublearray_free, DJ_
 );
 impl_callback!(
     CallbackPassEnum,
 	external_fn_type!(bool; isize, MyEnum),
 	pub fn invoke(&self, arg: MyEnum) -> bool { external_fn_call!(bool; self.invoke; self.id, arg) },
-	nativekt_natives_testrs_testrs__callbackpassenum_new, DA_,
-	nativekt_natives_testrs_testrs__callbackpassenum_id, DB_,
-	nativekt_natives_testrs_testrs__callbackpassenum_free, DC_
+	nativekt_natives_testrs_testrs__callbackpassenum_new, DK_,
+	nativekt_natives_testrs_testrs__callbackpassenum_id, DL_,
+	nativekt_natives_testrs_testrs__callbackpassenum_free, DM_
 );
 impl_callback!(
     CallbackPassEnumArray,
 	external_fn_type!(bool; isize, *mut Vec<MyEnum>),
 	pub fn invoke(&self, arg: Vec<MyEnum>) -> bool { external_fn_call!(bool; self.invoke; self.id, into_raw(arg)) },
-	nativekt_natives_testrs_testrs__callbackpassenumarray_new, DD_,
-	nativekt_natives_testrs_testrs__callbackpassenumarray_id, DE_,
-	nativekt_natives_testrs_testrs__callbackpassenumarray_free, DF_
+	nativekt_natives_testrs_testrs__callbackpassenumarray_new, DN_,
+	nativekt_natives_testrs_testrs__callbackpassenumarray_id, DO_,
+	nativekt_natives_testrs_testrs__callbackpassenumarray_free, DP_
 );
 impl_callback!(
     CallbackPassFloat,
 	external_fn_type!(bool; isize, f32),
 	pub fn invoke(&self, arg: f32) -> bool { external_fn_call!(bool; self.invoke; self.id, arg) },
-	nativekt_natives_testrs_testrs__callbackpassfloat_new, DG_,
-	nativekt_natives_testrs_testrs__callbackpassfloat_id, DH_,
-	nativekt_natives_testrs_testrs__callbackpassfloat_free, DI_
+	nativekt_natives_testrs_testrs__callbackpassfloat_new, DQ_,
+	nativekt_natives_testrs_testrs__callbackpassfloat_id, DR_,
+	nativekt_natives_testrs_testrs__callbackpassfloat_free, DS_
 );
 impl_callback!(
     CallbackPassFloatArray,
 	external_fn_type!(bool; isize, *mut Vec<f32>),
 	pub fn invoke(&self, arg: Vec<f32>) -> bool { external_fn_call!(bool; self.invoke; self.id, into_raw(arg)) },
-	nativekt_natives_testrs_testrs__callbackpassfloatarray_new, DJ_,
-	nativekt_natives_testrs_testrs__callbackpassfloatarray_id, DK_,
-	nativekt_natives_testrs_testrs__callbackpassfloatarray_free, DL_
+	nativekt_natives_testrs_testrs__callbackpassfloatarray_new, DT_,
+	nativekt_natives_testrs_testrs__callbackpassfloatarray_id, DU_,
+	nativekt_natives_testrs_testrs__callbackpassfloatarray_free, DV_
 );
 impl_callback!(
     CallbackPassInt,
 	external_fn_type!(bool; isize, i32),
 	pub fn invoke(&self, arg: i32) -> bool { external_fn_call!(bool; self.invoke; self.id, arg) },
-	nativekt_natives_testrs_testrs__callbackpassint_new, DM_,
-	nativekt_natives_testrs_testrs__callbackpassint_id, DN_,
-	nativekt_natives_testrs_testrs__callbackpassint_free, DO_
+	nativekt_natives_testrs_testrs__callbackpassint_new, DW_,
+	nativekt_natives_testrs_testrs__callbackpassint_id, DX_,
+	nativekt_natives_testrs_testrs__callbackpassint_free, DY_
 );
 impl_callback!(
     CallbackPassIntArray,
 	external_fn_type!(bool; isize, *mut Vec<i32>),
 	pub fn invoke(&self, arg: Vec<i32>) -> bool { external_fn_call!(bool; self.invoke; self.id, into_raw(arg)) },
-	nativekt_natives_testrs_testrs__callbackpassintarray_new, DP_,
-	nativekt_natives_testrs_testrs__callbackpassintarray_id, DQ_,
-	nativekt_natives_testrs_testrs__callbackpassintarray_free, DR_
+	nativekt_natives_testrs_testrs__callbackpassintarray_new, DZ_,
+	nativekt_natives_testrs_testrs__callbackpassintarray_id, Da_,
+	nativekt_natives_testrs_testrs__callbackpassintarray_free, Db_
 );
 impl_callback!(
     CallbackPassInterface,
 	external_fn_type!(bool; isize, *mut Arc<crate::MyInterface>),
 	pub fn invoke(&self, arg: Arc<crate::MyInterface>) -> bool { external_fn_call!(bool; self.invoke; self.id, into_raw(arg)) },
-	nativekt_natives_testrs_testrs__callbackpassinterface_new, DS_,
-	nativekt_natives_testrs_testrs__callbackpassinterface_id, DT_,
-	nativekt_natives_testrs_testrs__callbackpassinterface_free, DU_
+	nativekt_natives_testrs_testrs__callbackpassinterface_new, Dc_,
+	nativekt_natives_testrs_testrs__callbackpassinterface_id, Dd_,
+	nativekt_natives_testrs_testrs__callbackpassinterface_free, De_
 );
 impl_callback!(
     CallbackPassInterfaceArray,
 	external_fn_type!(bool; isize, *mut Vec<Arc<crate::MyInterface>>),
 	pub fn invoke(&self, arg: Vec<Arc<crate::MyInterface>>) -> bool { external_fn_call!(bool; self.invoke; self.id, into_raw(arg)) },
-	nativekt_natives_testrs_testrs__callbackpassinterfacearray_new, DV_,
-	nativekt_natives_testrs_testrs__callbackpassinterfacearray_id, DW_,
-	nativekt_natives_testrs_testrs__callbackpassinterfacearray_free, DX_
+	nativekt_natives_testrs_testrs__callbackpassinterfacearray_new, Df_,
+	nativekt_natives_testrs_testrs__callbackpassinterfacearray_id, Dg_,
+	nativekt_natives_testrs_testrs__callbackpassinterfacearray_free, Dh_
 );
 impl_callback!(
     CallbackPassInterfaceArrayN,
 	external_fn_type!(bool; isize, *mut Vec<Option<Arc<crate::MyInterface>>>),
 	pub fn invoke(&self, arg: Vec<Option<Arc<crate::MyInterface>>>) -> bool { external_fn_call!(bool; self.invoke; self.id, into_raw(arg)) },
-	nativekt_natives_testrs_testrs__callbackpassinterfacearrayn_new, DY_,
-	nativekt_natives_testrs_testrs__callbackpassinterfacearrayn_id, DZ_,
-	nativekt_natives_testrs_testrs__callbackpassinterfacearrayn_free, Da_
+	nativekt_natives_testrs_testrs__callbackpassinterfacearrayn_new, Di_,
+	nativekt_natives_testrs_testrs__callbackpassinterfacearrayn_id, Dj_,
+	nativekt_natives_testrs_testrs__callbackpassinterfacearrayn_free, Dk_
 );
 impl_callback!(
     CallbackPassInterfaceN,
 	external_fn_type!(bool; isize, *mut Arc<crate::MyInterface>),
 	pub fn invoke(&self, arg: Option<Arc<crate::MyInterface>>) -> bool { external_fn_call!(bool; self.invoke; self.id, obj_opt(arg, into_raw)) },
-	nativekt_natives_testrs_testrs__callbackpassinterfacen_new, Db_,
-	nativekt_natives_testrs_testrs__callbackpassinterfacen_id, Dc_,
-	nativekt_natives_testrs_testrs__callbackpassinterfacen_free, Dd_
+	nativekt_natives_testrs_testrs__callbackpassinterfacen_new, Dl_,
+	nativekt_natives_testrs_testrs__callbackpassinterfacen_id, Dm_,
+	nativekt_natives_testrs_testrs__callbackpassinterfacen_free, Dn_
 );
 impl_callback!(
     CallbackPassLong,
 	external_fn_type!(bool; isize, i64),
 	pub fn invoke(&self, arg: i64) -> bool { external_fn_call!(bool; self.invoke; self.id, arg) },
-	nativekt_natives_testrs_testrs__callbackpasslong_new, De_,
-	nativekt_natives_testrs_testrs__callbackpasslong_id, Df_,
-	nativekt_natives_testrs_testrs__callbackpasslong_free, Dg_
+	nativekt_natives_testrs_testrs__callbackpasslong_new, Do_,
+	nativekt_natives_testrs_testrs__callbackpasslong_id, Dp_,
+	nativekt_natives_testrs_testrs__callbackpasslong_free, Dq_
 );
 impl_callback!(
     CallbackPassLongArray,
 	external_fn_type!(bool; isize, *mut Vec<i64>),
 	pub fn invoke(&self, arg: Vec<i64>) -> bool { external_fn_call!(bool; self.invoke; self.id, into_raw(arg)) },
-	nativekt_natives_testrs_testrs__callbackpasslongarray_new, Dh_,
-	nativekt_natives_testrs_testrs__callbackpasslongarray_id, Di_,
-	nativekt_natives_testrs_testrs__callbackpasslongarray_free, Dj_
+	nativekt_natives_testrs_testrs__callbackpasslongarray_new, Dr_,
+	nativekt_natives_testrs_testrs__callbackpasslongarray_id, Ds_,
+	nativekt_natives_testrs_testrs__callbackpasslongarray_free, Dt_
 );
 impl_callback!(
     CallbackPassShort,
 	external_fn_type!(bool; isize, i16),
 	pub fn invoke(&self, arg: i16) -> bool { external_fn_call!(bool; self.invoke; self.id, arg) },
-	nativekt_natives_testrs_testrs__callbackpassshort_new, Dk_,
-	nativekt_natives_testrs_testrs__callbackpassshort_id, Dl_,
-	nativekt_natives_testrs_testrs__callbackpassshort_free, Dm_
+	nativekt_natives_testrs_testrs__callbackpassshort_new, Du_,
+	nativekt_natives_testrs_testrs__callbackpassshort_id, Dv_,
+	nativekt_natives_testrs_testrs__callbackpassshort_free, Dw_
 );
 impl_callback!(
     CallbackPassShortArray,
 	external_fn_type!(bool; isize, *mut Vec<i16>),
 	pub fn invoke(&self, arg: Vec<i16>) -> bool { external_fn_call!(bool; self.invoke; self.id, into_raw(arg)) },
-	nativekt_natives_testrs_testrs__callbackpassshortarray_new, Dn_,
-	nativekt_natives_testrs_testrs__callbackpassshortarray_id, Do_,
-	nativekt_natives_testrs_testrs__callbackpassshortarray_free, Dp_
+	nativekt_natives_testrs_testrs__callbackpassshortarray_new, Dx_,
+	nativekt_natives_testrs_testrs__callbackpassshortarray_id, Dy_,
+	nativekt_natives_testrs_testrs__callbackpassshortarray_free, Dz_
 );
 impl_callback!(
     CallbackPassString,
 	external_fn_type!(bool; isize, *mut String),
 	pub fn invoke(&self, arg: String) -> bool { external_fn_call!(bool; self.invoke; self.id, into_raw(arg)) },
-	nativekt_natives_testrs_testrs__callbackpassstring_new, Dq_,
-	nativekt_natives_testrs_testrs__callbackpassstring_id, Dr_,
-	nativekt_natives_testrs_testrs__callbackpassstring_free, Ds_
+	nativekt_natives_testrs_testrs__callbackpassstring_new, EA_,
+	nativekt_natives_testrs_testrs__callbackpassstring_id, EB_,
+	nativekt_natives_testrs_testrs__callbackpassstring_free, EC_
 );
 impl_callback!(
     CallbackPassStringArray,
 	external_fn_type!(bool; isize, *mut Vec<String>),
 	pub fn invoke(&self, arg: Vec<String>) -> bool { external_fn_call!(bool; self.invoke; self.id, into_raw(arg)) },
-	nativekt_natives_testrs_testrs__callbackpassstringarray_new, Dt_,
-	nativekt_natives_testrs_testrs__callbackpassstringarray_id, Du_,
-	nativekt_natives_testrs_testrs__callbackpassstringarray_free, Dv_
+	nativekt_natives_testrs_testrs__callbackpassstringarray_new, ED_,
+	nativekt_natives_testrs_testrs__callbackpassstringarray_id, EE_,
+	nativekt_natives_testrs_testrs__callbackpassstringarray_free, EF_
 );
 impl_callback!(
     CallbackPassStringArrayN,
 	external_fn_type!(bool; isize, *mut Vec<Option<String>>),
 	pub fn invoke(&self, arg: Vec<Option<String>>) -> bool { external_fn_call!(bool; self.invoke; self.id, into_raw(arg)) },
-	nativekt_natives_testrs_testrs__callbackpassstringarrayn_new, Dw_,
-	nativekt_natives_testrs_testrs__callbackpassstringarrayn_id, Dx_,
-	nativekt_natives_testrs_testrs__callbackpassstringarrayn_free, Dy_
+	nativekt_natives_testrs_testrs__callbackpassstringarrayn_new, EG_,
+	nativekt_natives_testrs_testrs__callbackpassstringarrayn_id, EH_,
+	nativekt_natives_testrs_testrs__callbackpassstringarrayn_free, EI_
+);
+impl_callback!(
+    CallbackPassStringEmpty,
+	external_fn_type!(bool; isize, *mut String),
+	pub fn invoke(&self, arg: String) -> bool { external_fn_call!(bool; self.invoke; self.id, into_raw(arg)) },
+	nativekt_natives_testrs_testrs__callbackpassstringempty_new, EJ_,
+	nativekt_natives_testrs_testrs__callbackpassstringempty_id, EK_,
+	nativekt_natives_testrs_testrs__callbackpassstringempty_free, EL_
 );
 impl_callback!(
     CallbackPassStringN,
 	external_fn_type!(bool; isize, *mut String),
 	pub fn invoke(&self, arg: Option<String>) -> bool { external_fn_call!(bool; self.invoke; self.id, obj_opt(arg, into_raw)) },
-	nativekt_natives_testrs_testrs__callbackpassstringn_new, Dz_,
-	nativekt_natives_testrs_testrs__callbackpassstringn_id, EA_,
-	nativekt_natives_testrs_testrs__callbackpassstringn_free, EB_
+	nativekt_natives_testrs_testrs__callbackpassstringn_new, EM_,
+	nativekt_natives_testrs_testrs__callbackpassstringn_id, EN_,
+	nativekt_natives_testrs_testrs__callbackpassstringn_free, EO_
 );
 impl_callback!(
     CallbackPassUByte,
 	external_fn_type!(bool; isize, u8),
 	pub fn invoke(&self, arg: u8) -> bool { external_fn_call!(bool; self.invoke; self.id, arg) },
-	nativekt_natives_testrs_testrs__callbackpassubyte_new, EC_,
-	nativekt_natives_testrs_testrs__callbackpassubyte_id, ED_,
-	nativekt_natives_testrs_testrs__callbackpassubyte_free, EE_
+	nativekt_natives_testrs_testrs__callbackpassubyte_new, EP_,
+	nativekt_natives_testrs_testrs__callbackpassubyte_id, EQ_,
+	nativekt_natives_testrs_testrs__callbackpassubyte_free, ER_
 );
 impl_callback!(
     CallbackPassUByteArray,
 	external_fn_type!(bool; isize, *mut Vec<u8>),
 	pub fn invoke(&self, arg: Vec<u8>) -> bool { external_fn_call!(bool; self.invoke; self.id, into_raw(arg)) },
-	nativekt_natives_testrs_testrs__callbackpassubytearray_new, EF_,
-	nativekt_natives_testrs_testrs__callbackpassubytearray_id, EG_,
-	nativekt_natives_testrs_testrs__callbackpassubytearray_free, EH_
+	nativekt_natives_testrs_testrs__callbackpassubytearray_new, ES_,
+	nativekt_natives_testrs_testrs__callbackpassubytearray_id, ET_,
+	nativekt_natives_testrs_testrs__callbackpassubytearray_free, EU_
 );
 impl_callback!(
     CallbackPassUInt,
 	external_fn_type!(bool; isize, u32),
 	pub fn invoke(&self, arg: u32) -> bool { external_fn_call!(bool; self.invoke; self.id, arg) },
-	nativekt_natives_testrs_testrs__callbackpassuint_new, EI_,
-	nativekt_natives_testrs_testrs__callbackpassuint_id, EJ_,
-	nativekt_natives_testrs_testrs__callbackpassuint_free, EK_
+	nativekt_natives_testrs_testrs__callbackpassuint_new, EV_,
+	nativekt_natives_testrs_testrs__callbackpassuint_id, EW_,
+	nativekt_natives_testrs_testrs__callbackpassuint_free, EX_
 );
 impl_callback!(
     CallbackPassUIntArray,
 	external_fn_type!(bool; isize, *mut Vec<u32>),
 	pub fn invoke(&self, arg: Vec<u32>) -> bool { external_fn_call!(bool; self.invoke; self.id, into_raw(arg)) },
-	nativekt_natives_testrs_testrs__callbackpassuintarray_new, EL_,
-	nativekt_natives_testrs_testrs__callbackpassuintarray_id, EM_,
-	nativekt_natives_testrs_testrs__callbackpassuintarray_free, EN_
+	nativekt_natives_testrs_testrs__callbackpassuintarray_new, EY_,
+	nativekt_natives_testrs_testrs__callbackpassuintarray_id, EZ_,
+	nativekt_natives_testrs_testrs__callbackpassuintarray_free, Ea_
 );
 impl_callback!(
     CallbackPassULong,
 	external_fn_type!(bool; isize, u64),
 	pub fn invoke(&self, arg: u64) -> bool { external_fn_call!(bool; self.invoke; self.id, arg) },
-	nativekt_natives_testrs_testrs__callbackpassulong_new, EO_,
-	nativekt_natives_testrs_testrs__callbackpassulong_id, EP_,
-	nativekt_natives_testrs_testrs__callbackpassulong_free, EQ_
+	nativekt_natives_testrs_testrs__callbackpassulong_new, Eb_,
+	nativekt_natives_testrs_testrs__callbackpassulong_id, Ec_,
+	nativekt_natives_testrs_testrs__callbackpassulong_free, Ed_
 );
 impl_callback!(
     CallbackPassULongArray,
 	external_fn_type!(bool; isize, *mut Vec<u64>),
 	pub fn invoke(&self, arg: Vec<u64>) -> bool { external_fn_call!(bool; self.invoke; self.id, into_raw(arg)) },
-	nativekt_natives_testrs_testrs__callbackpassulongarray_new, ER_,
-	nativekt_natives_testrs_testrs__callbackpassulongarray_id, ES_,
-	nativekt_natives_testrs_testrs__callbackpassulongarray_free, ET_
+	nativekt_natives_testrs_testrs__callbackpassulongarray_new, Ee_,
+	nativekt_natives_testrs_testrs__callbackpassulongarray_id, Ef_,
+	nativekt_natives_testrs_testrs__callbackpassulongarray_free, Eg_
 );
 impl_callback!(
     CallbackPassUShort,
 	external_fn_type!(bool; isize, u16),
 	pub fn invoke(&self, arg: u16) -> bool { external_fn_call!(bool; self.invoke; self.id, arg) },
-	nativekt_natives_testrs_testrs__callbackpassushort_new, EU_,
-	nativekt_natives_testrs_testrs__callbackpassushort_id, EV_,
-	nativekt_natives_testrs_testrs__callbackpassushort_free, EW_
+	nativekt_natives_testrs_testrs__callbackpassushort_new, Eh_,
+	nativekt_natives_testrs_testrs__callbackpassushort_id, Ei_,
+	nativekt_natives_testrs_testrs__callbackpassushort_free, Ej_
 );
 impl_callback!(
     CallbackPassUShortArray,
 	external_fn_type!(bool; isize, *mut Vec<u16>),
 	pub fn invoke(&self, arg: Vec<u16>) -> bool { external_fn_call!(bool; self.invoke; self.id, into_raw(arg)) },
-	nativekt_natives_testrs_testrs__callbackpassushortarray_new, EX_,
-	nativekt_natives_testrs_testrs__callbackpassushortarray_id, EY_,
-	nativekt_natives_testrs_testrs__callbackpassushortarray_free, EZ_
+	nativekt_natives_testrs_testrs__callbackpassushortarray_new, Ek_,
+	nativekt_natives_testrs_testrs__callbackpassushortarray_id, El_,
+	nativekt_natives_testrs_testrs__callbackpassushortarray_free, Em_
 );
 impl_callback!(
     CallbackReturnBoolean,
 	external_fn_type!(bool; isize),
 	pub fn invoke(&self) -> bool { external_fn_call!(bool; self.invoke; self.id) },
-	nativekt_natives_testrs_testrs__callbackreturnboolean_new, Ea_,
-	nativekt_natives_testrs_testrs__callbackreturnboolean_id, Eb_,
-	nativekt_natives_testrs_testrs__callbackreturnboolean_free, Ec_
+	nativekt_natives_testrs_testrs__callbackreturnboolean_new, En_,
+	nativekt_natives_testrs_testrs__callbackreturnboolean_id, Eo_,
+	nativekt_natives_testrs_testrs__callbackreturnboolean_free, Ep_
 );
 impl_callback!(
     CallbackReturnBooleanArray,
 	external_fn_type!(*mut Vec<bool>; isize),
 	pub fn invoke(&self) -> Vec<bool> { from_raw(external_fn_call!(*mut Vec<bool>; self.invoke; self.id)) },
-	nativekt_natives_testrs_testrs__callbackreturnbooleanarray_new, Ed_,
-	nativekt_natives_testrs_testrs__callbackreturnbooleanarray_id, Ee_,
-	nativekt_natives_testrs_testrs__callbackreturnbooleanarray_free, Ef_
+	nativekt_natives_testrs_testrs__callbackreturnbooleanarray_new, Eq_,
+	nativekt_natives_testrs_testrs__callbackreturnbooleanarray_id, Er_,
+	nativekt_natives_testrs_testrs__callbackreturnbooleanarray_free, Es_
 );
 impl_callback!(
     CallbackReturnByte,
 	external_fn_type!(i8; isize),
 	pub fn invoke(&self) -> i8 { external_fn_call!(i8; self.invoke; self.id) },
-	nativekt_natives_testrs_testrs__callbackreturnbyte_new, Eg_,
-	nativekt_natives_testrs_testrs__callbackreturnbyte_id, Eh_,
-	nativekt_natives_testrs_testrs__callbackreturnbyte_free, Ei_
+	nativekt_natives_testrs_testrs__callbackreturnbyte_new, Et_,
+	nativekt_natives_testrs_testrs__callbackreturnbyte_id, Eu_,
+	nativekt_natives_testrs_testrs__callbackreturnbyte_free, Ev_
 );
 impl_callback!(
     CallbackReturnByteArray,
 	external_fn_type!(*mut Vec<i8>; isize),
 	pub fn invoke(&self) -> Vec<i8> { from_raw(external_fn_call!(*mut Vec<i8>; self.invoke; self.id)) },
-	nativekt_natives_testrs_testrs__callbackreturnbytearray_new, Ej_,
-	nativekt_natives_testrs_testrs__callbackreturnbytearray_id, Ek_,
-	nativekt_natives_testrs_testrs__callbackreturnbytearray_free, El_
+	nativekt_natives_testrs_testrs__callbackreturnbytearray_new, Ew_,
+	nativekt_natives_testrs_testrs__callbackreturnbytearray_id, Ex_,
+	nativekt_natives_testrs_testrs__callbackreturnbytearray_free, Ey_
 );
 impl_callback!(
     CallbackReturnCallback,
 	external_fn_type!(*mut Arc<VoidCallback>; isize),
 	pub fn invoke(&self) -> Arc<VoidCallback> { from_raw(external_fn_call!(*mut Arc<VoidCallback>; self.invoke; self.id)) },
-	nativekt_natives_testrs_testrs__callbackreturncallback_new, Em_,
-	nativekt_natives_testrs_testrs__callbackreturncallback_id, En_,
-	nativekt_natives_testrs_testrs__callbackreturncallback_free, Eo_
+	nativekt_natives_testrs_testrs__callbackreturncallback_new, Ez_,
+	nativekt_natives_testrs_testrs__callbackreturncallback_id, FA_,
+	nativekt_natives_testrs_testrs__callbackreturncallback_free, FB_
 );
 impl_callback!(
     CallbackReturnCallbackN,
 	external_fn_type!(*mut Arc<VoidCallback>; isize),
 	pub fn invoke(&self) -> Option<Arc<VoidCallback>> { ptr_opt(external_fn_call!(*mut Arc<VoidCallback>; self.invoke; self.id), from_raw) },
-	nativekt_natives_testrs_testrs__callbackreturncallbackn_new, Ep_,
-	nativekt_natives_testrs_testrs__callbackreturncallbackn_id, Eq_,
-	nativekt_natives_testrs_testrs__callbackreturncallbackn_free, Er_
+	nativekt_natives_testrs_testrs__callbackreturncallbackn_new, FC_,
+	nativekt_natives_testrs_testrs__callbackreturncallbackn_id, FD_,
+	nativekt_natives_testrs_testrs__callbackreturncallbackn_free, FE_
 );
 impl_callback!(
     CallbackReturnChar,
 	external_fn_type!(u16; isize),
 	pub fn invoke(&self) -> u16 { external_fn_call!(u16; self.invoke; self.id) },
-	nativekt_natives_testrs_testrs__callbackreturnchar_new, Es_,
-	nativekt_natives_testrs_testrs__callbackreturnchar_id, Et_,
-	nativekt_natives_testrs_testrs__callbackreturnchar_free, Eu_
+	nativekt_natives_testrs_testrs__callbackreturnchar_new, FF_,
+	nativekt_natives_testrs_testrs__callbackreturnchar_id, FG_,
+	nativekt_natives_testrs_testrs__callbackreturnchar_free, FH_
 );
 impl_callback!(
     CallbackReturnCharArray,
 	external_fn_type!(*mut Vec<u16>; isize),
 	pub fn invoke(&self) -> Vec<u16> { from_raw(external_fn_call!(*mut Vec<u16>; self.invoke; self.id)) },
-	nativekt_natives_testrs_testrs__callbackreturnchararray_new, Ev_,
-	nativekt_natives_testrs_testrs__callbackreturnchararray_id, Ew_,
-	nativekt_natives_testrs_testrs__callbackreturnchararray_free, Ex_
+	nativekt_natives_testrs_testrs__callbackreturnchararray_new, FI_,
+	nativekt_natives_testrs_testrs__callbackreturnchararray_id, FJ_,
+	nativekt_natives_testrs_testrs__callbackreturnchararray_free, FK_
+);
+impl_callback!(
+    CallbackReturnCharArrayEmpty,
+	external_fn_type!(*mut Vec<u16>; isize),
+	pub fn invoke(&self) -> Vec<u16> { from_raw(external_fn_call!(*mut Vec<u16>; self.invoke; self.id)) },
+	nativekt_natives_testrs_testrs__callbackreturnchararrayempty_new, FL_,
+	nativekt_natives_testrs_testrs__callbackreturnchararrayempty_id, FM_,
+	nativekt_natives_testrs_testrs__callbackreturnchararrayempty_free, FN_
 );
 impl_callback!(
     CallbackReturnCharArrayN,
 	external_fn_type!(*mut Vec<u16>; isize),
 	pub fn invoke(&self) -> Option<Vec<u16>> { ptr_opt(external_fn_call!(*mut Vec<u16>; self.invoke; self.id), from_raw) },
-	nativekt_natives_testrs_testrs__callbackreturnchararrayn_new, Ey_,
-	nativekt_natives_testrs_testrs__callbackreturnchararrayn_id, Ez_,
-	nativekt_natives_testrs_testrs__callbackreturnchararrayn_free, FA_
+	nativekt_natives_testrs_testrs__callbackreturnchararrayn_new, FO_,
+	nativekt_natives_testrs_testrs__callbackreturnchararrayn_id, FP_,
+	nativekt_natives_testrs_testrs__callbackreturnchararrayn_free, FQ_
 );
 impl_callback!(
     CallbackReturnDictionary,
 	external_fn_type!(*mut MyDictionary; isize),
 	pub fn invoke(&self) -> MyDictionary { from_raw(external_fn_call!(*mut MyDictionary; self.invoke; self.id)) },
-	nativekt_natives_testrs_testrs__callbackreturndictionary_new, FB_,
-	nativekt_natives_testrs_testrs__callbackreturndictionary_id, FC_,
-	nativekt_natives_testrs_testrs__callbackreturndictionary_free, FD_
+	nativekt_natives_testrs_testrs__callbackreturndictionary_new, FR_,
+	nativekt_natives_testrs_testrs__callbackreturndictionary_id, FS_,
+	nativekt_natives_testrs_testrs__callbackreturndictionary_free, FT_
 );
 impl_callback!(
     CallbackReturnDictionaryArray,
 	external_fn_type!(*mut Vec<MyDictionary>; isize),
 	pub fn invoke(&self) -> Vec<MyDictionary> { from_raw(external_fn_call!(*mut Vec<MyDictionary>; self.invoke; self.id)) },
-	nativekt_natives_testrs_testrs__callbackreturndictionaryarray_new, FE_,
-	nativekt_natives_testrs_testrs__callbackreturndictionaryarray_id, FF_,
-	nativekt_natives_testrs_testrs__callbackreturndictionaryarray_free, FG_
+	nativekt_natives_testrs_testrs__callbackreturndictionaryarray_new, FU_,
+	nativekt_natives_testrs_testrs__callbackreturndictionaryarray_id, FV_,
+	nativekt_natives_testrs_testrs__callbackreturndictionaryarray_free, FW_
 );
 impl_callback!(
     CallbackReturnDictionaryArrayN,
 	external_fn_type!(*mut Vec<Option<MyDictionary>>; isize),
 	pub fn invoke(&self) -> Vec<Option<MyDictionary>> { from_raw(external_fn_call!(*mut Vec<Option<MyDictionary>>; self.invoke; self.id)) },
-	nativekt_natives_testrs_testrs__callbackreturndictionaryarrayn_new, FH_,
-	nativekt_natives_testrs_testrs__callbackreturndictionaryarrayn_id, FI_,
-	nativekt_natives_testrs_testrs__callbackreturndictionaryarrayn_free, FJ_
+	nativekt_natives_testrs_testrs__callbackreturndictionaryarrayn_new, FX_,
+	nativekt_natives_testrs_testrs__callbackreturndictionaryarrayn_id, FY_,
+	nativekt_natives_testrs_testrs__callbackreturndictionaryarrayn_free, FZ_
 );
 impl_callback!(
     CallbackReturnDictionaryN,
 	external_fn_type!(*mut MyDictionary; isize),
 	pub fn invoke(&self) -> Option<MyDictionary> { ptr_opt(external_fn_call!(*mut MyDictionary; self.invoke; self.id), from_raw) },
-	nativekt_natives_testrs_testrs__callbackreturndictionaryn_new, FK_,
-	nativekt_natives_testrs_testrs__callbackreturndictionaryn_id, FL_,
-	nativekt_natives_testrs_testrs__callbackreturndictionaryn_free, FM_
+	nativekt_natives_testrs_testrs__callbackreturndictionaryn_new, Fa_,
+	nativekt_natives_testrs_testrs__callbackreturndictionaryn_id, Fb_,
+	nativekt_natives_testrs_testrs__callbackreturndictionaryn_free, Fc_
 );
 impl_callback!(
     CallbackReturnDouble,
 	external_fn_type!(f64; isize),
 	pub fn invoke(&self) -> f64 { external_fn_call!(f64; self.invoke; self.id) },
-	nativekt_natives_testrs_testrs__callbackreturndouble_new, FN_,
-	nativekt_natives_testrs_testrs__callbackreturndouble_id, FO_,
-	nativekt_natives_testrs_testrs__callbackreturndouble_free, FP_
+	nativekt_natives_testrs_testrs__callbackreturndouble_new, Fd_,
+	nativekt_natives_testrs_testrs__callbackreturndouble_id, Fe_,
+	nativekt_natives_testrs_testrs__callbackreturndouble_free, Ff_
 );
 impl_callback!(
     CallbackReturnDoubleArray,
 	external_fn_type!(*mut Vec<f64>; isize),
 	pub fn invoke(&self) -> Vec<f64> { from_raw(external_fn_call!(*mut Vec<f64>; self.invoke; self.id)) },
-	nativekt_natives_testrs_testrs__callbackreturndoublearray_new, FQ_,
-	nativekt_natives_testrs_testrs__callbackreturndoublearray_id, FR_,
-	nativekt_natives_testrs_testrs__callbackreturndoublearray_free, FS_
+	nativekt_natives_testrs_testrs__callbackreturndoublearray_new, Fg_,
+	nativekt_natives_testrs_testrs__callbackreturndoublearray_id, Fh_,
+	nativekt_natives_testrs_testrs__callbackreturndoublearray_free, Fi_
 );
 impl_callback!(
     CallbackReturnEnum,
 	external_fn_type!(MyEnum; isize),
 	pub fn invoke(&self) -> MyEnum { external_fn_call!(enum MyEnum; self.invoke; self.id) },
-	nativekt_natives_testrs_testrs__callbackreturnenum_new, FT_,
-	nativekt_natives_testrs_testrs__callbackreturnenum_id, FU_,
-	nativekt_natives_testrs_testrs__callbackreturnenum_free, FV_
+	nativekt_natives_testrs_testrs__callbackreturnenum_new, Fj_,
+	nativekt_natives_testrs_testrs__callbackreturnenum_id, Fk_,
+	nativekt_natives_testrs_testrs__callbackreturnenum_free, Fl_
 );
 impl_callback!(
     CallbackReturnEnumArray,
 	external_fn_type!(*mut Vec<MyEnum>; isize),
 	pub fn invoke(&self) -> Vec<MyEnum> { from_raw(external_fn_call!(*mut Vec<MyEnum>; self.invoke; self.id)) },
-	nativekt_natives_testrs_testrs__callbackreturnenumarray_new, FW_,
-	nativekt_natives_testrs_testrs__callbackreturnenumarray_id, FX_,
-	nativekt_natives_testrs_testrs__callbackreturnenumarray_free, FY_
+	nativekt_natives_testrs_testrs__callbackreturnenumarray_new, Fm_,
+	nativekt_natives_testrs_testrs__callbackreturnenumarray_id, Fn_,
+	nativekt_natives_testrs_testrs__callbackreturnenumarray_free, Fo_
 );
 impl_callback!(
     CallbackReturnFloat,
 	external_fn_type!(f32; isize),
 	pub fn invoke(&self) -> f32 { external_fn_call!(f32; self.invoke; self.id) },
-	nativekt_natives_testrs_testrs__callbackreturnfloat_new, FZ_,
-	nativekt_natives_testrs_testrs__callbackreturnfloat_id, Fa_,
-	nativekt_natives_testrs_testrs__callbackreturnfloat_free, Fb_
+	nativekt_natives_testrs_testrs__callbackreturnfloat_new, Fp_,
+	nativekt_natives_testrs_testrs__callbackreturnfloat_id, Fq_,
+	nativekt_natives_testrs_testrs__callbackreturnfloat_free, Fr_
 );
 impl_callback!(
     CallbackReturnFloatArray,
 	external_fn_type!(*mut Vec<f32>; isize),
 	pub fn invoke(&self) -> Vec<f32> { from_raw(external_fn_call!(*mut Vec<f32>; self.invoke; self.id)) },
-	nativekt_natives_testrs_testrs__callbackreturnfloatarray_new, Fc_,
-	nativekt_natives_testrs_testrs__callbackreturnfloatarray_id, Fd_,
-	nativekt_natives_testrs_testrs__callbackreturnfloatarray_free, Fe_
+	nativekt_natives_testrs_testrs__callbackreturnfloatarray_new, Fs_,
+	nativekt_natives_testrs_testrs__callbackreturnfloatarray_id, Ft_,
+	nativekt_natives_testrs_testrs__callbackreturnfloatarray_free, Fu_
 );
 impl_callback!(
     CallbackReturnInt,
 	external_fn_type!(i32; isize),
 	pub fn invoke(&self) -> i32 { external_fn_call!(i32; self.invoke; self.id) },
-	nativekt_natives_testrs_testrs__callbackreturnint_new, Ff_,
-	nativekt_natives_testrs_testrs__callbackreturnint_id, Fg_,
-	nativekt_natives_testrs_testrs__callbackreturnint_free, Fh_
+	nativekt_natives_testrs_testrs__callbackreturnint_new, Fv_,
+	nativekt_natives_testrs_testrs__callbackreturnint_id, Fw_,
+	nativekt_natives_testrs_testrs__callbackreturnint_free, Fx_
 );
 impl_callback!(
     CallbackReturnIntArray,
 	external_fn_type!(*mut Vec<i32>; isize),
 	pub fn invoke(&self) -> Vec<i32> { from_raw(external_fn_call!(*mut Vec<i32>; self.invoke; self.id)) },
-	nativekt_natives_testrs_testrs__callbackreturnintarray_new, Fi_,
-	nativekt_natives_testrs_testrs__callbackreturnintarray_id, Fj_,
-	nativekt_natives_testrs_testrs__callbackreturnintarray_free, Fk_
+	nativekt_natives_testrs_testrs__callbackreturnintarray_new, Fy_,
+	nativekt_natives_testrs_testrs__callbackreturnintarray_id, Fz_,
+	nativekt_natives_testrs_testrs__callbackreturnintarray_free, GA_
 );
 impl_callback!(
     CallbackReturnInterface,
 	external_fn_type!(*mut Arc<crate::MyInterface>; isize),
 	pub fn invoke(&self) -> Arc<crate::MyInterface> { from_raw(external_fn_call!(*mut Arc<crate::MyInterface>; self.invoke; self.id)) },
-	nativekt_natives_testrs_testrs__callbackreturninterface_new, Fl_,
-	nativekt_natives_testrs_testrs__callbackreturninterface_id, Fm_,
-	nativekt_natives_testrs_testrs__callbackreturninterface_free, Fn_
+	nativekt_natives_testrs_testrs__callbackreturninterface_new, GB_,
+	nativekt_natives_testrs_testrs__callbackreturninterface_id, GC_,
+	nativekt_natives_testrs_testrs__callbackreturninterface_free, GD_
 );
 impl_callback!(
     CallbackReturnInterfaceArray,
 	external_fn_type!(*mut Vec<Arc<crate::MyInterface>>; isize),
 	pub fn invoke(&self) -> Vec<Arc<crate::MyInterface>> { from_raw(external_fn_call!(*mut Vec<Arc<crate::MyInterface>>; self.invoke; self.id)) },
-	nativekt_natives_testrs_testrs__callbackreturninterfacearray_new, Fo_,
-	nativekt_natives_testrs_testrs__callbackreturninterfacearray_id, Fp_,
-	nativekt_natives_testrs_testrs__callbackreturninterfacearray_free, Fq_
+	nativekt_natives_testrs_testrs__callbackreturninterfacearray_new, GE_,
+	nativekt_natives_testrs_testrs__callbackreturninterfacearray_id, GF_,
+	nativekt_natives_testrs_testrs__callbackreturninterfacearray_free, GG_
 );
 impl_callback!(
     CallbackReturnInterfaceArrayN,
 	external_fn_type!(*mut Vec<Option<Arc<crate::MyInterface>>>; isize),
 	pub fn invoke(&self) -> Vec<Option<Arc<crate::MyInterface>>> { from_raw(external_fn_call!(*mut Vec<Option<Arc<crate::MyInterface>>>; self.invoke; self.id)) },
-	nativekt_natives_testrs_testrs__callbackreturninterfacearrayn_new, Fr_,
-	nativekt_natives_testrs_testrs__callbackreturninterfacearrayn_id, Fs_,
-	nativekt_natives_testrs_testrs__callbackreturninterfacearrayn_free, Ft_
+	nativekt_natives_testrs_testrs__callbackreturninterfacearrayn_new, GH_,
+	nativekt_natives_testrs_testrs__callbackreturninterfacearrayn_id, GI_,
+	nativekt_natives_testrs_testrs__callbackreturninterfacearrayn_free, GJ_
 );
 impl_callback!(
     CallbackReturnInterfaceN,
 	external_fn_type!(*mut Arc<crate::MyInterface>; isize),
 	pub fn invoke(&self) -> Option<Arc<crate::MyInterface>> { ptr_opt(external_fn_call!(*mut Arc<crate::MyInterface>; self.invoke; self.id), from_raw) },
-	nativekt_natives_testrs_testrs__callbackreturninterfacen_new, Fu_,
-	nativekt_natives_testrs_testrs__callbackreturninterfacen_id, Fv_,
-	nativekt_natives_testrs_testrs__callbackreturninterfacen_free, Fw_
+	nativekt_natives_testrs_testrs__callbackreturninterfacen_new, GK_,
+	nativekt_natives_testrs_testrs__callbackreturninterfacen_id, GL_,
+	nativekt_natives_testrs_testrs__callbackreturninterfacen_free, GM_
 );
 impl_callback!(
     CallbackReturnLong,
 	external_fn_type!(i64; isize),
 	pub fn invoke(&self) -> i64 { external_fn_call!(i64; self.invoke; self.id) },
-	nativekt_natives_testrs_testrs__callbackreturnlong_new, Fx_,
-	nativekt_natives_testrs_testrs__callbackreturnlong_id, Fy_,
-	nativekt_natives_testrs_testrs__callbackreturnlong_free, Fz_
+	nativekt_natives_testrs_testrs__callbackreturnlong_new, GN_,
+	nativekt_natives_testrs_testrs__callbackreturnlong_id, GO_,
+	nativekt_natives_testrs_testrs__callbackreturnlong_free, GP_
 );
 impl_callback!(
     CallbackReturnLongArray,
 	external_fn_type!(*mut Vec<i64>; isize),
 	pub fn invoke(&self) -> Vec<i64> { from_raw(external_fn_call!(*mut Vec<i64>; self.invoke; self.id)) },
-	nativekt_natives_testrs_testrs__callbackreturnlongarray_new, GA_,
-	nativekt_natives_testrs_testrs__callbackreturnlongarray_id, GB_,
-	nativekt_natives_testrs_testrs__callbackreturnlongarray_free, GC_
+	nativekt_natives_testrs_testrs__callbackreturnlongarray_new, GQ_,
+	nativekt_natives_testrs_testrs__callbackreturnlongarray_id, GR_,
+	nativekt_natives_testrs_testrs__callbackreturnlongarray_free, GS_
 );
 impl_callback!(
     CallbackReturnShort,
 	external_fn_type!(i16; isize),
 	pub fn invoke(&self) -> i16 { external_fn_call!(i16; self.invoke; self.id) },
-	nativekt_natives_testrs_testrs__callbackreturnshort_new, GD_,
-	nativekt_natives_testrs_testrs__callbackreturnshort_id, GE_,
-	nativekt_natives_testrs_testrs__callbackreturnshort_free, GF_
+	nativekt_natives_testrs_testrs__callbackreturnshort_new, GT_,
+	nativekt_natives_testrs_testrs__callbackreturnshort_id, GU_,
+	nativekt_natives_testrs_testrs__callbackreturnshort_free, GV_
 );
 impl_callback!(
     CallbackReturnShortArray,
 	external_fn_type!(*mut Vec<i16>; isize),
 	pub fn invoke(&self) -> Vec<i16> { from_raw(external_fn_call!(*mut Vec<i16>; self.invoke; self.id)) },
-	nativekt_natives_testrs_testrs__callbackreturnshortarray_new, GG_,
-	nativekt_natives_testrs_testrs__callbackreturnshortarray_id, GH_,
-	nativekt_natives_testrs_testrs__callbackreturnshortarray_free, GI_
+	nativekt_natives_testrs_testrs__callbackreturnshortarray_new, GW_,
+	nativekt_natives_testrs_testrs__callbackreturnshortarray_id, GX_,
+	nativekt_natives_testrs_testrs__callbackreturnshortarray_free, GY_
 );
 impl_callback!(
     CallbackReturnString,
 	external_fn_type!(*mut String; isize),
 	pub fn invoke(&self) -> String { from_raw(external_fn_call!(*mut String; self.invoke; self.id)) },
-	nativekt_natives_testrs_testrs__callbackreturnstring_new, GJ_,
-	nativekt_natives_testrs_testrs__callbackreturnstring_id, GK_,
-	nativekt_natives_testrs_testrs__callbackreturnstring_free, GL_
+	nativekt_natives_testrs_testrs__callbackreturnstring_new, GZ_,
+	nativekt_natives_testrs_testrs__callbackreturnstring_id, Ga_,
+	nativekt_natives_testrs_testrs__callbackreturnstring_free, Gb_
 );
 impl_callback!(
     CallbackReturnStringArray,
 	external_fn_type!(*mut Vec<String>; isize),
 	pub fn invoke(&self) -> Vec<String> { from_raw(external_fn_call!(*mut Vec<String>; self.invoke; self.id)) },
-	nativekt_natives_testrs_testrs__callbackreturnstringarray_new, GM_,
-	nativekt_natives_testrs_testrs__callbackreturnstringarray_id, GN_,
-	nativekt_natives_testrs_testrs__callbackreturnstringarray_free, GO_
+	nativekt_natives_testrs_testrs__callbackreturnstringarray_new, Gc_,
+	nativekt_natives_testrs_testrs__callbackreturnstringarray_id, Gd_,
+	nativekt_natives_testrs_testrs__callbackreturnstringarray_free, Ge_
 );
 impl_callback!(
     CallbackReturnStringArrayN,
 	external_fn_type!(*mut Vec<Option<String>>; isize),
 	pub fn invoke(&self) -> Vec<Option<String>> { from_raw(external_fn_call!(*mut Vec<Option<String>>; self.invoke; self.id)) },
-	nativekt_natives_testrs_testrs__callbackreturnstringarrayn_new, GP_,
-	nativekt_natives_testrs_testrs__callbackreturnstringarrayn_id, GQ_,
-	nativekt_natives_testrs_testrs__callbackreturnstringarrayn_free, GR_
+	nativekt_natives_testrs_testrs__callbackreturnstringarrayn_new, Gf_,
+	nativekt_natives_testrs_testrs__callbackreturnstringarrayn_id, Gg_,
+	nativekt_natives_testrs_testrs__callbackreturnstringarrayn_free, Gh_
+);
+impl_callback!(
+    CallbackReturnStringEmpty,
+	external_fn_type!(*mut String; isize),
+	pub fn invoke(&self) -> String { from_raw(external_fn_call!(*mut String; self.invoke; self.id)) },
+	nativekt_natives_testrs_testrs__callbackreturnstringempty_new, Gi_,
+	nativekt_natives_testrs_testrs__callbackreturnstringempty_id, Gj_,
+	nativekt_natives_testrs_testrs__callbackreturnstringempty_free, Gk_
 );
 impl_callback!(
     CallbackReturnStringN,
 	external_fn_type!(*mut String; isize),
 	pub fn invoke(&self) -> Option<String> { ptr_opt(external_fn_call!(*mut String; self.invoke; self.id), from_raw) },
-	nativekt_natives_testrs_testrs__callbackreturnstringn_new, GS_,
-	nativekt_natives_testrs_testrs__callbackreturnstringn_id, GT_,
-	nativekt_natives_testrs_testrs__callbackreturnstringn_free, GU_
+	nativekt_natives_testrs_testrs__callbackreturnstringn_new, Gl_,
+	nativekt_natives_testrs_testrs__callbackreturnstringn_id, Gm_,
+	nativekt_natives_testrs_testrs__callbackreturnstringn_free, Gn_
 );
 impl_callback!(
     CallbackReturnUByte,
 	external_fn_type!(u8; isize),
 	pub fn invoke(&self) -> u8 { external_fn_call!(u8; self.invoke; self.id) },
-	nativekt_natives_testrs_testrs__callbackreturnubyte_new, GV_,
-	nativekt_natives_testrs_testrs__callbackreturnubyte_id, GW_,
-	nativekt_natives_testrs_testrs__callbackreturnubyte_free, GX_
+	nativekt_natives_testrs_testrs__callbackreturnubyte_new, Go_,
+	nativekt_natives_testrs_testrs__callbackreturnubyte_id, Gp_,
+	nativekt_natives_testrs_testrs__callbackreturnubyte_free, Gq_
 );
 impl_callback!(
     CallbackReturnUByteArray,
 	external_fn_type!(*mut Vec<u8>; isize),
 	pub fn invoke(&self) -> Vec<u8> { from_raw(external_fn_call!(*mut Vec<u8>; self.invoke; self.id)) },
-	nativekt_natives_testrs_testrs__callbackreturnubytearray_new, GY_,
-	nativekt_natives_testrs_testrs__callbackreturnubytearray_id, GZ_,
-	nativekt_natives_testrs_testrs__callbackreturnubytearray_free, Ga_
+	nativekt_natives_testrs_testrs__callbackreturnubytearray_new, Gr_,
+	nativekt_natives_testrs_testrs__callbackreturnubytearray_id, Gs_,
+	nativekt_natives_testrs_testrs__callbackreturnubytearray_free, Gt_
 );
 impl_callback!(
     CallbackReturnUInt,
 	external_fn_type!(u32; isize),
 	pub fn invoke(&self) -> u32 { external_fn_call!(u32; self.invoke; self.id) },
-	nativekt_natives_testrs_testrs__callbackreturnuint_new, Gb_,
-	nativekt_natives_testrs_testrs__callbackreturnuint_id, Gc_,
-	nativekt_natives_testrs_testrs__callbackreturnuint_free, Gd_
+	nativekt_natives_testrs_testrs__callbackreturnuint_new, Gu_,
+	nativekt_natives_testrs_testrs__callbackreturnuint_id, Gv_,
+	nativekt_natives_testrs_testrs__callbackreturnuint_free, Gw_
 );
 impl_callback!(
     CallbackReturnUIntArray,
 	external_fn_type!(*mut Vec<u32>; isize),
 	pub fn invoke(&self) -> Vec<u32> { from_raw(external_fn_call!(*mut Vec<u32>; self.invoke; self.id)) },
-	nativekt_natives_testrs_testrs__callbackreturnuintarray_new, Ge_,
-	nativekt_natives_testrs_testrs__callbackreturnuintarray_id, Gf_,
-	nativekt_natives_testrs_testrs__callbackreturnuintarray_free, Gg_
+	nativekt_natives_testrs_testrs__callbackreturnuintarray_new, Gx_,
+	nativekt_natives_testrs_testrs__callbackreturnuintarray_id, Gy_,
+	nativekt_natives_testrs_testrs__callbackreturnuintarray_free, Gz_
 );
 impl_callback!(
     CallbackReturnULong,
 	external_fn_type!(u64; isize),
 	pub fn invoke(&self) -> u64 { external_fn_call!(u64; self.invoke; self.id) },
-	nativekt_natives_testrs_testrs__callbackreturnulong_new, Gh_,
-	nativekt_natives_testrs_testrs__callbackreturnulong_id, Gi_,
-	nativekt_natives_testrs_testrs__callbackreturnulong_free, Gj_
+	nativekt_natives_testrs_testrs__callbackreturnulong_new, HA_,
+	nativekt_natives_testrs_testrs__callbackreturnulong_id, HB_,
+	nativekt_natives_testrs_testrs__callbackreturnulong_free, HC_
 );
 impl_callback!(
     CallbackReturnULongArray,
 	external_fn_type!(*mut Vec<u64>; isize),
 	pub fn invoke(&self) -> Vec<u64> { from_raw(external_fn_call!(*mut Vec<u64>; self.invoke; self.id)) },
-	nativekt_natives_testrs_testrs__callbackreturnulongarray_new, Gk_,
-	nativekt_natives_testrs_testrs__callbackreturnulongarray_id, Gl_,
-	nativekt_natives_testrs_testrs__callbackreturnulongarray_free, Gm_
+	nativekt_natives_testrs_testrs__callbackreturnulongarray_new, HD_,
+	nativekt_natives_testrs_testrs__callbackreturnulongarray_id, HE_,
+	nativekt_natives_testrs_testrs__callbackreturnulongarray_free, HF_
 );
 impl_callback!(
     CallbackReturnUShort,
 	external_fn_type!(u16; isize),
 	pub fn invoke(&self) -> u16 { external_fn_call!(u16; self.invoke; self.id) },
-	nativekt_natives_testrs_testrs__callbackreturnushort_new, Gn_,
-	nativekt_natives_testrs_testrs__callbackreturnushort_id, Go_,
-	nativekt_natives_testrs_testrs__callbackreturnushort_free, Gp_
+	nativekt_natives_testrs_testrs__callbackreturnushort_new, HG_,
+	nativekt_natives_testrs_testrs__callbackreturnushort_id, HH_,
+	nativekt_natives_testrs_testrs__callbackreturnushort_free, HI_
 );
 impl_callback!(
     CallbackReturnUShortArray,
 	external_fn_type!(*mut Vec<u16>; isize),
 	pub fn invoke(&self) -> Vec<u16> { from_raw(external_fn_call!(*mut Vec<u16>; self.invoke; self.id)) },
-	nativekt_natives_testrs_testrs__callbackreturnushortarray_new, Gq_,
-	nativekt_natives_testrs_testrs__callbackreturnushortarray_id, Gr_,
-	nativekt_natives_testrs_testrs__callbackreturnushortarray_free, Gs_
+	nativekt_natives_testrs_testrs__callbackreturnushortarray_new, HJ_,
+	nativekt_natives_testrs_testrs__callbackreturnushortarray_id, HK_,
+	nativekt_natives_testrs_testrs__callbackreturnushortarray_free, HL_
 );
 impl_callback!(
     VoidCallback,
 	external_fn_type!((); isize),
 	pub fn invoke(&self) { external_fn_call!((); self.invoke; self.id) },
-	nativekt_natives_testrs_testrs__voidcallback_new, Gt_,
-	nativekt_natives_testrs_testrs__voidcallback_id, Gu_,
-	nativekt_natives_testrs_testrs__voidcallback_free, Gv_
+	nativekt_natives_testrs_testrs__voidcallback_new, HM_,
+	nativekt_natives_testrs_testrs__voidcallback_id, HN_,
+	nativekt_natives_testrs_testrs__voidcallback_free, HO_
 );
 
 // ╔═══════════════╗
@@ -1187,771 +1229,813 @@ pub enum MyEnum {
 // ║     Functions     ║
 // ╚═══════════════════╝
 
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_void() -> bool as Gw_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_void() -> bool as HP_ {
     crate::pass_void()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_char(arg: u16) -> bool as Gx_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_char(arg: u16) -> bool as HQ_ {
     crate::pass_char(arg)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_boolean(arg: bool) -> bool as Gy_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_boolean(arg: bool) -> bool as HR_ {
     crate::pass_boolean(arg)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_byte(arg: i8) -> bool as Gz_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_byte(arg: i8) -> bool as HS_ {
     crate::pass_byte(arg)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_ubyte(arg: u8) -> bool as HA_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_ubyte(arg: u8) -> bool as HT_ {
     crate::pass_ubyte(arg)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_short(arg: i16) -> bool as HB_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_short(arg: i16) -> bool as HU_ {
     crate::pass_short(arg)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_ushort(arg: u16) -> bool as HC_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_ushort(arg: u16) -> bool as HV_ {
     crate::pass_ushort(arg)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_int(arg: i32) -> bool as HD_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_int(arg: i32) -> bool as HW_ {
     crate::pass_int(arg)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_uint(arg: u32) -> bool as HE_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_uint(arg: u32) -> bool as HX_ {
     crate::pass_uint(arg)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_long(arg: i64) -> bool as HF_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_long(arg: i64) -> bool as HY_ {
     crate::pass_long(arg)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_ulong(arg: u64) -> bool as HG_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_ulong(arg: u64) -> bool as HZ_ {
     crate::pass_ulong(arg)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_float(arg: f32) -> bool as HH_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_float(arg: f32) -> bool as Ha_ {
     crate::pass_float(arg)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_double(arg: f64) -> bool as HI_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_double(arg: f64) -> bool as Hb_ {
     crate::pass_double(arg)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_string(arg: *mut String) -> bool as HJ_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_string(arg: *mut String) -> bool as Hc_ {
     crate::pass_string(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_string_n(arg: *mut String) -> bool as HK_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_string_empty(arg: *mut String) -> bool as Hd_ {
+    crate::pass_string_empty(from_raw(arg))
+}}
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_string_n(arg: *mut String) -> bool as He_ {
     crate::pass_string_n(ptr_opt(arg, from_raw))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_enum(arg: MyEnum) -> bool as HL_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_enum(arg: MyEnum) -> bool as Hf_ {
     crate::pass_enum(arg)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_dictionary(arg: *mut MyDictionary) -> bool as HM_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_dictionary(arg: *mut MyDictionary) -> bool as Hg_ {
     crate::pass_dictionary(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_dictionary_n(arg: *mut MyDictionary) -> bool as HN_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_dictionary_n(arg: *mut MyDictionary) -> bool as Hh_ {
     crate::pass_dictionary_n(ptr_opt(arg, from_raw))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_interface(arg: *mut Arc<crate::MyInterface>) -> bool as HO_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_interface(arg: *mut Arc<crate::MyInterface>) -> bool as Hi_ {
     crate::pass_interface(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_interface_n(arg: *mut Arc<crate::MyInterface>) -> bool as HP_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_interface_n(arg: *mut Arc<crate::MyInterface>) -> bool as Hj_ {
     crate::pass_interface_n(ptr_opt(arg, from_raw))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_void() -> () as HQ_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_void() -> () as Hk_ {
     crate::return_void()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_char() -> u16 as HR_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_char() -> u16 as Hl_ {
     crate::return_char()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_boolean() -> bool as HS_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_boolean() -> bool as Hm_ {
     crate::return_boolean()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_byte() -> i8 as HT_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_byte() -> i8 as Hn_ {
     crate::return_byte()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_ubyte() -> u8 as HU_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_ubyte() -> u8 as Ho_ {
     crate::return_ubyte()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_short() -> i16 as HV_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_short() -> i16 as Hp_ {
     crate::return_short()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_ushort() -> u16 as HW_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_ushort() -> u16 as Hq_ {
     crate::return_ushort()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_int() -> i32 as HX_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_int() -> i32 as Hr_ {
     crate::return_int()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_uint() -> u32 as HY_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_uint() -> u32 as Hs_ {
     crate::return_uint()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_long() -> i64 as HZ_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_long() -> i64 as Ht_ {
     crate::return_long()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_ulong() -> u64 as Ha_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_ulong() -> u64 as Hu_ {
     crate::return_ulong()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_float() -> f32 as Hb_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_float() -> f32 as Hv_ {
     crate::return_float()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_double() -> f64 as Hc_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_double() -> f64 as Hw_ {
     crate::return_double()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_string() -> *mut String as Hd_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_string() -> *mut String as Hx_ {
     into_raw(crate::return_string())
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_string_n() -> *mut String as He_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_string_empty() -> *mut String as Hy_ {
+    into_raw(crate::return_string_empty())
+}}
+export_fn!{ fn nativekt_natives_testrs_testrs_return_string_n() -> *mut String as Hz_ {
     obj_opt(crate::return_string_n(), into_raw)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_enum() -> MyEnum as Hf_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_enum() -> MyEnum as IA_ {
     crate::return_enum()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_dictionary() -> *mut MyDictionary as Hg_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_dictionary() -> *mut MyDictionary as IB_ {
     into_raw(crate::return_dictionary())
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_dictionary_n() -> *mut MyDictionary as Hh_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_dictionary_n() -> *mut MyDictionary as IC_ {
     obj_opt(crate::return_dictionary_n(), into_raw)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_char(arg: u16) -> u16 as Hi_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_char(arg: u16) -> u16 as ID_ {
     crate::ping_char(arg)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_boolean(arg: bool) -> bool as Hj_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_boolean(arg: bool) -> bool as IE_ {
     crate::ping_boolean(arg)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_byte(arg: i8) -> i8 as Hk_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_byte(arg: i8) -> i8 as IF_ {
     crate::ping_byte(arg)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_ubyte(arg: u8) -> u8 as Hl_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_ubyte(arg: u8) -> u8 as IG_ {
     crate::ping_ubyte(arg)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_short(arg: i16) -> i16 as Hm_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_short(arg: i16) -> i16 as IH_ {
     crate::ping_short(arg)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_ushort(arg: u16) -> u16 as Hn_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_ushort(arg: u16) -> u16 as II_ {
     crate::ping_ushort(arg)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_int(arg: i32) -> i32 as Ho_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_int(arg: i32) -> i32 as IJ_ {
     crate::ping_int(arg)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_uint(arg: u32) -> u32 as Hp_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_uint(arg: u32) -> u32 as IK_ {
     crate::ping_uint(arg)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_long(arg: i64) -> i64 as Hq_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_long(arg: i64) -> i64 as IL_ {
     crate::ping_long(arg)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_ulong(arg: u64) -> u64 as Hr_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_ulong(arg: u64) -> u64 as IM_ {
     crate::ping_ulong(arg)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_float(arg: f32) -> f32 as Hs_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_float(arg: f32) -> f32 as IN_ {
     crate::ping_float(arg)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_double(arg: f64) -> f64 as Ht_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_double(arg: f64) -> f64 as IO_ {
     crate::ping_double(arg)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_string(arg: *mut String) -> *mut String as Hu_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_string(arg: *mut String) -> *mut String as IP_ {
     into_raw(crate::ping_string(from_raw(arg)))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_string_n(arg: *mut String) -> *mut String as Hv_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_string_empty(arg: *mut String) -> *mut String as IQ_ {
+    into_raw(crate::ping_string_empty(from_raw(arg)))
+}}
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_string_n(arg: *mut String) -> *mut String as IR_ {
     obj_opt(crate::ping_string_n(ptr_opt(arg, from_raw)), into_raw)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_enum(arg: MyEnum) -> MyEnum as Hw_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_enum(arg: MyEnum) -> MyEnum as IS_ {
     crate::ping_enum(arg)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_dictionary(arg: *mut MyDictionary) -> *mut MyDictionary as Hx_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_dictionary(arg: *mut MyDictionary) -> *mut MyDictionary as IT_ {
     into_raw(crate::ping_dictionary(from_raw(arg)))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_dictionary_n(arg: *mut MyDictionary) -> *mut MyDictionary as Hy_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_empty_dictionary(arg: *mut EmptyDictionary) -> *mut EmptyDictionary as IU_ {
+    into_raw(crate::ping_empty_dictionary(from_raw(arg)))
+}}
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_dictionary_n(arg: *mut MyDictionary) -> *mut MyDictionary as IV_ {
     obj_opt(crate::ping_dictionary_n(ptr_opt(arg, from_raw)), into_raw)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_interface(arg: *mut Arc<crate::MyInterface>) -> *mut Arc<crate::MyInterface> as Hz_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_interface(arg: *mut Arc<crate::MyInterface>) -> *mut Arc<crate::MyInterface> as IW_ {
     into_raw(crate::ping_interface(from_raw(arg)))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_interface_n(arg: *mut Arc<crate::MyInterface>) -> *mut Arc<crate::MyInterface> as IA_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_interface_n(arg: *mut Arc<crate::MyInterface>) -> *mut Arc<crate::MyInterface> as IX_ {
     obj_opt(crate::ping_interface_n(ptr_opt(arg, from_raw)), into_raw)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_void(arg: *mut Arc<VoidCallback>) -> () as IB_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_void(arg: *mut Arc<VoidCallback>) -> () as IY_ {
     crate::callback_void(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_void_n(arg: *mut Arc<VoidCallback>) -> bool as IC_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_void_n(arg: *mut Arc<VoidCallback>) -> bool as IZ_ {
     crate::callback_void_n(ptr_opt(arg, from_raw))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_char(arg: *mut Arc<CallbackPassChar>) -> bool as ID_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_char(arg: *mut Arc<CallbackPassChar>) -> bool as Ia_ {
     crate::callback_arg_char(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_boolean(arg: *mut Arc<CallbackPassBoolean>) -> bool as IE_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_boolean(arg: *mut Arc<CallbackPassBoolean>) -> bool as Ib_ {
     crate::callback_arg_boolean(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_byte(arg: *mut Arc<CallbackPassByte>) -> bool as IF_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_byte(arg: *mut Arc<CallbackPassByte>) -> bool as Ic_ {
     crate::callback_arg_byte(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_ubyte(arg: *mut Arc<CallbackPassUByte>) -> bool as IG_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_ubyte(arg: *mut Arc<CallbackPassUByte>) -> bool as Id_ {
     crate::callback_arg_ubyte(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_short(arg: *mut Arc<CallbackPassShort>) -> bool as IH_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_short(arg: *mut Arc<CallbackPassShort>) -> bool as Ie_ {
     crate::callback_arg_short(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_ushort(arg: *mut Arc<CallbackPassUShort>) -> bool as II_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_ushort(arg: *mut Arc<CallbackPassUShort>) -> bool as If_ {
     crate::callback_arg_ushort(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_int(arg: *mut Arc<CallbackPassInt>) -> bool as IJ_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_int(arg: *mut Arc<CallbackPassInt>) -> bool as Ig_ {
     crate::callback_arg_int(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_uint(arg: *mut Arc<CallbackPassUInt>) -> bool as IK_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_uint(arg: *mut Arc<CallbackPassUInt>) -> bool as Ih_ {
     crate::callback_arg_uint(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_long(arg: *mut Arc<CallbackPassLong>) -> bool as IL_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_long(arg: *mut Arc<CallbackPassLong>) -> bool as Ii_ {
     crate::callback_arg_long(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_ulong(arg: *mut Arc<CallbackPassULong>) -> bool as IM_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_ulong(arg: *mut Arc<CallbackPassULong>) -> bool as Ij_ {
     crate::callback_arg_ulong(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_float(arg: *mut Arc<CallbackPassFloat>) -> bool as IN_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_float(arg: *mut Arc<CallbackPassFloat>) -> bool as Ik_ {
     crate::callback_arg_float(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_double(arg: *mut Arc<CallbackPassDouble>) -> bool as IO_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_double(arg: *mut Arc<CallbackPassDouble>) -> bool as Il_ {
     crate::callback_arg_double(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_string(arg: *mut Arc<CallbackPassString>) -> bool as IP_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_string(arg: *mut Arc<CallbackPassString>) -> bool as Im_ {
     crate::callback_arg_string(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_string_n(arg: *mut Arc<CallbackPassStringN>) -> bool as IQ_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_string_empty(arg: *mut Arc<CallbackPassStringEmpty>) -> bool as In_ {
+    crate::callback_arg_string_empty(from_raw(arg))
+}}
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_string_n(arg: *mut Arc<CallbackPassStringN>) -> bool as Io_ {
     crate::callback_arg_string_n(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_callback(pass: *mut Arc<VoidCallback>, arg: *mut Arc<CallbackPassCallback>) -> bool as IR_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_callback(pass: *mut Arc<VoidCallback>, arg: *mut Arc<CallbackPassCallback>) -> bool as Ip_ {
     crate::callback_arg_callback(from_raw(pass), from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_callback_n(arg: *mut Arc<CallbackPassCallbackN>) -> bool as IS_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_callback_n(arg: *mut Arc<CallbackPassCallbackN>) -> bool as Iq_ {
     crate::callback_arg_callback_n(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_enum(arg: *mut Arc<CallbackPassEnum>) -> bool as IT_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_enum(arg: *mut Arc<CallbackPassEnum>) -> bool as Ir_ {
     crate::callback_arg_enum(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_dictionary(arg: *mut Arc<CallbackPassDictionary>) -> bool as IU_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_dictionary(arg: *mut Arc<CallbackPassDictionary>) -> bool as Is_ {
     crate::callback_arg_dictionary(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_dictionary_n(arg: *mut Arc<CallbackPassDictionaryN>) -> bool as IV_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_dictionary_n(arg: *mut Arc<CallbackPassDictionaryN>) -> bool as It_ {
     crate::callback_arg_dictionary_n(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_interface(pass: *mut Arc<crate::MyInterface>, arg: *mut Arc<CallbackPassInterface>) -> bool as IW_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_interface(pass: *mut Arc<crate::MyInterface>, arg: *mut Arc<CallbackPassInterface>) -> bool as Iu_ {
     crate::callback_arg_interface(from_raw(pass), from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_interface_n(arg: *mut Arc<CallbackPassInterfaceN>) -> bool as IX_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_interface_n(arg: *mut Arc<CallbackPassInterfaceN>) -> bool as Iv_ {
     crate::callback_arg_interface_n(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_char(arg: *mut Arc<CallbackReturnChar>) -> bool as IY_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_char(arg: *mut Arc<CallbackReturnChar>) -> bool as Iw_ {
     crate::callback_return_char(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_boolean(arg: *mut Arc<CallbackReturnBoolean>) -> bool as IZ_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_boolean(arg: *mut Arc<CallbackReturnBoolean>) -> bool as Ix_ {
     crate::callback_return_boolean(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_byte(arg: *mut Arc<CallbackReturnByte>) -> bool as Ia_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_byte(arg: *mut Arc<CallbackReturnByte>) -> bool as Iy_ {
     crate::callback_return_byte(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_ubyte(arg: *mut Arc<CallbackReturnUByte>) -> bool as Ib_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_ubyte(arg: *mut Arc<CallbackReturnUByte>) -> bool as Iz_ {
     crate::callback_return_ubyte(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_short(arg: *mut Arc<CallbackReturnShort>) -> bool as Ic_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_short(arg: *mut Arc<CallbackReturnShort>) -> bool as JA_ {
     crate::callback_return_short(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_ushort(arg: *mut Arc<CallbackReturnUShort>) -> bool as Id_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_ushort(arg: *mut Arc<CallbackReturnUShort>) -> bool as JB_ {
     crate::callback_return_ushort(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_int(arg: *mut Arc<CallbackReturnInt>) -> bool as Ie_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_int(arg: *mut Arc<CallbackReturnInt>) -> bool as JC_ {
     crate::callback_return_int(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_uint(arg: *mut Arc<CallbackReturnUInt>) -> bool as If_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_uint(arg: *mut Arc<CallbackReturnUInt>) -> bool as JD_ {
     crate::callback_return_uint(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_long(arg: *mut Arc<CallbackReturnLong>) -> bool as Ig_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_long(arg: *mut Arc<CallbackReturnLong>) -> bool as JE_ {
     crate::callback_return_long(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_ulong(arg: *mut Arc<CallbackReturnULong>) -> bool as Ih_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_ulong(arg: *mut Arc<CallbackReturnULong>) -> bool as JF_ {
     crate::callback_return_ulong(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_float(arg: *mut Arc<CallbackReturnFloat>) -> bool as Ii_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_float(arg: *mut Arc<CallbackReturnFloat>) -> bool as JG_ {
     crate::callback_return_float(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_double(arg: *mut Arc<CallbackReturnDouble>) -> bool as Ij_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_double(arg: *mut Arc<CallbackReturnDouble>) -> bool as JH_ {
     crate::callback_return_double(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_string(arg: *mut Arc<CallbackReturnString>) -> bool as Ik_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_string(arg: *mut Arc<CallbackReturnString>) -> bool as JI_ {
     crate::callback_return_string(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_string_n(arg: *mut Arc<CallbackReturnStringN>) -> bool as Il_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_string_empty(arg: *mut Arc<CallbackReturnStringEmpty>) -> bool as JJ_ {
+    crate::callback_return_string_empty(from_raw(arg))
+}}
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_string_n(arg: *mut Arc<CallbackReturnStringN>) -> bool as JK_ {
     crate::callback_return_string_n(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_callback(arg: *mut Arc<CallbackReturnCallback>) -> *mut Arc<VoidCallback> as Im_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_callback(arg: *mut Arc<CallbackReturnCallback>) -> *mut Arc<VoidCallback> as JL_ {
     into_raw(crate::callback_return_callback(from_raw(arg)))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_callback_n(arg: *mut Arc<CallbackReturnCallbackN>) -> bool as In_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_callback_n(arg: *mut Arc<CallbackReturnCallbackN>) -> bool as JM_ {
     crate::callback_return_callback_n(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_enum(arg: *mut Arc<CallbackReturnEnum>) -> bool as Io_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_enum(arg: *mut Arc<CallbackReturnEnum>) -> bool as JN_ {
     crate::callback_return_enum(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_dictionary(arg: *mut Arc<CallbackReturnDictionary>) -> bool as Ip_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_dictionary(arg: *mut Arc<CallbackReturnDictionary>) -> bool as JO_ {
     crate::callback_return_dictionary(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_dictionary_n(arg: *mut Arc<CallbackReturnDictionaryN>) -> bool as Iq_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_dictionary_n(arg: *mut Arc<CallbackReturnDictionaryN>) -> bool as JP_ {
     crate::callback_return_dictionary_n(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_interface(arg: *mut Arc<CallbackReturnInterface>) -> bool as Ir_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_interface(arg: *mut Arc<CallbackReturnInterface>) -> bool as JQ_ {
     crate::callback_return_interface(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_interface_n(arg: *mut Arc<CallbackReturnInterfaceN>) -> bool as Is_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_interface_n(arg: *mut Arc<CallbackReturnInterfaceN>) -> bool as JR_ {
     crate::callback_return_interface_n(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_char_array(arg: *mut Vec<u16>) -> bool as It_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_char_array(arg: *mut Vec<u16>) -> bool as JS_ {
     crate::pass_char_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_char_array_n(arg: *mut Vec<u16>) -> bool as Iu_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_char_array_empty(arg: *mut Vec<u16>) -> bool as JT_ {
+    crate::pass_char_array_empty(from_raw(arg))
+}}
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_char_array_n(arg: *mut Vec<u16>) -> bool as JU_ {
     crate::pass_char_array_n(ptr_opt(arg, from_raw))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_boolean_array(arg: *mut Vec<bool>) -> bool as Iv_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_boolean_array(arg: *mut Vec<bool>) -> bool as JV_ {
     crate::pass_boolean_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_byte_array(arg: *mut Vec<i8>) -> bool as Iw_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_byte_array(arg: *mut Vec<i8>) -> bool as JW_ {
     crate::pass_byte_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_ubyte_array(arg: *mut Vec<u8>) -> bool as Ix_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_ubyte_array(arg: *mut Vec<u8>) -> bool as JX_ {
     crate::pass_ubyte_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_short_array(arg: *mut Vec<i16>) -> bool as Iy_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_short_array(arg: *mut Vec<i16>) -> bool as JY_ {
     crate::pass_short_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_ushort_array(arg: *mut Vec<u16>) -> bool as Iz_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_ushort_array(arg: *mut Vec<u16>) -> bool as JZ_ {
     crate::pass_ushort_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_int_array(arg: *mut Vec<i32>) -> bool as JA_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_int_array(arg: *mut Vec<i32>) -> bool as Ja_ {
     crate::pass_int_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_uint_array(arg: *mut Vec<u32>) -> bool as JB_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_uint_array(arg: *mut Vec<u32>) -> bool as Jb_ {
     crate::pass_uint_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_long_array(arg: *mut Vec<i64>) -> bool as JC_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_long_array(arg: *mut Vec<i64>) -> bool as Jc_ {
     crate::pass_long_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_ulong_array(arg: *mut Vec<u64>) -> bool as JD_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_ulong_array(arg: *mut Vec<u64>) -> bool as Jd_ {
     crate::pass_ulong_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_float_array(arg: *mut Vec<f32>) -> bool as JE_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_float_array(arg: *mut Vec<f32>) -> bool as Je_ {
     crate::pass_float_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_double_array(arg: *mut Vec<f64>) -> bool as JF_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_double_array(arg: *mut Vec<f64>) -> bool as Jf_ {
     crate::pass_double_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_string_array(arg: *mut Vec<String>) -> bool as JG_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_string_array(arg: *mut Vec<String>) -> bool as Jg_ {
     crate::pass_string_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_string_array_n(arg: *mut Vec<Option<String>>) -> bool as JH_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_string_array_n(arg: *mut Vec<Option<String>>) -> bool as Jh_ {
     crate::pass_string_array_n(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_enum_array(arg: *mut Vec<MyEnum>) -> bool as JI_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_enum_array(arg: *mut Vec<MyEnum>) -> bool as Ji_ {
     crate::pass_enum_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_dictionary_array(arg: *mut Vec<MyDictionary>) -> bool as JJ_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_dictionary_array(arg: *mut Vec<MyDictionary>) -> bool as Jj_ {
     crate::pass_dictionary_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_dictionary_array_n(arg: *mut Vec<Option<MyDictionary>>) -> bool as JK_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_dictionary_array_n(arg: *mut Vec<Option<MyDictionary>>) -> bool as Jk_ {
     crate::pass_dictionary_array_n(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_interface_array(arg: *mut Vec<Arc<crate::MyInterface>>) -> bool as JL_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_interface_array(arg: *mut Vec<Arc<crate::MyInterface>>) -> bool as Jl_ {
     crate::pass_interface_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_interface_array_n(arg: *mut Vec<Option<Arc<crate::MyInterface>>>) -> bool as JM_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_interface_array_n(arg: *mut Vec<Option<Arc<crate::MyInterface>>>) -> bool as Jm_ {
     crate::pass_interface_array_n(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_char_array() -> *mut Vec<u16> as JN_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_char_array() -> *mut Vec<u16> as Jn_ {
     into_raw(crate::return_char_array())
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_char_array_n() -> *mut Vec<u16> as JO_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_char_array_empty() -> *mut Vec<u16> as Jo_ {
+    into_raw(crate::return_char_array_empty())
+}}
+export_fn!{ fn nativekt_natives_testrs_testrs_return_char_array_n() -> *mut Vec<u16> as Jp_ {
     obj_opt(crate::return_char_array_n(), into_raw)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_boolean_array() -> *mut Vec<bool> as JP_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_boolean_array() -> *mut Vec<bool> as Jq_ {
     into_raw(crate::return_boolean_array())
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_byte_array() -> *mut Vec<i8> as JQ_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_byte_array() -> *mut Vec<i8> as Jr_ {
     into_raw(crate::return_byte_array())
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_ubyte_array() -> *mut Vec<u8> as JR_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_ubyte_array() -> *mut Vec<u8> as Js_ {
     into_raw(crate::return_ubyte_array())
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_short_array() -> *mut Vec<i16> as JS_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_short_array() -> *mut Vec<i16> as Jt_ {
     into_raw(crate::return_short_array())
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_ushort_array() -> *mut Vec<u16> as JT_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_ushort_array() -> *mut Vec<u16> as Ju_ {
     into_raw(crate::return_ushort_array())
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_int_array() -> *mut Vec<i32> as JU_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_int_array() -> *mut Vec<i32> as Jv_ {
     into_raw(crate::return_int_array())
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_uint_array() -> *mut Vec<u32> as JV_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_uint_array() -> *mut Vec<u32> as Jw_ {
     into_raw(crate::return_uint_array())
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_long_array() -> *mut Vec<i64> as JW_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_long_array() -> *mut Vec<i64> as Jx_ {
     into_raw(crate::return_long_array())
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_ulong_array() -> *mut Vec<u64> as JX_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_ulong_array() -> *mut Vec<u64> as Jy_ {
     into_raw(crate::return_ulong_array())
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_float_array() -> *mut Vec<f32> as JY_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_float_array() -> *mut Vec<f32> as Jz_ {
     into_raw(crate::return_float_array())
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_double_array() -> *mut Vec<f64> as JZ_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_double_array() -> *mut Vec<f64> as KA_ {
     into_raw(crate::return_double_array())
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_string_array() -> *mut Vec<String> as Ja_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_string_array() -> *mut Vec<String> as KB_ {
     into_raw(crate::return_string_array())
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_string_array_n() -> *mut Vec<Option<String>> as Jb_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_string_array_n() -> *mut Vec<Option<String>> as KC_ {
     into_raw(crate::return_string_array_n())
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_enum_array() -> *mut Vec<MyEnum> as Jc_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_enum_array() -> *mut Vec<MyEnum> as KD_ {
     into_raw(crate::return_enum_array())
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_dictionary_array() -> *mut Vec<MyDictionary> as Jd_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_dictionary_array() -> *mut Vec<MyDictionary> as KE_ {
     into_raw(crate::return_dictionary_array())
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_dictionary_array_n() -> *mut Vec<Option<MyDictionary>> as Je_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_dictionary_array_n() -> *mut Vec<Option<MyDictionary>> as KF_ {
     into_raw(crate::return_dictionary_array_n())
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_char_array(arg: *mut Vec<u16>) -> *mut Vec<u16> as Jf_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_char_array(arg: *mut Vec<u16>) -> *mut Vec<u16> as KG_ {
     into_raw(crate::ping_char_array(from_raw(arg)))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_char_array_n(arg: *mut Vec<u16>) -> *mut Vec<u16> as Jg_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_char_array_empty(arg: *mut Vec<u16>) -> *mut Vec<u16> as KH_ {
+    into_raw(crate::ping_char_array_empty(from_raw(arg)))
+}}
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_char_array_n(arg: *mut Vec<u16>) -> *mut Vec<u16> as KI_ {
     obj_opt(crate::ping_char_array_n(ptr_opt(arg, from_raw)), into_raw)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_boolean_array(arg: *mut Vec<bool>) -> *mut Vec<bool> as Jh_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_boolean_array(arg: *mut Vec<bool>) -> *mut Vec<bool> as KJ_ {
     into_raw(crate::ping_boolean_array(from_raw(arg)))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_byte_array(arg: *mut Vec<i8>) -> *mut Vec<i8> as Ji_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_byte_array(arg: *mut Vec<i8>) -> *mut Vec<i8> as KK_ {
     into_raw(crate::ping_byte_array(from_raw(arg)))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_ubyte_array(arg: *mut Vec<u8>) -> *mut Vec<u8> as Jj_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_ubyte_array(arg: *mut Vec<u8>) -> *mut Vec<u8> as KL_ {
     into_raw(crate::ping_ubyte_array(from_raw(arg)))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_short_array(arg: *mut Vec<i16>) -> *mut Vec<i16> as Jk_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_short_array(arg: *mut Vec<i16>) -> *mut Vec<i16> as KM_ {
     into_raw(crate::ping_short_array(from_raw(arg)))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_ushort_array(arg: *mut Vec<u16>) -> *mut Vec<u16> as Jl_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_ushort_array(arg: *mut Vec<u16>) -> *mut Vec<u16> as KN_ {
     into_raw(crate::ping_ushort_array(from_raw(arg)))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_int_array(arg: *mut Vec<i32>) -> *mut Vec<i32> as Jm_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_int_array(arg: *mut Vec<i32>) -> *mut Vec<i32> as KO_ {
     into_raw(crate::ping_int_array(from_raw(arg)))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_uint_array(arg: *mut Vec<u32>) -> *mut Vec<u32> as Jn_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_uint_array(arg: *mut Vec<u32>) -> *mut Vec<u32> as KP_ {
     into_raw(crate::ping_uint_array(from_raw(arg)))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_long_array(arg: *mut Vec<i64>) -> *mut Vec<i64> as Jo_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_long_array(arg: *mut Vec<i64>) -> *mut Vec<i64> as KQ_ {
     into_raw(crate::ping_long_array(from_raw(arg)))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_ulong_array(arg: *mut Vec<u64>) -> *mut Vec<u64> as Jp_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_ulong_array(arg: *mut Vec<u64>) -> *mut Vec<u64> as KR_ {
     into_raw(crate::ping_ulong_array(from_raw(arg)))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_float_array(arg: *mut Vec<f32>) -> *mut Vec<f32> as Jq_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_float_array(arg: *mut Vec<f32>) -> *mut Vec<f32> as KS_ {
     into_raw(crate::ping_float_array(from_raw(arg)))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_double_array(arg: *mut Vec<f64>) -> *mut Vec<f64> as Jr_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_double_array(arg: *mut Vec<f64>) -> *mut Vec<f64> as KT_ {
     into_raw(crate::ping_double_array(from_raw(arg)))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_string_array(arg: *mut Vec<String>) -> *mut Vec<String> as Js_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_string_array(arg: *mut Vec<String>) -> *mut Vec<String> as KU_ {
     into_raw(crate::ping_string_array(from_raw(arg)))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_string_array_n(arg: *mut Vec<Option<String>>) -> *mut Vec<Option<String>> as Jt_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_string_array_n(arg: *mut Vec<Option<String>>) -> *mut Vec<Option<String>> as KV_ {
     into_raw(crate::ping_string_array_n(from_raw(arg)))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_enum_array(arg: *mut Vec<MyEnum>) -> *mut Vec<MyEnum> as Ju_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_enum_array(arg: *mut Vec<MyEnum>) -> *mut Vec<MyEnum> as KW_ {
     into_raw(crate::ping_enum_array(from_raw(arg)))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_dictionary_array(arg: *mut Vec<MyDictionary>) -> *mut Vec<MyDictionary> as Jv_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_dictionary_array(arg: *mut Vec<MyDictionary>) -> *mut Vec<MyDictionary> as KX_ {
     into_raw(crate::ping_dictionary_array(from_raw(arg)))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_dictionary_array_n(arg: *mut Vec<Option<MyDictionary>>) -> *mut Vec<Option<MyDictionary>> as Jw_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_dictionary_array_n(arg: *mut Vec<Option<MyDictionary>>) -> *mut Vec<Option<MyDictionary>> as KY_ {
     into_raw(crate::ping_dictionary_array_n(from_raw(arg)))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_interface_array(arg: *mut Vec<Arc<crate::MyInterface>>) -> *mut Vec<Arc<crate::MyInterface>> as Jx_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_interface_array(arg: *mut Vec<Arc<crate::MyInterface>>) -> *mut Vec<Arc<crate::MyInterface>> as KZ_ {
     into_raw(crate::ping_interface_array(from_raw(arg)))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_interface_array_n(arg: *mut Vec<Option<Arc<crate::MyInterface>>>) -> *mut Vec<Option<Arc<crate::MyInterface>>> as Jy_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_interface_array_n(arg: *mut Vec<Option<Arc<crate::MyInterface>>>) -> *mut Vec<Option<Arc<crate::MyInterface>>> as Ka_ {
     into_raw(crate::ping_interface_array_n(from_raw(arg)))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_char_array(arg: *mut Arc<CallbackPassCharArray>) -> bool as Jz_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_char_array(arg: *mut Arc<CallbackPassCharArray>) -> bool as Kb_ {
     crate::callback_arg_char_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_char_array_n(arg: *mut Arc<CallbackPassCharArrayN>) -> bool as KA_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_char_array_empty(arg: *mut Arc<CallbackPassCharArrayEmpty>) -> bool as Kc_ {
+    crate::callback_arg_char_array_empty(from_raw(arg))
+}}
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_char_array_n(arg: *mut Arc<CallbackPassCharArrayN>) -> bool as Kd_ {
     crate::callback_arg_char_array_n(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_boolean_array(arg: *mut Arc<CallbackPassBooleanArray>) -> bool as KB_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_boolean_array(arg: *mut Arc<CallbackPassBooleanArray>) -> bool as Ke_ {
     crate::callback_arg_boolean_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_byte_array(arg: *mut Arc<CallbackPassByteArray>) -> bool as KC_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_byte_array(arg: *mut Arc<CallbackPassByteArray>) -> bool as Kf_ {
     crate::callback_arg_byte_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_ubyte_array(arg: *mut Arc<CallbackPassUByteArray>) -> bool as KD_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_ubyte_array(arg: *mut Arc<CallbackPassUByteArray>) -> bool as Kg_ {
     crate::callback_arg_ubyte_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_short_array(arg: *mut Arc<CallbackPassShortArray>) -> bool as KE_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_short_array(arg: *mut Arc<CallbackPassShortArray>) -> bool as Kh_ {
     crate::callback_arg_short_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_ushort_array(arg: *mut Arc<CallbackPassUShortArray>) -> bool as KF_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_ushort_array(arg: *mut Arc<CallbackPassUShortArray>) -> bool as Ki_ {
     crate::callback_arg_ushort_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_int_array(arg: *mut Arc<CallbackPassIntArray>) -> bool as KG_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_int_array(arg: *mut Arc<CallbackPassIntArray>) -> bool as Kj_ {
     crate::callback_arg_int_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_uint_array(arg: *mut Arc<CallbackPassUIntArray>) -> bool as KH_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_uint_array(arg: *mut Arc<CallbackPassUIntArray>) -> bool as Kk_ {
     crate::callback_arg_uint_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_long_array(arg: *mut Arc<CallbackPassLongArray>) -> bool as KI_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_long_array(arg: *mut Arc<CallbackPassLongArray>) -> bool as Kl_ {
     crate::callback_arg_long_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_ulong_array(arg: *mut Arc<CallbackPassULongArray>) -> bool as KJ_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_ulong_array(arg: *mut Arc<CallbackPassULongArray>) -> bool as Km_ {
     crate::callback_arg_ulong_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_float_array(arg: *mut Arc<CallbackPassFloatArray>) -> bool as KK_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_float_array(arg: *mut Arc<CallbackPassFloatArray>) -> bool as Kn_ {
     crate::callback_arg_float_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_double_array(arg: *mut Arc<CallbackPassDoubleArray>) -> bool as KL_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_double_array(arg: *mut Arc<CallbackPassDoubleArray>) -> bool as Ko_ {
     crate::callback_arg_double_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_string_array(arg: *mut Arc<CallbackPassStringArray>) -> bool as KM_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_string_array(arg: *mut Arc<CallbackPassStringArray>) -> bool as Kp_ {
     crate::callback_arg_string_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_string_array_n(arg: *mut Arc<CallbackPassStringArrayN>) -> bool as KN_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_string_array_n(arg: *mut Arc<CallbackPassStringArrayN>) -> bool as Kq_ {
     crate::callback_arg_string_array_n(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_enum_array(arg: *mut Arc<CallbackPassEnumArray>) -> bool as KO_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_enum_array(arg: *mut Arc<CallbackPassEnumArray>) -> bool as Kr_ {
     crate::callback_arg_enum_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_dictionary_array(arg: *mut Arc<CallbackPassDictionaryArray>) -> bool as KP_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_dictionary_array(arg: *mut Arc<CallbackPassDictionaryArray>) -> bool as Ks_ {
     crate::callback_arg_dictionary_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_dictionary_array_n(arg: *mut Arc<CallbackPassDictionaryArrayN>) -> bool as KQ_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_dictionary_array_n(arg: *mut Arc<CallbackPassDictionaryArrayN>) -> bool as Kt_ {
     crate::callback_arg_dictionary_array_n(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_interface_array(arg: *mut Arc<CallbackPassInterfaceArray>) -> bool as KR_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_interface_array(arg: *mut Arc<CallbackPassInterfaceArray>) -> bool as Ku_ {
     crate::callback_arg_interface_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_interface_array_n(arg: *mut Arc<CallbackPassInterfaceArrayN>) -> bool as KS_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_arg_interface_array_n(arg: *mut Arc<CallbackPassInterfaceArrayN>) -> bool as Kv_ {
     crate::callback_arg_interface_array_n(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_char_array(arg: *mut Arc<CallbackReturnCharArray>) -> bool as KT_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_char_array(arg: *mut Arc<CallbackReturnCharArray>) -> bool as Kw_ {
     crate::callback_return_char_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_char_array_n(arg: *mut Arc<CallbackReturnCharArrayN>) -> bool as KU_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_char_array_empty(arg: *mut Arc<CallbackReturnCharArrayEmpty>) -> bool as Kx_ {
+    crate::callback_return_char_array_empty(from_raw(arg))
+}}
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_char_array_n(arg: *mut Arc<CallbackReturnCharArrayN>) -> bool as Ky_ {
     crate::callback_return_char_array_n(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_boolean_array(arg: *mut Arc<CallbackReturnBooleanArray>) -> bool as KV_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_boolean_array(arg: *mut Arc<CallbackReturnBooleanArray>) -> bool as Kz_ {
     crate::callback_return_boolean_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_byte_array(arg: *mut Arc<CallbackReturnByteArray>) -> bool as KW_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_byte_array(arg: *mut Arc<CallbackReturnByteArray>) -> bool as LA_ {
     crate::callback_return_byte_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_ubyte_array(arg: *mut Arc<CallbackReturnUByteArray>) -> bool as KX_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_ubyte_array(arg: *mut Arc<CallbackReturnUByteArray>) -> bool as LB_ {
     crate::callback_return_ubyte_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_short_array(arg: *mut Arc<CallbackReturnShortArray>) -> bool as KY_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_short_array(arg: *mut Arc<CallbackReturnShortArray>) -> bool as LC_ {
     crate::callback_return_short_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_ushort_array(arg: *mut Arc<CallbackReturnUShortArray>) -> bool as KZ_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_ushort_array(arg: *mut Arc<CallbackReturnUShortArray>) -> bool as LD_ {
     crate::callback_return_ushort_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_int_array(arg: *mut Arc<CallbackReturnIntArray>) -> bool as Ka_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_int_array(arg: *mut Arc<CallbackReturnIntArray>) -> bool as LE_ {
     crate::callback_return_int_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_uint_array(arg: *mut Arc<CallbackReturnUIntArray>) -> bool as Kb_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_uint_array(arg: *mut Arc<CallbackReturnUIntArray>) -> bool as LF_ {
     crate::callback_return_uint_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_long_array(arg: *mut Arc<CallbackReturnLongArray>) -> bool as Kc_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_long_array(arg: *mut Arc<CallbackReturnLongArray>) -> bool as LG_ {
     crate::callback_return_long_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_ulong_array(arg: *mut Arc<CallbackReturnULongArray>) -> bool as Kd_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_ulong_array(arg: *mut Arc<CallbackReturnULongArray>) -> bool as LH_ {
     crate::callback_return_ulong_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_float_array(arg: *mut Arc<CallbackReturnFloatArray>) -> bool as Ke_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_float_array(arg: *mut Arc<CallbackReturnFloatArray>) -> bool as LI_ {
     crate::callback_return_float_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_double_array(arg: *mut Arc<CallbackReturnDoubleArray>) -> bool as Kf_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_double_array(arg: *mut Arc<CallbackReturnDoubleArray>) -> bool as LJ_ {
     crate::callback_return_double_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_string_array(arg: *mut Arc<CallbackReturnStringArray>) -> bool as Kg_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_string_array(arg: *mut Arc<CallbackReturnStringArray>) -> bool as LK_ {
     crate::callback_return_string_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_string_array_n(arg: *mut Arc<CallbackReturnStringArrayN>) -> bool as Kh_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_string_array_n(arg: *mut Arc<CallbackReturnStringArrayN>) -> bool as LL_ {
     crate::callback_return_string_array_n(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_enum_array(arg: *mut Arc<CallbackReturnEnumArray>) -> bool as Ki_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_enum_array(arg: *mut Arc<CallbackReturnEnumArray>) -> bool as LM_ {
     crate::callback_return_enum_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_dictionary_array(arg: *mut Arc<CallbackReturnDictionaryArray>) -> bool as Kj_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_dictionary_array(arg: *mut Arc<CallbackReturnDictionaryArray>) -> bool as LN_ {
     crate::callback_return_dictionary_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_dictionary_array_n(arg: *mut Arc<CallbackReturnDictionaryArrayN>) -> bool as Kk_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_dictionary_array_n(arg: *mut Arc<CallbackReturnDictionaryArrayN>) -> bool as LO_ {
     crate::callback_return_dictionary_array_n(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_interface_array(arg: *mut Arc<CallbackReturnInterfaceArray>) -> bool as Kl_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_interface_array(arg: *mut Arc<CallbackReturnInterfaceArray>) -> bool as LP_ {
     crate::callback_return_interface_array(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_interface_array_n(arg: *mut Arc<CallbackReturnInterfaceArrayN>) -> bool as Km_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_callback_return_interface_array_n(arg: *mut Arc<CallbackReturnInterfaceArrayN>) -> bool as LQ_ {
     crate::callback_return_interface_array_n(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_big_dictionary(arg: *mut TypeDictionary) -> bool as Kn_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_big_dictionary(arg: *mut TypeDictionary) -> bool as LR_ {
     crate::pass_big_dictionary(from_raw(arg))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_big_dictionary(callback: *mut Arc<VoidCallback>, inter: *mut Arc<crate::MyInterface>) -> *mut TypeDictionary as Ko_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_big_dictionary(callback: *mut Arc<VoidCallback>, inter: *mut Arc<crate::MyInterface>) -> *mut TypeDictionary as LS_ {
     into_raw(crate::return_big_dictionary(from_raw(callback), from_raw(inter)))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_big_dictionary(arg: *mut TypeDictionary) -> *mut TypeDictionary as Kp_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_big_dictionary(arg: *mut TypeDictionary) -> *mut TypeDictionary as LT_ {
     into_raw(crate::ping_big_dictionary(from_raw(arg)))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_pass_big_dictionary_n(arg: *mut TypeDictionary) -> bool as Kq_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_pass_big_dictionary_n(arg: *mut TypeDictionary) -> bool as LU_ {
     crate::pass_big_dictionary_n(ptr_opt(arg, from_raw))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_return_big_dictionary_n() -> *mut TypeDictionary as Kr_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_return_big_dictionary_n() -> *mut TypeDictionary as LV_ {
     obj_opt(crate::return_big_dictionary_n(), into_raw)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_ping_big_dictionary_n(arg: *mut TypeDictionary) -> *mut TypeDictionary as Ks_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_ping_big_dictionary_n(arg: *mut TypeDictionary) -> *mut TypeDictionary as LW_ {
     obj_opt(crate::ping_big_dictionary_n(ptr_opt(arg, from_raw)), into_raw)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_critical_primitives(a1: u16, a2: bool, a3: i8, a4: u8, a5: i16, a6: u16, a7: i32, a8: u32, a9: i64, a10: u64, a11: f32, a12: f64) -> bool as Kt_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_critical_primitives(a1: u16, a2: bool, a3: i8, a4: u8, a5: i16, a6: u16, a7: i32, a8: u32, a9: i64, a10: u64, a11: f32, a12: f64) -> bool as LX_ {
     crate::critical_primitives(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_critical_enum(a1: MyEnum) -> bool as Ku_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_critical_enum(a1: MyEnum) -> bool as LY_ {
     crate::critical_enum(a1)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_critical_string(a1: *mut u8, _a1_size: i32) -> bool as Kv_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_critical_string(a1: *mut u8, _a1_size: i32) -> bool as LZ_ {
     crate::critical_string(&critical_string(a1, _a1_size))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_critical_string_n(a1: *mut u8, _a1_size: i32) -> bool as Kw_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_critical_string_empty(a1: *mut u8, _a1_size: i32) -> bool as La_ {
+    crate::critical_string_empty(&critical_string(a1, _a1_size))
+}}
+export_fn!{ fn nativekt_natives_testrs_testrs_critical_string_n(a1: *mut u8, _a1_size: i32) -> bool as Lb_ {
     crate::critical_string_n(&critical_string_opt(a1, _a1_size))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_critical_interface(a1: *mut Arc<crate::MyInterface>) -> bool as Kx_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_critical_interface(a1: *mut Arc<crate::MyInterface>) -> bool as Lc_ {
     crate::critical_interface(&from_raw(a1))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_critical_interface_n(a1: *mut Arc<crate::MyInterface>) -> bool as Ky_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_critical_interface_n(a1: *mut Arc<crate::MyInterface>) -> bool as Ld_ {
     crate::critical_interface_n(&ptr_opt(a1, from_raw))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_critical_primitives_array(a1: *mut u16, _a1_length: i32, a2: *mut bool, _a2_length: i32, a3: *mut i8, _a3_length: i32, a4: *mut u8, _a4_length: i32, a5: *mut i16, _a5_length: i32, a6: *mut u16, _a6_length: i32, a7: *mut i32, _a7_length: i32, a8: *mut u32, _a8_length: i32, a9: *mut i64, _a9_length: i32, a10: *mut u64, _a10_length: i32, a11: *mut f32, _a11_length: i32, a12: *mut f64, _a12_length: i32) -> bool as Kz_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_critical_primitives_array(a1: *mut u16, _a1_length: i32, a2: *mut bool, _a2_length: i32, a3: *mut i8, _a3_length: i32, a4: *mut u8, _a4_length: i32, a5: *mut i16, _a5_length: i32, a6: *mut u16, _a6_length: i32, a7: *mut i32, _a7_length: i32, a8: *mut u32, _a8_length: i32, a9: *mut i64, _a9_length: i32, a10: *mut u64, _a10_length: i32, a11: *mut f32, _a11_length: i32, a12: *mut f64, _a12_length: i32) -> bool as Le_ {
     crate::critical_primitives_array(&critical_array(a1, _a1_length), &critical_array(a2, _a2_length), &critical_array(a3, _a3_length), &critical_array(a4, _a4_length), &critical_array(a5, _a5_length), &critical_array(a6, _a6_length), &critical_array(a7, _a7_length), &critical_array(a8, _a8_length), &critical_array(a9, _a9_length), &critical_array(a10, _a10_length), &critical_array(a11, _a11_length), &critical_array(a12, _a12_length))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_critical_enum_array(a1: *mut MyEnum, _a1_length: i32) -> bool as LA_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_critical_enum_array(a1: *mut MyEnum, _a1_length: i32) -> bool as Lf_ {
     crate::critical_enum_array(&critical_array(a1, _a1_length))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_critical_primitives_array_n(a1: *mut u16, _a1_length: i32, a2: *mut bool, _a2_length: i32, a3: *mut i8, _a3_length: i32, a4: *mut u8, _a4_length: i32, a5: *mut i16, _a5_length: i32, a6: *mut u16, _a6_length: i32, a7: *mut i32, _a7_length: i32, a8: *mut u32, _a8_length: i32, a9: *mut i64, _a9_length: i32, a10: *mut u64, _a10_length: i32, a11: *mut f32, _a11_length: i32, a12: *mut f64, _a12_length: i32) -> bool as LB_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_critical_primitives_array_empty(a1: *mut u16, _a1_length: i32, a2: *mut bool, _a2_length: i32, a3: *mut i8, _a3_length: i32, a4: *mut u8, _a4_length: i32, a5: *mut i16, _a5_length: i32, a6: *mut u16, _a6_length: i32, a7: *mut i32, _a7_length: i32, a8: *mut u32, _a8_length: i32, a9: *mut i64, _a9_length: i32, a10: *mut u64, _a10_length: i32, a11: *mut f32, _a11_length: i32, a12: *mut f64, _a12_length: i32) -> bool as Lg_ {
+    crate::critical_primitives_array_empty(&critical_array(a1, _a1_length), &critical_array(a2, _a2_length), &critical_array(a3, _a3_length), &critical_array(a4, _a4_length), &critical_array(a5, _a5_length), &critical_array(a6, _a6_length), &critical_array(a7, _a7_length), &critical_array(a8, _a8_length), &critical_array(a9, _a9_length), &critical_array(a10, _a10_length), &critical_array(a11, _a11_length), &critical_array(a12, _a12_length))
+}}
+export_fn!{ fn nativekt_natives_testrs_testrs_critical_enum_array_empty(a1: *mut MyEnum, _a1_length: i32) -> bool as Lh_ {
+    crate::critical_enum_array_empty(&critical_array(a1, _a1_length))
+}}
+export_fn!{ fn nativekt_natives_testrs_testrs_critical_primitives_array_n(a1: *mut u16, _a1_length: i32, a2: *mut bool, _a2_length: i32, a3: *mut i8, _a3_length: i32, a4: *mut u8, _a4_length: i32, a5: *mut i16, _a5_length: i32, a6: *mut u16, _a6_length: i32, a7: *mut i32, _a7_length: i32, a8: *mut u32, _a8_length: i32, a9: *mut i64, _a9_length: i32, a10: *mut u64, _a10_length: i32, a11: *mut f32, _a11_length: i32, a12: *mut f64, _a12_length: i32) -> bool as Li_ {
     crate::critical_primitives_array_n(&critical_array_opt(a1, _a1_length), &critical_array_opt(a2, _a2_length), &critical_array_opt(a3, _a3_length), &critical_array_opt(a4, _a4_length), &critical_array_opt(a5, _a5_length), &critical_array_opt(a6, _a6_length), &critical_array_opt(a7, _a7_length), &critical_array_opt(a8, _a8_length), &critical_array_opt(a9, _a9_length), &critical_array_opt(a10, _a10_length), &critical_array_opt(a11, _a11_length), &critical_array_opt(a12, _a12_length))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_critical_enum_array_n(a1: *mut MyEnum, _a1_length: i32) -> bool as LC_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_critical_enum_array_n(a1: *mut MyEnum, _a1_length: i32) -> bool as Lj_ {
     crate::critical_enum_array_n(&critical_array_opt(a1, _a1_length))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_critical_return_char() -> u16 as LD_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_critical_return_char() -> u16 as Lk_ {
     crate::critical_return_char()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_critical_return_boolean() -> bool as LE_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_critical_return_boolean() -> bool as Ll_ {
     crate::critical_return_boolean()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_critical_return_byte() -> i8 as LF_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_critical_return_byte() -> i8 as Lm_ {
     crate::critical_return_byte()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_critical_return_ubyte() -> u8 as LG_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_critical_return_ubyte() -> u8 as Ln_ {
     crate::critical_return_ubyte()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_critical_return_short() -> i16 as LH_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_critical_return_short() -> i16 as Lo_ {
     crate::critical_return_short()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_critical_return_ushort() -> u16 as LI_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_critical_return_ushort() -> u16 as Lp_ {
     crate::critical_return_ushort()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_critical_return_int() -> i32 as LJ_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_critical_return_int() -> i32 as Lq_ {
     crate::critical_return_int()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_critical_return_uint() -> u32 as LK_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_critical_return_uint() -> u32 as Lr_ {
     crate::critical_return_uint()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_critical_return_long() -> i64 as LL_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_critical_return_long() -> i64 as Ls_ {
     crate::critical_return_long()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_critical_return_ulong() -> u64 as LM_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_critical_return_ulong() -> u64 as Lt_ {
     crate::critical_return_ulong()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_critical_return_float() -> f32 as LN_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_critical_return_float() -> f32 as Lu_ {
     crate::critical_return_float()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_critical_return_double() -> f64 as LO_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_critical_return_double() -> f64 as Lv_ {
     crate::critical_return_double()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_critical_return_enum() -> MyEnum as LP_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_critical_return_enum() -> MyEnum as Lw_ {
     crate::critical_return_enum()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_critical_return_interface() -> *mut Arc<crate::MyInterface> as LQ_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_critical_return_interface() -> *mut Arc<crate::MyInterface> as Lx_ {
     into_raw(crate::critical_return_interface())
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_jvmci1() -> bool as LR_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_jvmci1() -> bool as Ly_ {
     crate::jvmci1()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_jvmci2(a1: i32) -> bool as LS_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_jvmci2(a1: i32) -> bool as Lz_ {
     crate::jvmci2(a1)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_jvmci3(a1: i32, a2: i32) -> bool as LT_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_jvmci3(a1: i32, a2: i32) -> bool as MA_ {
     crate::jvmci3(a1, a2)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_jvmci4(a1: i32, a2: i32, a3: i32, a4: i32, a5: i32, a6: i32, a7: i32, a8: i32, a9: i32) -> bool as LU_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_jvmci4(a1: i32, a2: i32, a3: i32, a4: i32, a5: i32, a6: i32, a7: i32, a8: i32, a9: i32) -> bool as MB_ {
     crate::jvmci4(a1, a2, a3, a4, a5, a6, a7, a8, a9)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_jvmci5(a1: i32, a2: i64, a3: i32, a4: i64, a5: i32, a6: i64, a7: i32, a8: i32, a9: i64) -> bool as LV_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_jvmci5(a1: i32, a2: i64, a3: i32, a4: i64, a5: i32, a6: i64, a7: i32, a8: i32, a9: i64) -> bool as MC_ {
     crate::jvmci5(a1, a2, a3, a4, a5, a6, a7, a8, a9)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_jvmci6(a1: f32, a2: f32, a3: f32, a4: f32, a5: f32, a6: f32, a7: f32, a8: f32, a9: f32, a10: i32, a11: i32, a12: i32, a13: i32) -> bool as LW_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_jvmci6(a1: f32, a2: f32, a3: f32, a4: f32, a5: f32, a6: f32, a7: f32, a8: f32, a9: f32, a10: i32, a11: i32, a12: i32, a13: i32) -> bool as MD_ {
     crate::jvmci6(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_jvmci7(a1: f32, a2: f64, a3: f32, a4: f64, a5: f32, a6: f64, a7: f32, a8: f32, a9: f64) -> bool as LX_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_jvmci7(a1: f32, a2: f64, a3: f32, a4: f64, a5: f32, a6: f64, a7: f32, a8: f32, a9: f64) -> bool as ME_ {
     crate::jvmci7(a1, a2, a3, a4, a5, a6, a7, a8, a9)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_jvmci8(a1: i32, a2: f64, a3: f32, a4: i64) -> bool as LY_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_jvmci8(a1: i32, a2: f64, a3: f32, a4: i64) -> bool as MF_ {
     crate::jvmci8(a1, a2, a3, a4)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_jvmci9(a1: i32, a2: f64, a3: f32, a4: i64, a5: i64, a6: f64, a7: f32, a8: f32, a9: i32) -> bool as LZ_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_jvmci9(a1: i32, a2: f64, a3: f32, a4: i64, a5: i64, a6: f64, a7: f32, a8: f32, a9: i32) -> bool as MG_ {
     crate::jvmci9(a1, a2, a3, a4, a5, a6, a7, a8, a9)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_jvmci10(a1: *mut u8, _a1_size: i32, a2: f64, a3: f32, a4: i64, a5: i64, a6: f64, a7: *mut u8, _a7_size: i32, a8: f32, a9: i32) -> bool as La_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_jvmci10(a1: *mut u8, _a1_size: i32, a2: f64, a3: f32, a4: i64, a5: i64, a6: f64, a7: *mut u8, _a7_size: i32, a8: f32, a9: i32) -> bool as MH_ {
     crate::jvmci10(&critical_string(a1, _a1_size), a2, a3, a4, a5, a6, &critical_string(a7, _a7_size), a8, a9)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_jvmci11(a1: f32, a2: i32, a3: f32, a4: i32, a5: f32, a6: i32, a7: f32, a8: i32, a9: f32, a10: i32, a11: f32, a12: i32, a13: f32, a14: i32, a15: f32, a16: i32, a17: f32) -> bool as Lb_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_jvmci11(a1: f32, a2: i32, a3: f32, a4: i32, a5: f32, a6: i32, a7: f32, a8: i32, a9: f32, a10: i32, a11: f32, a12: i32, a13: f32, a14: i32, a15: f32, a16: i32, a17: f32) -> bool as MI_ {
     crate::jvmci11(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17)
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_jvmci12() -> i32 as Lc_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_jvmci12() -> i32 as MJ_ {
     crate::jvmci12()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_jvmci13() -> i64 as Ld_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_jvmci13() -> i64 as MK_ {
     crate::jvmci13()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_jvmci14() -> f32 as Le_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_jvmci14() -> f32 as ML_ {
     crate::jvmci14()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_jvmci15() -> f64 as Lf_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_jvmci15() -> f64 as MM_ {
     crate::jvmci15()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_jvmci_array(array: *mut i32, _array_length: i32) -> bool as Lg_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_jvmci_array(array: *mut i32, _array_length: i32) -> bool as MN_ {
     crate::jvmci_array(&critical_array(array, _array_length))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_jvmci_some_arrays(array1: *mut i32, _array1_length: i32, array2: *mut f32, _array2_length: i32, array3: *mut f64, _array3_length: i32) -> bool as Lh_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_jvmci_some_arrays(array1: *mut i32, _array1_length: i32, array2: *mut f32, _array2_length: i32, array3: *mut f64, _array3_length: i32) -> bool as MO_ {
     crate::jvmci_some_arrays(&critical_array(array1, _array1_length), &critical_array(array2, _array2_length), &critical_array(array3, _array3_length))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs_jvmci_enum(enum1: MyEnum, enum2: MyEnum, enum_array: *mut MyEnum, _enum_array_length: i32) -> bool as Li_ {
+export_fn!{ fn nativekt_natives_testrs_testrs_jvmci_enum(enum1: MyEnum, enum2: MyEnum, enum_array: *mut MyEnum, _enum_array_length: i32) -> bool as MP_ {
     crate::jvmci_enum(enum1, enum2, &critical_array(enum_array, _enum_array_length))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs__interface_myinterface_new_0() -> *mut Arc<crate::MyInterface> as Lj_ {
+export_fn!{ fn nativekt_natives_testrs_testrs__interface_myinterface_new_0() -> *mut Arc<crate::MyInterface> as MQ_ {
     into_raw(Arc::new(crate::MyInterface::new()))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs__interface_myinterface_new_1(a: i32) -> *mut Arc<crate::MyInterface> as Lk_ {
+export_fn!{ fn nativekt_natives_testrs_testrs__interface_myinterface_new_1(a: i32) -> *mut Arc<crate::MyInterface> as MR_ {
     into_raw(Arc::new(crate::MyInterface::new_critical(a)))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs__interface_myinterface_fn_test(_self: *mut Arc<crate::MyInterface>) -> bool as Ll_ {
+export_fn!{ fn nativekt_natives_testrs_testrs__interface_myinterface_fn_test(_self: *mut Arc<crate::MyInterface>) -> bool as MS_ {
     unsafe { &*_self }.test()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs__interface_myinterface_fn_test_critical(_self: *mut Arc<crate::MyInterface>) -> bool as Lm_ {
+export_fn!{ fn nativekt_natives_testrs_testrs__interface_myinterface_fn_test_critical(_self: *mut Arc<crate::MyInterface>) -> bool as MT_ {
     unsafe { &*_self }.test_critical()
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs__interface_myinterface_fn_pass_interface(_self: *mut Arc<crate::MyInterface>, a1: *mut Arc<crate::MyInterface>) -> () as Ln_ {
+export_fn!{ fn nativekt_natives_testrs_testrs__interface_myinterface_fn_pass_interface(_self: *mut Arc<crate::MyInterface>, a1: *mut Arc<crate::MyInterface>) -> () as MU_ {
     unsafe { &*_self }.pass_interface(&from_raw(a1))
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs__interface_myinterface_fn_return_interface(_self: *mut Arc<crate::MyInterface>) -> *mut Arc<crate::MyInterface> as Lo_ {
+export_fn!{ fn nativekt_natives_testrs_testrs__interface_myinterface_fn_return_interface(_self: *mut Arc<crate::MyInterface>) -> *mut Arc<crate::MyInterface> as MV_ {
     into_raw(unsafe { &*_self }.return_interface())
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs__interface_myinterface_free(_self: *mut Arc<crate::MyInterface>) -> () as Lp_ {
+export_fn!{ fn nativekt_natives_testrs_testrs__interface_myinterface_free(_self: *mut Arc<crate::MyInterface>) -> () as MW_ {
     from_raw(_self);
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs__interface_myinterface_clone(_self: *mut Arc<crate::MyInterface>) -> *mut Arc<crate::MyInterface> as Lq_ {
+export_fn!{ fn nativekt_natives_testrs_testrs__interface_myinterface_clone(_self: *mut Arc<crate::MyInterface>) -> *mut Arc<crate::MyInterface> as MX_ {
     into_raw(unsafe { &*_self }.clone())
 }}
-export_fn!{ fn nativekt_natives_testrs_testrs__interface_myinterface_address(_self: *mut Arc<crate::MyInterface>) -> usize as Lr_ {
+export_fn!{ fn nativekt_natives_testrs_testrs__interface_myinterface_address(_self: *mut Arc<crate::MyInterface>) -> usize as MY_ {
     Arc::as_ptr(unsafe { &*_self }) as usize
 }}

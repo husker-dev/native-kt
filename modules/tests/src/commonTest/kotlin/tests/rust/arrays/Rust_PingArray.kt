@@ -16,6 +16,12 @@ class Rust_PingArray {
     }
 
     @Test
+    fun pingCharArrayEmpty() = withRustLib {
+        val arr = charArrayOf()
+        assertContentEquals(arr, pingCharArrayEmpty(arr))
+    }
+
+    @Test
     fun pingCharArrayN() = withRustLib {
         val arr = null
         assertContentEquals(arr, pingCharArrayN(arr))

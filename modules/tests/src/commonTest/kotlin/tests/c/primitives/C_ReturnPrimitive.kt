@@ -80,6 +80,11 @@ class C_ReturnPrimitive {
     }
 
     @Test
+    fun returnStringEmpty() = withCLib {
+        assertEquals("", natives.test.returnStringEmpty())
+    }
+
+    @Test
     fun returnStringN() = withCLib {
         assertNull(natives.test.returnStringN())
     }

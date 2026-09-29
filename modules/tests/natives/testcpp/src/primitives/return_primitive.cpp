@@ -55,6 +55,10 @@ KString return_string() {
     return KString("test string");
 }
 
+KString return_string_empty() {
+    return KString("");
+}
+
 KOptional<KString> return_string_n() {
     return KOptional<KString>();
 }

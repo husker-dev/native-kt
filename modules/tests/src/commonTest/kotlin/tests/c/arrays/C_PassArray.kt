@@ -17,6 +17,11 @@ class C_PassArray {
     }
 
     @Test
+    fun passCharArrayEmpty() = withCLib {
+        assertTrue(natives.test.passCharArrayEmpty(charArrayOf()))
+    }
+
+    @Test
     fun passCharArrayN() = withCLib {
         assertTrue(natives.test.passCharArrayN(null))
     }

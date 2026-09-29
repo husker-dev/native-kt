@@ -1,5 +1,6 @@
 package tests.rust.primitives
 
+import natives.testrs.EmptyDictionary
 import withRustLib
 import natives.testrs.MyDictionary
 import natives.testrs.MyEnum
@@ -85,6 +86,11 @@ class Rust_PingPrimitive {
     }
 
     @Test
+    fun pingStringEmpty() = withRustLib {
+        assertEquals("", natives.testrs.pingStringEmpty(""))
+    }
+
+    @Test
     fun pingStringN() = withRustLib {
         assertNull(natives.testrs.pingStringN(null))
     }
@@ -99,6 +105,14 @@ class Rust_PingPrimitive {
         assertEquals(
             MyDictionary(1, 2, 3, 4),
             natives.testrs.pingDictionary(MyDictionary(1, 2, 3, 4))
+        )
+    }
+
+    @Test
+    fun pingEmptyDictionary() = withRustLib {
+        assertEquals(
+            EmptyDictionary(),
+            natives.testrs.pingEmptyDictionary(EmptyDictionary())
         )
     }
 

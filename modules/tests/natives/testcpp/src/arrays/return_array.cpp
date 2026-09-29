@@ -6,6 +6,10 @@ KArray<uint16_t> return_char_array() {
     };
 }
 
+KArray<uint16_t> return_char_array_empty() {
+    return KArray<uint16_t> {};
+}
+
 KOptional<KArray<uint16_t>> return_char_array_n() {
     return KOptional<KArray<uint16_t>>();
 }

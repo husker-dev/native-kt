@@ -35,6 +35,11 @@ class Rust_Critical {
     }
 
     @Test
+    fun criticalStringEmpty() = withRustLib {
+        assertTrue(natives.testrs.criticalStringEmpty(""))
+    }
+
+    @Test
     fun criticalStringN() = withRustLib {
         assertTrue(natives.testrs.criticalStringN(null))
     }
@@ -71,6 +76,31 @@ class Rust_Critical {
     fun criticalEnumArray() = withRustLib {
         assertTrue(natives.testrs.criticalEnumArray(
             arrayOf(MyEnum.CASE1, MyEnum.CASE2)
+        ))
+    }
+
+    @Test
+    fun criticalPrimitivesArrayEmpty() = withRustLib {
+        assertTrue(natives.testrs.criticalPrimitivesArrayEmpty(
+            charArrayOf(),
+            booleanArrayOf(),
+            byteArrayOf(),
+            ubyteArrayOf(),
+            shortArrayOf(),
+            ushortArrayOf(),
+            intArrayOf(),
+            uintArrayOf(),
+            longArrayOf(),
+            ulongArrayOf(),
+            floatArrayOf(),
+            doubleArrayOf()
+        ))
+    }
+
+    @Test
+    fun criticalEnumArrayEmpty() = withRustLib {
+        assertTrue(natives.testrs.criticalEnumArrayEmpty(
+            arrayOf()
         ))
     }
 

@@ -17,6 +17,12 @@ class Cpp_PingArray {
     }
 
     @Test
+    fun pingCharArrayEmpty() = withCppLib {
+        val arr = charArrayOf()
+        assertContentEquals(arr, pingCharArrayEmpty(arr))
+    }
+
+    @Test
     fun pingCharArrayN() = withCppLib {
         val arr = null
         assertContentEquals(arr, pingCharArrayN(arr))

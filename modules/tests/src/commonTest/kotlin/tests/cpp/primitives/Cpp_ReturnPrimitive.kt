@@ -80,6 +80,11 @@ class Cpp_ReturnPrimitive {
     }
 
     @Test
+    fun returnStringEmpty() = withCppLib {
+        assertEquals("", natives.testcpp.returnStringEmpty())
+    }
+
+    @Test
     fun returnStringN() = withCppLib {
         assertNull(natives.testcpp.returnStringN())
     }

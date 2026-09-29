@@ -6,6 +6,10 @@ bool pass_char_array(KArray<uint16_t> arg) {
         arg[1] == 'b';
 }
 
+bool pass_char_array_empty(KArray<uint16_t> arg) {
+    return arg.get_length() == 0;
+}
+
 bool pass_char_array_n(KOptional<KArray<uint16_t>> arg) {
     return arg.is_none();
 }

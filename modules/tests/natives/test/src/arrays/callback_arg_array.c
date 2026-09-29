@@ -5,6 +5,10 @@ bool callback_arg_char_array(RC_CallbackPassCharArray* arg) {
     return callbackpasschararray_invoke(arg, kchar_array_of('a', 'b'));
 }
 
+bool callback_arg_char_array_empty(RC_CallbackPassCharArrayEmpty* arg) {
+    return callbackpasschararrayempty_invoke(arg, kchar_array_of_n(0));
+}
+
 bool callback_arg_char_array_n(RC_CallbackPassCharArrayN* arg) {
     return callbackpasschararrayn_invoke(arg, NULL);
 }

@@ -74,6 +74,7 @@ public:
 // ║     Type definitions     ║
 // ╚══════════════════════════╝
 
+struct EmptyDictionary;
 struct ParentDictionary;
 struct MyDictionary;
 struct TypeDictionary;
@@ -85,6 +86,7 @@ struct CallbackPassCallback;
 struct CallbackPassCallbackN;
 struct CallbackPassChar;
 struct CallbackPassCharArray;
+struct CallbackPassCharArrayEmpty;
 struct CallbackPassCharArrayN;
 struct CallbackPassDictionary;
 struct CallbackPassDictionaryArray;
@@ -109,6 +111,7 @@ struct CallbackPassShortArray;
 struct CallbackPassString;
 struct CallbackPassStringArray;
 struct CallbackPassStringArrayN;
+struct CallbackPassStringEmpty;
 struct CallbackPassStringN;
 struct CallbackPassUByte;
 struct CallbackPassUByteArray;
@@ -126,6 +129,7 @@ struct CallbackReturnCallback;
 struct CallbackReturnCallbackN;
 struct CallbackReturnChar;
 struct CallbackReturnCharArray;
+struct CallbackReturnCharArrayEmpty;
 struct CallbackReturnCharArrayN;
 struct CallbackReturnDictionary;
 struct CallbackReturnDictionaryArray;
@@ -150,6 +154,7 @@ struct CallbackReturnShortArray;
 struct CallbackReturnString;
 struct CallbackReturnStringArray;
 struct CallbackReturnStringArrayN;
+struct CallbackReturnStringEmpty;
 struct CallbackReturnStringN;
 struct CallbackReturnUByte;
 struct CallbackReturnUByteArray;
@@ -222,6 +227,7 @@ KCallbackDef(CallbackPassCallback, bool, std::shared_ptr<VoidCallback> arg)
 KCallbackDef(CallbackPassCallbackN, bool, KOptional<std::shared_ptr<VoidCallback>> arg)
 KCallbackDef(CallbackPassChar, bool, uint16_t arg)
 KCallbackDef(CallbackPassCharArray, bool, KArray<uint16_t> arg)
+KCallbackDef(CallbackPassCharArrayEmpty, bool, KArray<uint16_t> arg)
 KCallbackDef(CallbackPassCharArrayN, bool, KOptional<KArray<uint16_t>> arg)
 KCallbackDef(CallbackPassDictionary, bool, MyDictionary arg)
 KCallbackDef(CallbackPassDictionaryArray, bool, KArray<MyDictionary> arg)
@@ -246,6 +252,7 @@ KCallbackDef(CallbackPassShortArray, bool, KArray<int16_t> arg)
 KCallbackDef(CallbackPassString, bool, KString arg)
 KCallbackDef(CallbackPassStringArray, bool, KArray<KString> arg)
 KCallbackDef(CallbackPassStringArrayN, bool, KArray<KOptional<KString>> arg)
+KCallbackDef(CallbackPassStringEmpty, bool, KString arg)
 KCallbackDef(CallbackPassStringN, bool, KOptional<KString> arg)
 KCallbackDef(CallbackPassUByte, bool, uint8_t arg)
 KCallbackDef(CallbackPassUByteArray, bool, KArray<uint8_t> arg)
@@ -263,6 +270,7 @@ KCallbackDef(CallbackReturnCallback, std::shared_ptr<VoidCallback>)
 KCallbackDef(CallbackReturnCallbackN, KOptional<std::shared_ptr<VoidCallback>>)
 KCallbackDef(CallbackReturnChar, uint16_t)
 KCallbackDef(CallbackReturnCharArray, KArray<uint16_t>)
+KCallbackDef(CallbackReturnCharArrayEmpty, KArray<uint16_t>)
 KCallbackDef(CallbackReturnCharArrayN, KOptional<KArray<uint16_t>>)
 KCallbackDef(CallbackReturnDictionary, MyDictionary)
 KCallbackDef(CallbackReturnDictionaryArray, KArray<MyDictionary>)
@@ -287,6 +295,7 @@ KCallbackDef(CallbackReturnShortArray, KArray<int16_t>)
 KCallbackDef(CallbackReturnString, KString)
 KCallbackDef(CallbackReturnStringArray, KArray<KString>)
 KCallbackDef(CallbackReturnStringArrayN, KArray<KOptional<KString>>)
+KCallbackDef(CallbackReturnStringEmpty, KString)
 KCallbackDef(CallbackReturnStringN, KOptional<KString>)
 KCallbackDef(CallbackReturnUByte, uint8_t)
 KCallbackDef(CallbackReturnUByteArray, KArray<uint8_t>)
@@ -301,6 +310,11 @@ KCallbackDef(VoidCallback, void)
 // ╔═════════════════╗
 // ║     Structs     ║
 // ╚═════════════════╝
+
+struct EmptyDictionary {    
+    EmptyDictionary();
+    EmptyDictionary(const EmptyDictionary& other);
+};
 
 struct ParentDictionary {
 	int32_t a;
@@ -374,6 +388,7 @@ bool pass_ulong(uint64_t arg);
 bool pass_float(float arg);
 bool pass_double(double arg);
 bool pass_string(KString arg);
+bool pass_string_empty(KString arg);
 bool pass_string_n(KOptional<KString> arg);
 bool pass_enum(MyEnum arg);
 bool pass_dictionary(MyDictionary arg);
@@ -394,6 +409,7 @@ uint64_t return_ulong();
 float return_float();
 double return_double();
 KString return_string();
+KString return_string_empty();
 KOptional<KString> return_string_n();
 MyEnum return_enum();
 MyDictionary return_dictionary();
@@ -411,9 +427,11 @@ uint64_t ping_ulong(uint64_t arg);
 float ping_float(float arg);
 double ping_double(double arg);
 KString ping_string(KString arg);
+KString ping_string_empty(KString arg);
 KOptional<KString> ping_string_n(KOptional<KString> arg);
 MyEnum ping_enum(MyEnum arg);
 MyDictionary ping_dictionary(MyDictionary arg);
+EmptyDictionary ping_empty_dictionary(EmptyDictionary arg);
 KOptional<MyDictionary> ping_dictionary_n(KOptional<MyDictionary> arg);
 std::shared_ptr<IMyInterface> ping_interface(std::shared_ptr<IMyInterface> arg);
 KOptional<std::shared_ptr<IMyInterface>> ping_interface_n(KOptional<std::shared_ptr<IMyInterface>> arg);
@@ -432,6 +450,7 @@ bool callback_arg_ulong(std::shared_ptr<CallbackPassULong> arg);
 bool callback_arg_float(std::shared_ptr<CallbackPassFloat> arg);
 bool callback_arg_double(std::shared_ptr<CallbackPassDouble> arg);
 bool callback_arg_string(std::shared_ptr<CallbackPassString> arg);
+bool callback_arg_string_empty(std::shared_ptr<CallbackPassStringEmpty> arg);
 bool callback_arg_string_n(std::shared_ptr<CallbackPassStringN> arg);
 bool callback_arg_callback(std::shared_ptr<VoidCallback> pass, std::shared_ptr<CallbackPassCallback> arg);
 bool callback_arg_callback_n(std::shared_ptr<CallbackPassCallbackN> arg);
@@ -453,6 +472,7 @@ bool callback_return_ulong(std::shared_ptr<CallbackReturnULong> arg);
 bool callback_return_float(std::shared_ptr<CallbackReturnFloat> arg);
 bool callback_return_double(std::shared_ptr<CallbackReturnDouble> arg);
 bool callback_return_string(std::shared_ptr<CallbackReturnString> arg);
+bool callback_return_string_empty(std::shared_ptr<CallbackReturnStringEmpty> arg);
 bool callback_return_string_n(std::shared_ptr<CallbackReturnStringN> arg);
 std::shared_ptr<VoidCallback> callback_return_callback(std::shared_ptr<CallbackReturnCallback> arg);
 bool callback_return_callback_n(std::shared_ptr<CallbackReturnCallbackN> arg);
@@ -462,6 +482,7 @@ bool callback_return_dictionary_n(std::shared_ptr<CallbackReturnDictionaryN> arg
 bool callback_return_interface(std::shared_ptr<CallbackReturnInterface> arg);
 bool callback_return_interface_n(std::shared_ptr<CallbackReturnInterfaceN> arg);
 bool pass_char_array(KArray<uint16_t> arg);
+bool pass_char_array_empty(KArray<uint16_t> arg);
 bool pass_char_array_n(KOptional<KArray<uint16_t>> arg);
 bool pass_boolean_array(KArray<bool> arg);
 bool pass_byte_array(KArray<int8_t> arg);
@@ -482,6 +503,7 @@ bool pass_dictionary_array_n(KArray<KOptional<MyDictionary>> arg);
 bool pass_interface_array(KArray<std::shared_ptr<IMyInterface>> arg);
 bool pass_interface_array_n(KArray<KOptional<std::shared_ptr<IMyInterface>>> arg);
 KArray<uint16_t> return_char_array();
+KArray<uint16_t> return_char_array_empty();
 KOptional<KArray<uint16_t>> return_char_array_n();
 KArray<bool> return_boolean_array();
 KArray<int8_t> return_byte_array();
@@ -500,6 +522,7 @@ KArray<MyEnum> return_enum_array();
 KArray<MyDictionary> return_dictionary_array();
 KArray<KOptional<MyDictionary>> return_dictionary_array_n();
 KArray<uint16_t> ping_char_array(KArray<uint16_t> arg);
+KArray<uint16_t> ping_char_array_empty(KArray<uint16_t> arg);
 KOptional<KArray<uint16_t>> ping_char_array_n(KOptional<KArray<uint16_t>> arg);
 KArray<bool> ping_boolean_array(KArray<bool> arg);
 KArray<int8_t> ping_byte_array(KArray<int8_t> arg);
@@ -520,6 +543,7 @@ KArray<KOptional<MyDictionary>> ping_dictionary_array_n(KArray<KOptional<MyDicti
 KArray<std::shared_ptr<IMyInterface>> ping_interface_array(KArray<std::shared_ptr<IMyInterface>> arg);
 KArray<KOptional<std::shared_ptr<IMyInterface>>> ping_interface_array_n(KArray<KOptional<std::shared_ptr<IMyInterface>>> arg);
 bool callback_arg_char_array(std::shared_ptr<CallbackPassCharArray> arg);
+bool callback_arg_char_array_empty(std::shared_ptr<CallbackPassCharArrayEmpty> arg);
 bool callback_arg_char_array_n(std::shared_ptr<CallbackPassCharArrayN> arg);
 bool callback_arg_boolean_array(std::shared_ptr<CallbackPassBooleanArray> arg);
 bool callback_arg_byte_array(std::shared_ptr<CallbackPassByteArray> arg);
@@ -540,6 +564,7 @@ bool callback_arg_dictionary_array_n(std::shared_ptr<CallbackPassDictionaryArray
 bool callback_arg_interface_array(std::shared_ptr<CallbackPassInterfaceArray> arg);
 bool callback_arg_interface_array_n(std::shared_ptr<CallbackPassInterfaceArrayN> arg);
 bool callback_return_char_array(std::shared_ptr<CallbackReturnCharArray> arg);
+bool callback_return_char_array_empty(std::shared_ptr<CallbackReturnCharArrayEmpty> arg);
 bool callback_return_char_array_n(std::shared_ptr<CallbackReturnCharArrayN> arg);
 bool callback_return_boolean_array(std::shared_ptr<CallbackReturnBooleanArray> arg);
 bool callback_return_byte_array(std::shared_ptr<CallbackReturnByteArray> arg);
@@ -568,11 +593,14 @@ KOptional<TypeDictionary> ping_big_dictionary_n(KOptional<TypeDictionary> arg);
 bool critical_primitives(uint16_t a1, bool a2, int8_t a3, uint8_t a4, int16_t a5, uint16_t a6, int32_t a7, uint32_t a8, int64_t a9, uint64_t a10, float a11, double a12);
 bool critical_enum(MyEnum a1);
 bool critical_string(const KString& a1);
+bool critical_string_empty(const KString& a1);
 bool critical_string_n(const KOptional<KString>& a1);
 bool critical_interface(const std::shared_ptr<IMyInterface>& a1);
 bool critical_interface_n(const KOptional<std::shared_ptr<IMyInterface>>& a1);
 bool critical_primitives_array(const KArray<uint16_t>& a1, const KArray<bool>& a2, const KArray<int8_t>& a3, const KArray<uint8_t>& a4, const KArray<int16_t>& a5, const KArray<uint16_t>& a6, const KArray<int32_t>& a7, const KArray<uint32_t>& a8, const KArray<int64_t>& a9, const KArray<uint64_t>& a10, const KArray<float>& a11, const KArray<double>& a12);
 bool critical_enum_array(const KArray<MyEnum>& a1);
+bool critical_primitives_array_empty(const KArray<uint16_t>& a1, const KArray<bool>& a2, const KArray<int8_t>& a3, const KArray<uint8_t>& a4, const KArray<int16_t>& a5, const KArray<uint16_t>& a6, const KArray<int32_t>& a7, const KArray<uint32_t>& a8, const KArray<int64_t>& a9, const KArray<uint64_t>& a10, const KArray<float>& a11, const KArray<double>& a12);
+bool critical_enum_array_empty(const KArray<MyEnum>& a1);
 bool critical_primitives_array_n(const KOptional<KArray<uint16_t>>& a1, const KOptional<KArray<bool>>& a2, const KOptional<KArray<int8_t>>& a3, const KOptional<KArray<uint8_t>>& a4, const KOptional<KArray<int16_t>>& a5, const KOptional<KArray<uint16_t>>& a6, const KOptional<KArray<int32_t>>& a7, const KOptional<KArray<uint32_t>>& a8, const KOptional<KArray<int64_t>>& a9, const KOptional<KArray<uint64_t>>& a10, const KOptional<KArray<float>>& a11, const KOptional<KArray<double>>& a12);
 bool critical_enum_array_n(const KOptional<KArray<MyEnum>>& a1);
 uint16_t critical_return_char();

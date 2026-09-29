@@ -32,6 +32,7 @@
 #define NATIVEKT_MyInterface void
 #endif
 
+typedef struct EmptyDictionary EmptyDictionary;
 typedef struct ParentDictionary ParentDictionary;
 typedef struct MyDictionary MyDictionary;
 typedef struct TypeDictionary TypeDictionary;
@@ -43,6 +44,7 @@ typedef struct CallbackPassCallback CallbackPassCallback;
 typedef struct CallbackPassCallbackN CallbackPassCallbackN;
 typedef struct CallbackPassChar CallbackPassChar;
 typedef struct CallbackPassCharArray CallbackPassCharArray;
+typedef struct CallbackPassCharArrayEmpty CallbackPassCharArrayEmpty;
 typedef struct CallbackPassCharArrayN CallbackPassCharArrayN;
 typedef struct CallbackPassDictionary CallbackPassDictionary;
 typedef struct CallbackPassDictionaryArray CallbackPassDictionaryArray;
@@ -67,6 +69,7 @@ typedef struct CallbackPassShortArray CallbackPassShortArray;
 typedef struct CallbackPassString CallbackPassString;
 typedef struct CallbackPassStringArray CallbackPassStringArray;
 typedef struct CallbackPassStringArrayN CallbackPassStringArrayN;
+typedef struct CallbackPassStringEmpty CallbackPassStringEmpty;
 typedef struct CallbackPassStringN CallbackPassStringN;
 typedef struct CallbackPassUByte CallbackPassUByte;
 typedef struct CallbackPassUByteArray CallbackPassUByteArray;
@@ -84,6 +87,7 @@ typedef struct CallbackReturnCallback CallbackReturnCallback;
 typedef struct CallbackReturnCallbackN CallbackReturnCallbackN;
 typedef struct CallbackReturnChar CallbackReturnChar;
 typedef struct CallbackReturnCharArray CallbackReturnCharArray;
+typedef struct CallbackReturnCharArrayEmpty CallbackReturnCharArrayEmpty;
 typedef struct CallbackReturnCharArrayN CallbackReturnCharArrayN;
 typedef struct CallbackReturnDictionary CallbackReturnDictionary;
 typedef struct CallbackReturnDictionaryArray CallbackReturnDictionaryArray;
@@ -108,6 +112,7 @@ typedef struct CallbackReturnShortArray CallbackReturnShortArray;
 typedef struct CallbackReturnString CallbackReturnString;
 typedef struct CallbackReturnStringArray CallbackReturnStringArray;
 typedef struct CallbackReturnStringArrayN CallbackReturnStringArrayN;
+typedef struct CallbackReturnStringEmpty CallbackReturnStringEmpty;
 typedef struct CallbackReturnStringN CallbackReturnStringN;
 typedef struct CallbackReturnUByte CallbackReturnUByte;
 typedef struct CallbackReturnUByteArray CallbackReturnUByteArray;
@@ -142,6 +147,7 @@ RC(CallbackPassCallback, CallbackPassCallback, callbackpasscallback)
 RC(CallbackPassCallbackN, CallbackPassCallbackN, callbackpasscallbackn)
 RC(CallbackPassChar, CallbackPassChar, callbackpasschar)
 RC(CallbackPassCharArray, CallbackPassCharArray, callbackpasschararray)
+RC(CallbackPassCharArrayEmpty, CallbackPassCharArrayEmpty, callbackpasschararrayempty)
 RC(CallbackPassCharArrayN, CallbackPassCharArrayN, callbackpasschararrayn)
 RC(CallbackPassDictionary, CallbackPassDictionary, callbackpassdictionary)
 RC(CallbackPassDictionaryArray, CallbackPassDictionaryArray, callbackpassdictionaryarray)
@@ -166,6 +172,7 @@ RC(CallbackPassShortArray, CallbackPassShortArray, callbackpassshortarray)
 RC(CallbackPassString, CallbackPassString, callbackpassstring)
 RC(CallbackPassStringArray, CallbackPassStringArray, callbackpassstringarray)
 RC(CallbackPassStringArrayN, CallbackPassStringArrayN, callbackpassstringarrayn)
+RC(CallbackPassStringEmpty, CallbackPassStringEmpty, callbackpassstringempty)
 RC(CallbackPassStringN, CallbackPassStringN, callbackpassstringn)
 RC(CallbackPassUByte, CallbackPassUByte, callbackpassubyte)
 RC(CallbackPassUByteArray, CallbackPassUByteArray, callbackpassubytearray)
@@ -183,6 +190,7 @@ RC(CallbackReturnCallback, CallbackReturnCallback, callbackreturncallback)
 RC(CallbackReturnCallbackN, CallbackReturnCallbackN, callbackreturncallbackn)
 RC(CallbackReturnChar, CallbackReturnChar, callbackreturnchar)
 RC(CallbackReturnCharArray, CallbackReturnCharArray, callbackreturnchararray)
+RC(CallbackReturnCharArrayEmpty, CallbackReturnCharArrayEmpty, callbackreturnchararrayempty)
 RC(CallbackReturnCharArrayN, CallbackReturnCharArrayN, callbackreturnchararrayn)
 RC(CallbackReturnDictionary, CallbackReturnDictionary, callbackreturndictionary)
 RC(CallbackReturnDictionaryArray, CallbackReturnDictionaryArray, callbackreturndictionaryarray)
@@ -207,6 +215,7 @@ RC(CallbackReturnShortArray, CallbackReturnShortArray, callbackreturnshortarray)
 RC(CallbackReturnString, CallbackReturnString, callbackreturnstring)
 RC(CallbackReturnStringArray, CallbackReturnStringArray, callbackreturnstringarray)
 RC(CallbackReturnStringArrayN, CallbackReturnStringArrayN, callbackreturnstringarrayn)
+RC(CallbackReturnStringEmpty, CallbackReturnStringEmpty, callbackreturnstringempty)
 RC(CallbackReturnStringN, CallbackReturnStringN, callbackreturnstringn)
 RC(CallbackReturnUByte, CallbackReturnUByte, callbackreturnubyte)
 RC(CallbackReturnUByteArray, CallbackReturnUByteArray, callbackreturnubytearray)
@@ -439,6 +448,15 @@ typedef enum {
 // ║     Structs     ║
 // ╚═════════════════╝
 
+struct EmptyDictionary {	
+	EmptyDictionary* _Nullable (* _Nullable clone)(const EmptyDictionary* _Nullable);
+	void (* _Nullable free)(EmptyDictionary* _Nullable);
+};
+
+EmptyDictionary* _Nonnull EmptyDictionary_new();
+EmptyDictionary* _Nullable EmptyDictionary_clone(const EmptyDictionary* _Nullable self);
+void EmptyDictionary_free(EmptyDictionary* _Nullable self);
+
 struct ParentDictionary {	
 	ParentDictionary* _Nullable (* _Nullable clone)(const ParentDictionary* _Nullable);
 	void (* _Nullable free)(ParentDictionary* _Nullable);
@@ -529,6 +547,7 @@ KCallbackDef(CallbackPassCallback, callbackpasscallback, bool, RC_VoidCallback* 
 KCallbackDef(CallbackPassCallbackN, callbackpasscallbackn, bool, RC_VoidCallback* _Nullable arg)
 KCallbackDef(CallbackPassChar, callbackpasschar, bool, uint16_t arg)
 KCallbackDef(CallbackPassCharArray, callbackpasschararray, bool, KCharArray* _Nonnull arg)
+KCallbackDef(CallbackPassCharArrayEmpty, callbackpasschararrayempty, bool, KCharArray* _Nonnull arg)
 KCallbackDef(CallbackPassCharArrayN, callbackpasschararrayn, bool, KCharArray* _Nullable arg)
 KCallbackDef(CallbackPassDictionary, callbackpassdictionary, bool, MyDictionary* _Nonnull arg)
 KCallbackDef(CallbackPassDictionaryArray, callbackpassdictionaryarray, bool, KArray* _Nonnull arg)
@@ -553,6 +572,7 @@ KCallbackDef(CallbackPassShortArray, callbackpassshortarray, bool, KShortArray* 
 KCallbackDef(CallbackPassString, callbackpassstring, bool, KString* _Nonnull arg)
 KCallbackDef(CallbackPassStringArray, callbackpassstringarray, bool, KArray* _Nonnull arg)
 KCallbackDef(CallbackPassStringArrayN, callbackpassstringarrayn, bool, KArray* _Nonnull arg)
+KCallbackDef(CallbackPassStringEmpty, callbackpassstringempty, bool, KString* _Nonnull arg)
 KCallbackDef(CallbackPassStringN, callbackpassstringn, bool, KString* _Nullable arg)
 KCallbackDef(CallbackPassUByte, callbackpassubyte, bool, uint8_t arg)
 KCallbackDef(CallbackPassUByteArray, callbackpassubytearray, bool, KUByteArray* _Nonnull arg)
@@ -570,6 +590,7 @@ KCallbackDef(CallbackReturnCallback, callbackreturncallback, RC_VoidCallback* _N
 KCallbackDef(CallbackReturnCallbackN, callbackreturncallbackn, RC_VoidCallback* _Nullable)
 KCallbackDef(CallbackReturnChar, callbackreturnchar, uint16_t)
 KCallbackDef(CallbackReturnCharArray, callbackreturnchararray, KCharArray* _Nonnull)
+KCallbackDef(CallbackReturnCharArrayEmpty, callbackreturnchararrayempty, KCharArray* _Nonnull)
 KCallbackDef(CallbackReturnCharArrayN, callbackreturnchararrayn, KCharArray* _Nullable)
 KCallbackDef(CallbackReturnDictionary, callbackreturndictionary, MyDictionary* _Nonnull)
 KCallbackDef(CallbackReturnDictionaryArray, callbackreturndictionaryarray, KArray* _Nonnull)
@@ -594,6 +615,7 @@ KCallbackDef(CallbackReturnShortArray, callbackreturnshortarray, KShortArray* _N
 KCallbackDef(CallbackReturnString, callbackreturnstring, KString* _Nonnull)
 KCallbackDef(CallbackReturnStringArray, callbackreturnstringarray, KArray* _Nonnull)
 KCallbackDef(CallbackReturnStringArrayN, callbackreturnstringarrayn, KArray* _Nonnull)
+KCallbackDef(CallbackReturnStringEmpty, callbackreturnstringempty, KString* _Nonnull)
 KCallbackDef(CallbackReturnStringN, callbackreturnstringn, KString* _Nullable)
 KCallbackDef(CallbackReturnUByte, callbackreturnubyte, uint8_t)
 KCallbackDef(CallbackReturnUByteArray, callbackreturnubytearray, KUByteArray* _Nonnull)
@@ -624,6 +646,7 @@ bool pass_ulong(uint64_t arg);
 bool pass_float(float arg);
 bool pass_double(double arg);
 bool pass_string(KString* _Nonnull arg);
+bool pass_string_empty(KString* _Nonnull arg);
 bool pass_string_n(KString* _Nullable arg);
 bool pass_enum(MyEnum arg);
 bool pass_dictionary(MyDictionary* _Nonnull arg);
@@ -644,6 +667,7 @@ uint64_t return_ulong(void);
 float return_float(void);
 double return_double(void);
 KString* _Nonnull return_string(void);
+KString* _Nonnull return_string_empty(void);
 KString* _Nullable return_string_n(void);
 MyEnum return_enum(void);
 MyDictionary* _Nonnull return_dictionary(void);
@@ -661,9 +685,11 @@ uint64_t ping_ulong(uint64_t arg);
 float ping_float(float arg);
 double ping_double(double arg);
 KString* _Nonnull ping_string(KString* _Nonnull arg);
+KString* _Nonnull ping_string_empty(KString* _Nonnull arg);
 KString* _Nullable ping_string_n(KString* _Nullable arg);
 MyEnum ping_enum(MyEnum arg);
 MyDictionary* _Nonnull ping_dictionary(MyDictionary* _Nonnull arg);
+EmptyDictionary* _Nonnull ping_empty_dictionary(EmptyDictionary* _Nonnull arg);
 MyDictionary* _Nullable ping_dictionary_n(MyDictionary* _Nullable arg);
 RC_MyInterface* _Nonnull ping_interface(RC_MyInterface* _Nonnull arg);
 RC_MyInterface* _Nullable ping_interface_n(RC_MyInterface* _Nullable arg);
@@ -682,6 +708,7 @@ bool callback_arg_ulong(RC_CallbackPassULong* _Nonnull arg);
 bool callback_arg_float(RC_CallbackPassFloat* _Nonnull arg);
 bool callback_arg_double(RC_CallbackPassDouble* _Nonnull arg);
 bool callback_arg_string(RC_CallbackPassString* _Nonnull arg);
+bool callback_arg_string_empty(RC_CallbackPassStringEmpty* _Nonnull arg);
 bool callback_arg_string_n(RC_CallbackPassStringN* _Nonnull arg);
 bool callback_arg_callback(RC_VoidCallback* _Nonnull pass, RC_CallbackPassCallback* _Nonnull arg);
 bool callback_arg_callback_n(RC_CallbackPassCallbackN* _Nonnull arg);
@@ -703,6 +730,7 @@ bool callback_return_ulong(RC_CallbackReturnULong* _Nonnull arg);
 bool callback_return_float(RC_CallbackReturnFloat* _Nonnull arg);
 bool callback_return_double(RC_CallbackReturnDouble* _Nonnull arg);
 bool callback_return_string(RC_CallbackReturnString* _Nonnull arg);
+bool callback_return_string_empty(RC_CallbackReturnStringEmpty* _Nonnull arg);
 bool callback_return_string_n(RC_CallbackReturnStringN* _Nonnull arg);
 RC_VoidCallback* _Nonnull callback_return_callback(RC_CallbackReturnCallback* _Nonnull arg);
 bool callback_return_callback_n(RC_CallbackReturnCallbackN* _Nonnull arg);
@@ -712,6 +740,7 @@ bool callback_return_dictionary_n(RC_CallbackReturnDictionaryN* _Nonnull arg);
 bool callback_return_interface(RC_CallbackReturnInterface* _Nonnull arg);
 bool callback_return_interface_n(RC_CallbackReturnInterfaceN* _Nonnull arg);
 bool pass_char_array(KCharArray* _Nonnull arg);
+bool pass_char_array_empty(KCharArray* _Nonnull arg);
 bool pass_char_array_n(KCharArray* _Nullable arg);
 bool pass_boolean_array(KBooleanArray* _Nonnull arg);
 bool pass_byte_array(KByteArray* _Nonnull arg);
@@ -732,6 +761,7 @@ bool pass_dictionary_array_n(KArray* _Nonnull arg);
 bool pass_interface_array(KArray* _Nonnull arg);
 bool pass_interface_array_n(KArray* _Nonnull arg);
 KCharArray* _Nonnull return_char_array(void);
+KCharArray* _Nonnull return_char_array_empty(void);
 KCharArray* _Nullable return_char_array_n(void);
 KBooleanArray* _Nonnull return_boolean_array(void);
 KByteArray* _Nonnull return_byte_array(void);
@@ -750,6 +780,7 @@ KIntArray* _Nonnull return_enum_array(void);
 KArray* _Nonnull return_dictionary_array(void);
 KArray* _Nonnull return_dictionary_array_n(void);
 KCharArray* _Nonnull ping_char_array(KCharArray* _Nonnull arg);
+KCharArray* _Nonnull ping_char_array_empty(KCharArray* _Nonnull arg);
 KCharArray* _Nullable ping_char_array_n(KCharArray* _Nullable arg);
 KBooleanArray* _Nonnull ping_boolean_array(KBooleanArray* _Nonnull arg);
 KByteArray* _Nonnull ping_byte_array(KByteArray* _Nonnull arg);
@@ -770,6 +801,7 @@ KArray* _Nonnull ping_dictionary_array_n(KArray* _Nonnull arg);
 KArray* _Nonnull ping_interface_array(KArray* _Nonnull arg);
 KArray* _Nonnull ping_interface_array_n(KArray* _Nonnull arg);
 bool callback_arg_char_array(RC_CallbackPassCharArray* _Nonnull arg);
+bool callback_arg_char_array_empty(RC_CallbackPassCharArrayEmpty* _Nonnull arg);
 bool callback_arg_char_array_n(RC_CallbackPassCharArrayN* _Nonnull arg);
 bool callback_arg_boolean_array(RC_CallbackPassBooleanArray* _Nonnull arg);
 bool callback_arg_byte_array(RC_CallbackPassByteArray* _Nonnull arg);
@@ -790,6 +822,7 @@ bool callback_arg_dictionary_array_n(RC_CallbackPassDictionaryArrayN* _Nonnull a
 bool callback_arg_interface_array(RC_CallbackPassInterfaceArray* _Nonnull arg);
 bool callback_arg_interface_array_n(RC_CallbackPassInterfaceArrayN* _Nonnull arg);
 bool callback_return_char_array(RC_CallbackReturnCharArray* _Nonnull arg);
+bool callback_return_char_array_empty(RC_CallbackReturnCharArrayEmpty* _Nonnull arg);
 bool callback_return_char_array_n(RC_CallbackReturnCharArrayN* _Nonnull arg);
 bool callback_return_boolean_array(RC_CallbackReturnBooleanArray* _Nonnull arg);
 bool callback_return_byte_array(RC_CallbackReturnByteArray* _Nonnull arg);
@@ -818,11 +851,14 @@ TypeDictionary* _Nullable ping_big_dictionary_n(TypeDictionary* _Nullable arg);
 bool critical_primitives(uint16_t a1, bool a2, int8_t a3, uint8_t a4, int16_t a5, uint16_t a6, int32_t a7, uint32_t a8, int64_t a9, uint64_t a10, float a11, double a12);
 bool critical_enum(MyEnum a1);
 bool critical_string(KString* _Nonnull a1);
+bool critical_string_empty(KString* _Nonnull a1);
 bool critical_string_n(KString* _Nullable a1);
 bool critical_interface(RC_MyInterface* _Nonnull a1);
 bool critical_interface_n(RC_MyInterface* _Nullable a1);
 bool critical_primitives_array(KCharArray* _Nonnull a1, KBooleanArray* _Nonnull a2, KByteArray* _Nonnull a3, KUByteArray* _Nonnull a4, KShortArray* _Nonnull a5, KUShortArray* _Nonnull a6, KIntArray* _Nonnull a7, KUIntArray* _Nonnull a8, KLongArray* _Nonnull a9, KULongArray* _Nonnull a10, KFloatArray* _Nonnull a11, KDoubleArray* _Nonnull a12);
 bool critical_enum_array(KIntArray* _Nonnull a1);
+bool critical_primitives_array_empty(KCharArray* _Nonnull a1, KBooleanArray* _Nonnull a2, KByteArray* _Nonnull a3, KUByteArray* _Nonnull a4, KShortArray* _Nonnull a5, KUShortArray* _Nonnull a6, KIntArray* _Nonnull a7, KUIntArray* _Nonnull a8, KLongArray* _Nonnull a9, KULongArray* _Nonnull a10, KFloatArray* _Nonnull a11, KDoubleArray* _Nonnull a12);
+bool critical_enum_array_empty(KIntArray* _Nonnull a1);
 bool critical_primitives_array_n(KCharArray* _Nullable a1, KBooleanArray* _Nullable a2, KByteArray* _Nullable a3, KUByteArray* _Nullable a4, KShortArray* _Nullable a5, KUShortArray* _Nullable a6, KIntArray* _Nullable a7, KUIntArray* _Nullable a8, KLongArray* _Nullable a9, KULongArray* _Nullable a10, KFloatArray* _Nullable a11, KDoubleArray* _Nullable a12);
 bool critical_enum_array_n(KIntArray* _Nullable a1);
 uint16_t critical_return_char(void);

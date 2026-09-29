@@ -80,6 +80,11 @@ class Rust_ReturnPrimitive {
     }
 
     @Test
+    fun returnStringEmpty() = withRustLib {
+        assertEquals("", natives.testrs.returnStringEmpty())
+    }
+
+    @Test
     fun returnStringN() = withRustLib {
         assertNull(natives.testrs.returnStringN())
     }

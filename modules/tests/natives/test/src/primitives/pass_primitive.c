@@ -59,6 +59,10 @@ bool pass_string(KString* arg) {
     return arg->size == 11 && strncmp(arg->data, "test string", arg->size) == 0;
 }
 
+bool pass_string_empty(KString* arg) {
+    return arg->size == 0;
+}
+
 bool pass_string_n(KString* arg) {
     return arg == NULL;
 }

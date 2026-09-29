@@ -8,6 +8,11 @@ bool callback_return_char_array(RC_CallbackReturnCharArray* arg) {
         array->elements[1] == 'b';
 }
 
+bool callback_return_char_array_empty(RC_CallbackReturnCharArrayEmpty* arg) {
+    const KCharArray* array = callbackreturnchararrayempty_invoke(arg);
+    return array->length == 0;
+}
+
 bool callback_return_char_array_n(RC_CallbackReturnCharArrayN* arg) {
     return callbackreturnchararrayn_invoke(arg) == NULL;
 }

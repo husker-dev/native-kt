@@ -54,6 +54,11 @@ bool callback_return_string(RC_CallbackReturnString* arg) {
     return strncmp(str->data, "test string", str->size) == 0;
 }
 
+bool callback_return_string_empty(RC_CallbackReturnStringEmpty* arg) {
+    const KString* str = callbackreturnstringempty_invoke(arg);
+    return str->size == 0;
+}
+
 bool callback_return_string_n(RC_CallbackReturnStringN* arg) {
     return callbackreturnstringn_invoke(arg) == NULL;
 }

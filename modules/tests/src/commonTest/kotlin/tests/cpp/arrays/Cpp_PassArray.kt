@@ -17,6 +17,11 @@ class Cpp_PassArray {
     }
 
     @Test
+    fun passCharArrayEmpty() = withCppLib {
+        assertTrue(natives.testcpp.passCharArrayEmpty(charArrayOf()))
+    }
+
+    @Test
     fun passCharArrayN() = withCppLib {
         assertTrue(natives.testcpp.passCharArrayN(null))
     }

@@ -88,6 +88,11 @@ class Rust_CallbackArgPrimitive {
     }
 
     @Test
+    fun callbackArgStringEmpty() = withRustLib {
+        assertTrue(natives.testrs.callbackArgStringEmpty { it == "" })
+    }
+
+    @Test
     fun callbackArgStringN() = withRustLib {
         assertTrue(natives.testrs.callbackArgStringN { it == null })
     }

@@ -8,6 +8,10 @@ bool pass_char_array(KCharArray* arg) {
         arg->elements[1] == 'b';
 }
 
+bool pass_char_array_empty(KCharArray* arg) {
+    return arg->length == 0;
+}
+
 bool pass_char_array_n(KCharArray* arg) {
     return arg == NULL;
 }

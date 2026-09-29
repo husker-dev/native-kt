@@ -63,17 +63,25 @@ class KotlinNativePrinter(
             printLabel("String")
             if(context.hasStringCastToNative) appendLine("""
                 
-                private fun toNativeString(str: String?): COpaquePointer? = str?.encodeToByteArray()?.usePinned {
-                    ${context.mangle("string_new")}(it.addressOf(0), it.get().size.convert(), true)
+                private fun toNativeString(str: String?): COpaquePointer? = str?.encodeToByteArray()?.let { bytes ->
+                    bytes.usePinned {
+                        ${context.mangle("string_new")}(
+                            data = if(bytes.isEmpty()) null else it.addressOf(0), 
+                            size = bytes.size.convert(), 
+                            make_copy = true
+                        )
+                    }
                 }
             """.trimIndent())
             if(context.hasStringCastToKotlin) appendLine("""
                 
                 private fun toKotlinString(str: COpaquePointer?, free: Boolean): String? {
                     if(str == null) return null
-                    val data = ${context.mangle("string_data")}(str)!!
                     val size = ${context.mangle("string_size")}(str).toInt()
-                    return data.readBytes(size).decodeToString()
+                    return if(size > 0) {
+                        ${context.mangle("string_data")}(str)!!
+                            .readBytes(size).decodeToString()
+                    } else { "" }
                         .also { if(free) ${context.mangle("string_free")}(str) }
                 }
             """.trimIndent())
@@ -87,16 +95,22 @@ class KotlinNativePrinter(
                 if (context.hasCharArrayCastToNative) appendLine("""
                     
                     private fun toNativeCharArray(arr: CharArray?): COpaquePointer? = arr?.usePinned {
-                        ${context.mangle("chararray_new")}(it.addressOf(0).reinterpret(), arr.size, true)
+                        ${context.mangle("chararray_new")}(
+                            if(arr.isEmpty()) null else it.addressOf(0).reinterpret(), 
+                            arr.size, 
+                            true
+                        )
                     }
                 """.trimIndent())
                 if (context.hasCharArrayCastToKotlin) appendLine("""
                     
                     private fun toKotlinCharArray(arr: COpaquePointer?, free: Boolean): CharArray? {
                         if(arr == null) return null
-                        val elements = ${context.mangle("chararray_elements")}(arr)
                         val length = ${context.mangle("chararray_length")}(arr)
-                        return CharArray(length) { elements!![it].toInt().toChar() }
+                        return if(length > 0) {
+                            val elements = ${context.mangle("chararray_elements")}(arr)
+                            CharArray(length) { elements!![it].toInt().toChar() }
+                        } else { charArrayOf() }  
                             .also { if(free) ${context.mangle("chararray_free")}(arr) }
                     }
                 """.trimIndent())
@@ -108,7 +122,11 @@ class KotlinNativePrinter(
                     private fun toNativeBooleanArray(arr: BooleanArray?): COpaquePointer? {
                         if(arr == null) return null
                         return ByteArray(arr.size) { arr[it].toByte() }.usePinned {
-                            ${context.mangle("booleanarray_new")}(it.addressOf(0).reinterpret(), arr.size, true)
+                            ${context.mangle("booleanarray_new")}(
+                                if(arr.isEmpty()) null else it.addressOf(0).reinterpret(), 
+                                arr.size, 
+                                true
+                            )
                         }
                     }
                 """.trimIndent())
@@ -116,9 +134,11 @@ class KotlinNativePrinter(
                     
                     private fun toKotlinBooleanArray(arr: COpaquePointer?, free: Boolean): BooleanArray? {
                         if(arr == null) return null
-                        val elements = ${context.mangle("booleanarray_elements")}(arr)
                         val length = ${context.mangle("booleanarray_length")}(arr)
-                        return BooleanArray(length) { elements!![it].value }
+                        return if(length > 0) {
+                            val elements = ${context.mangle("booleanarray_elements")}(arr)
+                            BooleanArray(length) { elements!![it].value }
+                        } else { booleanArrayOf() }
                             .also { if(free) ${context.mangle("booleanarray_free")}(arr) }
                     }
                 """.trimIndent())
@@ -129,16 +149,22 @@ class KotlinNativePrinter(
                 if (context.hasByteArrayCastToNative || context.hasUByteArrayCastToNative) appendLine("""
                     
                     private fun toNativeByteArray(arr: ByteArray?): COpaquePointer? = arr?.usePinned {
-                        ${context.mangle("bytearray_new")}(it.addressOf(0).reinterpret(), arr.size, true)
+                        ${context.mangle("bytearray_new")}(
+                            if(arr.isEmpty()) null else it.addressOf(0).reinterpret(), 
+                            arr.size, 
+                            true
+                        )
                     }
                 """.trimIndent())
                 if (context.hasByteArrayCastToKotlin || context.hasUByteArrayCastToKotlin) appendLine("""
                     
                     private fun toKotlinByteArray(arr: COpaquePointer?, free: Boolean): ByteArray? {
                         if(arr == null) return null
-                        val elements = ${context.mangle("bytearray_elements")}(arr)
                         val length = ${context.mangle("bytearray_length")}(arr)
-                        return ByteArray(length) { elements!![it] }
+                        return if(length > 0) {
+                            val elements = ${context.mangle("bytearray_elements")}(arr)
+                            ByteArray(length) { elements!![it] }
+                        } else { byteArrayOf() }
                             .also { if(free) ${context.mangle("bytearray_free")}(arr) }
                     }
                 """.trimIndent())
@@ -149,16 +175,22 @@ class KotlinNativePrinter(
                 if (context.hasShortArrayCastToNative || context.hasUShortArrayCastToNative) appendLine("""
                     
                     private fun toNativeShortArray(arr: ShortArray?): COpaquePointer? = arr?.usePinned {
-                        ${context.mangle("shortarray_new")}(it.addressOf(0).reinterpret(), arr.size, true)
+                        ${context.mangle("shortarray_new")}(
+                            if(arr.isEmpty()) null else it.addressOf(0).reinterpret(), 
+                            arr.size, 
+                            true
+                        )
                     }
                 """.trimIndent())
                 if (context.hasShortArrayCastToKotlin || context.hasUShortArrayCastToKotlin) appendLine("""
                     
                     private fun toKotlinShortArray(arr: COpaquePointer?, free: Boolean): ShortArray? {
                         if(arr == null) return null
-                        val elements = ${context.mangle("shortarray_elements")}(arr)
                         val length = ${context.mangle("shortarray_length")}(arr)
-                        return ShortArray(length) { elements!![it] }
+                        return if(length > 0) {
+                            val elements = ${context.mangle("shortarray_elements")}(arr)
+                            ShortArray(length) { elements!![it] }
+                        } else { shortArrayOf() }
                             .also { if(free) ${context.mangle("shortarray_free")}(arr) }
                     }
                 """.trimIndent())
@@ -169,16 +201,22 @@ class KotlinNativePrinter(
                 if (context.hasIntArrayCastToNative || context.hasUIntArrayCastToNative || context.hasEnumArrayCastToNative) appendLine("""
                     
                     private fun toNativeIntArray(arr: IntArray?): COpaquePointer? = arr?.usePinned {
-                        ${context.mangle("intarray_new")}(it.addressOf(0).reinterpret(), arr.size, true)
+                        ${context.mangle("intarray_new")}(
+                            if(arr.isEmpty()) null else it.addressOf(0).reinterpret(), 
+                            arr.size, 
+                            true
+                        )
                     }
                 """.trimIndent())
                 if (context.hasIntArrayCastToKotlin || context.hasUIntArrayCastToKotlin || context.hasEnumArrayCastToKotlin) appendLine("""
                     
                     private fun toKotlinIntArray(arr: COpaquePointer?, free: Boolean): IntArray? {
                         if(arr == null) return null
-                        val elements = ${context.mangle("intarray_elements")}(arr)
                         val length = ${context.mangle("intarray_length")}(arr)
-                        return IntArray(length) { elements!![it] }
+                        return if(length > 0) {
+                            val elements = ${context.mangle("intarray_elements")}(arr)
+                            IntArray(length) { elements!![it] }
+                        } else { intArrayOf() }
                             .also { if(free) ${context.mangle("intarray_free")}(arr) }
                     }
                 """.trimIndent())
@@ -189,16 +227,22 @@ class KotlinNativePrinter(
                 if (context.hasLongArrayCastToNative || context.hasULongArrayCastToNative) appendLine("""
                     
                     private fun toNativeLongArray(arr: LongArray?): COpaquePointer? = arr?.usePinned {
-                        ${context.mangle("longarray_new")}(it.addressOf(0).reinterpret(), arr.size, true)
+                        ${context.mangle("longarray_new")}(
+                            if(arr.isEmpty()) null else it.addressOf(0).reinterpret(), 
+                            arr.size, 
+                            true
+                        )
                     }
                 """.trimIndent())
                 if (context.hasLongArrayCastToKotlin || context.hasULongArrayCastToKotlin) appendLine("""
                     
                     private fun toKotlinLongArray(arr: COpaquePointer?, free: Boolean): LongArray? {
                         if(arr == null) return null
-                        val elements = ${context.mangle("longarray_elements")}(arr)
                         val length = ${context.mangle("longarray_length")}(arr)
-                        return LongArray(length) { elements!![it] }
+                        return if(length > 0) {
+                            val elements = ${context.mangle("longarray_elements")}(arr)
+                            LongArray(length) { elements!![it] }
+                        } else { longArrayOf() }
                             .also { if(free) ${context.mangle("longarray_free")}(arr) }
                     }
                 """.trimIndent())
@@ -209,16 +253,22 @@ class KotlinNativePrinter(
                 if (context.hasFloatArrayCastToNative) appendLine("""
                     
                     private fun toNativeFloatArray(arr: FloatArray?): COpaquePointer? = arr?.usePinned {
-                        ${context.mangle("floatarray_new")}(it.addressOf(0).reinterpret(), arr.size, true)
+                        ${context.mangle("floatarray_new")}(
+                            if(arr.isEmpty()) null else it.addressOf(0).reinterpret(), 
+                            arr.size, 
+                            true
+                        )
                     }
                 """.trimIndent())
                 if (context.hasFloatArrayCastToKotlin) appendLine("""
                     
                     private fun toKotlinFloatArray(arr: COpaquePointer?, free: Boolean): FloatArray? {
                         if(arr == null) return null
-                        val elements = ${context.mangle("floatarray_elements")}(arr)
                         val length = ${context.mangle("floatarray_length")}(arr)
-                        return FloatArray(length) { elements!![it] }
+                        return if(length > 0) {
+                            val elements = ${context.mangle("floatarray_elements")}(arr)
+                            FloatArray(length) { elements!![it] }
+                        } else { floatArrayOf() }
                             .also { if(free) ${context.mangle("floatarray_free")}(arr) }
                     }
                 """.trimIndent())
@@ -229,16 +279,22 @@ class KotlinNativePrinter(
                 if (context.hasDoubleArrayCastToNative) appendLine("""
                     
                     private fun toNativeDoubleArray(arr: DoubleArray?): COpaquePointer? = arr?.usePinned {
-                        ${context.mangle("doublearray_new")}(it.addressOf(0).reinterpret(), arr.size, true)
+                        ${context.mangle("doublearray_new")}(
+                            if(arr.isEmpty()) null else it.addressOf(0).reinterpret(), 
+                            arr.size, 
+                            true
+                        )
                     }
                 """.trimIndent())
                 if (context.hasDoubleArrayCastToKotlin) appendLine("""
                     
                     private fun toKotlinDoubleArray(arr: COpaquePointer?, free: Boolean): DoubleArray? {
                         if(arr == null) return null
-                        val elements = ${context.mangle("doublearray_elements")}(arr)
                         val length = ${context.mangle("doublearray_length")}(arr)
-                        return DoubleArray(length) { elements!![it] }
+                        return if(length > 0) {
+                            val elements = ${context.mangle("doublearray_elements")}(arr)
+                            DoubleArray(length) { elements!![it] }
+                        } else { doubleArrayOf() }
                             .also { if(free) ${context.mangle("doublearray_free")}(arr) }
                     }
                 """.trimIndent())
@@ -460,14 +516,14 @@ class KotlinNativePrinter(
                 val name = it.kname
                 when {
                     critical && it.type.isString() ->
-                        if(it.type.isNullable) "_${name}_pinned?.addressOf(0), _${name}_bytes?.size ?: -1"
-                        else "_${name}_pinned.addressOf(0), _${name}_bytes.size"
+                        if(it.type.isNullable) "if(_${name}_bytes?.isEmpty() ?: false) null else _${name}_pinned?.addressOf(0), _${name}_bytes?.size ?: -1"
+                        else "if(_${name}_bytes.isEmpty()) null else _${name}_pinned.addressOf(0), _${name}_bytes.size"
                     critical && (it.type.isCharArray() || it.type.isBooleanArray()) ->
-                        if(it.type.isNullable) "_${name}_pinned?.addressOf(0)?.reinterpret(), $name?.size ?: -1"
-                        else "_${name}_pinned.addressOf(0).reinterpret(), $name.size"
+                        if(it.type.isNullable) "if($name?.isEmpty() ?: false) null else _${name}_pinned?.addressOf(0)?.reinterpret(), $name?.size ?: -1"
+                        else "if($name.isEmpty()) null else _${name}_pinned.addressOf(0).reinterpret(), $name.size"
                     critical && it.type.isArray() ->
-                        if(it.type.isNullable) "_${name}_pinned?.addressOf(0), $name?.size ?: -1"
-                        else "_${name}_pinned.addressOf(0), $name.size"
+                        if(it.type.isNullable) "if($name?.isEmpty() ?: false) null else _${name}_pinned?.addressOf(0), $name?.size ?: -1"
+                        else "if($name.isEmpty()) null else _${name}_pinned.addressOf(0), $name.size"
                     else -> castToNative(it.type, name)
                 }
             }

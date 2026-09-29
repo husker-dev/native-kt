@@ -16,6 +16,7 @@ namespace global {
     bool passFloat(f32 arg);
     bool passDouble(f64 arg);
     bool passString(string arg);
+    bool passStringEmpty(string arg);
     bool passStringN(string? arg);
     bool passEnum(MyEnum arg);
     bool passDictionary(MyDictionary arg);
@@ -38,6 +39,7 @@ namespace global {
     f32 returnFloat();
     f64 returnDouble();
     string returnString();
+    string returnStringEmpty();
     string? returnStringN();
     MyEnum returnEnum();
     MyDictionary returnDictionary();
@@ -57,9 +59,11 @@ namespace global {
     f32 pingFloat(f32 arg);
     f64 pingDouble(f64 arg);
     string pingString(string arg);
+    string pingStringEmpty(string arg);
     string? pingStringN(string? arg);
     MyEnum pingEnum(MyEnum arg);
     MyDictionary pingDictionary(MyDictionary arg);
+    EmptyDictionary pingEmptyDictionary(EmptyDictionary arg);
     MyDictionary? pingDictionaryN(MyDictionary? arg);
     MyInterface pingInterface(MyInterface arg);
     MyInterface? pingInterfaceN(MyInterface? arg);
@@ -80,6 +84,7 @@ namespace global {
     bool callbackArgFloat(CallbackPassFloat arg);
     bool callbackArgDouble(CallbackPassDouble arg);
     bool callbackArgString(CallbackPassString arg);
+    bool callbackArgStringEmpty(CallbackPassStringEmpty arg);
     bool callbackArgStringN(CallbackPassStringN arg);
     bool callbackArgCallback(VoidCallback pass, CallbackPassCallback arg);
     bool callbackArgCallbackN(CallbackPassCallbackN arg);
@@ -103,6 +108,7 @@ namespace global {
     bool callbackReturnFloat(CallbackReturnFloat arg);
     bool callbackReturnDouble(CallbackReturnDouble arg);
     bool callbackReturnString(CallbackReturnString arg);
+    bool callbackReturnStringEmpty(CallbackReturnStringEmpty arg);
     bool callbackReturnStringN(CallbackReturnStringN arg);
     VoidCallback callbackReturnCallback(CallbackReturnCallback arg);
     bool callbackReturnCallbackN(CallbackReturnCallbackN arg);
@@ -114,6 +120,7 @@ namespace global {
 
     // Arrays: pass
     bool passCharArray(Array<char> arg);
+    bool passCharArrayEmpty(Array<char> arg);
     bool passCharArrayN(Array<char>? arg);
     bool passBooleanArray(Array<bool> arg);
     bool passByteArray(Array<i8> arg);
@@ -136,6 +143,7 @@ namespace global {
 
     // Arrays: return
     Array<char> returnCharArray();
+    Array<char> returnCharArrayEmpty();
     Array<char>? returnCharArrayN();
     Array<bool> returnBooleanArray();
     Array<i8> returnByteArray();
@@ -156,6 +164,7 @@ namespace global {
 
     // Arrays: ping
     Array<char> pingCharArray(Array<char> arg);
+    Array<char> pingCharArrayEmpty(Array<char> arg);
     Array<char>? pingCharArrayN(Array<char>? arg);
     Array<bool> pingBooleanArray(Array<bool> arg);
     Array<i8> pingByteArray(Array<i8> arg);
@@ -176,8 +185,9 @@ namespace global {
     Array<MyInterface> pingInterfaceArray(Array<MyInterface> arg);
     Array<MyInterface?> pingInterfaceArrayN(Array<MyInterface?> arg);
 
-     // Arrays: callback arg
+    // Arrays: callback arg
     bool callbackArgCharArray(CallbackPassCharArray arg);
+    bool callbackArgCharArrayEmpty(CallbackPassCharArrayEmpty arg);
     bool callbackArgCharArrayN(CallbackPassCharArrayN arg);
     bool callbackArgBooleanArray(CallbackPassBooleanArray arg);
     bool callbackArgByteArray(CallbackPassByteArray arg);
@@ -200,6 +210,7 @@ namespace global {
 
     // Arrays: callback arg
     bool callbackReturnCharArray(CallbackReturnCharArray arg);
+    bool callbackReturnCharArrayEmpty(CallbackReturnCharArrayEmpty arg);
     bool callbackReturnCharArrayN(CallbackReturnCharArrayN arg);
     bool callbackReturnBooleanArray(CallbackReturnBooleanArray arg);
     bool callbackReturnByteArray(CallbackReturnByteArray arg);
@@ -233,12 +244,16 @@ namespace global {
     [Critical] bool criticalPrimitives(char a1, bool a2, i8 a3, u8 a4, i16 a5, u16 a6, i32 a7, u32 a8, i64 a9, u64 a10, f32 a11, f64 a12);
     [Critical] bool criticalEnum(MyEnum a1);
     [Critical] bool criticalString(string a1);
+    [Critical] bool criticalStringEmpty(string a1);
     [Critical] bool criticalStringN(string? a1);
     [Critical] bool criticalInterface(MyInterface a1);
     [Critical] bool criticalInterfaceN(MyInterface? a1);
 
     [Critical] bool criticalPrimitivesArray(Array<char> a1, Array<bool> a2, Array<i8> a3, Array<u8> a4, Array<i16> a5, Array<u16> a6, Array<i32> a7, Array<u32> a8, Array<i64> a9, Array<u64> a10, Array<f32> a11, Array<f64> a12);
     [Critical] bool criticalEnumArray(Array<MyEnum> a1);
+
+    [Critical] bool criticalPrimitivesArrayEmpty(Array<char> a1, Array<bool> a2, Array<i8> a3, Array<u8> a4, Array<i16> a5, Array<u16> a6, Array<i32> a7, Array<u32> a8, Array<i64> a9, Array<u64> a10, Array<f32> a11, Array<f64> a12);
+    [Critical] bool criticalEnumArrayEmpty(Array<MyEnum> a1);
 
     [Critical] bool criticalPrimitivesArrayN(Array<char>? a1, Array<bool>? a2, Array<i8>? a3, Array<u8>? a4, Array<i16>? a5, Array<u16>? a6, Array<i32>? a7, Array<u32>? a8, Array<i64>? a9, Array<u64>? a10, Array<f32>? a11, Array<f64>? a12);
     [Critical] bool criticalEnumArrayN(Array<MyEnum>? a1);
@@ -296,6 +311,7 @@ callback CallbackPassULong = bool (u64 arg);
 callback CallbackPassFloat = bool (f32 arg);
 callback CallbackPassDouble = bool (f64 arg);
 callback CallbackPassString = bool (string arg);
+callback CallbackPassStringEmpty = bool (string arg);
 callback CallbackPassStringN = bool (string? arg);
 callback CallbackPassCallback = bool (VoidCallback arg);
 callback CallbackPassCallbackN = bool (VoidCallback? arg);
@@ -318,6 +334,7 @@ callback CallbackReturnULong = u64 ();
 callback CallbackReturnFloat = f32 ();
 callback CallbackReturnDouble = f64 ();
 callback CallbackReturnString = string ();
+callback CallbackReturnStringEmpty = string ();
 callback CallbackReturnStringN = string? ();
 callback CallbackReturnCallback = VoidCallback ();
 callback CallbackReturnCallbackN = VoidCallback? ();
@@ -330,6 +347,7 @@ callback CallbackReturnInterfaceN = MyInterface? ();
 // arrays
 
 callback CallbackPassCharArray = bool (Array<char> arg);
+callback CallbackPassCharArrayEmpty = bool (Array<char> arg);
 callback CallbackPassCharArrayN = bool (Array<char>? arg);
 callback CallbackPassBooleanArray = bool (Array<bool> arg);
 callback CallbackPassByteArray = bool (Array<i8> arg);
@@ -351,6 +369,7 @@ callback CallbackPassInterfaceArray = bool (Array<MyInterface> arg);
 callback CallbackPassInterfaceArrayN = bool (Array<MyInterface?> arg);
 
 callback CallbackReturnCharArray = Array<char> ();
+callback CallbackReturnCharArrayEmpty = Array<char> ();
 callback CallbackReturnCharArrayN = Array<char>? ();
 callback CallbackReturnBooleanArray = Array<bool> ();
 callback CallbackReturnByteArray = Array<i8> ();
@@ -379,6 +398,8 @@ enum MyEnum {
 };
 
 // dictionary
+
+dictionary EmptyDictionary { };
 
 dictionary ParentDictionary {
     i32 a;

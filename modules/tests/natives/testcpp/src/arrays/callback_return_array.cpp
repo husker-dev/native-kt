@@ -7,6 +7,10 @@ bool callback_return_char_array(std::shared_ptr<CallbackReturnCharArray> arg) {
         result[1] == 'b';
 }
 
+bool callback_return_char_array_empty(std::shared_ptr<CallbackReturnCharArrayEmpty> arg) {
+    return arg->invoke().get_length() == 0;
+}
+
 bool callback_return_char_array_n(std::shared_ptr<CallbackReturnCharArrayN> arg) {
     return arg->invoke().is_none();
 }

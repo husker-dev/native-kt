@@ -16,6 +16,11 @@ class Rust_ReturnArray {
     }
 
     @Test
+    fun returnCharArrayEmpty() = withRustLib {
+        assertContentEquals(charArrayOf(), natives.testrs.returnCharArrayEmpty())
+    }
+
+    @Test
     fun returnCharArrayN() = withRustLib {
         assertContentEquals(null, natives.testrs.returnCharArrayN())
     }

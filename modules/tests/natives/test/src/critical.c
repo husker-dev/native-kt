@@ -32,6 +32,10 @@ bool critical_string(KString* a1) {
     return a1->size == 11 && strncmp(a1->data, "test string", a1->size) == 0;
 }
 
+bool critical_string_empty(KString* a1) {
+    return a1->size == 0;
+}
+
 bool critical_string_n(KString* a1) {
     return a1 == NULL;
 }
@@ -90,6 +94,28 @@ bool critical_primitives_array(
             a12->elements[1] == 2.2;
 }
 
+bool critical_primitives_array_empty(
+    KCharArray* a1, KBooleanArray* a2,
+    KByteArray* a3, KUByteArray* a4,
+    KShortArray* a5, KUShortArray* a6,
+    KIntArray* a7,  KUIntArray* a8,
+    KLongArray* a9, KULongArray* a10,
+    KFloatArray* a11, KDoubleArray* a12
+) {
+    return a1->length == 0 &&
+            a2->length == 0 &&
+            a3->length == 0 &&
+            a4->length == 0 &&
+            a5->length == 0 &&
+            a6->length == 0 &&
+            a7->length == 0 &&
+            a8->length == 0 &&
+            a9->length == 0 &&
+            a10->length == 0 &&
+            a11->length == 0 &&
+            a12->length == 0;
+}
+
 bool critical_primitives_array_n(
     KCharArray* a1, KBooleanArray* a2,
     KByteArray* a3, KUByteArray* a4,
@@ -112,6 +138,10 @@ bool critical_enum_array(KIntArray* a1) {
     return a1->length == 2 &&
            elements[0] == MyEnum_CASE1 &&
            elements[1] == MyEnum_CASE2;
+}
+
+bool critical_enum_array_empty(KIntArray* a1) {
+    return a1->length == 0;
 }
 
 bool critical_enum_array_n(KIntArray* a1) {

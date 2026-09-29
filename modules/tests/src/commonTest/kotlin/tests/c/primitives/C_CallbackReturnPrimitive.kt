@@ -77,6 +77,11 @@ class C_CallbackReturnPrimitive {
     }
 
     @Test
+    fun callbackReturnStringEmpty() = withCLib {
+        assertTrue(natives.test.callbackReturnStringEmpty { "" })
+    }
+
+    @Test
     fun callbackReturnStringN() = withCLib {
         assertTrue(natives.test.callbackReturnStringN { null })
     }

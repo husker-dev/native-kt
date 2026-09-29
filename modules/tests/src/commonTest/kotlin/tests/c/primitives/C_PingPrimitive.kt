@@ -1,5 +1,6 @@
 package tests.c.primitives
 
+import natives.test.EmptyDictionary
 import withCLib
 import natives.test.MyDictionary
 import natives.test.MyEnum
@@ -85,6 +86,11 @@ class C_PingPrimitive {
     }
 
     @Test
+    fun pingStringEmpty() = withCLib {
+        assertEquals("", natives.test.pingStringEmpty(""))
+    }
+
+    @Test
     fun pingStringN() = withCLib {
         assertNull(natives.test.pingStringN(null))
     }
@@ -99,6 +105,14 @@ class C_PingPrimitive {
         assertEquals(
             MyDictionary(1, 2, 3, 4),
             natives.test.pingDictionary(MyDictionary(1, 2, 3, 4))
+        )
+    }
+
+    @Test
+    fun pingEmptyDictionary() = withCLib {
+        assertEquals(
+            EmptyDictionary(),
+            natives.test.pingEmptyDictionary(EmptyDictionary())
         )
     }
 

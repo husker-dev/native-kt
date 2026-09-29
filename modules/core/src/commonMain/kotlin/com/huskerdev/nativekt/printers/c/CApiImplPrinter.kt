@@ -32,10 +32,10 @@ class CApiImplPrinter(
         if(context.needsAllocFunctions) append("""
             
             LIB_EXPORT void* ${context.mangle("alloc")}(size_t size) {
-                return malloc(size);
+                return size <= 0 ? NULL : malloc(size);
             }
             LIB_EXPORT void ${context.mangle("dealloc")}(void* ptr, size_t size) {
-                free(ptr);
+                if(ptr != NULL) free(ptr);
             }
         """.trimIndent())
     }
@@ -116,9 +116,9 @@ class CApiImplPrinter(
                 // String
                 
                 KString* _kstring_new(const char* data, _KStringNewArgs args) {
-                    const int32_t size = args.size != -1 ? args.size : strlen(data);
-                    const char* actual_data = data;
-                    if (args.make_copy) {
+                    const int32_t size = args.size != -1 ? args.size : (data == NULL ? 0 : strlen(data));
+                    const char* actual_data = size == 0 ? NULL : data;
+                    if (args.make_copy && size > 0) {
                         actual_data = (const char*) malloc(size);
                         memcpy((void*) actual_data, data, size);
                     }
@@ -128,13 +128,12 @@ class CApiImplPrinter(
                 }
                 
                 KString* kstring_clone(const KString* of) {
-                    const size_t size = of->size;
-                    void* data = malloc(size);
-                    memcpy(data, of->data, size);
-                    return kstring_new((const char*) data, .size = size, .make_copy = false);
+                    return kstring_new((const char*) of->data, .size = of->size, .make_copy = true);
                 }
                 
                 int32_t kstring_length(const KString* _Nonnull self) {
+                    if(self->size == 0) 
+                        return 0;
                     const char* s = self->data;
                     size_t count = 0;
                     while (*s) {
@@ -147,7 +146,8 @@ class CApiImplPrinter(
                 
                 void kstring_free(KString* self) {
                     if(self == NULL) return;
-                    free((void*) self->data);
+                    if(self->data != NULL)
+                        free((void*) self->data);
                     free((void*) self);
                 }
                 
@@ -232,8 +232,8 @@ class CApiImplPrinter(
                     
                     $name* ${funcName}_new(const $type* elements, const int32_t length, bool make_copy) {
                         $name* result = ($name*) malloc(sizeof($name));
-                        const $type* actual_elements = elements;
-                        if (make_copy) {
+                        const $type* actual_elements = length == 0 ? NULL : elements;
+                        if (make_copy && length != 0) {
                             size_t size = sizeof($type) * length;
                             actual_elements = (const $type*) malloc(size);
                             memcpy((void*) actual_elements, (void*) elements, size);
@@ -245,7 +245,7 @@ class CApiImplPrinter(
                     $name* ${funcName}_of_n(const int n, ...) {
                         va_list args;
                         va_start(args, n);
-                        $type* elements = ($type*) malloc(n * sizeof($type));
+                        $type* elements = n == 0 ? NULL : ($type*) malloc(n * sizeof($type));
                         for (int i = 0; i < n; i++)
                             elements[i] = ($type) va_arg(args, $varargType);
                         va_end(args);
@@ -259,7 +259,8 @@ class CApiImplPrinter(
                     
                     void ${funcName}_free($name* self) {
                         if(self == NULL) return;
-                        free((void*) self->elements);
+                        if(self->elements != NULL)
+                            free((void*) self->elements);
                         free((void*) self);
                     }
                     
@@ -305,20 +306,22 @@ class CApiImplPrinter(
                 
                 KArray* karray_with_capacity(const int32_t capacity) {
                     KArray* result = (KArray*) malloc(sizeof(KArray));
-                    *result = (KArray) { karray_clone, karray_free, malloc(capacity * sizeof(void*)), 0, capacity };
+                    void* elements = capacity == 0 ? NULL : malloc(capacity * sizeof(void*));
+                    *result = (KArray) { karray_clone, karray_free, elements, 0, capacity };
                     return result;
                 }
                 
                 KArray* karray_new(const void** elements, const int32_t length) {
                     KArray* result = (KArray*) malloc(sizeof(KArray));
-                    *result = (KArray) { karray_clone, karray_free, elements, length, length };
+                    void* actual_elements = length == 0 ? NULL : elements;
+                    *result = (KArray) { karray_clone, karray_free, actual_elements, length, length };
                     return result;
                 }
                 
                 KArray* karray_of_n(const int n, ...) {
                     va_list args;
                     va_start(args, n);
-                    void** elements = (void**) malloc(n * sizeof(void*));
+                    void** elements = n == 0 ? NULL : (void**) malloc(n * sizeof(void*));
                     for (int i = 0; i < n; i++)
                         elements[i] = (void*) va_arg(args, void*);
                     va_end(args);
@@ -337,7 +340,7 @@ class CApiImplPrinter(
                 KArray* karray_clone(const KArray* _Nullable self) {
                     if(self == NULL) return NULL;
                     const int32_t size = self->length * sizeof(void*);
-                    void** elements = malloc(size);
+                    void** elements = size == 0 ? NULL : malloc(size);
                     for (int i = 0; i < self->length; i++) {
                         ArrayElement* element = (ArrayElement*) self->elements[i];
                         elements[i] = element == NULL ? NULL : element->clone(element);
@@ -353,21 +356,22 @@ class CApiImplPrinter(
                         if(element == NULL) continue;
                         element->free(element);
                     }
-                    free((void*) elements);
+                    if(elements != NULL)
+                        free((void*) elements);
                     free((void*) self);
                 }
                 
                 #define IMPL_OBJECT_ARRAY(T, FUNC_NEW, FUNC_LENGTH, FUNC_PUSH, FUNC_GET, FUNC_FREE) \
-                LIB_EXPORT KArray* FUNC_NEW(int32_t capacity, bool ne) {                     \
+                LIB_EXPORT KArray* FUNC_NEW(int32_t capacity, bool ne) {                  \
                     return karray_with_capacity(capacity);                                \
                 }                                                                         \
-                LIB_EXPORT int32_t FUNC_LENGTH(KArray* self, bool ne) {                      \
+                LIB_EXPORT int32_t FUNC_LENGTH(KArray* self, bool ne) {                   \
                     return ((KArray*) self)->length;                                      \
                 }                                                                         \
                 LIB_EXPORT void FUNC_PUSH(KArray* self, void* element, bool ne) {         \
                     karray_push((KArray*) self, element);                                 \
                 }                                                                         \
-                LIB_EXPORT T* FUNC_GET(KArray* self, int32_t index, bool ne) {               \
+                LIB_EXPORT T* FUNC_GET(KArray* self, int32_t index, bool ne) {            \
                     return (void*) ((KArray*) self)->elements[index];                     \
                 }                                                                         \
                 LIB_EXPORT void FUNC_FREE(KArray* self, bool ne) {                        \
@@ -433,7 +437,7 @@ class CApiImplPrinter(
                 
                 $name* ${name}_new(${args.joinToString()}) {
                     $name* result = ($name*) malloc(sizeof($name));
-                    *result = ($name) { ${name}_clone, ${name}_free, ${argNames.joinToString()} };
+                    *result = ($name) { ${listOf("${name}_clone", "${name}_free", *argNames.toTypedArray()).joinToString()} };
                     return result;
                 }
             

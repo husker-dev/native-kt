@@ -52,6 +52,10 @@ KString* ping_string(KString* arg) {
     return arg->clone(arg);
 }
 
+KString* ping_string_empty(KString* arg) {
+    return arg->clone(arg);
+}
+
 KString* ping_string_n(KString* arg) {
     return arg;
 }
@@ -61,6 +65,10 @@ MyEnum ping_enum(const MyEnum arg) {
 }
 
 MyDictionary* ping_dictionary(MyDictionary* arg) {
+    return arg->clone(arg);
+}
+
+EmptyDictionary* ping_empty_dictionary(EmptyDictionary* arg) {
     return arg->clone(arg);
 }
 

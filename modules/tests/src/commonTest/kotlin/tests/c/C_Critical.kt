@@ -34,6 +34,11 @@ class C_Critical {
     }
 
     @Test
+    fun criticalStringEmpty() = withCLib {
+        assertTrue(natives.test.criticalStringEmpty(""))
+    }
+
+    @Test
     fun criticalStringN() = withCLib {
         assertTrue(natives.test.criticalStringN(null))
     }
@@ -70,6 +75,31 @@ class C_Critical {
     fun criticalEnumArray() = withCLib {
         assertTrue(natives.test.criticalEnumArray(
             arrayOf(MyEnum.CASE1, MyEnum.CASE2)
+        ))
+    }
+
+    @Test
+    fun criticalPrimitivesArrayEmpty() = withCLib {
+        assertTrue(natives.test.criticalPrimitivesArrayEmpty(
+            charArrayOf(),
+            booleanArrayOf(),
+            byteArrayOf(),
+            ubyteArrayOf(),
+            shortArrayOf(),
+            ushortArrayOf(),
+            intArrayOf(),
+            uintArrayOf(),
+            longArrayOf(),
+            ulongArrayOf(),
+            floatArrayOf(),
+            doubleArrayOf()
+        ))
+    }
+
+    @Test
+    fun criticalEnumArrayEmpty() = withCLib {
+        assertTrue(natives.test.criticalEnumArrayEmpty(
+            arrayOf()
         ))
     }
 

@@ -52,6 +52,10 @@ KString ping_string(KString arg) {
     return arg;
 }
 
+KString ping_string_empty(KString arg) {
+    return arg;
+}
+
 KOptional<KString> ping_string_n(KOptional<KString> arg) {
     return arg;
 }
@@ -61,6 +65,10 @@ MyEnum ping_enum(MyEnum arg) {
 }
 
 MyDictionary ping_dictionary(MyDictionary arg) {
+    return arg;
+}
+
+EmptyDictionary ping_empty_dictionary(EmptyDictionary arg) {
     return arg;
 }
 

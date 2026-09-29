@@ -88,6 +88,11 @@ class C_CallbackArgPrimitive {
     }
 
     @Test
+    fun callbackArgStringEmpty() = withCLib {
+        assertTrue(natives.test.callbackArgStringEmpty { it == "" })
+    }
+
+    @Test
     fun callbackArgStringN() = withCLib {
         assertTrue(natives.test.callbackArgStringN { it == null })
     }

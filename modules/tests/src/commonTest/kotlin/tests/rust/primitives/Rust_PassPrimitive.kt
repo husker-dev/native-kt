@@ -80,6 +80,11 @@ class Rust_PassPrimitive {
     }
 
     @Test
+    fun passStringEmpty() = withRustLib {
+        assertTrue(natives.testrs.passStringEmpty(""))
+    }
+
+    @Test
     fun passStringN() = withRustLib {
         assertTrue(natives.testrs.passStringN(null))
     }

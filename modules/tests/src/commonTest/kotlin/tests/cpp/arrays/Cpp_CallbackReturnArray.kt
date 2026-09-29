@@ -17,6 +17,11 @@ class Cpp_CallbackReturnArray {
     }
 
     @Test
+    fun callbackReturnCharArrayEmpty() = withCppLib {
+        assertTrue(natives.testcpp.callbackReturnCharArrayEmpty { charArrayOf() })
+    }
+
+    @Test
     fun callbackReturnCharArrayN() = withCppLib {
         assertTrue(natives.testcpp.callbackReturnCharArrayN { null })
     }

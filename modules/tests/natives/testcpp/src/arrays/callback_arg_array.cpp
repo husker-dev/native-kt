@@ -6,6 +6,10 @@ bool callback_arg_char_array(std::shared_ptr<CallbackPassCharArray> arg) {
     });
 }
 
+bool callback_arg_char_array_empty(std::shared_ptr<CallbackPassCharArrayEmpty> arg) {
+    return arg->invoke(KArray<uint16_t> {});
+}
+
 bool callback_arg_char_array_n(std::shared_ptr<CallbackPassCharArrayN> arg) {
     return arg->invoke(KOptional<KArray<uint16_t>>());
 }

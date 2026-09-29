@@ -1,5 +1,6 @@
 package tests.cpp.primitives
 
+import natives.testcpp.EmptyDictionary
 import natives.testcpp.MyDictionary
 import natives.testcpp.MyEnum
 import natives.testcpp.pingBoolean
@@ -85,6 +86,11 @@ class Cpp_PingPrimitive {
     }
 
     @Test
+    fun pingStringEmpty() = withCppLib {
+        assertEquals("", pingString(""))
+    }
+
+    @Test
     fun pingStringN() = withCppLib {
         assertNull(natives.testcpp.pingStringN(null))
     }
@@ -99,6 +105,14 @@ class Cpp_PingPrimitive {
         assertEquals(
             MyDictionary(1, 2, 3, 4),
             natives.testcpp.pingDictionary(MyDictionary(1, 2, 3, 4))
+        )
+    }
+
+    @Test
+    fun pingDictionaryEmpty() = withCppLib {
+        assertEquals(
+            EmptyDictionary(),
+            natives.testcpp.pingEmptyDictionary(EmptyDictionary())
         )
     }
 

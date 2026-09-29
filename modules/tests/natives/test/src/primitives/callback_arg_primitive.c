@@ -60,6 +60,10 @@ bool callback_arg_string(RC_CallbackPassString* arg) {
     return callbackpassstring_invoke(arg, kstring_new("test string"));
 }
 
+bool callback_arg_string_empty(RC_CallbackPassStringEmpty* arg) {
+    return callbackpassstringempty_invoke(arg, kstring_new(""));
+}
+
 bool callback_arg_string_n(RC_CallbackPassStringN* arg) {
     return callbackpassstringn_invoke(arg, NULL);
 }

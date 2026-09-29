@@ -58,6 +58,10 @@ bool pass_string(KString arg) {
     return std::string(arg.get_data(), arg.get_size()) == "test string";
 }
 
+bool pass_string_empty(KString arg) {
+    return arg.get_size() == 0;
+}
+
 bool pass_string_n(KOptional<KString> arg) {
     return arg.is_none();
 }

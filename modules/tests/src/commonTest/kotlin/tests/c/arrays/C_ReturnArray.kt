@@ -16,6 +16,11 @@ class C_ReturnArray {
     }
 
     @Test
+    fun returnCharArrayEmpty() = withCLib {
+        assertContentEquals(charArrayOf(), natives.test.returnCharArrayEmpty())
+    }
+
+    @Test
     fun returnCharArrayN() = withCLib {
         assertContentEquals(null, natives.test.returnCharArrayN())
     }

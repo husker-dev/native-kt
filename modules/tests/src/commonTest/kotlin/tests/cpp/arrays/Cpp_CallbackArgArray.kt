@@ -16,6 +16,11 @@ class Cpp_CallbackArgArray {
     }
 
     @Test
+    fun callbackArgCharArrayEmpty() = withCppLib {
+        assertTrue(natives.testcpp.callbackArgCharArrayEmpty { it.contentEquals(charArrayOf()) })
+    }
+
+    @Test
     fun callbackArgCharArrayN() = withCppLib {
         assertTrue(natives.testcpp.callbackArgCharArrayN { it == null })
     }

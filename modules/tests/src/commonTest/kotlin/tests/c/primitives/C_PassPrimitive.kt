@@ -80,6 +80,11 @@ class C_PassPrimitive {
     }
 
     @Test
+    fun passStringEmpty() = withCLib {
+        assertTrue(natives.test.passStringEmpty(""))
+    }
+
+    @Test
     fun passStringN() = withCLib {
         assertTrue(natives.test.passStringN(null))
     }

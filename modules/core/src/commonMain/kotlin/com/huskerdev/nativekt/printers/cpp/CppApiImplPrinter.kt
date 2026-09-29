@@ -42,11 +42,11 @@ class CppApiImplPrinter(
         if(context.needsAllocFunctions) appendLine("""
             
             LIB_EXPORT void* ${context.mangle("alloc")}(size_t size) {
-                return malloc(size);
+                return size == 0 ? nullptr : malloc(size);
             }
             
             LIB_EXPORT void ${context.mangle("dealloc")}(void* ptr, size_t size) {
-                return free(ptr);
+                if(ptr != nullptr) free(ptr);
             }
         """.trimIndent())
     }
@@ -103,7 +103,8 @@ class CppApiImplPrinter(
                         const size_t size = length * sizeof(char);
                         this->data = new char[size];
                         std::memcpy(this->data, data, size);
-                    } else this->data = const_cast<char*>(data);
+                    } else 
+                        this->data = const_cast<char*>(data);
                     this->size = length;
                 }
     
@@ -111,7 +112,8 @@ class CppApiImplPrinter(
                     if (copy) {
                         this->data = new char[size];
                         std::memcpy(this->data, data, size);
-                    } else this->data = const_cast<char*>(data);
+                    } else 
+                        this->data = const_cast<char*>(data);
                     this->size = size;
                 }
     
@@ -154,6 +156,8 @@ class CppApiImplPrinter(
                 }
     
                 int32_t KString::get_length() const {
+                    if(size == 0)
+                        return 0;
                     const char* s = data;
                     size_t count = 0;
                     while (*s) {
@@ -186,6 +190,7 @@ class CppApiImplPrinter(
                 }
                 
                 LIB_EXPORT void ${context.mangle("string_free")}(void* _Nonnull self) {
+                    if(self == NULL) return;
                     delete static_cast<KString*>(self);
                 }
             """.trimIndent())

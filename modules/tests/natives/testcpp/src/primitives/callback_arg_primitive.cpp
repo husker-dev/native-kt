@@ -62,6 +62,10 @@ bool callback_arg_string(std::shared_ptr<CallbackPassString> arg) {
     return arg->invoke(KString("test string"));
 }
 
+bool callback_arg_string_empty(std::shared_ptr<CallbackPassStringEmpty> arg) {
+    return arg->invoke(KString(""));
+}
+
 bool callback_arg_string_n(std::shared_ptr<CallbackPassStringN> arg) {
     return arg->invoke(KOptional<KString>());
 }

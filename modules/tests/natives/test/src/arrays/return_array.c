@@ -6,6 +6,10 @@ KCharArray* return_char_array(void) {
     return kchar_array_of('a', 'b');
 }
 
+KCharArray* return_char_array_empty(void) {
+    return kchar_array_of_n(0);
+}
+
 KCharArray* return_char_array_n(void) {
     return NULL;
 }

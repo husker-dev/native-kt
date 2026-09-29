@@ -17,6 +17,12 @@ class C_PingArray {
     }
 
     @Test
+    fun pingCharArrayEmpty() = withCLib {
+        val arr = charArrayOf()
+        assertContentEquals(arr, pingCharArrayEmpty(arr))
+    }
+
+    @Test
     fun pingCharArrayN() = withCLib {
         val arr = null
         assertContentEquals(arr, pingCharArrayN(arr))

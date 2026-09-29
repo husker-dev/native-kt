@@ -124,6 +124,12 @@ pub fn pass_string(
     arg == "test string"
 }
 
+pub fn pass_string_empty(
+    arg: String
+) -> bool {
+    arg.is_empty()
+}
+
 pub fn pass_string_n(
     arg: Option<String>
 ) -> bool {
@@ -215,6 +221,10 @@ pub fn return_double() -> f64 {
 
 pub fn return_string() -> String {
     "test string".to_string()
+}
+
+pub fn return_string_empty() -> String {
+    "".to_string()
 }
 
 pub fn return_string_n() -> Option<String> {
@@ -311,6 +321,12 @@ pub fn ping_string(
     arg
 }
 
+pub fn ping_string_empty(
+    arg: String
+) -> String {
+    arg
+}
+
 pub fn ping_string_n(
     arg: Option<String>
 ) -> Option<String> {
@@ -326,6 +342,12 @@ pub fn ping_enum(
 pub fn ping_dictionary(
     arg: MyDictionary
 ) -> MyDictionary {
+    arg
+}
+
+pub fn ping_empty_dictionary(
+    arg: EmptyDictionary
+) -> EmptyDictionary {
     arg
 }
 
@@ -435,6 +457,12 @@ pub fn callback_arg_string(
     arg: Arc<CallbackPassString>
 ) -> bool {
     arg.invoke("test string".to_string())
+}
+
+pub fn callback_arg_string_empty(
+    arg: Arc<CallbackPassStringEmpty>
+) -> bool {
+    arg.invoke("".to_string())
 }
 
 pub fn callback_arg_string_n(
@@ -565,6 +593,12 @@ pub fn callback_return_string(
     arg.invoke().as_str() == "test string"
 }
 
+pub fn callback_return_string_empty(
+    arg: Arc<CallbackReturnStringEmpty>
+) -> bool {
+    arg.invoke().as_str() == ""
+}
+
 pub fn callback_return_string_n(
     arg: Arc<CallbackReturnStringN>
 ) -> bool {
@@ -621,6 +655,12 @@ pub fn pass_char_array(
     arg: Vec<u16>
 ) -> bool {
     arg.as_slice() == ['a' as u16, 'b' as u16]
+}
+
+pub fn pass_char_array_empty(
+    arg: Vec<u16>
+) -> bool {
+    arg.is_empty()
 }
 
 pub fn pass_char_array_n(
@@ -753,6 +793,10 @@ pub fn return_char_array() -> Vec<u16> {
     vec!('a' as u16, 'b' as u16)
 }
 
+pub fn return_char_array_empty() -> Vec<u16> {
+    vec!()
+}
+
 pub fn return_char_array_n() -> Option<Vec<u16>> {
     None
 }
@@ -825,6 +869,12 @@ pub fn return_dictionary_array_n() -> Vec<Option<MyDictionary>> {
 }
 
 pub fn ping_char_array(
+    arg: Vec<u16>
+) -> Vec<u16> {
+    arg.clone()
+}
+
+pub fn ping_char_array_empty(
     arg: Vec<u16>
 ) -> Vec<u16> {
     arg.clone()
@@ -948,6 +998,12 @@ pub fn callback_arg_char_array(
     arg: Arc<CallbackPassCharArray>
 ) -> bool {
     arg.invoke(vec!('a' as u16, 'b' as u16))
+}
+
+pub fn callback_arg_char_array_empty(
+    arg: Arc<CallbackPassCharArrayEmpty>
+) -> bool {
+    arg.invoke(vec!())
 }
 
 pub fn callback_arg_char_array_n(
@@ -1082,6 +1138,13 @@ pub fn callback_return_char_array(
     let result = arg.invoke();
     let arr = result.as_slice();
     arr[0] == 'a' as u16 && arr[1] == 'b' as u16
+}
+
+pub fn callback_return_char_array_empty(
+    arg: Arc<CallbackReturnCharArrayEmpty>
+) -> bool {
+    let result = arg.invoke();
+    result.is_empty()
 }
 
 pub fn callback_return_char_array_n(
@@ -1421,6 +1484,12 @@ pub fn critical_string(
     a1.as_str() == "test string"
 }
 
+pub fn critical_string_empty(
+    a1: &String
+) -> bool {
+    a1.is_empty()
+}
+
 pub fn critical_string_n(
     a1: &Option<String>
 ) -> bool {
@@ -1471,6 +1540,32 @@ pub fn critical_enum_array(
     a1: &Vec<MyEnum>
 ) -> bool {
     a1.as_slice() == [MyEnum::CASE1, MyEnum::CASE2]
+}
+
+pub fn critical_primitives_array_empty(
+    a1: &Vec<u16>,
+    a2: &Vec<bool>,
+    a3: &Vec<i8>,
+    a4: &Vec<u8>,
+    a5: &Vec<i16>,
+    a6: &Vec<u16>,
+    a7: &Vec<i32>,
+    a8: &Vec<u32>,
+    a9: &Vec<i64>,
+    a10: &Vec<u64>,
+    a11: &Vec<f32>,
+    a12: &Vec<f64>
+) -> bool {
+    a1.is_empty() && a2.is_empty() && a3.is_empty() &&
+        a4.is_empty() && a5.is_empty() && a6.is_empty() &&
+        a7.is_empty() && a8.is_empty() && a9.is_empty() &&
+        a10.is_empty() && a11.is_empty() && a12.is_empty()
+}
+
+pub fn critical_enum_array_empty(
+    a1: &Vec<MyEnum>
+) -> bool {
+    a1.is_empty()
 }
 
 pub fn critical_primitives_array_n(

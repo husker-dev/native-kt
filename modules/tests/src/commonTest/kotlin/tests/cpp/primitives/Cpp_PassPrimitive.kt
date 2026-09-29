@@ -80,6 +80,11 @@ class Cpp_PassPrimitive {
     }
 
     @Test
+    fun passStringEmpty() = withCppLib {
+        assertTrue(natives.testcpp.passStringEmpty(""))
+    }
+
+    @Test
     fun passStringN() = withCppLib {
         assertTrue(natives.testcpp.passStringN(null))
     }

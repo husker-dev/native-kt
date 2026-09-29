@@ -4,6 +4,10 @@ KCharArray* ping_char_array(KCharArray* arg) {
     return arg->clone(arg);
 }
 
+KCharArray* ping_char_array_empty(KCharArray* arg) {
+    return arg->clone(arg);
+}
+
 KCharArray* ping_char_array_n(KCharArray* arg) {
     return arg;
 }

@@ -17,6 +17,11 @@ class Rust_PassArray {
     }
 
     @Test
+    fun passCharArrayEmpty() = withRustLib {
+        assertTrue(natives.testrs.passCharArrayEmpty(charArrayOf()))
+    }
+
+    @Test
     fun passCharArrayN() = withRustLib {
         assertTrue(natives.testrs.passCharArrayN(null))
     }

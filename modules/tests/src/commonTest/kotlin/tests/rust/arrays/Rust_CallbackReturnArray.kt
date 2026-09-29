@@ -17,6 +17,11 @@ class Rust_CallbackReturnArray {
     }
 
     @Test
+    fun callbackReturnCharArrayEmpty() = withRustLib {
+        assertTrue(natives.testrs.callbackReturnCharArrayEmpty { charArrayOf() })
+    }
+
+    @Test
     fun callbackReturnCharArrayN() = withRustLib {
         assertTrue(natives.testrs.callbackReturnCharArrayN { null })
     }

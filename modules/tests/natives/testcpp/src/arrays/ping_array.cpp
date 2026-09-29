@@ -4,6 +4,10 @@ KArray<uint16_t> ping_char_array(KArray<uint16_t> arg) {
     return arg;
 }
 
+KArray<uint16_t> ping_char_array_empty(KArray<uint16_t> arg) {
+    return arg;
+}
+
 KOptional<KArray<uint16_t>> ping_char_array_n(KOptional<KArray<uint16_t>> arg) {
     return arg;
 }

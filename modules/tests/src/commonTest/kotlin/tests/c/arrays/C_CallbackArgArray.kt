@@ -16,6 +16,11 @@ class C_CallbackArgArray {
     }
 
     @Test
+    fun callbackArgCharArrayEmpty() = withCLib {
+        assertTrue(natives.test.callbackArgCharArrayEmpty { it.contentEquals(charArrayOf()) })
+    }
+
+    @Test
     fun callbackArgCharArrayN() = withCLib {
         assertTrue(natives.test.callbackArgCharArrayN { it == null })
     }

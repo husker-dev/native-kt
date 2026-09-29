@@ -34,6 +34,11 @@ class Cpp_Critical {
     }
 
     @Test
+    fun criticalStringEmpty() = withCppLib {
+        assertTrue(natives.testcpp.criticalStringEmpty(""))
+    }
+
+    @Test
     fun criticalStringN() = withCppLib {
         assertTrue(natives.testcpp.criticalStringN(null))
     }
@@ -70,6 +75,31 @@ class Cpp_Critical {
     fun criticalEnumArray() = withCppLib {
         assertTrue(natives.testcpp.criticalEnumArray(
             arrayOf(MyEnum.CASE1, MyEnum.CASE2)
+        ))
+    }
+
+    @Test
+    fun criticalPrimitivesArrayEmpty() = withCppLib {
+        assertTrue(natives.testcpp.criticalPrimitivesArrayEmpty(
+            charArrayOf(),
+            booleanArrayOf(),
+            byteArrayOf(),
+            ubyteArrayOf(),
+            shortArrayOf(),
+            ushortArrayOf(),
+            intArrayOf(),
+            uintArrayOf(),
+            longArrayOf(),
+            ulongArrayOf(),
+            floatArrayOf(),
+            doubleArrayOf()
+        ))
+    }
+
+    @Test
+    fun criticalEnumArrayEmpty() = withCppLib {
+        assertTrue(natives.testcpp.criticalEnumArrayEmpty(
+            arrayOf()
         ))
     }
 

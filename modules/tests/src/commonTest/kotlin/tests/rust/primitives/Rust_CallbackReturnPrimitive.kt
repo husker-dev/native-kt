@@ -77,6 +77,11 @@ class Rust_CallbackReturnPrimitive {
     }
 
     @Test
+    fun callbackReturnStringEmpty() = withRustLib {
+        assertTrue(natives.testrs.callbackReturnStringEmpty { "" })
+    }
+
+    @Test
     fun callbackReturnStringN() = withRustLib {
         assertTrue(natives.testrs.callbackReturnStringN { null })
     }

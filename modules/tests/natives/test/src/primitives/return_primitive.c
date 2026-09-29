@@ -55,6 +55,10 @@ KString* return_string(void) {
     return kstring_new("test string");
 }
 
+KString* return_string_empty(void) {
+    return kstring_new("");
+}
+
 KString* return_string_n(void) {
     return NULL;
 }

@@ -26,19 +26,23 @@ bool critical_enum(const MyEnum a1) {
     return a1 == CASE1;
 }
 
+bool critical_string(const KString& a1) {
+    return std::string(a1.get_data(), a1.get_size()) == "test string";
+}
+
+bool critical_string_empty(const KString& a1) {
+    return a1.get_size() == 0;
+}
+
+bool critical_string_n(const KOptional<KString>& a1) {
+    return a1.is_none();
+}
+
 bool critical_interface(const std::shared_ptr<IMyInterface>& a1) {
     return a1->test();
 }
 
 bool critical_interface_n(const KOptional<std::shared_ptr<IMyInterface>>& a1) {
-    return a1.is_none();
-}
-
-bool critical_string(const KString& a1) {
-    return std::string(a1.get_data(), a1.get_size()) == "test string";
-}
-
-bool critical_string_n(const KOptional<KString>& a1) {
     return a1.is_none();
 }
 
@@ -88,6 +92,28 @@ bool critical_primitives_array(
             a12[1] == 2.2;
 }
 
+bool critical_primitives_array_empty(
+    const KArray<uint16_t>& a1, const KArray<bool>& a2,
+    const KArray<int8_t>& a3, const KArray<uint8_t>& a4,
+    const KArray<int16_t>& a5, const KArray<uint16_t>& a6,
+    const KArray<int32_t>& a7,  const KArray<uint32_t>& a8,
+    const KArray<int64_t>& a9, const KArray<uint64_t>& a10,
+    const KArray<float>& a11, const KArray<double>& a12
+) {
+    return a1.get_length() == 0 &&
+            a2.get_length() == 0 &&
+            a3.get_length() == 0 &&
+            a4.get_length() == 0 &&
+            a5.get_length() == 0 &&
+            a6.get_length() == 0 &&
+            a7.get_length() == 0 &&
+            a8.get_length() == 0 &&
+            a9.get_length() == 0 &&
+            a10.get_length() == 0 &&
+            a11.get_length() == 0 &&
+            a12.get_length() == 0;
+}
+
 bool critical_primitives_array_n(
     const KOptional<KArray<uint16_t>>& a1, const KOptional<KArray<bool>>& a2,
     const KOptional<KArray<int8_t>>& a3, const KOptional<KArray<uint8_t>>& a4,
@@ -108,6 +134,10 @@ bool critical_enum_array(const KArray<MyEnum>& a1) {
     return a1.get_length() == 2 &&
            a1[0] == CASE1 &&
            a1[1] == CASE2;
+}
+
+bool critical_enum_array_empty(const KArray<MyEnum>& a1) {
+    return a1.get_length() == 0;
 }
 
 bool critical_enum_array_n(const KOptional<KArray<MyEnum>>& a1) {

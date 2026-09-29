@@ -186,7 +186,7 @@ class KotlinCommonPrinter(
             """.replaceIndent("\t"))
 
             // Impl (data class)
-            if ((context.configuration as? NativeKtJvmConfiguration)?.useJvmRecord ?: false)
+            if ((context.configuration as? NativeKtJvmConfiguration)?.useJvmRecord ?: false && fields.isNotEmpty())
                 append("\n\t@kotlin.jvm.JvmRecord")
 
             if(fields.isNotEmpty()) {
@@ -195,7 +195,17 @@ class KotlinCommonPrinter(
                     "\n\t\toverride val ${field.kname}: ${field.type.toKotlinType()}"
                 }
                 append("\n\t): ${dictionary.kname}")
-            } else append("\n\tclass Impl: ${dictionary.kname}")
+            } else append("""
+                
+                class Impl: ${dictionary.kname} {
+                    override fun equals(other: Any?): Boolean {
+                        if (this === other) return true
+                        if (other == null || this::class != other::class) return false
+                        return true
+                    }
+                    override fun hashCode(): Int = this::class.hashCode()
+                }
+            """.replaceIndent("\t"))
 
             if (fields.any { it.type.isArray() }) {
                 fun hashFunc(field: ResolvedIdlField.Declaration) = if (field.type.isArray())

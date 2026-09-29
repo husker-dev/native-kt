@@ -16,6 +16,11 @@ class Rust_CallbackArgArray {
     }
 
     @Test
+    fun callbackArgCharArrayEmpty() = withRustLib {
+        assertTrue(natives.testrs.callbackArgCharArrayEmpty { it.contentEquals(charArrayOf()) })
+    }
+
+    @Test
     fun callbackArgCharArrayN() = withRustLib {
         assertTrue(natives.testrs.callbackArgCharArrayN { it == null })
     }

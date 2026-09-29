@@ -17,6 +17,11 @@ class C_CallbackReturnArray {
     }
 
     @Test
+    fun callbackReturnCharArrayEmpty() = withCLib {
+        assertTrue(natives.test.callbackReturnCharArrayEmpty { charArrayOf() })
+    }
+
+    @Test
     fun callbackReturnCharArrayN() = withCLib {
         assertTrue(natives.test.callbackReturnCharArrayN { null })
     }
