@@ -14,6 +14,7 @@ class CEmscriptenPrinter(
         target.parent()!!.createDirectories()
         target.writeSync(buildString {
             printHeader()
+            printBoxedPrimitives()
             printString()
             printPrimitiveArrays()
             printTypedArrays()
@@ -41,18 +42,59 @@ class CEmscriptenPrinter(
         """.trimIndent())
     }
 
+    private fun StringBuilder.printBoxedPrimitives() {
+        if(!context.hasPrimitiveNullable && !context.hasEnumNullable)
+            return
+        appendLine("\n// Boxed primitives")
+
+        listOf(
+            Triple("uint16_t" to "char", context.hasCharNullableToNative, context.hasCharNullableToKotlin),
+            Triple("bool" to "boolean", context.hasBooleanNullableToNative, context.hasBooleanNullableToKotlin),
+            Triple("int8_t" to "byte",
+                context.hasByteNullableToNative || context.hasUByteNullableToNative,
+                context.hasByteNullableToKotlin || context.hasUByteNullableToKotlin),
+            Triple("int16_t" to "short",
+                context.hasShortNullableToNative || context.hasUShortNullableToNative,
+                context.hasShortNullableToKotlin || context.hasUShortNullableToKotlin),
+            Triple("int32_t" to "int",
+                context.hasIntNullableToNative || context.hasUIntNullableToNative || context.hasEnumNullableToNative,
+                context.hasIntNullableToKotlin || context.hasUIntNullableToKotlin || context.hasEnumNullableToKotlin),
+            Triple("int64_t" to "long",
+                context.hasLongNullableToNative || context.hasULongNullableToNative,
+                context.hasLongNullableToKotlin || context.hasULongNullableToKotlin),
+            Triple("float" to "float", context.hasFloatNullableToNative, context.hasFloatNullableToKotlin),
+            Triple("double" to "double", context.hasDoubleNullableToNative, context.hasDoubleNullableToKotlin)
+        ).forEach { (names, hasToNativeCast, hasToKotlinCast) ->
+            if(!hasToNativeCast && !hasToKotlinCast) return@forEach
+            val (type, name) = names
+
+            if(hasToNativeCast) appendLine("""
+                
+                EMSCRIPTEN_KEEPALIVE void* ${context.jsMangle["${name}_new"]}($type value) {
+                    return ${context.mangle("${name}_new")}(value);
+                }
+            """.trimIndent())
+            if(hasToKotlinCast) appendLine("""
+                
+                EMSCRIPTEN_KEEPALIVE $type ${context.jsMangle["${name}_get"]}(void* _Nullable self, bool free) {
+                    return ${context.mangle("${name}_get")}(self, free);
+                }
+            """.trimIndent())
+        }
+    }
+
     private fun StringBuilder.printString() {
-        if(!context.hasStringCast)
+        if(!context.hasString)
             return
         appendLine("\n// String")
 
-        if(context.hasStringCastToNative) appendLine("""
+        if(context.hasStringToNative) appendLine("""
             
             EMSCRIPTEN_KEEPALIVE void* ${context.jsMangle["string_new"]}(const char* _Nullable data, const int32_t size, const bool make_copy) {
                 return ${context.mangle("string_new")}(data, size, make_copy);
             }
         """.trimIndent())
-        if(context.hasStringCastToKotlin) appendLine("""
+        if(context.hasStringToKotlin) appendLine("""
             
             EMSCRIPTEN_KEEPALIVE const char* ${context.jsMangle["string_data"]}(const void* _Nullable self) {
                 return ${context.mangle("string_data")}(self);
@@ -67,25 +109,25 @@ class CEmscriptenPrinter(
     }
 
     private fun StringBuilder.printPrimitiveArrays() {
-        if(!context.hasPrimitiveArrayCast)
+        if(!context.hasPrimitiveArray)
             return
         listOf(
-            Triple("Char" to "uint16_t", context.hasCharArrayCastToNative, context.hasCharArrayCastToKotlin),
-            Triple("Boolean" to "bool", context.hasBooleanArrayCastToNative, context.hasBooleanArrayCastToKotlin),
+            Triple("Char" to "uint16_t", context.hasCharArrayToNative, context.hasCharArrayToKotlin),
+            Triple("Boolean" to "bool", context.hasBooleanArrayToNative, context.hasBooleanArrayToKotlin),
             Triple("Byte" to "int8_t",
-                context.hasByteArrayCastToNative || context.hasUByteArrayCastToNative,
-                context.hasByteArrayCastToKotlin || context.hasUByteArrayCastToKotlin),
+                context.hasByteArrayToNative || context.hasUByteArrayToNative,
+                context.hasByteArrayToKotlin || context.hasUByteArrayToKotlin),
             Triple("Short" to "int16_t",
-                context.hasShortArrayCastToNative || context.hasUShortArrayCastToNative,
-                context.hasShortArrayCastToKotlin || context.hasUShortArrayCastToKotlin),
+                context.hasShortArrayToNative || context.hasUShortArrayToNative,
+                context.hasShortArrayToKotlin || context.hasUShortArrayToKotlin),
             Triple("Int" to "int32_t",
-                context.hasIntArrayCastToNative || context.hasUIntArrayCastToNative || context.hasEnumArrayCastToNative,
-                context.hasIntArrayCastToKotlin || context.hasUIntArrayCastToKotlin || context.hasEnumArrayCastToKotlin),
+                context.hasIntArrayToNative || context.hasUIntArrayToNative || context.hasEnumArrayToNative,
+                context.hasIntArrayToKotlin || context.hasUIntArrayToKotlin || context.hasEnumArrayToKotlin),
             Triple("Long" to "int64_t",
-                context.hasLongArrayCastToNative || context.hasULongArrayCastToNative,
-                context.hasLongArrayCastToKotlin || context.hasULongArrayCastToKotlin),
-            Triple("Float" to "float", context.hasFloatArrayCastToNative, context.hasFloatArrayCastToKotlin),
-            Triple("Double" to "double", context.hasDoubleArrayCastToNative, context.hasDoubleArrayCastToKotlin),
+                context.hasLongArrayToNative || context.hasULongArrayToNative,
+                context.hasLongArrayToKotlin || context.hasULongArrayToKotlin),
+            Triple("Float" to "float", context.hasFloatArrayToNative, context.hasFloatArrayToKotlin),
+            Triple("Double" to "double", context.hasDoubleArrayToNative, context.hasDoubleArrayToKotlin),
         ).forEach { (names, hasToNativeCast, hasToKotlinCast) ->
             if(!hasToNativeCast && !hasToKotlinCast)
                 return@forEach
@@ -115,7 +157,7 @@ class CEmscriptenPrinter(
     }
 
     private fun StringBuilder.printTypedArrays() {
-        if(!context.hasObjectArraysCast)
+        if(!context.hasObjectArrays && !context.hasPrimitiveNullableArray && !context.hasEnumNullableArray)
             return
 
         append("""
@@ -142,10 +184,17 @@ class CEmscriptenPrinter(
 
         buildList {
             (context.castedDictionaries + context.castedInterfaces)
-                .filter { it in context.usedObjectArrayCast }
+                .filter { it in context.usedObjectArray }
                 .mapTo(this) { it.name.camelCase().lowercase() }
-            if(context.hasStringArrayCast)
-                add("string")
+            if(context.hasStringArray) add("string")
+            if(context.hasCharNullableArray) add("char")
+            if(context.hasBooleanNullableArray) add("boolean")
+            if(context.hasByteNullableArray || context.hasUByteNullableArray) add("byte")
+            if(context.hasShortNullableArray || context.hasUShortNullableArray) add("short")
+            if(context.hasIntNullableArray || context.hasUIntNullableArray || context.hasEnumNullableArray) add("int")
+            if(context.hasLongNullableArray || context.hasULongNullableArray) add("long")
+            if(context.hasFloatNullableArray) add("float")
+            if(context.hasDoubleNullableArray) add("double")
         }.forEach {
             append("""
                 
@@ -171,13 +220,13 @@ class CEmscriptenPrinter(
             }
 
             appendLine("\n// ${dictionary.cname}")
-            if(dictionary in context.toNativeDeclarationCasts) appendLine("""
+            if(dictionary in context.toNativeDeclaration) appendLine("""
                 
                 EMSCRIPTEN_KEEPALIVE void* _Nullable ${context.jsMangle["${name}_new"]}($args) {
                     return ${context.mangle("${name}_new")}(${fields.joinToString { it.cname }});
                 }
             """.trimIndent())
-            if(dictionary in context.toKotlinDeclarationCasts) {
+            if(dictionary in context.toKotlinDeclaration) {
                 appendLine("""
                     
                     EMSCRIPTEN_KEEPALIVE void ${context.jsMangle["${name}_free"]}(void* _Nullable self) {
@@ -203,13 +252,13 @@ class CEmscriptenPrinter(
             val name = callback.name.camelCase().lowercase()
 
             appendLine("\n// ${callback.cname}")
-            if(callback in context.toNativeDeclarationCasts) append("""
+            if(callback in context.toNativeDeclaration) append("""
                 
                 EMSCRIPTEN_KEEPALIVE void* _Nullable ${context.jsMangle["${name}_new"]}(const size_t id, const int32_t hash_code, void* _Nullable invoke, void* _Nullable equals, void* _Nullable free) {
                 	return ${context.mangle("${name}_new")}(id, hash_code, invoke, equals, free);
                 }
             """.trimIndent())
-            if(callback in context.toKotlinDeclarationCasts) append("""
+            if(callback in context.toKotlinDeclaration) append("""
                 
                 EMSCRIPTEN_KEEPALIVE size_t ${context.jsMangle["${name}_id"]}(void* _Nullable _self) {
                     return ${context.mangle("${name}_id")}(_self);

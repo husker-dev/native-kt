@@ -20,6 +20,7 @@ class RustPrinter(
             printHeaderDef(context)
             printStringDef(context)
             printArraysDef(context)
+            printBoxedPrimitives(context)
             printCriticalFuncDef(context)
             printDictionaries()
             printCallbacks()
@@ -119,7 +120,7 @@ class RustPrinter(
             if(dictionary in context.castedDeclarations) {
                 append("export_fn! {")
 
-                if(dictionary in context.toNativeDeclarationCasts) {
+                if(dictionary in context.toNativeDeclaration) {
                     // new
                     append("\n\tfn $funcNew(")
                     fields.joinTo(this) {
@@ -138,7 +139,7 @@ class RustPrinter(
                     }
                     append(" })\n\t}")
                 }
-                if(dictionary in context.toKotlinDeclarationCasts) {
+                if(dictionary in context.toKotlinDeclaration) {
                     // free
                     append("\n\tfn $funcFree(of: *mut $name) -> () as $funcFreeJs { from_raw(of); }")
 
@@ -283,18 +284,27 @@ class RustPrinter(
             append("""
                 
                 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-                #[repr(C)]
+                #[repr(i32)]
                 #[derive(PartialEq, Eq, Clone, Copy, Debug$defaultValueExt)]
                 pub enum $name {
             """.trimIndent())
 
             enum.elements.mapIndexed { index, value ->
                 if(value == defaultValue)
-                    "\n\t#[default]\n\t$value = $index"
+                    "\n\t#[default]\n\t$value = $index,"
                 else
-                    "\n\t$value = $index"
-            }.joinTo(this, ",")
-            append("\n}\n")
+                    "\n\t$value = $index,"
+            }.joinTo(this, "")
+
+            if(context.usedTypes.any { it.isEnum(isNullable = true) && it.declaration == enum }) {
+                append("""
+                    
+                    
+                    #[doc(hidden)] __MinNiche = -2147483648, 
+	                #[doc(hidden)] __MaxNiche = 2147483647
+                """.replaceIndent("\t"))
+            }
+            appendLine("\n}")
         }
     }
 

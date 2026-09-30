@@ -10,7 +10,7 @@ val ResolvedIdlDeclaration.kname: String
         is ResolvedIdlDictionary -> kname
         is ResolvedIdlCallbackFunction -> kname
         is ResolvedIdlInterface -> kname
-        else -> throw UnsupportedOperationException()
+        else -> throw UnsupportedOperationException(this.toString())
     }
 
 val ResolvedIdlOperation.kname: String
@@ -68,10 +68,10 @@ internal fun ResolvedIdlType.toKotlinType(
         isInterface() -> if(interfaceAsLong) "Long" else "${declaration.kname}$nullable"
         isArray() -> arrayType { type ->
             when {
-                type.isPrimitive() -> "${type.toKotlinType(ignoreUnsigned = ignoreUnsigned)}Array$nullable"
-                type.isEnum() && enumAsInt -> "IntArray$nullable"
+                type.isPrimitive(isNullable = false) -> "${type.toKotlinType(ignoreUnsigned = ignoreUnsigned)}Array$nullable"
+                type.isEnum(isNullable = false) && enumAsInt -> "IntArray$nullable"
                 type.isInterface() && interfaceAsLong -> "LongArray"
-                else -> "Array<${type.toKotlinType(stringAsBytes, enumAsInt, printNullable, interfaceAsLong = interfaceAsLong)}>$nullable"
+                else -> "Array<${type.toKotlinType(stringAsBytes, enumAsInt, printNullable, interfaceAsLong = interfaceAsLong, ignoreUnsigned = ignoreUnsigned)}>$nullable"
             }
         }
         else -> "${(this as ResolvedIdlType.Default).declaration.kname}$nullable"

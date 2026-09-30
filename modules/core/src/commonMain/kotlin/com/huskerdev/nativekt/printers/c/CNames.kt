@@ -68,6 +68,8 @@ fun ResolvedIdlType.toCType(
     val primitiveNullable = if((isPrimitive() || isEnum()) && isNullable) "*$nullable" else ""
     return when {
         isVoid() -> "void"
+        isPrimitive(isNullable = true) -> "Boxed${toKotlinType(printNullable = false, ignoreUnsigned = true)}$ptr$nullable"
+        isEnum(isNullable = true)-> "BoxedInt$ptr$nullable"
         isChar() -> "uint16_t$primitiveNullable"
         isBoolean() -> "bool$primitiveNullable"
         isByte() -> "int8_t$primitiveNullable"
@@ -84,8 +86,8 @@ fun ResolvedIdlType.toCType(
         isString() -> "KString$ptr$nullable"
         isArray() -> arrayType { type ->
             when {
-                type.isPrimitive() -> "K${type.toKotlinType(ignoreUnsigned = ignoreUnsigned)}Array$ptr$nullable"
-                type.isEnum() -> "KIntArray$ptr$nullable"
+                type.isPrimitive(isNullable = false) -> "K${type.toKotlinType(ignoreUnsigned = ignoreUnsigned)}Array$ptr$nullable"
+                type.isEnum(isNullable = false) -> "KIntArray$ptr$nullable"
                 else -> "KArray$ptr$nullable"
             }
         }
@@ -106,6 +108,7 @@ fun ResolvedIdlType.toCommonNativeType(
     val primitiveNullable = if((isPrimitive() || isEnum()) && isNullable) "*$nullable" else ""
     return when {
         isVoid() -> "void"
+        isNullablePrimitive() || isNullableEnum() -> "void*$nullable"
         isChar() -> "uint16_t$primitiveNullable"
         isBoolean() -> "bool$primitiveNullable"
         isByte() -> "int8_t$primitiveNullable"

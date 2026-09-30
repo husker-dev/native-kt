@@ -103,10 +103,10 @@ impl_typed_array!(i64,
 // ╚═══════════════╝
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[repr(C)]
+#[repr(i32)]
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum MyEnum {
-	A = 0
+	A = 0,
 }
 
 // ╔═══════════════════╗

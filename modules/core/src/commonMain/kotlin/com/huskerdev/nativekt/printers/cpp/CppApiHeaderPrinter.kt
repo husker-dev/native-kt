@@ -50,15 +50,15 @@ class CppApiHeaderPrinter(
     }
 
     private fun StringBuilder.printStdLib() {
-        if(!context.hasNullableCast &&
-            !context.hasStringCast &&
-            !context.hasObjectArraysCast &&
-            !context.hasPrimitiveArrayCast
+        if(!context.hasNullable &&
+            !context.hasString &&
+            !context.hasObjectArrays &&
+            !context.hasPrimitiveArray
         ) return
 
         printLabel("Types")
 
-        if(context.hasNullableCast) append("""
+        if(context.hasNullable) append("""
             
             template <typename T> class KOptional {
                 bool is_empty;
@@ -79,7 +79,7 @@ class CppApiHeaderPrinter(
                 const T* _Nullable get_ptr() const;
             };
         """.trimIndent())
-        if(context.hasStringCast) append("""
+        if(context.hasString) append("""
             
             class KString {
                 char* _Nonnull data;
@@ -98,7 +98,7 @@ class CppApiHeaderPrinter(
                 explicit operator const char* _Nonnull() const;
             };
         """.trimIndent())
-        if(context.hasObjectArraysCast || context.hasPrimitiveArrayCast) append("""
+        if(context.hasObjectArrays || context.hasPrimitiveArray) append("""
             
             template <typename T> class KArray {
                 T* _Nonnull elements;
@@ -305,9 +305,9 @@ class CppApiHeaderPrinter(
             
         """.trimIndent())
 
-        if(context.hasNullableCast) {
+        if(context.hasNullable) {
             printLabel("Tools")
-            if(context.hasNullableCastToKotlin) appendLine("""
+            if(context.hasNullableToKotlin) appendLine("""
                 
                 template<typename T>
                 T* _Nullable obj_opt(KOptional<T> opt, T* _Nonnull (* _Nonnull wrap)(T)) {
@@ -315,7 +315,7 @@ class CppApiHeaderPrinter(
                     return wrap(std::move(*opt.get_ptr()));
                 }
             """.trimIndent())
-            if(context.hasNullableCastToNative) appendLine("""
+            if(context.hasNullableToNative) appendLine("""
                 
                 template<typename T>
                 KOptional<T> ptr_opt(T* _Nullable arg, T (* _Nonnull unwrap)(T* _Nonnull)) {
@@ -444,7 +444,7 @@ class CppApiHeaderPrinter(
             """.trimIndent())
         }
 
-        if(context.hasPrimitiveArrayCast || context.hasObjectArraysCast) {
+        if(context.hasPrimitiveArray || context.hasObjectArrays) {
             printLabel("Array")
             append("""
                 

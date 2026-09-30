@@ -799,10 +799,22 @@ pub fn pass_char_array_n(
     arg.is_none()
 }
 
+pub fn pass_char_narray(
+    arg: Vec<Option<u16>>
+) -> bool {
+    arg.as_slice() == [None, Some('a' as u16)]
+}
+
 pub fn pass_boolean_array(
     arg: Vec<bool>
 ) -> bool {
     arg.as_slice() == [true, false]
+}
+
+pub fn pass_boolean_narray(
+    arg: Vec<Option<bool>>
+) -> bool {
+    arg.as_slice() == [None, Some(true)]
 }
 
 pub fn pass_byte_array(
@@ -811,10 +823,22 @@ pub fn pass_byte_array(
     arg.as_slice() == [1, 2]
 }
 
+pub fn pass_byte_narray(
+    arg: Vec<Option<i8>>
+) -> bool {
+    arg.as_slice() == [None, Some(1)]
+}
+
 pub fn pass_ubyte_array(
     arg: Vec<u8>
 ) -> bool {
     arg.as_slice() == [1, 255]
+}
+
+pub fn pass_ubyte_narray(
+    arg: Vec<Option<u8>>
+) -> bool {
+    arg.as_slice() == [None, Some(255)]
 }
 
 pub fn pass_short_array(
@@ -823,10 +847,22 @@ pub fn pass_short_array(
     arg.as_slice() == [1, 2]
 }
 
+pub fn pass_short_narray(
+    arg: Vec<Option<i16>>
+) -> bool {
+    arg.as_slice() == [None, Some(1)]
+}
+
 pub fn pass_ushort_array(
     arg: Vec<u16>
 ) -> bool {
     arg.as_slice() == [1, 65535]
+}
+
+pub fn pass_ushort_narray(
+    arg: Vec<Option<u16>>
+) -> bool {
+    arg.as_slice() == [None, Some(65535)]
 }
 
 pub fn pass_int_array(
@@ -835,10 +871,22 @@ pub fn pass_int_array(
     arg.as_slice() == [1, 2]
 }
 
+pub fn pass_int_narray(
+    arg: Vec<Option<i32>>
+) -> bool {
+    arg.as_slice() == [None, Some(1)]
+}
+
 pub fn pass_uint_array(
     arg: Vec<u32>
 ) -> bool {
     arg.as_slice() == [1, 4294967295]
+}
+
+pub fn pass_uint_narray(
+    arg: Vec<Option<u32>>
+) -> bool {
+    arg.as_slice() == [None, Some(4294967295)]
 }
 
 pub fn pass_long_array(
@@ -847,10 +895,22 @@ pub fn pass_long_array(
     arg.as_slice() == [1, 2]
 }
 
+pub fn pass_long_narray(
+    arg: Vec<Option<i64>>
+) -> bool {
+    arg.as_slice() == [None, Some(1)]
+}
+
 pub fn pass_ulong_array(
     arg: Vec<u64>
 ) -> bool {
     arg.as_slice() == [1, 18446744073709551615]
+}
+
+pub fn pass_ulong_narray(
+    arg: Vec<Option<u64>>
+) -> bool {
+    arg.as_slice() == [None, Some(18446744073709551615)]
 }
 
 pub fn pass_float_array(
@@ -859,10 +919,22 @@ pub fn pass_float_array(
     arg.as_slice() == [1.1, 2.2]
 }
 
+pub fn pass_float_narray(
+    arg: Vec<Option<f32>>
+) -> bool {
+    arg.as_slice() == [None, Some(1.1)]
+}
+
 pub fn pass_double_array(
     arg: Vec<f64>
 ) -> bool {
     arg.as_slice() == [1.1, 2.2]
+}
+
+pub fn pass_double_narray(
+    arg: Vec<Option<f64>>
+) -> bool {
+    arg.as_slice() == [None, Some(1.1)]
 }
 
 pub fn pass_string_array(
@@ -884,6 +956,12 @@ pub fn pass_enum_array(
 ) -> bool {
     arg.as_slice()[0] == MyEnum::CASE1 &&
     arg.as_slice()[1] == MyEnum::CASE2
+}
+
+pub fn pass_enum_narray(
+    arg: Vec<Option<MyEnum>>
+) -> bool {
+    arg.as_slice() == [None, Some(MyEnum::CASE2)]
 }
 
 pub fn pass_dictionary_array(
@@ -931,48 +1009,96 @@ pub fn return_char_array_n() -> Option<Vec<u16>> {
     None
 }
 
+pub fn return_char_narray() -> Vec<Option<u16>> {
+    vec!(None, Some('a' as u16))
+}
+
 pub fn return_boolean_array() -> Vec<bool> {
     vec!(true, false)
+}
+
+pub fn return_boolean_narray() -> Vec<Option<bool>> {
+    vec!(None, Some(true))
 }
 
 pub fn return_byte_array() -> Vec<i8> {
     vec!(1, 2)
 }
 
+pub fn return_byte_narray() -> Vec<Option<i8>> {
+    vec!(None, Some(1))
+}
+
 pub fn return_ubyte_array() -> Vec<u8> {
     vec!(1, 255)
+}
+
+pub fn return_ubyte_narray() -> Vec<Option<u8>> {
+    vec!(None, Some(255))
 }
 
 pub fn return_short_array() -> Vec<i16> {
     vec!(1, 2)
 }
 
+pub fn return_short_narray() -> Vec<Option<i16>> {
+    vec!(None, Some(1))
+}
+
 pub fn return_ushort_array() -> Vec<u16> {
     vec!(1, 65535)
+}
+
+pub fn return_ushort_narray() -> Vec<Option<u16>> {
+    vec!(None, Some(65535))
 }
 
 pub fn return_int_array() -> Vec<i32> {
     vec!(1, 2)
 }
 
+pub fn return_int_narray() -> Vec<Option<i32>> {
+    vec!(None, Some(1))
+}
+
 pub fn return_uint_array() -> Vec<u32> {
     vec!(1, 4294967295)
+}
+
+pub fn return_uint_narray() -> Vec<Option<u32>> {
+    vec!(None, Some(4294967295))
 }
 
 pub fn return_long_array() -> Vec<i64> {
     vec!(1, 2)
 }
 
+pub fn return_long_narray() -> Vec<Option<i64>> {
+    vec!(None, Some(1))
+}
+
 pub fn return_ulong_array() -> Vec<u64> {
     vec!(1, 18446744073709551615)
+}
+
+pub fn return_ulong_narray() -> Vec<Option<u64>> {
+    vec!(None, Some(18446744073709551615))
 }
 
 pub fn return_float_array() -> Vec<f32> {
     vec!(1.1, 2.2)
 }
 
+pub fn return_float_narray() -> Vec<Option<f32>> {
+    vec!(None, Some(1.1))
+}
+
 pub fn return_double_array() -> Vec<f64> {
     vec!(1.1, 2.2)
+}
+
+pub fn return_double_narray() -> Vec<Option<f64>> {
+    vec!(None, Some(1.1))
 }
 
 pub fn return_string_array() -> Vec<String> {
@@ -985,6 +1111,10 @@ pub fn return_string_array_n() -> Vec<Option<String>> {
 
 pub fn return_enum_array() -> Vec<MyEnum> {
     vec!(MyEnum::CASE1, MyEnum::CASE2)
+}
+
+pub fn return_enum_narray() -> Vec<Option<MyEnum>> {
+    vec!(None, Some(MyEnum::CASE2))
 }
 
 pub fn return_dictionary_array() -> Vec<MyDictionary> {

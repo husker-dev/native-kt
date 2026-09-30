@@ -27,8 +27,18 @@ class Cpp_PassArray {
     }
 
     @Test
+    fun passCharNArray() = withCppLib {
+        assertTrue(natives.testcpp.passCharNArray(arrayOf(null, 'a')))
+    }
+
+    @Test
     fun passBooleanArray() = withCppLib {
         assertTrue(natives.testcpp.passBooleanArray(booleanArrayOf(true, false)))
+    }
+
+    @Test
+    fun passBooleanNArray() = withCppLib {
+        assertTrue(natives.testcpp.passBooleanNArray(arrayOf(null, true)))
     }
 
     @Test
@@ -37,8 +47,18 @@ class Cpp_PassArray {
     }
 
     @Test
+    fun passByteNArray() = withCppLib {
+        assertTrue(natives.testcpp.passByteNArray(arrayOf(null, 1.toByte())))
+    }
+
+    @Test
     fun passUByteArray() = withCppLib {
         assertTrue(natives.testcpp.passUByteArray(ubyteArrayOf(1.toUByte(), UByte.MAX_VALUE)))
+    }
+
+    @Test
+    fun passUByteNArray() = withCppLib {
+        assertTrue(natives.testcpp.passUByteNArray(arrayOf(null, UByte.MAX_VALUE)))
     }
 
     @Test
@@ -47,8 +67,18 @@ class Cpp_PassArray {
     }
 
     @Test
+    fun passShortNArray() = withCppLib {
+        assertTrue(natives.testcpp.passShortNArray(arrayOf(null, 1.toShort())))
+    }
+
+    @Test
     fun passUShortArray() = withCppLib {
         assertTrue(natives.testcpp.passUShortArray(ushortArrayOf(1.toUShort(), UShort.MAX_VALUE)))
+    }
+
+    @Test
+    fun passUShortNArray() = withCppLib {
+        assertTrue(natives.testcpp.passUShortNArray(arrayOf(null, UShort.MAX_VALUE)))
     }
 
     @Test
@@ -57,8 +87,18 @@ class Cpp_PassArray {
     }
 
     @Test
+    fun passIntNArray() = withCppLib {
+        assertTrue(natives.testcpp.passIntNArray(arrayOf(null, 1)))
+    }
+
+    @Test
     fun passUIntArray() = withCppLib {
         assertTrue(natives.testcpp.passUIntArray(uintArrayOf(1.toUInt(), UInt.MAX_VALUE)))
+    }
+
+    @Test
+    fun passUIntNArray() = withCppLib {
+        assertTrue(natives.testcpp.passUIntNArray(arrayOf(null, UInt.MAX_VALUE)))
     }
 
     @Test
@@ -67,8 +107,18 @@ class Cpp_PassArray {
     }
 
     @Test
+    fun passLongNArray() = withCppLib {
+        assertTrue(natives.testcpp.passLongNArray(arrayOf(null, 1L)))
+    }
+
+    @Test
     fun passULongArray() = withCppLib {
         assertTrue(natives.testcpp.passULongArray(ulongArrayOf(1.toULong(), ULong.MAX_VALUE)))
+    }
+
+    @Test
+    fun passULongNArray() = withCppLib {
+        assertTrue(natives.testcpp.passULongNArray(arrayOf(null, ULong.MAX_VALUE)))
     }
 
     @Test
@@ -77,8 +127,18 @@ class Cpp_PassArray {
     }
 
     @Test
+    fun passFloatNArray() = withCppLib {
+        assertTrue(natives.testcpp.passFloatNArray(arrayOf(null, 1.1f)))
+    }
+
+    @Test
     fun passDoubleArray() = withCppLib {
         assertTrue(natives.testcpp.passDoubleArray(doubleArrayOf(1.1, 2.2)))
+    }
+
+    @Test
+    fun passDoubleNArray() = withCppLib {
+        assertTrue(natives.testcpp.passDoubleNArray(arrayOf(null, 1.1)))
     }
 
     @Test
@@ -94,6 +154,11 @@ class Cpp_PassArray {
     @Test
     fun passEnumArray() = withCppLib {
         assertTrue(natives.testcpp.passEnumArray(arrayOf(MyEnum.CASE1, MyEnum.CASE2)))
+    }
+
+    @Test
+    fun passEnumNArray() = withCppLib {
+        assertTrue(natives.testcpp.passEnumNArray(arrayOf(null, MyEnum.CASE2)))
     }
 
     @Test

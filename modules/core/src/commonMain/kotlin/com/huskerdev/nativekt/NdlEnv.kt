@@ -21,5 +21,6 @@ object NdlEnv: WebIDLEnv {
         "string" to WebIDLBuiltinKind.STRING,
         "Array" to WebIDLBuiltinKind.LIST,
     )
-    override val overloadingSupport: Boolean = false
+    override val overloadingSupported: Boolean = false
+    override val emptyEnumSupported: Boolean = false
 }

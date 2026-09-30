@@ -57,7 +57,7 @@ class KotlinJvmJniPrinter(
         """.replaceIndent(indent2)
 
         val classes = (context.castedDictionaries + context.castedInterfaces)
-            .filter { it in context.toKotlinDeclarationCasts }
+            .filter { it in context.toKotlinDeclaration }
             .map { "${it.kname}::class.java" }
             .chunked(3)
             .joinListToString(prefix = "${indent2}val classes = listOf<Class<*>>(", postfix = ")", baseIndent = indent2) {
@@ -202,7 +202,7 @@ class KotlinJvmJniPrinter(
             val name = dictionary.kname
             val lower = dictionary.name.camelCase().lowercase()
 
-            if(dictionary in context.toKotlinDeclarationCasts) {
+            if(dictionary in context.toKotlinDeclaration) {
                 val args = fields.joinToString {
                     "${it.kname}: ${it.type.toJniKotlinType()}"
                 }
@@ -212,7 +212,7 @@ class KotlinJvmJniPrinter(
                 append("\n$indent2@Marker(${i++}) @JvmStatic fun _constructor_$lower($args) = ${dictionary.kname}($argNames)")
                 staticFunctions += "_constructor_$lower"
             }
-            if(dictionary in context.toNativeDeclarationCasts) {
+            if(dictionary in context.toNativeDeclaration) {
                 fields.forEach {
                     val fieldLower = it.name.camelCase().lowercase()
                     append("\n$indent2@Marker(${i++}) @JvmStatic fun _field_${lower}_$fieldLower(of: $name) = ${castToNative(it.type, "of.${it.kname}")}")
@@ -222,13 +222,13 @@ class KotlinJvmJniPrinter(
         }
 
         // Interfaces
-        if(context.hasInterfaceCast) {
-            if(context.hasInterfaceCastToNative) {
+        if(context.hasInterface) {
+            if(context.hasInterfaceToNative) {
                 append("\n$indent2@Marker(${i++}) @JvmStatic fun _interface_ptr(of: NativeKtRcObject) = of.rcPtr")
                 staticFunctions += "_interface_ptr"
             }
             context.castedInterfaces.forEach { inter ->
-                if(inter in context.toNativeDeclarationCasts) {
+                if(inter in context.toNativeDeclaration) {
                     append("\n$indent2@Marker(${i++}) @JvmStatic fun _constructor_${inter.name.camelCase().lowercase()}(ptr: Long) = ${inter.kname}(Unit, ptr)")
                     staticFunctions += "_constructor_${inter.name.camelCase().lowercase()}"
                 }
@@ -236,7 +236,7 @@ class KotlinJvmJniPrinter(
         }
 
         // Callbacks
-        if(context.hasCallbackCast) {
+        if(context.hasCallback) {
             append("\n$indent2@Marker(${i++}) @JvmStatic fun _callback_equals(c1: Any, c2: Any) = c1 == c2")
             append("\n$indent2@Marker(${i++}) @JvmStatic fun _callback_hashCode(c: Any) = c.hashCode()")
 
@@ -280,8 +280,8 @@ class KotlinJvmJniPrinter(
             when  {
                 arrType.isPrimitive() && arrType.isUnsigned() -> castToSigned(type, content)
                 arrType.isEnum() ->
-                    if(type.isNullable) "JniUtils.enumToInts($content)"
-                    else "JniUtils.enumToInts($content)!!"
+                    if(type.isNullable) "enumToInts($content)"
+                    else "enumToInts($content)!!"
                 arrType.isString() ->
                     if(type.isNullable) "JniUtils.stringsToBytes($content)"
                     else "JniUtils.stringsToBytes($content)!!"
@@ -306,8 +306,8 @@ class KotlinJvmJniPrinter(
             when  {
                 arrType.isPrimitive() && arrType.isUnsigned() -> castToUnsigned(type, content)
                 arrType.isEnum() ->
-                    if(type.isNullable) "JniUtils.intsToEnum($content, ${arrType.toKotlinType()}::class.java)"
-                    else "JniUtils.intsToEnum($content, ${arrType.toKotlinType()}::class.java)!!"
+                    if(type.isNullable) "JniUtils.intsToEnum($content, ${arrType.toKotlinType(printNullable = false)}::class.java)"
+                    else "JniUtils.intsToEnum($content, ${arrType.toKotlinType(printNullable = false)}::class.java)!!"
                 arrType.isString() ->
                     if(type.isNullable) "JniUtils.bytesToStrings($content)"
                     else "JniUtils.bytesToStrings($content)!!"

@@ -26,8 +26,18 @@ class Rust_ReturnArray {
     }
 
     @Test
+    fun returnCharNArray() = withRustLib {
+        assertContentEquals(arrayOf(null, 'a'), natives.testrs.returnCharNArray())
+    }
+
+    @Test
     fun returnBooleanArray() = withRustLib {
         assertContentEquals(booleanArrayOf(true, false), natives.testrs.returnBooleanArray())
+    }
+
+    @Test
+    fun returnBooleanNArray() = withRustLib {
+        assertContentEquals(arrayOf(null, true), natives.testrs.returnBooleanNArray())
     }
 
     @Test
@@ -36,8 +46,18 @@ class Rust_ReturnArray {
     }
 
     @Test
+    fun returnByteNArray() = withRustLib {
+        assertContentEquals(arrayOf(null, 1), natives.testrs.returnByteNArray())
+    }
+
+    @Test
     fun returnUByteArray() = withRustLib {
         assertContentEquals(ubyteArrayOf(1.toUByte(), UByte.MAX_VALUE), natives.testrs.returnUByteArray())
+    }
+
+    @Test
+    fun returnUByteNArray() = withRustLib {
+        assertContentEquals(arrayOf(null, UByte.MAX_VALUE), natives.testrs.returnUByteNArray())
     }
 
     @Test
@@ -46,8 +66,18 @@ class Rust_ReturnArray {
     }
 
     @Test
+    fun returnShortNArray() = withRustLib {
+        assertContentEquals(arrayOf(null, 1), natives.testrs.returnShortNArray())
+    }
+
+    @Test
     fun returnUShortArray() = withRustLib {
         assertContentEquals(ushortArrayOf(1.toUShort(), UShort.MAX_VALUE), natives.testrs.returnUShortArray())
+    }
+
+    @Test
+    fun returnUShortNArray() = withRustLib {
+        assertContentEquals(arrayOf(null, UShort.MAX_VALUE), natives.testrs.returnUShortNArray())
     }
 
     @Test
@@ -56,8 +86,18 @@ class Rust_ReturnArray {
     }
 
     @Test
+    fun returnIntNArray() = withRustLib {
+        assertContentEquals(arrayOf(null, 1), natives.testrs.returnIntNArray())
+    }
+
+    @Test
     fun returnUIntArray() = withRustLib {
         assertContentEquals(uintArrayOf(1.toUInt(), UInt.MAX_VALUE), natives.testrs.returnUIntArray())
+    }
+
+    @Test
+    fun returnUIntNArray() = withRustLib {
+        assertContentEquals(arrayOf(null, UInt.MAX_VALUE), natives.testrs.returnUIntNArray())
     }
 
     @Test
@@ -66,8 +106,18 @@ class Rust_ReturnArray {
     }
 
     @Test
+    fun returnLongNArray() = withRustLib {
+        assertContentEquals(arrayOf(null, 1), natives.testrs.returnLongNArray())
+    }
+
+    @Test
     fun returnULongArray() = withRustLib {
         assertContentEquals(ulongArrayOf(1.toULong(), ULong.MAX_VALUE), natives.testrs.returnULongArray())
+    }
+
+    @Test
+    fun returnULongNArray() = withRustLib {
+        assertContentEquals(arrayOf(null, ULong.MAX_VALUE), natives.testrs.returnULongNArray())
     }
 
     @Test
@@ -76,8 +126,18 @@ class Rust_ReturnArray {
     }
 
     @Test
+    fun returnFloatNArray() = withRustLib {
+        assertContentEquals(arrayOf(null, 1.1f), natives.testrs.returnFloatNArray())
+    }
+
+    @Test
     fun returnDoubleArray() = withRustLib {
         assertContentEquals(doubleArrayOf(1.1, 2.2), natives.testrs.returnDoubleArray())
+    }
+
+    @Test
+    fun returnDoubleNArray() = withRustLib {
+        assertContentEquals(arrayOf(null, 1.1), natives.testrs.returnDoubleNArray())
     }
 
     @Test
@@ -93,6 +153,11 @@ class Rust_ReturnArray {
     @Test
     fun returnEnumArray() = withRustLib {
         assertContentEquals(arrayOf(MyEnum.CASE1, MyEnum.CASE2), natives.testrs.returnEnumArray())
+    }
+
+    @Test
+    fun returnEnumNArray() = withRustLib {
+        assertContentEquals(arrayOf(null, MyEnum.CASE2), natives.testrs.returnEnumNArray())
     }
 
     @Test

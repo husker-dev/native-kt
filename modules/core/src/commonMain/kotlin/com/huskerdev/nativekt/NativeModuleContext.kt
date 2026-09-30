@@ -123,166 +123,209 @@ class NativeModuleContext(
 
     val usedTypes = toNativeTypes + toKotlinTypes
 
-    val toNativeDeclarationCasts = toNativeTypes.map { it.declaration }.toHashSet()
-    val toKotlinDeclarationCasts = toKotlinTypes.map { it.declaration }.toHashSet()
-    val castedDeclarations = (toNativeDeclarationCasts + toKotlinDeclarationCasts).sortedBy { it.name }
+    val toNativeDeclaration = toNativeTypes.map { it.declaration }.toHashSet()
+    val toKotlinDeclaration = toKotlinTypes.map { it.declaration }.toHashSet()
+    val castedDeclarations = (toNativeDeclaration + toKotlinDeclaration).sortedBy { it.name }
 
-    val hasNullableCastToKotlin = toKotlinTypes.any { it.isNullable }
-    val hasNullableCastToNative = toNativeTypes.any { it.isNullable }
-    val hasNullableCast = hasNullableCastToKotlin || hasNullableCastToNative
+    val hasNullableToKotlin = toKotlinTypes.any { it.isNullable }
+    val hasNullableToNative = toNativeTypes.any { it.isNullable }
+    val hasNullable = hasNullableToKotlin || hasNullableToNative
 
-    val hasEnumToCastNative = toNativeTypes.any(ResolvedIdlType::isEnum)
-    val hasEnumToCastKotlin = toKotlinTypes.any(ResolvedIdlType::isEnum)
-    val hasEnumsCast = hasEnumToCastNative || hasEnumToCastKotlin
+    val hasEnumToNative = toNativeTypes.any(ResolvedIdlType::isEnum)
+    val hasEnumToKotlin = toKotlinTypes.any(ResolvedIdlType::isEnum)
+    val hasEnums = hasEnumToNative || hasEnumToKotlin
     val castedEnums = castedDeclarations.filterIsInstance<ResolvedIdlEnum>().sortedBy { it.name }
 
-    val hasDictionaryCastToNative = toNativeTypes.any(ResolvedIdlType::isDictionary)
-    val hasDictionaryCastToKotlin = toKotlinTypes.any(ResolvedIdlType::isDictionary)
-    val hasDictionaryCast = hasDictionaryCastToNative || hasDictionaryCastToKotlin
+    val hasDictionaryToNative = toNativeTypes.any(ResolvedIdlType::isDictionary)
+    val hasDictionaryToKotlin = toKotlinTypes.any(ResolvedIdlType::isDictionary)
+    val hasDictionary = hasDictionaryToNative || hasDictionaryToKotlin
     val castedDictionaries = castedDeclarations.filterIsInstance<ResolvedIdlDictionary>().sortedBy { it.name }
 
-    val hasInterfaceCastToNative = toNativeTypes.any(ResolvedIdlType::isInterface)
-    val hasInterfaceCastToKotlin = toKotlinTypes.any(ResolvedIdlType::isInterface)
-    val hasInterfaceCast = hasInterfaceCastToNative || hasInterfaceCastToKotlin
+    val hasInterfaceToNative = toNativeTypes.any(ResolvedIdlType::isInterface)
+    val hasInterfaceToKotlin = toKotlinTypes.any(ResolvedIdlType::isInterface)
+    val hasInterface = hasInterfaceToNative || hasInterfaceToKotlin
     val castedInterfaces = castedDeclarations.filterIsInstance<ResolvedIdlInterface>().sortedBy { it.name }
 
-    val hasCallbackCastToNative = toNativeTypes.any(ResolvedIdlType::isCallback)
-    val hasCallbackCastToKotlin = toKotlinTypes.any(ResolvedIdlType::isCallback)
-    val hasCallbackCast = hasCallbackCastToNative || hasCallbackCastToKotlin
+    val hasCallbackToNative = toNativeTypes.any(ResolvedIdlType::isCallback)
+    val hasCallbackToKotlin = toKotlinTypes.any(ResolvedIdlType::isCallback)
+    val hasCallback = hasCallbackToNative || hasCallbackToKotlin
     val castedCallbacks = castedDeclarations.filterIsInstance<ResolvedIdlCallbackFunction>().sortedBy { it.name }
 
-    val hasStringCastToNative = toNativeTypes.any(ResolvedIdlType::isString)
-    val hasStringCastToKotlin = toKotlinTypes.any(ResolvedIdlType::isString)
-    val hasStringCast = hasStringCastToNative || hasStringCastToKotlin
+    val hasStringToNative = toNativeTypes.any(ResolvedIdlType::isString)
+    val hasStringToKotlin = toKotlinTypes.any(ResolvedIdlType::isString)
+    val hasString = hasStringToNative || hasStringToKotlin
 
-    val hasCharNullableToNative = toNativeTypes.any { it.isChar() && it.isNullable }
-    val hasCharNullableToKotlin = toKotlinTypes.any { it.isChar() && it.isNullable }
+    val hasCharNullableToNative = toNativeTypes.any { it.isChar(isNullable = true) }
+    val hasCharNullableToKotlin = toKotlinTypes.any { it.isChar(isNullable = true) }
     val hasCharNullable = hasCharNullableToNative || hasCharNullableToKotlin
-    val hasCharArrayCastToNative = toNativeTypes.any(ResolvedIdlType::isCharArray)
-    val hasCharArrayCastToKotlin = toKotlinTypes.any(ResolvedIdlType::isCharArray)
-    val hasCharArrayCast = hasCharArrayCastToNative || hasCharArrayCastToKotlin
+    val hasCharArrayToNative = toNativeTypes.any { it.isCharArray(parameterIsNullable = false) }
+    val hasCharArrayToKotlin = toKotlinTypes.any { it.isCharArray(parameterIsNullable = false) }
+    val hasCharArray = hasCharArrayToNative || hasCharArrayToKotlin
+    val hasCharNullableArrayToNative = toNativeTypes.any { it.isCharArray(parameterIsNullable = true) }
+    val hasCharNullableArrayToKotlin = toKotlinTypes.any { it.isCharArray(parameterIsNullable = true) }
+    val hasCharNullableArray = hasCharNullableArrayToNative || hasCharNullableArrayToKotlin
 
-    val hasBooleanNullableToNative = toNativeTypes.any { it.isBoolean() && it.isNullable }
-    val hasBooleanNullableToKotlin = toKotlinTypes.any { it.isBoolean() && it.isNullable }
+    val hasBooleanNullableToNative = toNativeTypes.any { it.isBoolean(isNullable = true) }
+    val hasBooleanNullableToKotlin = toKotlinTypes.any { it.isBoolean(isNullable = true) }
     val hasBooleanNullable = hasBooleanNullableToNative || hasBooleanNullableToKotlin
-    val hasBooleanArrayCastToNative = toNativeTypes.any(ResolvedIdlType::isBooleanArray)
-    val hasBooleanArrayCastToKotlin = toKotlinTypes.any(ResolvedIdlType::isBooleanArray)
-    val hasBooleanArrayCast = hasBooleanArrayCastToNative || hasBooleanArrayCastToKotlin
+    val hasBooleanArrayToNative = toNativeTypes.any { it.isBooleanArray(parameterIsNullable = false) }
+    val hasBooleanArrayToKotlin = toKotlinTypes.any { it.isBooleanArray(parameterIsNullable = false) }
+    val hasBooleanArray = hasBooleanArrayToNative || hasBooleanArrayToKotlin
+    val hasBooleanNullableArrayToNative = toNativeTypes.any { it.isBooleanArray(parameterIsNullable = true) }
+    val hasBooleanNullableArrayToKotlin = toKotlinTypes.any { it.isBooleanArray(parameterIsNullable = true) }
+    val hasBooleanNullableArray = hasBooleanNullableArrayToNative || hasBooleanNullableArrayToKotlin
 
-    val hasByteNullableToNative = toNativeTypes.any { it.isByte() && it.isNullable }
-    val hasByteNullableToKotlin = toKotlinTypes.any { it.isByte() && it.isNullable }
+    val hasByteNullableToNative = toNativeTypes.any { it.isByte(isNullable = true) }
+    val hasByteNullableToKotlin = toKotlinTypes.any { it.isByte(isNullable = true) }
     val hasByteNullable = hasByteNullableToNative || hasByteNullableToKotlin
-    val hasByteArrayCastToNative = toNativeTypes.any(ResolvedIdlType::isByteArray)
-    val hasByteArrayCastToKotlin = toKotlinTypes.any(ResolvedIdlType::isByteArray)
-    val hasByteArrayCast = hasByteArrayCastToNative || hasByteArrayCastToKotlin
+    val hasByteArrayToNative = toNativeTypes.any { it.isByteArray(parameterIsNullable = false) }
+    val hasByteArrayToKotlin = toKotlinTypes.any { it.isByteArray(parameterIsNullable = false) }
+    val hasByteArray = hasByteArrayToNative || hasByteArrayToKotlin
+    val hasByteNullableArrayToNative = toNativeTypes.any { it.isByteArray(parameterIsNullable = true) }
+    val hasByteNullableArrayToKotlin = toKotlinTypes.any { it.isByteArray(parameterIsNullable = true) }
+    val hasByteNullableArray = hasByteNullableArrayToNative || hasByteNullableArrayToKotlin
 
-    val hasUByteNullableToNative = toNativeTypes.any { it.isUByte() && it.isNullable }
-    val hasUByteNullableToKotlin = toKotlinTypes.any { it.isUByte() && it.isNullable }
+    val hasUByteNullableToNative = toNativeTypes.any { it.isUByte(isNullable = true) }
+    val hasUByteNullableToKotlin = toKotlinTypes.any { it.isUByte(isNullable = true) }
     val hasUByteNullable = hasUByteNullableToNative || hasUByteNullableToKotlin
-    val hasUByteArrayCastToNative = toNativeTypes.any(ResolvedIdlType::isUByteArray)
-    val hasUByteArrayCastToKotlin = toKotlinTypes.any(ResolvedIdlType::isUByteArray)
-    val hasUByteArrayCast = hasUByteArrayCastToNative || hasUByteArrayCastToKotlin
+    val hasUByteArrayToNative = toNativeTypes.any { it.isUByteArray(parameterIsNullable = false) }
+    val hasUByteArrayToKotlin = toKotlinTypes.any { it.isUByteArray(parameterIsNullable = false) }
+    val hasUByteArray = hasUByteArrayToNative || hasUByteArrayToKotlin
+    val hasUByteNullableArrayToNative = toNativeTypes.any { it.isUByteArray(parameterIsNullable = true) }
+    val hasUByteNullableArrayToKotlin = toKotlinTypes.any { it.isUByteArray(parameterIsNullable = true) }
+    val hasUByteNullableArray = hasUByteNullableArrayToNative || hasUByteNullableArrayToKotlin
 
-    val hasShortNullableToNative = toNativeTypes.any { it.isShort() && it.isNullable }
-    val hasShortNullableToKotlin = toKotlinTypes.any { it.isShort() && it.isNullable }
+    val hasShortNullableToNative = toNativeTypes.any { it.isShort(isNullable = true) }
+    val hasShortNullableToKotlin = toKotlinTypes.any { it.isShort(isNullable = true) }
     val hasShortNullable = hasShortNullableToNative || hasShortNullableToKotlin
-    val hasShortArrayCastToNative = toNativeTypes.any(ResolvedIdlType::isShortArray)
-    val hasShortArrayCastToKotlin = toKotlinTypes.any(ResolvedIdlType::isShortArray)
-    val hasShortArrayCast = hasShortArrayCastToNative || hasShortArrayCastToKotlin
+    val hasShortArrayToNative = toNativeTypes.any { it.isShortArray(parameterIsNullable = false) }
+    val hasShortArrayToKotlin = toKotlinTypes.any { it.isShortArray(parameterIsNullable = false) }
+    val hasShortArray = hasShortArrayToNative || hasShortArrayToKotlin
+    val hasShortNullableArrayToNative = toNativeTypes.any { it.isShortArray(parameterIsNullable = true) }
+    val hasShortNullableArrayToKotlin = toKotlinTypes.any { it.isShortArray(parameterIsNullable = true) }
+    val hasShortNullableArray = hasShortNullableArrayToNative || hasShortNullableArrayToKotlin
 
-    val hasUShortNullableToNative = toNativeTypes.any { it.isUShort() && it.isNullable }
-    val hasUShortNullableToKotlin = toKotlinTypes.any { it.isUShort() && it.isNullable }
+    val hasUShortNullableToNative = toNativeTypes.any { it.isUShort(isNullable = true) }
+    val hasUShortNullableToKotlin = toKotlinTypes.any { it.isUShort(isNullable = true) }
     val hasUShortNullable = hasUShortNullableToNative || hasUShortNullableToKotlin
-    val hasUShortArrayCastToNative = toNativeTypes.any(ResolvedIdlType::isUShortArray)
-    val hasUShortArrayCastToKotlin = toKotlinTypes.any(ResolvedIdlType::isUShortArray)
-    val hasUShortArrayCast = hasUShortArrayCastToNative || hasUShortArrayCastToKotlin
+    val hasUShortArrayToNative = toNativeTypes.any { it.isUShortArray(parameterIsNullable = false) }
+    val hasUShortArrayToKotlin = toKotlinTypes.any { it.isUShortArray(parameterIsNullable = false) }
+    val hasUShortArray = hasUShortArrayToNative || hasUShortArrayToKotlin
+    val hasUShortNullableArrayToNative = toNativeTypes.any { it.isUShortArray(parameterIsNullable = true) }
+    val hasUShortNullableArrayToKotlin = toKotlinTypes.any { it.isUShortArray(parameterIsNullable = true) }
+    val hasUShortNullableArray = hasUShortNullableArrayToNative || hasUShortNullableArrayToKotlin
 
-    val hasIntNullableToNative = toNativeTypes.any { it.isInt() && it.isNullable }
-    val hasIntNullableToKotlin = toKotlinTypes.any { it.isInt() && it.isNullable }
+    val hasIntNullableToNative = toNativeTypes.any { it.isInt(isNullable = true) }
+    val hasIntNullableToKotlin = toKotlinTypes.any { it.isInt(isNullable = true) }
     val hasIntNullable = hasIntNullableToNative || hasIntNullableToKotlin
-    val hasIntArrayCastToNative = toNativeTypes.any(ResolvedIdlType::isIntArray)
-    val hasIntArrayCastToKotlin = toKotlinTypes.any(ResolvedIdlType::isIntArray)
-    val hasIntArrayCast = hasIntArrayCastToNative || hasIntArrayCastToKotlin
+    val hasIntArrayToNative = toNativeTypes.any { it.isIntArray(parameterIsNullable = false) }
+    val hasIntArrayToKotlin = toKotlinTypes.any { it.isIntArray(parameterIsNullable = false) }
+    val hasIntArray = hasIntArrayToNative || hasIntArrayToKotlin
+    val hasIntNullableArrayToNative = toNativeTypes.any { it.isIntArray(parameterIsNullable = true) }
+    val hasIntNullableArrayToKotlin = toKotlinTypes.any { it.isIntArray(parameterIsNullable = true) }
+    val hasIntNullableArray = hasIntNullableArrayToNative || hasIntNullableArrayToKotlin
 
-    val hasUIntNullableToNative = toNativeTypes.any { it.isUInt() && it.isNullable }
-    val hasUIntNullableToKotlin = toKotlinTypes.any { it.isUInt() && it.isNullable }
+    val hasUIntNullableToNative = toNativeTypes.any { it.isUInt(isNullable = true) }
+    val hasUIntNullableToKotlin = toKotlinTypes.any { it.isUInt(isNullable = true) }
     val hasUIntNullable = hasUIntNullableToNative || hasUIntNullableToKotlin
-    val hasUIntArrayCastToNative = toNativeTypes.any(ResolvedIdlType::isUIntArray)
-    val hasUIntArrayCastToKotlin = toKotlinTypes.any(ResolvedIdlType::isUIntArray)
-    val hasUIntArrayCast = hasUIntArrayCastToNative || hasUIntArrayCastToKotlin
+    val hasUIntArrayToNative = toNativeTypes.any { it.isUIntArray(parameterIsNullable = false) }
+    val hasUIntArrayToKotlin = toKotlinTypes.any { it.isUIntArray(parameterIsNullable = false) }
+    val hasUIntArray = hasUIntArrayToNative || hasUIntArrayToKotlin
+    val hasUIntNullableArrayToNative = toNativeTypes.any { it.isUIntArray(parameterIsNullable = true) }
+    val hasUIntNullableArrayToKotlin = toKotlinTypes.any { it.isUIntArray(parameterIsNullable = true) }
+    val hasUIntNullableArray = hasUIntNullableArrayToNative || hasUIntNullableArrayToKotlin
 
-    val hasLongNullableToNative = toNativeTypes.any { it.isLong() && it.isNullable }
-    val hasLongNullableToKotlin = toKotlinTypes.any { it.isLong() && it.isNullable }
+    val hasLongNullableToNative = toNativeTypes.any { it.isLong(isNullable = true) }
+    val hasLongNullableToKotlin = toKotlinTypes.any { it.isLong(isNullable = true) }
     val hasLongNullable = hasLongNullableToNative || hasLongNullableToKotlin
-    val hasLongArrayCastToNative = toNativeTypes.any(ResolvedIdlType::isLongArray)
-    val hasLongArrayCastToKotlin = toKotlinTypes.any(ResolvedIdlType::isLongArray)
-    val hasLongArrayCast = hasLongArrayCastToNative || hasLongArrayCastToKotlin
+    val hasLongArrayToNative = toNativeTypes.any { it.isLongArray(parameterIsNullable = false) }
+    val hasLongArrayToKotlin = toKotlinTypes.any { it.isLongArray(parameterIsNullable = false) }
+    val hasLongArray = hasLongArrayToNative || hasLongArrayToKotlin
+    val hasLongNullableArrayToNative = toNativeTypes.any { it.isLongArray(parameterIsNullable = true) }
+    val hasLongNullableArrayToKotlin = toKotlinTypes.any { it.isLongArray(parameterIsNullable = true) }
+    val hasLongNullableArray = hasLongNullableArrayToNative || hasLongNullableArrayToKotlin
 
-    val hasULongNullableToNative = toNativeTypes.any { it.isULong() && it.isNullable }
-    val hasULongNullableToKotlin = toKotlinTypes.any { it.isULong() && it.isNullable }
+    val hasULongNullableToNative = toNativeTypes.any { it.isULong(isNullable = true) }
+    val hasULongNullableToKotlin = toKotlinTypes.any { it.isULong(isNullable = true) }
     val hasULongNullable = hasULongNullableToNative || hasULongNullableToKotlin
-    val hasULongArrayCastToNative = toNativeTypes.any(ResolvedIdlType::isULongArray)
-    val hasULongArrayCastToKotlin = toKotlinTypes.any(ResolvedIdlType::isULongArray)
-    val hasULongArrayCast = hasULongArrayCastToNative || hasULongArrayCastToKotlin
+    val hasULongArrayToNative = toNativeTypes.any { it.isULongArray(parameterIsNullable = false) }
+    val hasULongArrayToKotlin = toKotlinTypes.any { it.isULongArray(parameterIsNullable = false) }
+    val hasULongArray = hasULongArrayToNative || hasULongArrayToKotlin
+    val hasULongNullableArrayToNative = toNativeTypes.any { it.isULongArray(parameterIsNullable = true) }
+    val hasULongNullableArrayToKotlin = toKotlinTypes.any { it.isULongArray(parameterIsNullable = true) }
+    val hasULongNullableArray = hasULongNullableArrayToNative || hasULongNullableArrayToKotlin
 
-    val hasFloatNullableToNative = toNativeTypes.any { it.isFloat() && it.isNullable }
-    val hasFloatNullableToKotlin = toKotlinTypes.any { it.isFloat() && it.isNullable }
+    val hasFloatNullableToNative = toNativeTypes.any { it.isFloat(isNullable = true) }
+    val hasFloatNullableToKotlin = toKotlinTypes.any { it.isFloat(isNullable = true) }
     val hasFloatNullable = hasFloatNullableToNative || hasFloatNullableToKotlin
-    val hasFloatArrayCastToNative = toNativeTypes.any(ResolvedIdlType::isFloatArray)
-    val hasFloatArrayCastToKotlin = toKotlinTypes.any(ResolvedIdlType::isFloatArray)
-    val hasFloatArrayCast = hasFloatArrayCastToNative || hasFloatArrayCastToKotlin
+    val hasFloatArrayToNative = toNativeTypes.any { it.isFloatArray(parameterIsNullable = false) }
+    val hasFloatArrayToKotlin = toKotlinTypes.any { it.isFloatArray(parameterIsNullable = false) }
+    val hasFloatArray = hasFloatArrayToNative || hasFloatArrayToKotlin
+    val hasFloatNullableArrayToNative = toNativeTypes.any { it.isFloatArray(parameterIsNullable = true) }
+    val hasFloatNullableArrayToKotlin = toKotlinTypes.any { it.isFloatArray(parameterIsNullable = true) }
+    val hasFloatNullableArray = hasFloatNullableArrayToNative || hasFloatNullableArrayToKotlin
 
-    val hasDoubleNullableToNative = toNativeTypes.any { it.isDouble() && it.isNullable }
-    val hasDoubleNullableToKotlin = toKotlinTypes.any { it.isDouble() && it.isNullable }
+    val hasDoubleNullableToNative = toNativeTypes.any { it.isDouble(isNullable = true) }
+    val hasDoubleNullableToKotlin = toKotlinTypes.any { it.isDouble(isNullable = true) }
     val hasDoubleNullable = hasDoubleNullableToNative || hasDoubleNullableToKotlin
-    val hasDoubleArrayCastToNative = toNativeTypes.any(ResolvedIdlType::isDoubleArray)
-    val hasDoubleArrayCastToKotlin = toKotlinTypes.any(ResolvedIdlType::isDoubleArray)
-    val hasDoubleArrayCast = hasDoubleArrayCastToNative || hasDoubleArrayCastToKotlin
+    val hasDoubleArrayToNative = toNativeTypes.any { it.isDoubleArray(parameterIsNullable = false) }
+    val hasDoubleArrayToKotlin = toKotlinTypes.any { it.isDoubleArray(parameterIsNullable = false) }
+    val hasDoubleArray = hasDoubleArrayToNative || hasDoubleArrayToKotlin
+    val hasDoubleNullableArrayToNative = toNativeTypes.any { it.isDoubleArray(parameterIsNullable = true) }
+    val hasDoubleNullableArrayToKotlin = toKotlinTypes.any { it.isDoubleArray(parameterIsNullable = true) }
+    val hasDoubleNullableArray = hasDoubleNullableArrayToNative || hasDoubleNullableArrayToKotlin
 
-    val hasEnumNullableToNative = toNativeTypes.any { it.isEnum() && it.isNullable }
-    val hasEnumNullableToKotlin = toKotlinTypes.any { it.isEnum() && it.isNullable }
+    val hasEnumNullableToNative = toNativeTypes.any { it.isEnum(isNullable = true) }
+    val hasEnumNullableToKotlin = toKotlinTypes.any { it.isEnum(isNullable = true) }
     val hasEnumNullable = hasEnumNullableToNative || hasEnumNullableToKotlin
-    val hasEnumArrayCastToNative = toNativeTypes.any(ResolvedIdlType::isEnumArray)
-    val hasEnumArrayCastToKotlin = toKotlinTypes.any(ResolvedIdlType::isEnumArray)
-    val hasEnumArrayCast = hasEnumArrayCastToNative || hasEnumArrayCastToKotlin
+    val hasEnumArrayToNative = toNativeTypes.any { it.isEnumArray(parameterIsNullable = false) }
+    val hasEnumArrayToKotlin = toKotlinTypes.any { it.isEnumArray(parameterIsNullable = false) }
+    val hasEnumArray = hasEnumArrayToNative || hasEnumArrayToKotlin
+    val hasEnumNullableArrayToNative = toNativeTypes.any { it.isEnumArray(parameterIsNullable = true) }
+    val hasEnumNullableArrayToKotlin = toKotlinTypes.any { it.isEnumArray(parameterIsNullable = true) }
+    val hasEnumNullableArray = hasEnumNullableArrayToNative || hasEnumNullableArrayToKotlin
 
-    val hasStringArrayCastToNative = toNativeTypes.any(ResolvedIdlType::isStringArray)
-    val hasStringArrayCastToKotlin = toKotlinTypes.any(ResolvedIdlType::isStringArray)
-    val hasStringArrayCast = hasStringArrayCastToNative || hasStringArrayCastToKotlin
+    val hasStringArrayToNative = toNativeTypes.any(ResolvedIdlType::isStringArray)
+    val hasStringArrayToKotlin = toKotlinTypes.any(ResolvedIdlType::isStringArray)
+    val hasStringArray = hasStringArrayToNative || hasStringArrayToKotlin
 
-    val usedObjectArrayCastToKotlin = toKotlinTypes
+    val usedObjectArrayToKotlin = toKotlinTypes
         .filter { it.isNonPrimitiveArray() && !it.isEnumArray() }
         .map { it.arrayTypeOrNull()!!.declaration }
-    val usedObjectArrayCastToNative = toNativeTypes
+    val usedObjectArrayToNative = toNativeTypes
         .filter { it.isNonPrimitiveArray() && !it.isEnumArray() }
         .map { it.arrayTypeOrNull()!!.declaration }
-    val usedObjectArrayCast = usedObjectArrayCastToKotlin + usedObjectArrayCastToNative
+    val usedObjectArray = usedObjectArrayToKotlin + usedObjectArrayToNative
 
-    val hasObjectArraysCast = usedObjectArrayCast.isNotEmpty()
+    val hasObjectArrays = usedObjectArray.isNotEmpty()
 
-    val hasPrimitiveArrayCast = hasCharArrayCast || hasBooleanArrayCast || hasByteArrayCast ||
-            hasUByteArrayCast || hasShortArrayCast || hasUShortArrayCast || hasIntArrayCast ||
-            hasUIntArrayCast || hasLongArrayCast || hasULongArrayCast || hasFloatArrayCast || hasDoubleArrayCast
+    val hasPrimitiveArray = hasCharArray || hasBooleanArray || hasByteArray ||
+            hasUByteArray || hasShortArray || hasUShortArray || hasIntArray ||
+            hasUIntArray || hasLongArray || hasULongArray || hasFloatArray || hasDoubleArray
 
-    val hasNullablePrimitivesCast = hasCharNullable || hasBooleanNullable || hasByteNullable ||
+    val hasPrimitiveNullableArray = hasCharNullableArray || hasBooleanNullableArray || hasByteNullableArray ||
+            hasUByteNullableArray || hasShortNullableArray || hasUShortNullableArray || hasIntNullableArray ||
+            hasUIntNullableArray || hasLongNullableArray || hasULongNullableArray || hasFloatNullableArray || hasDoubleNullableArray
+
+    val hasPrimitiveNullable = hasCharNullable || hasBooleanNullable || hasByteNullable ||
             hasUByteNullable || hasShortNullable || hasUShortNullable || hasIntNullable ||
             hasUIntNullable || hasLongNullable || hasULongNullable || hasFloatNullable || hasDoubleNullable
 
-    var hasCriticalStringCast = allOperations.any {
+    var hasCriticalString = allOperations.any {
         it.isCritical() && it.args.any { arg -> arg.type.isString() && !arg.type.isNullable }
     }
-    var hasCriticalStringOptCast = allOperations.any {
+    var hasCriticalStringOpt = allOperations.any {
         it.isCritical() && it.args.any { arg -> arg.type.isString() && arg.type.isNullable }
     }
-    var hasCriticalArrayCast = allOperations.any {
+    var hasCriticalArray = allOperations.any {
         it.isCritical() && it.args.any { arg -> arg.type.isArray() && !arg.type.isNullable }
     }
-    var hasCriticalArrayOptCast = allOperations.any {
+    var hasCriticalArrayOpt = allOperations.any {
         it.isCritical() && it.args.any { arg -> arg.type.isArray() && arg.type.isNullable }
     }
 
-    val needsAllocFunctions = hasPrimitiveArrayCast || hasStringCast || hasEnumArrayCast ||
-            hasNullablePrimitivesCast || hasEnumNullable ||
+    val needsAllocFunctions = hasPrimitiveArray || hasString || hasEnumArray ||
+            hasPrimitiveNullable || hasEnumNullable ||
             criticalOperations.flatMap { it.args }
                 .any { it.type.isReleasable() }
 
@@ -321,28 +364,21 @@ class NativeModuleContext(
                         ANY, MUTABLE_LIST, MAP, PROMISE, USV_STRING, BIG_INT,
                         UNRESTRICTED_FLOAT, UNRESTRICTED_DOUBLE, BYTE_SEQUENCE,
                         OBJECT -> throw UnsupportedOperationException("Unsupported type: ${declaration.kind}")
-
-                        STRING, VOID -> Unit
-                        BOOLEAN, CHAR, INT, UNSIGNED_INT, FLOAT,
-                        DOUBLE, BYTE, UNSIGNED_BYTE, SHORT,
-                        UNSIGNED_SHORT, LONG, UNSIGNED_LONG -> {
-                            if(isInsideArray && type.isNullable)
-                                throw UnsupportedOperationException("Nullable primitives are not supported in arrays: $type")
-                        }
                         LIST -> {
                             if(isInsideArray)
                                 throw UnsupportedOperationException("Nested arrays are not supported: $type")
                             checkType(type.parameters[0], true)
                         }
+                        STRING, VOID,
+                        BOOLEAN, CHAR, INT, UNSIGNED_INT, FLOAT,
+                        DOUBLE, BYTE, UNSIGNED_BYTE, SHORT,
+                        UNSIGNED_SHORT, LONG, UNSIGNED_LONG -> Unit
                     }
                     is ResolvedIdlCallbackFunction -> {
                         if(isInsideArray)
                             throw UnsupportedOperationException("Callback arrays are not supported yet")
                     }
-                    is ResolvedIdlEnum -> {
-                        if(isInsideArray && type.isNullable)
-                            throw UnsupportedOperationException("Nullable enums are not supported in arrays: ${type.declaration.name}")
-                    }
+                    is ResolvedIdlEnum,
                     is ResolvedIdlInterface,
                     is ResolvedIdlDictionary,
                     is ResolvedIdlNamespace,
@@ -463,8 +499,28 @@ private fun createJsMangleMap(context: NativeModuleContext) = buildList {
         add("dealloc")
     }
 
+    // Boxed primitives
+    if(context.hasPrimitiveNullable || context.hasEnumNullable) {
+        listOf(
+            "char" to context.hasCharNullable,
+            "boolean" to context.hasBooleanNullable,
+            "byte" to (context.hasByteNullable || context.hasUByteNullable),
+            "short" to (context.hasShortNullable || context.hasUShortNullable),
+            "int" to (context.hasIntNullable || context.hasUIntNullable || context.hasEnumNullable),
+            "long" to (context.hasLongNullable || context.hasULongNullable),
+            "float" to context.hasFloatNullable,
+            "double" to context.hasDoubleNullable
+        ).forEach { (name, hasCast) ->
+            if(!hasCast) return@forEach
+            addAll(listOf(
+                "${name}_new",
+                "${name}_get"
+            ))
+        }
+    }
+
     // String
-    if(context.hasStringCast) {
+    if(context.hasString) {
         addAll(listOf(
             "string_new", "string_data",
             "string_size", "string_length",
@@ -474,14 +530,14 @@ private fun createJsMangleMap(context: NativeModuleContext) = buildList {
 
     // Primitive arrays
     buildList {
-        if(context.hasCharArrayCast) add("char")
-        if(context.hasBooleanArrayCast) add("boolean")
-        if(context.hasByteArrayCast || context.hasUByteArrayCast || context.hasCriticalStringCast) add("byte")
-        if(context.hasShortArrayCast || context.hasUShortArrayCast) add("short")
-        if(context.hasIntArrayCast || context.hasUIntArrayCast || context.hasEnumArrayCast) add("int")
-        if(context.hasLongArrayCast || context.hasULongArrayCast) add("long")
-        if(context.hasFloatArrayCast) add("float")
-        if(context.hasDoubleArrayCast) add("double")
+        if(context.hasCharArray) add("char")
+        if(context.hasBooleanArray) add("boolean")
+        if(context.hasByteArray || context.hasUByteArray || context.hasCriticalString) add("byte")
+        if(context.hasShortArray || context.hasUShortArray) add("short")
+        if(context.hasIntArray || context.hasUIntArray || context.hasEnumArray) add("int")
+        if(context.hasLongArray || context.hasULongArray) add("long")
+        if(context.hasFloatArray) add("float")
+        if(context.hasDoubleArray) add("double")
     }.flatMapTo(this) {
         val name = "${it}array"
         listOf("${name}_new", "${name}_elements", "${name}_length", "${name}_free")
@@ -491,8 +547,16 @@ private fun createJsMangleMap(context: NativeModuleContext) = buildList {
     buildList {
         (context.castedDictionaries + context.castedInterfaces)
             .mapTo(this) { it.name.camelCase().lowercase() }
-        if(context.hasStringArrayCast)
-            add("string")
+
+        if(context.hasStringArray) add("string")
+        if(context.hasCharNullableArray)    add("char")
+        if(context.hasBooleanNullableArray) add("boolean")
+        if(context.hasByteNullableArray || context.hasUByteNullableArray)    add("byte")
+        if(context.hasShortNullableArray || context.hasUShortNullableArray)  add("short")
+        if(context.hasIntNullableArray || context.hasUIntNullableArray || context.hasEnumNullableArray) add("int")
+        if(context.hasLongNullableArray || context.hasULongNullableArray)    add("long")
+        if(context.hasFloatNullableArray)   add("float")
+        if(context.hasDoubleNullableArray)  add("double")
     }.flatMapTo(this) {
         listOf(
             "array_${it}_new", "array_${it}_length",
@@ -503,9 +567,9 @@ private fun createJsMangleMap(context: NativeModuleContext) = buildList {
     // Dictionaries
     context.castedDictionaries.forEach { dictionary ->
         val name = dictionary.name.camelCase().lowercase()
-        if(dictionary in context.toNativeDeclarationCasts)
+        if(dictionary in context.toNativeDeclaration)
             add("${name}_new")
-        if(dictionary in context.toKotlinDeclarationCasts) {
+        if(dictionary in context.toKotlinDeclaration) {
             add("${name}_free")
             context.allFields[dictionary]!!.mapTo(this) {
                 "${name}__${it.name.camelCase().lowercase()}"

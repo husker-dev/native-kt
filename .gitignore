@@ -6,6 +6,8 @@ build/
 cmake-build-debug-mingw
 cmake-build-debug
 local.properties
+.venv
+site
 
 ### IntelliJ IDEA ###
 .idea

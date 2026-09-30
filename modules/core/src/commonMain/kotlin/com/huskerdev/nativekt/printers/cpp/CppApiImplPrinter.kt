@@ -18,6 +18,7 @@ class CppApiImplPrinter(
         target.writeSync(buildString {
             printHeader()
             printStdLib()
+            printBoxedPrimitives()
             printPreDefs()
             printCallbacks()
             printStructs()
@@ -52,16 +53,16 @@ class CppApiImplPrinter(
     }
 
     private fun StringBuilder.printStdLib() {
-        if(!context.hasInterfaceCast &&
-            !context.hasCallbackCast &&
-            !context.hasStringCast &&
-            !context.hasPrimitiveArrayCast &&
-            !context.hasObjectArraysCast
+        if(!context.hasInterface &&
+            !context.hasCallback &&
+            !context.hasString &&
+            !context.hasPrimitiveArray &&
+            !context.hasObjectArrays
         ) return
 
         printLabel("Types")
 
-        if(context.hasInterfaceCast || context.hasCallbackCast) appendLine("""
+        if(context.hasInterface || context.hasCallback) appendLine("""
             
             template <typename T>
             std::shared_ptr<T> arc_unwrap(std::shared_ptr<T>* _Nonnull arg) {
@@ -75,7 +76,7 @@ class CppApiImplPrinter(
                 return new std::shared_ptr(value); 
             }
         """.trimIndent())
-        if(context.hasNullablePrimitivesCast || context.hasEnumNullable) appendLine("""
+        if(context.hasPrimitiveNullable || context.hasEnumNullable) appendLine("""
             
             template <typename T>
             T primitive_unwrap(T* _Nonnull arg) {
@@ -93,10 +94,10 @@ class CppApiImplPrinter(
         """.trimIndent())
 
         // String
-        if(context.hasStringCast) {
+        if(context.hasString) {
             append("\n// String\n")
 
-            if(context.hasStringCastToNative) appendLine("""
+            if(context.hasStringToNative) appendLine("""
                 
                 KString kstring_unwrap(KString* _Nonnull arg) {
                     KString result = std::move(*arg);
@@ -104,7 +105,7 @@ class CppApiImplPrinter(
                     return result;
                 }
             """.trimIndent())
-            if(context.hasStringCastToKotlin) appendLine("""
+            if(context.hasStringToKotlin) appendLine("""
                 
                 KString* _Nonnull kstring_wrap(KString value) { 
                     return new KString(std::move(value)); 
@@ -189,13 +190,13 @@ class CppApiImplPrinter(
                 }
             """.trimIndent())
 
-            if(context.hasStringCastToNative) appendLine("""
+            if(context.hasStringToNative) appendLine("""
                 
                 LIB_EXPORT void* _Nonnull ${context.mangle("string_new")}(char* _Nonnull data, size_t size, bool make_copy) {
                     return new KString(data, size, make_copy);
                 }
             """.trimIndent())
-            if(context.hasStringCastToKotlin) appendLine("""
+            if(context.hasStringToKotlin) appendLine("""
                 
                 LIB_EXPORT const char* _Nonnull ${context.mangle("string_data")}(void* _Nonnull self) {
                     return static_cast<KString*>(self)->get_data();
@@ -214,7 +215,7 @@ class CppApiImplPrinter(
         }
 
         // Primitive arrays
-        if(context.hasPrimitiveArrayCast) {
+        if(context.hasPrimitiveArray) {
             appendLine("""
                 
                 // Primitive arrays
@@ -234,14 +235,14 @@ class CppApiImplPrinter(
                 }
             """.trimIndent())
             listOf(
-                Triple("Char", "uint16_t", context.hasCharArrayCast),
-                Triple("Boolean", "bool", context.hasBooleanArrayCast),
-                Triple("Byte", "int8_t", context.hasByteArrayCast || context.hasUByteArrayCast),
-                Triple("Short", "int16_t", context.hasShortArrayCast || context.hasUShortArrayCast),
-                Triple("Int", "int32_t", context.hasIntArrayCast || context.hasEnumsCast || context.hasUIntArrayCast),
-                Triple("Long", "int64_t", context.hasLongArrayCast || context.hasULongArrayCast),
-                Triple("Float", "float", context.hasFloatArrayCast),
-                Triple("Double", "double", context.hasDoubleArrayCast)
+                Triple("Char", "uint16_t", context.hasCharArray),
+                Triple("Boolean", "bool", context.hasBooleanArray),
+                Triple("Byte", "int8_t", context.hasByteArray || context.hasUByteArray),
+                Triple("Short", "int16_t", context.hasShortArray || context.hasUShortArray),
+                Triple("Int", "int32_t", context.hasIntArray || context.hasEnums || context.hasUIntArray),
+                Triple("Long", "int64_t", context.hasLongArray || context.hasULongArray),
+                Triple("Float", "float", context.hasFloatArray),
+                Triple("Double", "double", context.hasDoubleArray)
             ).filter { it.third }
                 .forEach {
                     val name = "${it.first.lowercase()}array"
@@ -259,7 +260,7 @@ class CppApiImplPrinter(
         }
 
         // Typed arrays
-        if(context.hasObjectArraysCast) {
+        if(context.hasObjectArrays || context.hasPrimitiveNullableArray || context.hasEnumNullableArray) {
             appendLine("""
     
                 // Typed array macros
@@ -301,13 +302,21 @@ class CppApiImplPrinter(
             """.trimIndent())
             buildList {
                 context.dictionaries
-                    .filter { it in context.usedObjectArrayCast }
+                    .filter { it in context.usedObjectArray }
                     .mapTo(this) { it.cppName to it.cname.lowercase() }
                 context.castedInterfaces
-                    .filter { it in context.usedObjectArrayCast }
+                    .filter { it in context.usedObjectArray }
                     .mapTo(this) { "std::shared_ptr<${it.cppName}>" to it.cname.lowercase() }
-                if(context.hasStringArrayCast)
-                    add("KString" to "string")
+
+                if(context.hasStringArray) add("KString" to "string")
+                if(context.hasCharNullableArray)    add("uint16_t" to "char")
+                if(context.hasBooleanNullableArray) add("int8_t" to "boolean")
+                if(context.hasByteNullableArray || context.hasUByteNullableArray)   add("int8_t" to "byte")
+                if(context.hasShortNullableArray || context.hasUShortNullableArray) add("int16_t" to "short")
+                if(context.hasIntNullableArray || context.hasUIntNullableArray || context.hasEnumNullableArray) add("int32_t" to "int")
+                if(context.hasLongNullableArray || context.hasULongNullableArray)   add("int64_t" to "long")
+                if(context.hasFloatNullableArray)   add("float" to "float")
+                if(context.hasDoubleNullableArray)  add("double" to "double")
             }.forEach {
                 appendLine("""
         
@@ -324,8 +333,48 @@ class CppApiImplPrinter(
         append("\n")
     }
 
+    private fun StringBuilder.printBoxedPrimitives() {
+        printLabel("Boxed primitives")
+
+        appendLine("""
+            
+            #define IMPL_BOXED_PRIMITIVE(T, FUNC_NEW, FUNC_GET, FUNC_FREE) \
+            LIB_EXPORT T* FUNC_NEW(T value) {            \
+                T* result = (T*) malloc(sizeof(T));      \
+                result[0] = value;                       \
+                return result;                           \
+            }                                            \
+            LIB_EXPORT T FUNC_GET(T* self, bool _free) { \
+                T value = self[0];                       \
+                if(_free) free((void*) self);            \
+                return value;                            \
+            }
+        """.trimIndent())
+
+        listOf(
+            Triple("uint16_t", "char", context.hasCharNullable),
+            Triple("int8_t", "boolean", context.hasBooleanNullable),
+            Triple("int8_t", "byte", context.hasByteNullable || context.hasUByteNullable),
+            Triple("int16_t", "short", context.hasShortNullable || context.hasUShortNullable),
+            Triple("int32_t", "int", context.hasIntNullable || context.hasUIntNullable || context.hasEnumNullable),
+            Triple("int64_t", "long", context.hasLongNullable || context.hasULongNullable),
+            Triple("float", "float", context.hasFloatNullable),
+            Triple("double", "double", context.hasDoubleNullable)
+        ).forEach { (type, name, hasCast) ->
+            if(!hasCast) return@forEach
+            appendLine("""
+                IMPL_BOXED_PRIMITIVE(
+                    $type,
+                    ${context.mangle("${name}_new")},
+                    ${context.mangle("${name}_get")},
+                    ${context.mangle("${name}_free")}
+                )
+            """.trimIndent())
+        }
+    }
+
     private fun StringBuilder.printPreDefs() {
-        if(!context.hasDictionaryCast)
+        if(!context.hasDictionary)
             return
         printLabel("Pre-definitions")
 
@@ -333,9 +382,9 @@ class CppApiImplPrinter(
             val name = dictionary.cppName
             val lower = dictionary.name.camelCase().lowercase()
 
-            if(dictionary in context.toNativeDeclarationCasts)
+            if(dictionary in context.toNativeDeclaration)
                 append("\n$name ${lower}_unwrap($name* _Nonnull arg);")
-            if(dictionary in context.toKotlinDeclarationCasts)
+            if(dictionary in context.toKotlinDeclaration)
                 append("\n$name* _Nonnull ${lower}_wrap($name value);")
         }
         append("\n")
@@ -473,7 +522,7 @@ class CppApiImplPrinter(
             """.trimIndent())
 
             // Unwrap
-            if(dictionary in context.toNativeDeclarationCasts) appendLine("""
+            if(dictionary in context.toNativeDeclaration) appendLine("""
                 
                 $name ${dictionary.name.camelCase().lowercase()}_unwrap($name* _Nonnull arg) {
                     $name result = std::move(*arg);
@@ -483,7 +532,7 @@ class CppApiImplPrinter(
             """.trimIndent())
 
             // Wrap
-            if(dictionary in context.toKotlinDeclarationCasts) appendLine("""
+            if(dictionary in context.toKotlinDeclaration) appendLine("""
                 
                 $name* _Nonnull ${dictionary.name.camelCase().lowercase()}_wrap($name value) {
                     return new $name(std::move(value));
@@ -491,13 +540,13 @@ class CppApiImplPrinter(
             """.trimIndent())
 
             // Default
-            if(dictionary in context.toNativeDeclarationCasts) appendLine("""
+            if(dictionary in context.toNativeDeclaration) appendLine("""
                 
                 LIB_EXPORT void* ${dictionary.subCFunc(context, "new")}($allNativeArgs) {
                     return new $name($castedArgs);
                 }
             """.trimIndent())
-            if(dictionary in context.toKotlinDeclarationCasts) {
+            if(dictionary in context.toKotlinDeclaration) {
                 appendLine("""
                     
                     LIB_EXPORT void ${dictionary.subCFunc(context, "free")}(void* self) {

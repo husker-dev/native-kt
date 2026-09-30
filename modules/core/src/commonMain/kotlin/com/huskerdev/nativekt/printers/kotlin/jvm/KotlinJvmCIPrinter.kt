@@ -137,20 +137,20 @@ class KotlinJvmCIPrinter(
     }
 
     private fun StringBuilder.printInterfaceCasts() {
-        if(!context.hasInterfaceCast)
+        if(!context.hasInterface)
             return
 
         context.castedInterfaces.forEach { inter ->
             val name = inter.kname
 
-            if(inter in context.toNativeDeclarationCasts) appendLine("""
+            if(inter in context.toNativeDeclaration) appendLine("""
                 
                 private fun toNative$name(self: $name?): Long {
                     if(self == null) return 0
                     return __interface${name}Clone(self.rcPtr)
                 }
             """.replaceIndent(indent1))
-            if(inter in context.toKotlinDeclarationCasts) appendLine("""
+            if(inter in context.toKotlinDeclaration) appendLine("""
                 
                 private fun toKotlin$name(ptr: Long): $name? {
                     if(ptr == 0L) return null

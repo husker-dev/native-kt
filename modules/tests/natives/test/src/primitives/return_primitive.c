@@ -7,7 +7,7 @@ uint16_t return_char(void) {
     return 'a';
 }
 
-uint16_t* return_char_n(void) {
+BoxedChar* return_char_n(void) {
     return NULL;
 }
 
@@ -15,17 +15,15 @@ bool return_boolean(void) {
     return true;
 }
 
-bool* return_boolean_n(void) {
-    bool* result = (bool*) malloc(sizeof(bool));
-    *result = true;
-    return result;
+BoxedBoolean* return_boolean_n(void) {
+    return boxed_boolean_new(true);
 }
 
 int8_t return_byte(void) {
     return 99;
 }
 
-int8_t* return_byte_n(void) {
+BoxedByte* return_byte_n(void) {
     return NULL;
 }
 
@@ -33,17 +31,15 @@ uint8_t return_ubyte(void) {
     return 255u;
 }
 
-uint8_t* return_ubyte_n(void) {
-    uint8_t* result = (uint8_t*) malloc(sizeof(uint8_t));
-    *result = 255u;
-    return result;
+BoxedByte* return_ubyte_n(void) {
+    return boxed_byte_new(255u);
 }
 
 int16_t return_short(void) {
     return 99;
 }
 
-int16_t* return_short_n(void) {
+BoxedShort* return_short_n(void) {
     return NULL;
 }
 
@@ -51,17 +47,15 @@ uint16_t return_ushort(void) {
     return 65535u;
 }
 
-uint16_t* return_ushort_n(void) {
-    uint16_t* result = (uint16_t*) malloc(sizeof(uint16_t));
-    *result = 65535u;
-    return result;
+BoxedShort* return_ushort_n(void) {
+    return boxed_short_new(65535u);
 }
 
 int32_t return_int(void) {
     return 99;
 }
 
-int32_t* return_int_n(void) {
+BoxedInt* return_int_n(void) {
     return NULL;
 }
 
@@ -69,17 +63,15 @@ uint32_t return_uint(void) {
     return 4294967295u;
 }
 
-uint32_t* return_uint_n(void) {
-    uint32_t* result = (uint32_t*) malloc(sizeof(uint32_t));
-    *result = 4294967295u;
-    return result;
+BoxedInt* return_uint_n(void) {
+    return boxed_int_new(4294967295u);
 }
 
 int64_t return_long(void) {
     return 9223372036854775805;
 }
 
-int64_t* return_long_n(void) {
+BoxedLong* return_long_n(void) {
     return NULL;
 }
 
@@ -87,17 +79,15 @@ uint64_t return_ulong(void) {
     return 18446744073709551615u;
 }
 
-uint64_t* return_ulong_n(void) {
-    uint64_t* result = (uint64_t*) malloc(sizeof(uint64_t));
-    *result = 18446744073709551615u;
-    return result;
+BoxedLong* return_ulong_n(void) {
+    return boxed_long_new(18446744073709551615u);
 }
 
 float return_float(void) {
     return 99;
 }
 
-float* return_float_n(void) {
+BoxedFloat* return_float_n(void) {
     return NULL;
 }
 
@@ -105,10 +95,8 @@ double return_double(void) {
     return 99.0;
 }
 
-double* return_double_n(void) {
-    double* result = (double*) malloc(sizeof(double));
-    *result = 99.0;
-    return result;
+BoxedDouble* return_double_n(void) {
+    return boxed_double_new(99.0);
 }
 
 KString* return_string(void) {
@@ -127,10 +115,8 @@ MyEnum return_enum(void) {
     return MyEnum_CASE2;
 }
 
-MyEnum* return_enum_n(void) {
-    MyEnum* result = (MyEnum*) malloc(sizeof(MyEnum));
-    *result = MyEnum_CASE2;
-    return result;
+BoxedInt* return_enum_n(void) {
+    return boxed_int_new(MyEnum_CASE2);
 }
 
 MyDictionary* return_dictionary(void) {

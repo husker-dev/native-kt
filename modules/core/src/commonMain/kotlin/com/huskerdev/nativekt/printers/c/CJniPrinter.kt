@@ -42,10 +42,6 @@ class CJniPrinter(
             #include "api.h"
             
             static JavaVM *jvm;
-            
-            static jclass boxed_primitives_class[8];
-            static jmethodID boxed_primitives_create[8];
-            static jmethodID boxed_primitives_get[8];
         """.trimIndent())
 
         append("\nstatic void** JNI_functions(bool useCritical);\n")
@@ -54,18 +50,44 @@ class CJniPrinter(
         val methods = arrayListOf<String>()
         val objects = arrayListOf<String>()
 
+        // Boxed primitives
+        listOf(
+            Triple("char", context.hasCharNullableToNative, context.hasCharNullableToKotlin),
+            Triple("boolean", context.hasBooleanNullableToNative, context.hasBooleanNullableToKotlin),
+            Triple("byte",
+                context.hasByteNullableToNative || context.hasUByteNullableToNative,
+                context.hasByteNullableToKotlin || context.hasUByteNullableToKotlin),
+            Triple("short",
+                context.hasShortNullableToNative || context.hasUShortNullableToNative,
+                context.hasShortNullableToKotlin || context.hasUShortNullableToKotlin),
+            Triple("int",
+                context.hasIntNullableToNative || context.hasUIntNullableToNative || context.hasEnumNullableToNative,
+                context.hasIntNullableToKotlin || context.hasUIntNullableToKotlin || context.hasEnumNullableToKotlin),
+            Triple("long",
+                context.hasLongNullableToNative || context.hasULongNullableToNative,
+                context.hasLongNullableToKotlin || context.hasULongNullableToKotlin),
+            Triple("float", context.hasFloatNullableToNative, context.hasFloatNullableToKotlin),
+            Triple("double", context.hasDoubleNullableToNative, context.hasDoubleNullableToKotlin)
+        ).forEach { (name, hasToNativeCast, hasToKotlinCast) ->
+            if(!hasToNativeCast && !hasToKotlinCast) return@forEach
+
+            classes += "class_${name}"
+            if(hasToNativeCast) methods += "${name}_get"
+            if(hasToKotlinCast) methods += "${name}_new"
+        }
+
         // String
-        if (context.hasStringCast)
+        if (context.hasString)
             classes += "class_string"
 
         // Dictionaries
-        if(context.hasDictionaryCast) {
+        if(context.hasDictionary) {
             context.castedDictionaries.forEach { dictionary ->
-                if (dictionary in context.toKotlinDeclarationCasts) {
+                if (dictionary in context.toKotlinDeclaration) {
                     classes += dictionary.className
                     methods += dictionary.constructorMethod
                 }
-                if (dictionary in context.toNativeDeclarationCasts) {
+                if (dictionary in context.toNativeDeclaration) {
                     context.allFields[dictionary]!!.forEach { field ->
                         methods += field.dictionaryFieldMethod(dictionary)
                     }
@@ -74,19 +96,19 @@ class CJniPrinter(
         }
 
         // Interfaces
-        if(context.hasInterfaceCast) {
-            if (context.hasInterfaceCastToNative)
+        if(context.hasInterface) {
+            if (context.hasInterfaceToNative)
                 methods += "interface_ptr"
             context.castedInterfaces.forEach { inter ->
-                if (inter in context.toKotlinDeclarationCasts)
+                if (inter in context.toKotlinDeclaration)
                     classes += inter.className
-                if (inter in context.toNativeDeclarationCasts)
+                if (inter in context.toNativeDeclaration)
                     methods += inter.constructorMethod
             }
         }
 
         // Callbacks
-        if (context.hasCallbackCast) {
+        if (context.hasCallback) {
             methods += "callback_equals"
             methods += "callback_hash_code"
             context.castedCallbacks.forEach { callback ->
@@ -217,39 +239,46 @@ class CJniPrinter(
                 
         """.trimIndent())
 
-        // Primitives
-        if(context.hasNullablePrimitivesCast || context.hasEnumNullable) {
+        if(context.hasPrimitiveNullable || context.hasEnumNullable) {
             appendLine("\t// Get boxed primitives")
 
             listOf(
-                Triple("Character", "C", context.hasCharNullable),
-                Triple("Boolean", "Z", context.hasBooleanNullable),
-                Triple("Byte", "B", context.hasByteNullable || context.hasUByteNullable),
-                Triple("Short", "S", context.hasShortNullable || context.hasUShortNullable),
-                Triple("Integer", "I", context.hasIntNullable || context.hasUIntNullable || context.hasEnumNullable),
-                Triple("Long", "J", context.hasLongNullable || context.hasULongNullable),
-                Triple("Float", "F", context.hasFloatNullable),
-                Triple("Double", "D", context.hasDoubleNullable),
-            ).forEachIndexed { i, (name, d, hasCast) ->
-                if (!hasCast) return@forEachIndexed
+                Triple("Character" to "C", context.hasCharNullableToNative, context.hasCharNullableToKotlin),
+                Triple("Boolean" to "Z", context.hasBooleanNullableToNative, context.hasBooleanNullableToKotlin),
+                Triple("Byte" to "B",
+                    context.hasByteNullableToNative || context.hasUByteNullableToNative,
+                    context.hasByteNullableToKotlin || context.hasUByteNullableToKotlin),
+                Triple("Short" to "S",
+                    context.hasShortNullableToNative || context.hasUShortNullableToNative,
+                    context.hasShortNullableToKotlin || context.hasUShortNullableToKotlin),
+                Triple("Integer" to "I",
+                    context.hasIntNullableToNative || context.hasUIntNullableToNative || context.hasEnumNullableToNative,
+                    context.hasIntNullableToKotlin || context.hasUIntNullableToKotlin || context.hasEnumNullableToKotlin),
+                Triple("Long" to "J",
+                    context.hasLongNullableToNative || context.hasULongNullableToNative,
+                    context.hasLongNullableToKotlin || context.hasULongNullableToKotlin),
+                Triple("Float" to "F", context.hasFloatNullableToNative, context.hasFloatNullableToKotlin),
+                Triple("Double" to "D", context.hasDoubleNullableToNative, context.hasDoubleNullableToKotlin)
+            ).forEach { (names, hasToNativeCast, hasToKotlinCast) ->
+                if(!hasToNativeCast && !hasToKotlinCast) return@forEach
+                val (name, d) = names
                 val lowerName = when (name) {
                     "Character" -> "char"
                     "Integer" -> "int"
                     else -> name.lowercase()
                 }
 
-                val classField = "boxed_primitives_class[$i]"
-                appendLine("""
-                    
-                    $classField = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "java/lang/$name"));
-                    boxed_primitives_create[$i] = (*env)->GetStaticMethodID(env, $classField, "valueOf", "($d)Ljava/lang/$name;");
-                    boxed_primitives_get[$i] = (*env)->GetMethodID(env, $classField, "${lowerName}Value", "()$d");
-                """.replaceIndent("\t"))
+                append("\n\tclass_$lowerName = (*env)->NewGlobalRef(env, (*env)->FindClass(env, \"java/lang/$name\"));")
+                if(hasToNativeCast)
+                    append("\n\t${lowerName}_new = (*env)->GetStaticMethodID(env, class_$lowerName, \"valueOf\", \"($d)Ljava/lang/$name;\");")
+                if(hasToKotlinCast)
+                    append("\n\t${lowerName}_get = (*env)->GetMethodID(env, class_$lowerName, \"${lowerName}Value\", \"()$d\");")
             }
+            append("\n")
         }
 
         // String
-        if (context.hasStringCast) {
+        if (context.hasString) {
             appendLine("""
                 
                 // String
@@ -258,14 +287,14 @@ class CJniPrinter(
         }
 
         // Dictionaries
-        if (context.hasDictionaryCast) {
+        if (context.hasDictionary) {
             append("\n\t// Dictionaries")
             context.castedDictionaries.forEach { dictionary ->
-                if (dictionary in context.toKotlinDeclarationCasts) {
+                if (dictionary in context.toKotlinDeclaration) {
                     append("\n\t${dictionary.className} = $nextClass;")
                     append("\n\t${dictionary.constructorMethod} = $nextFunc;")
                 }
-                if (dictionary in context.toNativeDeclarationCasts) {
+                if (dictionary in context.toNativeDeclaration) {
                     context.allFields[dictionary]!!.forEach { field ->
                         append("\n\t${field.dictionaryFieldMethod(dictionary)} = $nextFunc;")
                     }
@@ -275,19 +304,19 @@ class CJniPrinter(
         }
 
         // Interfaces
-        if (context.hasInterfaceCast) {
+        if (context.hasInterface) {
             append("\n\t// Interfaces")
-            if (context.hasInterfaceCastToNative)
+            if (context.hasInterfaceToNative)
                 append("\n\tinterface_ptr = $nextFunc;")
             context.castedInterfaces.forEach { inter ->
-                if (inter in context.toKotlinDeclarationCasts) append("\n\t${inter.className} = $nextClass;")
-                if (inter in context.toNativeDeclarationCasts) append("\n\t${inter.constructorMethod} = $nextFunc;")
+                if (inter in context.toKotlinDeclaration) append("\n\t${inter.className} = $nextClass;")
+                if (inter in context.toNativeDeclaration) append("\n\t${inter.constructorMethod} = $nextFunc;")
             }
             append("\n")
         }
 
         // Callbacks
-        if (context.hasCallbackCast) {
+        if (context.hasCallback) {
             append("\n\t// Callbacks")
             append("\n\tcallback_equals = $nextFunc;")
             append("\n\tcallback_hash_code = $nextFunc;")
@@ -320,9 +349,9 @@ class CJniPrinter(
     private fun StringBuilder.printBasicCasts(castsFunctions: ArrayList<String>) {
 
         // String
-        if (context.hasStringCast) {
+        if (context.hasString) {
             printLabel("String")
-            if (context.hasStringCastToNative) {
+            if (context.hasStringToNative) {
                 appendLine("""
                     
                     static void* JNI_to_native_string_sized(JNIEnv *env, jbyteArray obj, jsize size) {
@@ -347,7 +376,7 @@ class CJniPrinter(
                 """.trimIndent())
                 castsFunctions += "static void* JNI_to_native_string(JNIEnv *env, jstring obj);"
             }
-            if (context.hasStringCastToKotlin) {
+            if (context.hasStringToKotlin) {
                 appendLine("""
                     
                     static jbyteArray JNI_to_kotlin_string(JNIEnv *env, void* str, bool free) {
@@ -366,47 +395,43 @@ class CJniPrinter(
             }
         }
 
-        if(context.hasNullablePrimitivesCast || context.hasEnumNullable) {
+        if(context.hasPrimitiveNullable || context.hasEnumNullable) {
             listOf(
-                Triple("Char" to 2, context.hasCharNullableToNative, context.hasCharNullableToKotlin),
-                Triple("Boolean" to 1, context.hasBooleanNullableToNative, context.hasBooleanNullableToKotlin),
-                Triple("Byte" to 1,
+                Triple("Char" to "uint16_t", context.hasCharNullableToNative, context.hasCharNullableToKotlin),
+                Triple("Boolean" to "int8_t", context.hasBooleanNullableToNative, context.hasBooleanNullableToKotlin),
+                Triple("Byte" to "int8_t",
                     context.hasByteNullableToNative || context.hasUByteNullableToNative,
                     context.hasByteNullableToKotlin || context.hasUByteNullableToKotlin),
-                Triple("Short" to 2,
+                Triple("Short" to "int16_t",
                     context.hasShortNullableToNative || context.hasUShortNullableToNative,
                     context.hasShortNullableToKotlin || context.hasUShortNullableToKotlin),
-                Triple("Int" to 4,
+                Triple("Int" to "int32_t",
                     context.hasIntNullableToNative || context.hasUIntNullableToNative || context.hasEnumNullableToNative,
                     context.hasIntNullableToKotlin || context.hasUIntNullableToKotlin || context.hasEnumNullableToKotlin),
-                Triple("Long" to 8,
+                Triple("Long" to "int64_t",
                     context.hasLongNullableToNative || context.hasULongNullableToNative,
                     context.hasLongNullableToKotlin || context.hasULongNullableToKotlin),
-                Triple("Float" to 4, context.hasFloatNullableToNative, context.hasFloatNullableToKotlin),
-                Triple("Double" to 8, context.hasDoubleNullableToNative, context.hasDoubleNullableToKotlin),
-            ).forEachIndexed { i, (names, hasToNative, hasToKotlin) ->
-                val name = names.first
-                val size = names.second
-                val lowercase = name.lowercase()
-                val jType = "j$lowercase"
+                Triple("Float" to "float", context.hasFloatNullableToNative, context.hasFloatNullableToKotlin),
+                Triple("Double" to "double", context.hasDoubleNullableToNative, context.hasDoubleNullableToKotlin),
+            ).forEach { (names, hasToNative, hasToKotlin) ->
+                val (name, type) = names
+                val lower = name.lowercase()
 
                 appendLine("\n// $name")
                 if(hasToNative) appendLine("""
                     
-                    static $jType* JNI_to_native_${lowercase}_nullable(JNIEnv *env, jobject obj) {
+                    static void* JNI_to_native_${lower}(JNIEnv *env, jobject obj) {
                         if(obj == NULL) return NULL;
-                        $jType* result = ($jType*) ${context.mangle("alloc")}($size);
-                        result[0] = (*env)->Call${name}Method(env, obj, boxed_primitives_get[$i]);
-                        return result;
+                        $type value = ($type) (*env)->Call${name}Method(env, obj, ${lower}_get);
+                        return ${context.mangle("${lower}_new")}(value);
                     }
                 """.trimIndent())
                 if(hasToKotlin) appendLine("""
                     
-                    static jobject JNI_to_kotlin_${lowercase}_nullable(JNIEnv *env, $jType* ptr, const bool free) {
+                    static jobject JNI_to_kotlin_${lower}(JNIEnv *env, void* ptr, const bool free) {
                         if(ptr == NULL) return NULL;
-                        jobject result = (*env)->CallStaticObjectMethod(env, boxed_primitives_class[$i], boxed_primitives_create[$i], (($jType*) ptr)[0]);
-                        ${context.mangle("dealloc")}((void*) ptr, $size);
-                        return result;
+                        $type value = ${context.mangle("${lower}_get")}(ptr, free);
+                        return (*env)->CallStaticObjectMethod(env, class_${lower}, ${lower}_new, value);
                     }
                 """.trimIndent())
             }
@@ -414,22 +439,22 @@ class CJniPrinter(
 
         // Primitive arrays
         listOf(
-            Triple("char", context.hasCharArrayCastToNative, context.hasCharArrayCastToKotlin),
-            Triple("boolean", context.hasBooleanArrayCastToNative, context.hasBooleanArrayCastToKotlin),
+            Triple("char", context.hasCharArrayToNative, context.hasCharArrayToKotlin),
+            Triple("boolean", context.hasBooleanArrayToNative, context.hasBooleanArrayToKotlin),
             Triple("byte",
-                context.hasByteArrayCastToNative || context.hasUByteArrayCastToNative,
-                context.hasByteArrayCastToKotlin || context.hasUByteArrayCastToKotlin),
+                context.hasByteArrayToNative || context.hasUByteArrayToNative,
+                context.hasByteArrayToKotlin || context.hasUByteArrayToKotlin),
             Triple("short",
-                context.hasShortArrayCastToNative || context.hasUShortArrayCastToNative,
-                context.hasShortArrayCastToKotlin || context.hasUShortArrayCastToKotlin),
+                context.hasShortArrayToNative || context.hasUShortArrayToNative,
+                context.hasShortArrayToKotlin || context.hasUShortArrayToKotlin),
             Triple("int",
-                context.hasIntArrayCastToNative || context.hasUIntArrayCastToNative || context.hasEnumArrayCastToNative,
-                context.hasIntArrayCastToKotlin || context.hasUIntArrayCastToKotlin || context.hasEnumArrayCastToKotlin),
+                context.hasIntArrayToNative || context.hasUIntArrayToNative || context.hasEnumArrayToNative,
+                context.hasIntArrayToKotlin || context.hasUIntArrayToKotlin || context.hasEnumArrayToKotlin),
             Triple("long",
-                context.hasLongArrayCastToNative || context.hasULongArrayCastToNative,
-                context.hasLongArrayCastToKotlin || context.hasULongArrayCastToKotlin),
-            Triple("float", context.hasFloatArrayCastToNative, context.hasFloatArrayCastToKotlin),
-            Triple("double", context.hasDoubleArrayCastToNative, context.hasDoubleArrayCastToKotlin),
+                context.hasLongArrayToNative || context.hasULongArrayToNative,
+                context.hasLongArrayToKotlin || context.hasULongArrayToKotlin),
+            Triple("float", context.hasFloatArrayToNative, context.hasFloatArrayToKotlin),
+            Triple("double", context.hasDoubleArrayToNative, context.hasDoubleArrayToKotlin),
         ).forEach { (name, hasToNative, hasToKotlin) ->
             val capitalized = name.uppercaseFirstChar()
 
@@ -492,18 +517,34 @@ class CJniPrinter(
             context.dictionaries.mapTo(this) { dictionary ->
                 Triple(
                     dictionary.name,
-                    dictionary in context.usedObjectArrayCastToNative,
-                    dictionary in context.usedObjectArrayCastToKotlin
+                    dictionary in context.usedObjectArrayToNative,
+                    dictionary in context.usedObjectArrayToKotlin
                 )
             }
             context.interfaces.mapTo(this) { inter ->
                 Triple(
                     inter.name,
-                    inter in context.usedObjectArrayCastToNative,
-                    inter in context.usedObjectArrayCastToKotlin
+                    inter in context.usedObjectArrayToNative,
+                    inter in context.usedObjectArrayToKotlin
                 )
             }
-            add(Triple("String", context.hasStringArrayCastToNative, context.hasStringArrayCastToKotlin))
+            add(Triple("String", context.hasStringArrayToNative, context.hasStringArrayToKotlin))
+            add(Triple("Char", context.hasCharNullableArrayToNative, context.hasCharNullableArrayToKotlin))
+            add(Triple("Boolean", context.hasBooleanNullableArrayToNative, context.hasBooleanNullableArrayToKotlin))
+            add(Triple("Byte",
+                context.hasByteNullableArrayToNative || context.hasUByteNullableArrayToNative,
+                context.hasByteNullableArrayToKotlin || context.hasUByteNullableArrayToKotlin))
+            add(Triple("Short",
+                context.hasShortNullableArrayToNative || context.hasUShortNullableArrayToNative,
+                context.hasShortNullableArrayToKotlin || context.hasUShortNullableArrayToKotlin))
+            add(Triple("Int",
+                context.hasIntNullableArrayToNative || context.hasUIntNullableArrayToNative || context.hasEnumNullableArrayToNative,
+                context.hasIntNullableArrayToKotlin || context.hasUIntNullableArrayToKotlin || context.hasEnumNullableArrayToKotlin))
+            add(Triple("Long",
+                context.hasLongNullableArrayToNative || context.hasULongNullableArrayToNative,
+                context.hasLongNullableArrayToKotlin || context.hasULongNullableArrayToKotlin))
+            add(Triple("Float", context.hasFloatNullableArrayToNative, context.hasFloatNullableArrayToKotlin))
+            add(Triple("Double", context.hasDoubleNullableArrayToNative, context.hasDoubleNullableArrayToKotlin))
         }.forEach { (name, hasToNative, hasToKotlin) ->
             val lower = name.camelCase().lowercase()
 
@@ -545,7 +586,7 @@ class CJniPrinter(
     }
 
     private fun StringBuilder.printDictionaries(castsFunctions: ArrayList<String>) {
-        if (!context.hasDictionaryCast)
+        if (!context.hasDictionary)
             return
         printLabel("Dictionaries")
 
@@ -556,7 +597,7 @@ class CJniPrinter(
             if (dictionary in context.castedDeclarations)
                 append("\n// ${dictionary.name}\n")
 
-            if (dictionary in context.toNativeDeclarationCasts) {
+            if (dictionary in context.toNativeDeclaration) {
                 append("""
                     
                     static void* JNI_to_native_$lower(JNIEnv *_env, jobject src) {
@@ -573,7 +614,7 @@ class CJniPrinter(
 
                 castsFunctions += "static void* JNI_to_native_$lower(JNIEnv *_env, jobject src);"
             }
-            if (dictionary in context.toKotlinDeclarationCasts) {
+            if (dictionary in context.toKotlinDeclaration) {
                 append("""
                     
                     static jobject JNI_to_kotlin_$lower(JNIEnv *_env, void* src, bool free) {
@@ -604,13 +645,13 @@ class CJniPrinter(
     }
 
     private fun StringBuilder.printInterfaces(castsFunctions: ArrayList<String>) {
-        if (!context.hasInterfaceCast)
+        if (!context.hasInterface)
             return
         printLabel("Interfaces")
 
         context.interfaces.forEach { inter ->
             val lower = inter.name.camelCase().lowercase()
-            if (inter in context.toNativeDeclarationCasts) {
+            if (inter in context.toNativeDeclaration) {
                 appendLine("""
                     
                     static void* JNI_to_native_$lower(JNIEnv *env, jobject src) {
@@ -621,7 +662,7 @@ class CJniPrinter(
                 """.trimIndent())
                 castsFunctions += "static void* JNI_to_native_$lower(JNIEnv *env, jobject src);"
             }
-            if (inter in context.toKotlinDeclarationCasts) {
+            if (inter in context.toKotlinDeclaration) {
                 appendLine("""
                     
                     static jobject JNI_to_kotlin_$lower(JNIEnv *env, void* src, bool free) {
@@ -638,7 +679,7 @@ class CJniPrinter(
     }
 
     private fun StringBuilder.printCallbacks(castsFunctions: ArrayList<String>) {
-        if (!context.hasCallbackCast)
+        if (!context.hasCallback)
             return
         printLabel("Callbacks")
 
@@ -678,7 +719,7 @@ class CJniPrinter(
 
             val lower = callback.name.camelCase().lowercase()
 
-            if (callback in context.toNativeDeclarationCasts) {
+            if (callback in context.toNativeDeclaration) {
                 val type = callback.type.toCommonNativeType()
                 val ret = if (!callback.type.isVoid()) "$type _result = " else ""
 
@@ -726,7 +767,7 @@ class CJniPrinter(
 
                 castsFunctions += "static void* JNI_to_native_$lower(JNIEnv *env, jobject src);"
             }
-            if (callback in context.toKotlinDeclarationCasts) {
+            if (callback in context.toKotlinDeclaration) {
                 appendLine("""
                     
                     static jobject JNI_to_kotlin_$lower(JNIEnv *env, void* src, bool free) {
@@ -868,9 +909,6 @@ class CJniPrinter(
     private val ResolvedIdlDeclaration.className: String
         get() = "class_${name.camelCase().lowercase()}"
 
-    private val ResolvedIdlEnum.castMethod: String
-        get() = "method_${name.camelCase().lowercase()}_cast"
-
     private val ResolvedIdlDictionary.constructorMethod: String
         get() = "method_${name.camelCase().lowercase()}"
 
@@ -891,12 +929,12 @@ class CJniPrinter(
         content: String,
         free: Boolean
     ): String = when {
-        type.isPrimitive() && type.isNullable -> {
+        type.isPrimitive(isNullable = true) -> {
             val lower = type.toKotlinType(ignoreUnsigned = true, printNullable = false).lowercase()
-            "JNI_to_kotlin_${lower}_nullable(_env, (j$lower*) $content, $free)"
+            "JNI_to_kotlin_${lower}(_env, (j$lower*) $content, $free)"
         }
         type.isEnum() ->
-            if(type.isNullable) "JNI_to_kotlin_int_nullable(_env, $content, $free)"
+            if(type.isNullable) "JNI_to_kotlin_int(_env, $content, $free)"
             else content
         type.isUByte() -> "(jbyte) $content"
         type.isUShort() -> "(jshort) $content"
@@ -908,10 +946,12 @@ class CJniPrinter(
             "JNI_to_kotlin_${type.declaration.name.camelCase().lowercase()}(_env, $content, $free)"
         type.isArray() -> type.arrayType { type ->
             when {
-                type.isPrimitive() -> "JNI_to_kotlin_${type.toKotlinType(ignoreUnsigned = true).lowercase()}array(_env, $content, $free)"
-                type.isEnum() -> "JNI_to_kotlin_intarray(_env, $content, $free)"
+                type.isPrimitive(isNullable = false) -> "JNI_to_kotlin_${type.toKotlinType(ignoreUnsigned = true).lowercase()}array(_env, $content, $free)"
+                type.isEnum() ->
+                    if(type.isNullable) "JNI_to_kotlin_int_array(_env, $content, true, $free)"
+                    else "JNI_to_kotlin_intarray(_env, $content, $free)"
                 type.isString() -> "JNI_to_kotlin_string_array(_env, $content, ${type.isNullable}, $free)"
-                else -> "JNI_to_kotlin_${type.declaration.name.camelCase().lowercase()}_array(_env, $content, ${type.isNullable}, $free)"
+                else -> "JNI_to_kotlin_${type.toKotlinType(printNullable = false, ignoreUnsigned = true).lowercase()}_array(_env, $content, ${type.isNullable}, $free)"
             }
         }
         else -> content
@@ -922,10 +962,10 @@ class CJniPrinter(
         content: String,
         size: String? = null
     ): String = when {
-        type.isPrimitive() && type.isNullable ->
-            "(${type.toCommonNativeType()}) JNI_to_native_${type.toKotlinType(ignoreUnsigned = true, printNullable = false).lowercase()}_nullable(_env, $content)"
+        type.isPrimitive(isNullable = true) ->
+            "(${type.toCommonNativeType()}) JNI_to_native_${type.toKotlinType(ignoreUnsigned = true, printNullable = false).lowercase()}(_env, $content)"
         type.isEnum() ->
-            if(type.isNullable) "JNI_to_native_int_nullable(_env, $content)"
+            if(type.isNullable) "JNI_to_native_int(_env, $content)"
             else content
         type.isPrimitive() && type.isUnsigned() -> castToNative(type.toSignedType(), content)
         type.isString() ->
@@ -936,14 +976,14 @@ class CJniPrinter(
             "JNI_to_native_${type.declaration.name.camelCase().lowercase()}(_env, $content)"
         type.isArray() -> type.arrayType { type ->
             when {
-                type.isPrimitive() ->
+                type.isPrimitive(isNullable = false) ->
                     if(size == null) "JNI_to_native_${type.toKotlinType(ignoreUnsigned = true).lowercase()}array(_env, $content)"
                     else "JNI_to_native_${type.toKotlinType(ignoreUnsigned = true).lowercase()}array_sized(_env, $content, $size)"
-                type.isEnum() -> "JNI_to_native_intarray(_env, $content)"
+                type.isEnum() ->
+                    if(type.isNullable) "JNI_to_native_int_array(_env, $content, true)"
+                    else "JNI_to_native_intarray(_env, $content)"
                 type.isString() -> "JNI_to_native_string_array(_env, $content, ${type.isNullable})"
-                else -> "JNI_to_native_${
-                    type.declaration.name.camelCase().lowercase()
-                }_array(_env, $content, ${type.isNullable})"
+                else -> "JNI_to_native_${type.toKotlinType(printNullable = false, ignoreUnsigned = true).lowercase()}_array(_env, $content, ${type.isNullable})"
             }
         }
         else -> content

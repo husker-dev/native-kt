@@ -27,8 +27,18 @@ class Rust_PassArray {
     }
 
     @Test
+    fun passCharNArray() = withRustLib {
+        assertTrue(natives.testrs.passCharNArray(arrayOf(null, 'a')))
+    }
+
+    @Test
     fun passBooleanArray() = withRustLib {
         assertTrue(natives.testrs.passBooleanArray(booleanArrayOf(true, false)))
+    }
+
+    @Test
+    fun passBooleanNArray() = withRustLib {
+        assertTrue(natives.testrs.passBooleanNArray(arrayOf(null, true)))
     }
 
     @Test
@@ -37,8 +47,18 @@ class Rust_PassArray {
     }
 
     @Test
+    fun passByteNArray() = withRustLib {
+        assertTrue(natives.testrs.passByteNArray(arrayOf(null, 1.toByte())))
+    }
+
+    @Test
     fun passUByteArray() = withRustLib {
         assertTrue(natives.testrs.passUByteArray(ubyteArrayOf(1.toUByte(), UByte.MAX_VALUE)))
+    }
+
+    @Test
+    fun passUByteNArray() = withRustLib {
+        assertTrue(natives.testrs.passUByteNArray(arrayOf(null, UByte.MAX_VALUE)))
     }
 
     @Test
@@ -47,8 +67,18 @@ class Rust_PassArray {
     }
 
     @Test
+    fun passShortNArray() = withRustLib {
+        assertTrue(natives.testrs.passShortNArray(arrayOf(null, 1.toShort())))
+    }
+
+    @Test
     fun passUShortArray() = withRustLib {
         assertTrue(natives.testrs.passUShortArray(ushortArrayOf(1.toUShort(), UShort.MAX_VALUE)))
+    }
+
+    @Test
+    fun passUShortNArray() = withRustLib {
+        assertTrue(natives.testrs.passUShortNArray(arrayOf(null, UShort.MAX_VALUE)))
     }
 
     @Test
@@ -57,8 +87,18 @@ class Rust_PassArray {
     }
 
     @Test
+    fun passIntNArray() = withRustLib {
+        assertTrue(natives.testrs.passIntNArray(arrayOf(null, 1)))
+    }
+
+    @Test
     fun passUIntArray() = withRustLib {
         assertTrue(natives.testrs.passUIntArray(uintArrayOf(1.toUInt(), UInt.MAX_VALUE)))
+    }
+
+    @Test
+    fun passUIntNArray() = withRustLib {
+        assertTrue(natives.testrs.passUIntNArray(arrayOf(null, UInt.MAX_VALUE)))
     }
 
     @Test
@@ -67,8 +107,18 @@ class Rust_PassArray {
     }
 
     @Test
+    fun passLongNArray() = withRustLib {
+        assertTrue(natives.testrs.passLongNArray(arrayOf(null, 1L)))
+    }
+
+    @Test
     fun passULongArray() = withRustLib {
         assertTrue(natives.testrs.passULongArray(ulongArrayOf(1.toULong(), ULong.MAX_VALUE)))
+    }
+
+    @Test
+    fun passULongNArray() = withRustLib {
+        assertTrue(natives.testrs.passULongNArray(arrayOf(null, ULong.MAX_VALUE)))
     }
 
     @Test
@@ -77,8 +127,18 @@ class Rust_PassArray {
     }
 
     @Test
+    fun passFloatNArray() = withRustLib {
+        assertTrue(natives.testrs.passFloatNArray(arrayOf(null, 1.1f)))
+    }
+
+    @Test
     fun passDoubleArray() = withRustLib {
         assertTrue(natives.testrs.passDoubleArray(doubleArrayOf(1.1, 2.2)))
+    }
+
+    @Test
+    fun passDoubleNArray() = withRustLib {
+        assertTrue(natives.testrs.passDoubleNArray(arrayOf(null, 1.1)))
     }
 
     @Test
@@ -94,6 +154,11 @@ class Rust_PassArray {
     @Test
     fun passEnumArray() = withRustLib {
         assertTrue(natives.testrs.passEnumArray(arrayOf(MyEnum.CASE1, MyEnum.CASE2)))
+    }
+
+    @Test
+    fun passEnumNArray() = withRustLib {
+        assertTrue(natives.testrs.passEnumNArray(arrayOf(null, MyEnum.CASE2)))
     }
 
     @Test

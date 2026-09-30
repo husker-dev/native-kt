@@ -17,6 +17,7 @@ class CApiImplPrinter(
         target.writeSync(buildString {
             printHeader()
             printStdLib()
+            printBoxedPrimitives()
             printStructs()
             printCallbacks()
             printFunctions()
@@ -109,7 +110,7 @@ class CApiImplPrinter(
             }
         }
 
-        if(context.hasStringCast) {
+        if(context.hasString) {
             printLabel("String")
             append("""
                     
@@ -152,13 +153,13 @@ class CApiImplPrinter(
                 }
                 
             """.trimIndent())
-            if(context.hasStringCastToNative) append("""
+            if(context.hasStringToNative) append("""
                 
                 KString* ${context.mangle("string_new")}(const char* data, const int32_t size, bool make_copy) {
                     return kstring_new(data, .size = size, .make_copy = make_copy);
                 }
             """.trimIndent())
-            if(context.hasStringCastToKotlin) append("""
+            if(context.hasStringToKotlin) append("""
                 
                 const char* ${context.mangle("string_data")}(const KString* self) {
                     return self->data;
@@ -177,45 +178,45 @@ class CApiImplPrinter(
             append("\n")
         }
 
-        if(context.hasPrimitiveArrayCast) {
+        if(context.hasPrimitiveArray) {
             printLabel("Primitive arrays")
             listOf(
                 Triple(Triple("Char", "uint16_t", "int32_t"),
-                    context.hasCharArrayCastToNative,
-                    context.hasCharArrayCastToKotlin),
+                    context.hasCharArrayToNative,
+                    context.hasCharArrayToKotlin),
                 Triple(Triple("Boolean", "bool", "int32_t"),
-                    context.hasBooleanArrayCastToNative,
-                    context.hasBooleanArrayCastToKotlin),
+                    context.hasBooleanArrayToNative,
+                    context.hasBooleanArrayToKotlin),
                 Triple(Triple("Byte", "int8_t", "int32_t"),
-                    context.hasByteArrayCastToNative || context.hasUByteArrayCastToNative,
-                    context.hasByteArrayCastToKotlin || context.hasUByteArrayCastToKotlin),
+                    context.hasByteArrayToNative || context.hasUByteArrayToNative,
+                    context.hasByteArrayToKotlin || context.hasUByteArrayToKotlin),
                 Triple(Triple("UByte", "uint8_t", "int32_t"),
-                    context.hasUByteArrayCastToNative,
-                    context.hasUByteArrayCastToKotlin),
+                    context.hasUByteArrayToNative,
+                    context.hasUByteArrayToKotlin),
                 Triple(Triple("Short", "int16_t", "int32_t"),
-                    context.hasShortArrayCastToNative || context.hasUShortArrayCastToNative,
-                    context.hasShortArrayCastToKotlin || context.hasUShortArrayCastToKotlin),
+                    context.hasShortArrayToNative || context.hasUShortArrayToNative,
+                    context.hasShortArrayToKotlin || context.hasUShortArrayToKotlin),
                 Triple(Triple("UShort", "uint16_t", "int32_t"),
-                    context.hasUShortArrayCastToNative,
-                    context.hasUShortArrayCastToKotlin),
+                    context.hasUShortArrayToNative,
+                    context.hasUShortArrayToKotlin),
                 Triple(Triple("Int", "int32_t", "int32_t"),
-                    context.hasIntArrayCastToNative || context.hasEnumArrayCastToNative || context.hasUIntArrayCastToNative,
-                    context.hasIntArrayCastToKotlin || context.hasEnumArrayCastToKotlin || context.hasUIntArrayCastToKotlin),
+                    context.hasIntArrayToNative || context.hasEnumArrayToNative || context.hasUIntArrayToNative,
+                    context.hasIntArrayToKotlin || context.hasEnumArrayToKotlin || context.hasUIntArrayToKotlin),
                 Triple(Triple("UInt", "uint32_t", "int32_t"),
-                    context.hasUIntArrayCastToNative,
-                    context.hasUIntArrayCastToKotlin),
+                    context.hasUIntArrayToNative,
+                    context.hasUIntArrayToKotlin),
                 Triple(Triple("Long", "int64_t", "int64_t"),
-                    context.hasLongArrayCastToNative || context.hasULongArrayCastToNative,
-                    context.hasLongArrayCastToKotlin || context.hasULongArrayCastToKotlin),
+                    context.hasLongArrayToNative || context.hasULongArrayToNative,
+                    context.hasLongArrayToKotlin || context.hasULongArrayToKotlin),
                 Triple(Triple("ULong", "uint64_t", "int64_t"),
-                    context.hasULongArrayCastToNative,
-                    context.hasULongArrayCastToKotlin),
+                    context.hasULongArrayToNative,
+                    context.hasULongArrayToKotlin),
                 Triple(Triple("Float", "float", "double"),
-                    context.hasFloatArrayCastToNative,
-                    context.hasFloatArrayCastToKotlin),
+                    context.hasFloatArrayToNative,
+                    context.hasFloatArrayToKotlin),
                 Triple(Triple("Double", "double", "double"),
-                    context.hasDoubleArrayCastToNative,
-                    context.hasDoubleArrayCastToKotlin),
+                    context.hasDoubleArrayToNative,
+                    context.hasDoubleArrayToKotlin),
             ).forEach { (desc, hasToNativeCast, hasToKotlinCast) ->
                 if(!hasToNativeCast && !hasToKotlinCast)
                     return@forEach
@@ -294,7 +295,7 @@ class CApiImplPrinter(
             }
         }
 
-        if(context.hasObjectArraysCast) {
+        if(context.hasObjectArrays || context.hasPrimitiveNullableArray || context.hasEnumNullableArray) {
             printLabel("Object array")
             append("""
                 
@@ -382,12 +383,20 @@ class CApiImplPrinter(
 
             buildList {
                 context.castedDictionaries.mapTo(this) {
-                    Triple(it.cname, it.cname.lowercase(), it in context.usedObjectArrayCast)
+                    Triple(it.cname, it.cname.lowercase(), it in context.usedObjectArray)
                 }
                 context.castedInterfaces.mapTo(this) {
-                    Triple("void", it.cname.lowercase(), it in context.usedObjectArrayCast)
+                    Triple("void", it.cname.lowercase(), it in context.usedObjectArray)
                 }
-                add(Triple("KString", "string", context.hasStringArrayCast))
+                add(Triple("KString", "string", context.hasStringArray))
+                add(Triple("uint16_t", "char", context.hasCharNullableArray))
+                add(Triple("int8_t", "boolean", context.hasBooleanNullableArray))
+                add(Triple("int8_t", "byte", context.hasByteNullableArray || context.hasUByteNullableArray))
+                add(Triple("int16_t", "short", context.hasShortNullableArray || context.hasUShortNullableArray))
+                add(Triple("int32_t", "int", context.hasIntNullableArray || context.hasUIntNullableArray || context.hasEnumNullableArray))
+                add(Triple("int64_t", "long", context.hasLongNullableArray || context.hasULongNullableArray))
+                add(Triple("float", "float", context.hasFloatNullableArray))
+                add(Triple("double", "double", context.hasDoubleNullableArray))
             }.filter { it.third }.joinTo(this, separator = "") { (type, name, _) ->
                 """
         
@@ -401,6 +410,57 @@ class CApiImplPrinter(
                 """.trimIndent()
             }
             append("\n")
+        }
+    }
+
+    private fun StringBuilder.printBoxedPrimitives() {
+        printLabel("Boxed primitives")
+
+        appendLine("""
+            
+            #define IMPL_BOXED_PRIMITIVE(T, NAME, FUNC_NEW, FUNC_FREE, FUNC_CLONE, FUNC_NEW_EXPORT, FUNC_GET_EXPORT) \
+            NAME* FUNC_CLONE(NAME* self);                          \
+            void FUNC_FREE(NAME* self);                            \
+            NAME* FUNC_NEW(T value) {                              \
+                NAME* result = (NAME*) malloc(sizeof(NAME));       \
+                *result = (NAME) { FUNC_CLONE, FUNC_FREE, value }; \
+                return result;                                     \
+            }                                                      \
+            NAME* FUNC_CLONE(NAME* self) {                         \
+                return FUNC_NEW(self->value);                      \
+            }                                                      \
+            void FUNC_FREE(NAME* self) {                           \
+                free((void*) self);                                \
+            }                                                      \
+            LIB_EXPORT NAME* FUNC_NEW_EXPORT(T value) {            \
+                return FUNC_NEW(value);                            \
+            }                                                      \
+            LIB_EXPORT T FUNC_GET_EXPORT(NAME* self, bool _free) { \
+                T value = self->value;                             \
+                if(_free) FUNC_FREE(self);                         \
+                return value;                                      \
+            }
+        """.trimIndent())
+
+        listOf(
+            Triple("uint16_t", "char", context.hasCharNullable),
+            Triple("int8_t", "boolean", context.hasBooleanNullable),
+            Triple("int8_t", "byte", context.hasByteNullable || context.hasUByteNullable),
+            Triple("int16_t", "short", context.hasShortNullable || context.hasUShortNullable),
+            Triple("int32_t", "int", context.hasIntNullable || context.hasUIntNullable || context.hasEnumNullable),
+            Triple("int64_t", "long", context.hasLongNullable || context.hasULongNullable),
+            Triple("float", "float", context.hasFloatNullable),
+            Triple("double", "double", context.hasDoubleNullable)
+        ).forEach { (type, name, hasCast) ->
+            if(!hasCast) return@forEach
+            appendLine("""
+                IMPL_BOXED_PRIMITIVE(
+                    $type, Boxed${name.uppercaseFirstChar()}, 
+                    boxed_${name}_new, _boxed_${name}_free, boxed_${name}_clone, 
+                    ${context.mangle("${name}_new")},
+                    ${context.mangle("${name}_get")}
+                )
+            """.trimIndent())
         }
     }
 
@@ -452,7 +512,7 @@ class CApiImplPrinter(
                 
             """.trimIndent())
 
-            if(dictionary in context.toNativeDeclarationCasts) append("""
+            if(dictionary in context.toNativeDeclaration) append("""
                 
                 LIB_EXPORT $name* $funcNew(${args.joinToString()}) {
                     return ${name}_new(${argNames.joinToString()});
@@ -464,7 +524,7 @@ class CApiImplPrinter(
                     ${name}_free(self);
                 }
             """.trimIndent())
-            if(dictionary in context.toKotlinDeclarationCasts) {
+            if(dictionary in context.toKotlinDeclaration) {
                 fields.forEach { field ->
                     val type = field.type.toCType(printNullable = true)
                     val func = dictionary.subFieldCFunc(context, field)

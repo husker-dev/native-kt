@@ -26,8 +26,18 @@ class Cpp_ReturnArray {
     }
 
     @Test
+    fun returnCharNArray() = withCppLib {
+        assertContentEquals(arrayOf(null, 'a'), natives.testcpp.returnCharNArray())
+    }
+
+    @Test
     fun returnBooleanArray() = withCppLib {
         assertContentEquals(booleanArrayOf(true, false), natives.testcpp.returnBooleanArray())
+    }
+
+    @Test
+    fun returnBooleanNArray() = withCppLib {
+        assertContentEquals(arrayOf(null, true), natives.testcpp.returnBooleanNArray())
     }
 
     @Test
@@ -36,8 +46,18 @@ class Cpp_ReturnArray {
     }
 
     @Test
+    fun returnByteNArray() = withCppLib {
+        assertContentEquals(arrayOf(null, 1), natives.testcpp.returnByteNArray())
+    }
+
+    @Test
     fun returnUByteArray() = withCppLib {
         assertContentEquals(ubyteArrayOf(1.toUByte(), UByte.MAX_VALUE), natives.testcpp.returnUByteArray())
+    }
+
+    @Test
+    fun returnUByteNArray() = withCppLib {
+        assertContentEquals(arrayOf(null, UByte.MAX_VALUE), natives.testcpp.returnUByteNArray())
     }
 
     @Test
@@ -46,8 +66,18 @@ class Cpp_ReturnArray {
     }
 
     @Test
+    fun returnShortNArray() = withCppLib {
+        assertContentEquals(arrayOf(null, 1), natives.testcpp.returnShortNArray())
+    }
+
+    @Test
     fun returnUShortArray() = withCppLib {
         assertContentEquals(ushortArrayOf(1.toUShort(), UShort.MAX_VALUE), natives.testcpp.returnUShortArray())
+    }
+
+    @Test
+    fun returnUShortNArray() = withCppLib {
+        assertContentEquals(arrayOf(null, UShort.MAX_VALUE), natives.testcpp.returnUShortNArray())
     }
 
     @Test
@@ -56,8 +86,18 @@ class Cpp_ReturnArray {
     }
 
     @Test
+    fun returnIntNArray() = withCppLib {
+        assertContentEquals(arrayOf(null, 1), natives.testcpp.returnIntNArray())
+    }
+
+    @Test
     fun returnUIntArray() = withCppLib {
         assertContentEquals(uintArrayOf(1.toUInt(), UInt.MAX_VALUE), natives.testcpp.returnUIntArray())
+    }
+
+    @Test
+    fun returnUIntNArray() = withCppLib {
+        assertContentEquals(arrayOf(null, UInt.MAX_VALUE), natives.testcpp.returnUIntNArray())
     }
 
     @Test
@@ -66,8 +106,18 @@ class Cpp_ReturnArray {
     }
 
     @Test
+    fun returnLongNArray() = withCppLib {
+        assertContentEquals(arrayOf(null, 1), natives.testcpp.returnLongNArray())
+    }
+
+    @Test
     fun returnULongArray() = withCppLib {
         assertContentEquals(ulongArrayOf(1.toULong(), ULong.MAX_VALUE), natives.testcpp.returnULongArray())
+    }
+
+    @Test
+    fun returnULongNArray() = withCppLib {
+        assertContentEquals(arrayOf(null, ULong.MAX_VALUE), natives.testcpp.returnULongNArray())
     }
 
     @Test
@@ -76,8 +126,18 @@ class Cpp_ReturnArray {
     }
 
     @Test
+    fun returnFloatNArray() = withCppLib {
+        assertContentEquals(arrayOf(null, 1.1f), natives.testcpp.returnFloatNArray())
+    }
+
+    @Test
     fun returnDoubleArray() = withCppLib {
         assertContentEquals(doubleArrayOf(1.1, 2.2), natives.testcpp.returnDoubleArray())
+    }
+
+    @Test
+    fun returnDoubleNArray() = withCppLib {
+        assertContentEquals(arrayOf(null, 1.1), natives.testcpp.returnDoubleNArray())
     }
 
     @Test
@@ -93,6 +153,11 @@ class Cpp_ReturnArray {
     @Test
     fun returnEnumArray() = withCppLib {
         assertContentEquals(arrayOf(MyEnum.CASE1, MyEnum.CASE2), natives.testcpp.returnEnumArray())
+    }
+
+    @Test
+    fun returnEnumNArray() = withCppLib {
+        assertContentEquals(arrayOf(null, MyEnum.CASE2), natives.testcpp.returnEnumNArray())
     }
 
     @Test

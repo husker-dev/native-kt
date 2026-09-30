@@ -19,6 +19,7 @@ class CApiHeaderPrinter(
             printHeader()
             printTypeDefs()
             printStdLib()
+            printBoxedPrimitives()
             printEnums()
             printDictionaries()
             printCallbacks()
@@ -48,7 +49,7 @@ class CApiHeaderPrinter(
             #include <stdarg.h>
         """.trimIndent())
 
-        if(language == Language.C && (context.hasObjectArraysCast || context.hasPrimitiveArrayCast)) {
+        if(language == Language.C && (context.hasObjectArrays || context.hasPrimitiveArray)) {
             appendLine("""
                 
                 #define ARG_LENGTH(...) ARG_LENGTH__(__VA_ARGS__)
@@ -115,9 +116,9 @@ class CApiHeaderPrinter(
     private fun StringBuilder.printStdLib() {
         if(context.callbacks.isEmpty() &&
             context.interfaces.isEmpty() &&
-            !context.hasStringCast &&
-            !context.hasPrimitiveArrayCast &&
-            !context.hasObjectArraysCast
+            !context.hasString &&
+            !context.hasPrimitiveArray &&
+            !context.hasObjectArrays
         ) return
 
         printLabel("Types")
@@ -149,7 +150,7 @@ class CApiHeaderPrinter(
         }
 
         // String
-        if(context.hasStringCast) {
+        if(context.hasString) {
             if (language == Language.C) {
                 append("""
                     
@@ -178,11 +179,11 @@ class CApiHeaderPrinter(
             }
             if (isInternal) {
                 val typeName = if (language == Language.C) "KString" else "void"
-                if (context.hasStringCastToNative) append("""
+                if (context.hasStringToNative) append("""
                     
                     LIB_EXPORT $typeName* _Nonnull ${context.mangle("string_new")}(const char* _Nonnull data, int32_t size, bool make_copy);
                 """.trimIndent())
-                if (context.hasStringCastToKotlin) append("""
+                if (context.hasStringToKotlin) append("""
                     
                     LIB_EXPORT const char* _Nonnull ${context.mangle("string_data")}(const $typeName* _Nonnull self);
                     LIB_EXPORT size_t ${context.mangle("string_size")}(const $typeName* _Nonnull self);
@@ -193,38 +194,38 @@ class CApiHeaderPrinter(
         }
 
         // Primitive arrays
-        if(context.hasPrimitiveArrayCast) {
+        if(context.hasPrimitiveArray) {
             if (language == Language.C) {
                 listOf(
-                    Triple("Char" to "uint16_t", context.hasCharArrayCastToNative, context.hasCharArrayCastToKotlin),
-                    Triple("Boolean" to "bool", context.hasBooleanArrayCastToNative, context.hasBooleanArrayCastToKotlin),
+                    Triple("Char" to "uint16_t", context.hasCharArrayToNative, context.hasCharArrayToKotlin),
+                    Triple("Boolean" to "bool", context.hasBooleanArrayToNative, context.hasBooleanArrayToKotlin),
                     Triple("Byte" to "int8_t",
-                        context.hasByteArrayCastToNative || (isInternal && context.hasUByteArrayCastToNative),
-                        context.hasByteArrayCastToKotlin || (isInternal && context.hasUByteArrayCastToKotlin)),
+                        context.hasByteArrayToNative || (isInternal && context.hasUByteArrayToNative),
+                        context.hasByteArrayToKotlin || (isInternal && context.hasUByteArrayToKotlin)),
                     Triple("UByte" to "uint8_t",
-                        context.hasUByteArrayCastToNative,
-                        context.hasUByteArrayCastToKotlin),
+                        context.hasUByteArrayToNative,
+                        context.hasUByteArrayToKotlin),
                     Triple("Short" to "int16_t",
-                        context.hasShortArrayCastToNative || (isInternal && context.hasUShortArrayCastToNative),
-                        context.hasShortArrayCastToKotlin || (isInternal && context.hasUShortArrayCastToKotlin)),
+                        context.hasShortArrayToNative || (isInternal && context.hasUShortArrayToNative),
+                        context.hasShortArrayToKotlin || (isInternal && context.hasUShortArrayToKotlin)),
                     Triple("UShort" to "uint16_t",
-                        context.hasUShortArrayCastToNative,
-                        context.hasUShortArrayCastToKotlin),
+                        context.hasUShortArrayToNative,
+                        context.hasUShortArrayToKotlin),
                     Triple("Int" to "int32_t",
-                        context.hasIntArrayCastToNative || context.hasEnumArrayCastToNative || (isInternal && context.hasUIntArrayCastToNative),
-                        context.hasIntArrayCastToKotlin || context.hasEnumArrayCastToKotlin || (isInternal && context.hasUIntArrayCastToKotlin)
+                        context.hasIntArrayToNative || context.hasEnumArrayToNative || (isInternal && context.hasUIntArrayToNative),
+                        context.hasIntArrayToKotlin || context.hasEnumArrayToKotlin || (isInternal && context.hasUIntArrayToKotlin)
                     ),
                     Triple("UInt" to "uint32_t",
-                        context.hasUIntArrayCastToNative,
-                        context.hasUIntArrayCastToKotlin),
+                        context.hasUIntArrayToNative,
+                        context.hasUIntArrayToKotlin),
                     Triple("Long" to "int64_t",
-                        context.hasLongArrayCastToNative || (isInternal && context.hasULongArrayCastToNative),
-                        context.hasLongArrayCastToKotlin || (isInternal && context.hasULongArrayCastToKotlin)),
+                        context.hasLongArrayToNative || (isInternal && context.hasULongArrayToNative),
+                        context.hasLongArrayToKotlin || (isInternal && context.hasULongArrayToKotlin)),
                     Triple("ULong" to "uint64_t",
-                        context.hasULongArrayCastToNative,
-                        context.hasULongArrayCastToKotlin),
-                    Triple("Float" to "float", context.hasFloatArrayCastToNative, context.hasFloatArrayCastToKotlin),
-                    Triple("Double" to "double", context.hasDoubleArrayCastToNative, context.hasDoubleArrayCastToKotlin)
+                        context.hasULongArrayToNative,
+                        context.hasULongArrayToKotlin),
+                    Triple("Float" to "float", context.hasFloatArrayToNative, context.hasFloatArrayToKotlin),
+                    Triple("Double" to "double", context.hasDoubleArrayToNative, context.hasDoubleArrayToKotlin)
                 ).forEach { (names, hasToNativeCast, hasToKotlinCast) ->
                     if (!hasToNativeCast && !hasToKotlinCast)
                         return@forEach
@@ -254,23 +255,23 @@ class CApiHeaderPrinter(
             }
             if(isInternal) {
                 listOf(
-                    Triple("Char" to "uint16_t", context.hasCharArrayCastToNative, context.hasCharArrayCastToKotlin),
-                    Triple("Boolean" to "bool", context.hasBooleanArrayCastToNative, context.hasBooleanArrayCastToKotlin),
+                    Triple("Char" to "uint16_t", context.hasCharArrayToNative, context.hasCharArrayToKotlin),
+                    Triple("Boolean" to "bool", context.hasBooleanArrayToNative, context.hasBooleanArrayToKotlin),
                     Triple("Byte" to "int8_t",
-                        context.hasByteArrayCastToNative || context.hasUByteArrayCastToNative,
-                        context.hasByteArrayCastToKotlin || context.hasUByteArrayCastToKotlin),
+                        context.hasByteArrayToNative || context.hasUByteArrayToNative,
+                        context.hasByteArrayToKotlin || context.hasUByteArrayToKotlin),
                     Triple("Short" to "int16_t",
-                        context.hasShortArrayCastToNative || context.hasUShortArrayCastToNative,
-                        context.hasShortArrayCastToKotlin || context.hasUShortArrayCastToKotlin),
+                        context.hasShortArrayToNative || context.hasUShortArrayToNative,
+                        context.hasShortArrayToKotlin || context.hasUShortArrayToKotlin),
                     Triple("Int" to "int32_t",
-                        context.hasIntArrayCastToNative || context.hasEnumArrayCastToNative || context.hasUIntArrayCastToNative,
-                        context.hasIntArrayCastToKotlin || context.hasEnumArrayCastToKotlin || context.hasUIntArrayCastToKotlin
+                        context.hasIntArrayToNative || context.hasEnumArrayToNative || context.hasUIntArrayToNative,
+                        context.hasIntArrayToKotlin || context.hasEnumArrayToKotlin || context.hasUIntArrayToKotlin
                     ),
                     Triple("Long" to "int64_t",
-                        context.hasLongArrayCastToNative || context.hasULongArrayCastToNative,
-                        context.hasLongArrayCastToKotlin || context.hasULongArrayCastToKotlin),
-                    Triple("Float" to "float", context.hasFloatArrayCastToNative, context.hasFloatArrayCastToKotlin),
-                    Triple("Double" to "double", context.hasDoubleArrayCastToNative, context.hasDoubleArrayCastToKotlin)
+                        context.hasLongArrayToNative || context.hasULongArrayToNative,
+                        context.hasLongArrayToKotlin || context.hasULongArrayToKotlin),
+                    Triple("Float" to "float", context.hasFloatArrayToNative, context.hasFloatArrayToKotlin),
+                    Triple("Double" to "double", context.hasDoubleArrayToNative, context.hasDoubleArrayToKotlin)
                 ).forEach { (names, hasToNativeCast, hasToKotlinCast) ->
                     if(!hasToNativeCast && !hasToKotlinCast)
                         return@forEach
@@ -299,7 +300,7 @@ class CApiHeaderPrinter(
         }
 
         // Object array
-        if(context.hasObjectArraysCast) {
+        if(context.hasObjectArrays || context.hasPrimitiveNullableArray || context.hasEnumNullableArray) {
             if (language == Language.C) {
                 append("""
                     
@@ -327,18 +328,31 @@ class CApiHeaderPrinter(
                 buildList {
                     context.castedDictionaries.mapTo(this) {
                         Triple(it.cname to it.cname.lowercase(),
-                            it in context.usedObjectArrayCastToNative,
-                            it in context.usedObjectArrayCastToKotlin)
+                            it in context.usedObjectArrayToNative,
+                            it in context.usedObjectArrayToKotlin)
                     }
                     context.castedInterfaces.mapTo(this) {
                         Triple("void" to it.cname.lowercase(),
-                            it in context.usedObjectArrayCastToNative,
-                            it in context.usedObjectArrayCastToKotlin)
+                            it in context.usedObjectArrayToNative,
+                            it in context.usedObjectArrayToKotlin)
                     }
-                    add(Triple("KString" to "string",
-                        context.hasStringArrayCastToNative,
-                        context.hasStringArrayCastToKotlin
-                    ))
+                    add(Triple("KString" to "string", context.hasStringArrayToNative, context.hasStringArrayToKotlin))
+                    add(Triple("uint16_t" to "char", context.hasCharNullableArrayToNative, context.hasCharNullableArrayToKotlin))
+                    add(Triple("int8_t" to "boolean", context.hasBooleanNullableArrayToNative, context.hasBooleanNullableArrayToKotlin))
+                    add(Triple("int8_t" to "byte",
+                        context.hasByteNullableArrayToNative || context.hasUByteNullableArrayToNative,
+                        context.hasByteNullableArrayToKotlin || context.hasUByteNullableArrayToKotlin))
+                    add(Triple("int16_t" to "short",
+                        context.hasShortNullableArrayToNative || context.hasUShortNullableArrayToNative,
+                        context.hasShortNullableArrayToKotlin || context.hasUShortNullableArrayToKotlin))
+                    add(Triple("int32_t" to "int",
+                        context.hasIntNullableArrayToNative || context.hasUIntNullableArrayToNative || context.hasEnumNullableArrayToNative,
+                        context.hasIntNullableArrayToKotlin || context.hasUIntNullableArrayToKotlin || context.hasEnumNullableArrayToKotlin))
+                    add(Triple("int64_t" to "long",
+                        context.hasLongNullableArrayToNative || context.hasULongNullableArrayToNative,
+                        context.hasLongNullableArrayToKotlin || context.hasULongNullableArrayToKotlin))
+                    add(Triple("float" to "float", context.hasFloatNullableArrayToNative, context.hasFloatNullableArrayToKotlin))
+                    add(Triple("double" to "double", context.hasDoubleNullableArrayToNative, context.hasDoubleNullableArrayToKotlin))
                 }.forEach { (names, hasToNativeCast, hasToKotlinCast) ->
                     if(!hasToNativeCast && !hasToKotlinCast)
                         return@forEach
@@ -361,6 +375,65 @@ class CApiHeaderPrinter(
                 }
             }
         }
+    }
+
+    private fun StringBuilder.printBoxedPrimitives() {
+        if(!context.hasPrimitiveNullable &&
+            !context.hasEnumNullable &&
+            !context.hasPrimitiveNullableArray &&
+            !context.hasEnumNullableArray
+        ) return
+        printLabel("Boxed primitives")
+
+        if(language == Language.C) append("""
+            
+            #define BOXED_PRIMITIVE(T, NAME, FUNC_NEW)                \
+            typedef struct NAME NAME;                                 \
+            struct NAME {                                             \
+                NAME* _Nullable (* _Nullable clone)(NAME* _Nullable); \
+                void (* _Nullable free)(NAME* _Nullable);             \
+                T value;                                              \
+            };                                                        \
+            NAME* _Nonnull FUNC_NEW(T value);
+        """.trimIndent())
+
+        listOf(
+            Triple("uint16_t" to "char", context.hasCharNullableToNative, context.hasCharNullableToKotlin),
+            Triple("int8_t" to "boolean", context.hasBooleanNullableToNative, context.hasBooleanNullableToKotlin),
+            Triple("int8_t" to "byte",
+                context.hasByteNullableToNative || context.hasUByteNullableToNative,
+                context.hasByteNullableToKotlin || context.hasUByteNullableToKotlin),
+            Triple("int16_t" to "short",
+                context.hasShortNullableToNative || context.hasUShortNullableToNative,
+                context.hasShortNullableToKotlin || context.hasUShortNullableToKotlin),
+            Triple("int32_t" to "int",
+                context.hasIntNullableToNative || context.hasUIntNullableToNative || context.hasEnumNullableToNative,
+                context.hasIntNullableToKotlin || context.hasUIntNullableToKotlin || context.hasEnumNullableToKotlin),
+            Triple("int64_t" to "long",
+                context.hasLongNullableToNative || context.hasULongNullableToNative,
+                context.hasLongNullableToKotlin || context.hasULongNullableToKotlin),
+            Triple("float" to "float", context.hasFloatNullableToNative, context.hasFloatNullableToKotlin),
+            Triple("double" to "double", context.hasDoubleNullableToNative, context.hasDoubleNullableToKotlin)
+        ).forEach { (names, hasToNativeCast, hasToKotlinCast) ->
+            val (type, name) = names
+            val boxedType = "Boxed${name.uppercaseFirstChar()}"
+            val ptrType = if(language == Language.C) "$boxedType*" else "void*"
+
+            if(language == Language.C)
+                append("\nBOXED_PRIMITIVE($type, Boxed${name.uppercaseFirstChar()}, boxed_${name}_new)")
+
+            if(isInternal) {
+                if (hasToNativeCast) append("""
+                    
+                    LIB_EXPORT $ptrType _Nonnull ${context.mangle("${name}_new")}($type value);
+                """.trimIndent())
+                if (hasToKotlinCast) append("""
+                    
+                    LIB_EXPORT $type ${context.mangle("${name}_get")}($ptrType _Nonnull self, bool free);
+                """.trimIndent())
+            }
+        }
+        append("\n")
     }
 
     private fun StringBuilder.printEnums() {
@@ -416,12 +489,12 @@ class CApiHeaderPrinter(
                 val args = fields.map { field ->
                     "${field.type.toLangType()} ${field.cname}"
                 }
-                if(dictionary in context.toNativeDeclarationCasts) append("""
+                if(dictionary in context.toNativeDeclaration) append("""
                     
                     LIB_EXPORT $structTypeName* _Nonnull ${dictionary.subCFunc(context, "new")}(${args.joinToString()});
                 """.trimIndent())
 
-                if(dictionary in context.toKotlinDeclarationCasts) {
+                if(dictionary in context.toKotlinDeclaration) {
                     append("""
                         
                         LIB_EXPORT void ${dictionary.subCFunc(context, "free")}($structTypeName* _Nonnull self);

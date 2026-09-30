@@ -435,6 +435,27 @@ void karray_push(KArray* _Nullable self, const void* _Nullable element);
 KArray* _Nullable karray_clone(const KArray* _Nullable self);
 void karray_free(KArray* _Nullable self);
 
+// ╔══════════════════════════╗
+// ║     Boxed primitives     ║
+// ╚══════════════════════════╝
+
+#define BOXED_PRIMITIVE(T, NAME, FUNC_NEW)                \
+typedef struct NAME NAME;                                 \
+struct NAME {                                             \
+    NAME* _Nullable (* _Nullable clone)(NAME* _Nullable); \
+    void (* _Nullable free)(NAME* _Nullable);             \
+    T value;                                              \
+};                                                        \
+NAME* _Nonnull FUNC_NEW(T value);
+BOXED_PRIMITIVE(uint16_t, BoxedChar, boxed_char_new)
+BOXED_PRIMITIVE(int8_t, BoxedBoolean, boxed_boolean_new)
+BOXED_PRIMITIVE(int8_t, BoxedByte, boxed_byte_new)
+BOXED_PRIMITIVE(int16_t, BoxedShort, boxed_short_new)
+BOXED_PRIMITIVE(int32_t, BoxedInt, boxed_int_new)
+BOXED_PRIMITIVE(int64_t, BoxedLong, boxed_long_new)
+BOXED_PRIMITIVE(float, BoxedFloat, boxed_float_new)
+BOXED_PRIMITIVE(double, BoxedDouble, boxed_double_new)
+
 // ╔═══════════════╗
 // ║     Enums     ║
 // ╚═══════════════╝
@@ -634,68 +655,68 @@ KCallbackDef(VoidCallback, voidcallback, void)
 
 bool pass_void(void);
 bool pass_char(uint16_t arg);
-bool pass_char_n(uint16_t* _Nullable arg);
+bool pass_char_n(BoxedChar* _Nullable arg);
 bool pass_boolean(bool arg);
-bool pass_boolean_n(bool* _Nullable arg);
+bool pass_boolean_n(BoxedBoolean* _Nullable arg);
 bool pass_byte(int8_t arg);
-bool pass_byte_n(int8_t* _Nullable arg);
+bool pass_byte_n(BoxedByte* _Nullable arg);
 bool pass_ubyte(uint8_t arg);
-bool pass_ubyte_n(uint8_t* _Nullable arg);
+bool pass_ubyte_n(BoxedByte* _Nullable arg);
 bool pass_short(int16_t arg);
-bool pass_short_n(int16_t* _Nullable arg);
+bool pass_short_n(BoxedShort* _Nullable arg);
 bool pass_ushort(uint16_t arg);
-bool pass_ushort_n(uint16_t* _Nullable arg);
+bool pass_ushort_n(BoxedShort* _Nullable arg);
 bool pass_int(int32_t arg);
-bool pass_int_n(int32_t* _Nullable arg);
+bool pass_int_n(BoxedInt* _Nullable arg);
 bool pass_uint(uint32_t arg);
-bool pass_uint_n(uint32_t* _Nullable arg);
+bool pass_uint_n(BoxedInt* _Nullable arg);
 bool pass_long(int64_t arg);
-bool pass_long_n(int64_t* _Nullable arg);
+bool pass_long_n(BoxedLong* _Nullable arg);
 bool pass_ulong(uint64_t arg);
-bool pass_ulong_n(uint64_t* _Nullable arg);
+bool pass_ulong_n(BoxedLong* _Nullable arg);
 bool pass_float(float arg);
-bool pass_float_n(float* _Nullable arg);
+bool pass_float_n(BoxedFloat* _Nullable arg);
 bool pass_double(double arg);
-bool pass_double_n(double* _Nullable arg);
+bool pass_double_n(BoxedDouble* _Nullable arg);
 bool pass_string(KString* _Nonnull arg);
 bool pass_string_empty(KString* _Nonnull arg);
 bool pass_string_n(KString* _Nullable arg);
 bool pass_enum(MyEnum arg);
-bool pass_enum_n(MyEnum* _Nullable arg);
+bool pass_enum_n(BoxedInt* _Nullable arg);
 bool pass_dictionary(MyDictionary* _Nonnull arg);
 bool pass_dictionary_n(MyDictionary* _Nullable arg);
 bool pass_interface(RC_MyInterface* _Nonnull arg);
 bool pass_interface_n(RC_MyInterface* _Nullable arg);
 void return_void(void);
 uint16_t return_char(void);
-uint16_t* _Nullable return_char_n(void);
+BoxedChar* _Nullable return_char_n(void);
 bool return_boolean(void);
-bool* _Nullable return_boolean_n(void);
+BoxedBoolean* _Nullable return_boolean_n(void);
 int8_t return_byte(void);
-int8_t* _Nullable return_byte_n(void);
+BoxedByte* _Nullable return_byte_n(void);
 uint8_t return_ubyte(void);
-uint8_t* _Nullable return_ubyte_n(void);
+BoxedByte* _Nullable return_ubyte_n(void);
 int16_t return_short(void);
-int16_t* _Nullable return_short_n(void);
+BoxedShort* _Nullable return_short_n(void);
 uint16_t return_ushort(void);
-uint16_t* _Nullable return_ushort_n(void);
+BoxedShort* _Nullable return_ushort_n(void);
 int32_t return_int(void);
-int32_t* _Nullable return_int_n(void);
+BoxedInt* _Nullable return_int_n(void);
 uint32_t return_uint(void);
-uint32_t* _Nullable return_uint_n(void);
+BoxedInt* _Nullable return_uint_n(void);
 int64_t return_long(void);
-int64_t* _Nullable return_long_n(void);
+BoxedLong* _Nullable return_long_n(void);
 uint64_t return_ulong(void);
-uint64_t* _Nullable return_ulong_n(void);
+BoxedLong* _Nullable return_ulong_n(void);
 float return_float(void);
-float* _Nullable return_float_n(void);
+BoxedFloat* _Nullable return_float_n(void);
 double return_double(void);
-double* _Nullable return_double_n(void);
+BoxedDouble* _Nullable return_double_n(void);
 KString* _Nonnull return_string(void);
 KString* _Nonnull return_string_empty(void);
 KString* _Nullable return_string_n(void);
 MyEnum return_enum(void);
-MyEnum* _Nullable return_enum_n(void);
+BoxedInt* _Nullable return_enum_n(void);
 MyDictionary* _Nonnull return_dictionary(void);
 MyDictionary* _Nullable return_dictionary_n(void);
 uint16_t ping_char(uint16_t arg);
@@ -768,20 +789,33 @@ bool callback_return_interface_n(RC_CallbackReturnInterfaceN* _Nonnull arg);
 bool pass_char_array(KCharArray* _Nonnull arg);
 bool pass_char_array_empty(KCharArray* _Nonnull arg);
 bool pass_char_array_n(KCharArray* _Nullable arg);
+bool pass_char_narray(KArray* _Nonnull arg);
 bool pass_boolean_array(KBooleanArray* _Nonnull arg);
+bool pass_boolean_narray(KArray* _Nonnull arg);
 bool pass_byte_array(KByteArray* _Nonnull arg);
+bool pass_byte_narray(KArray* _Nonnull arg);
 bool pass_ubyte_array(KUByteArray* _Nonnull arg);
+bool pass_ubyte_narray(KArray* _Nonnull arg);
 bool pass_short_array(KShortArray* _Nonnull arg);
+bool pass_short_narray(KArray* _Nonnull arg);
 bool pass_ushort_array(KUShortArray* _Nonnull arg);
+bool pass_ushort_narray(KArray* _Nonnull arg);
 bool pass_int_array(KIntArray* _Nonnull arg);
+bool pass_int_narray(KArray* _Nonnull arg);
 bool pass_uint_array(KUIntArray* _Nonnull arg);
+bool pass_uint_narray(KArray* _Nonnull arg);
 bool pass_long_array(KLongArray* _Nonnull arg);
+bool pass_long_narray(KArray* _Nonnull arg);
 bool pass_ulong_array(KULongArray* _Nonnull arg);
+bool pass_ulong_narray(KArray* _Nonnull arg);
 bool pass_float_array(KFloatArray* _Nonnull arg);
+bool pass_float_narray(KArray* _Nonnull arg);
 bool pass_double_array(KDoubleArray* _Nonnull arg);
+bool pass_double_narray(KArray* _Nonnull arg);
 bool pass_string_array(KArray* _Nonnull arg);
 bool pass_string_array_n(KArray* _Nonnull arg);
 bool pass_enum_array(KIntArray* _Nonnull arg);
+bool pass_enum_narray(KArray* _Nonnull arg);
 bool pass_dictionary_array(KArray* _Nonnull arg);
 bool pass_dictionary_array_n(KArray* _Nonnull arg);
 bool pass_interface_array(KArray* _Nonnull arg);
@@ -789,20 +823,33 @@ bool pass_interface_array_n(KArray* _Nonnull arg);
 KCharArray* _Nonnull return_char_array(void);
 KCharArray* _Nonnull return_char_array_empty(void);
 KCharArray* _Nullable return_char_array_n(void);
+KArray* _Nonnull return_char_narray(void);
 KBooleanArray* _Nonnull return_boolean_array(void);
+KArray* _Nonnull return_boolean_narray(void);
 KByteArray* _Nonnull return_byte_array(void);
+KArray* _Nonnull return_byte_narray(void);
 KUByteArray* _Nonnull return_ubyte_array(void);
+KArray* _Nonnull return_ubyte_narray(void);
 KShortArray* _Nonnull return_short_array(void);
+KArray* _Nonnull return_short_narray(void);
 KUShortArray* _Nonnull return_ushort_array(void);
+KArray* _Nonnull return_ushort_narray(void);
 KIntArray* _Nonnull return_int_array(void);
+KArray* _Nonnull return_int_narray(void);
 KUIntArray* _Nonnull return_uint_array(void);
+KArray* _Nonnull return_uint_narray(void);
 KLongArray* _Nonnull return_long_array(void);
+KArray* _Nonnull return_long_narray(void);
 KULongArray* _Nonnull return_ulong_array(void);
+KArray* _Nonnull return_ulong_narray(void);
 KFloatArray* _Nonnull return_float_array(void);
+KArray* _Nonnull return_float_narray(void);
 KDoubleArray* _Nonnull return_double_array(void);
+KArray* _Nonnull return_double_narray(void);
 KArray* _Nonnull return_string_array(void);
 KArray* _Nonnull return_string_array_n(void);
 KIntArray* _Nonnull return_enum_array(void);
+KArray* _Nonnull return_enum_narray(void);
 KArray* _Nonnull return_dictionary_array(void);
 KArray* _Nonnull return_dictionary_array_n(void);
 KCharArray* _Nonnull ping_char_array(KCharArray* _Nonnull arg);

@@ -14,10 +14,22 @@ bool pass_char_array_n(KOptional<KArray<uint16_t>> arg) {
     return arg.is_none();
 }
 
+bool pass_char_narray(KArray<KOptional<uint16_t>> arg) {
+    return arg.get_length() == 2 &&
+        arg[0].is_none() &&
+        *arg.get(1) == 'a';
+}
+
 bool pass_boolean_array(KArray<bool> arg) {
     return arg.get_length() == 2 &&
         arg[0] == true &&
         arg[1] == false;
+}
+
+bool pass_boolean_narray(KArray<KOptional<bool>> arg) {
+    return arg.get_length() == 2 &&
+        arg[0].is_none() &&
+        *arg.get(1) == true;
 }
 
 bool pass_byte_array(KArray<int8_t> arg) {
@@ -26,10 +38,22 @@ bool pass_byte_array(KArray<int8_t> arg) {
         arg[1] == 2;
 }
 
+bool pass_byte_narray(KArray<KOptional<int8_t>> arg) {
+    return arg.get_length() == 2 &&
+        arg[0].is_none() &&
+        *arg.get(1) == 1;
+}
+
 bool pass_ubyte_array(KArray<uint8_t> arg) {
     return arg.get_length() == 2 &&
         arg[0] == 1 &&
         arg[1] == 255u;
+}
+
+bool pass_ubyte_narray(KArray<KOptional<uint8_t>> arg) {
+    return arg.get_length() == 2 &&
+        arg[0].is_none() &&
+        *arg.get(1) == 255u;
 }
 
 bool pass_short_array(KArray<int16_t> arg) {
@@ -38,10 +62,22 @@ bool pass_short_array(KArray<int16_t> arg) {
         arg[1] == 2;
 }
 
+bool pass_short_narray(KArray<KOptional<int16_t>> arg) {
+    return arg.get_length() == 2 &&
+        arg[0].is_none() &&
+        *arg.get(1) == 1;
+}
+
 bool pass_ushort_array(KArray<uint16_t> arg) {
     return arg.get_length() == 2 &&
         arg[0] == 1 &&
         arg[1] == 65535u;
+}
+
+bool pass_ushort_narray(KArray<KOptional<uint16_t>> arg) {
+    return arg.get_length() == 2 &&
+        arg[0].is_none() &&
+        *arg.get(1) == 65535u;
 }
 
 bool pass_int_array(KArray<int32_t> arg) {
@@ -50,10 +86,22 @@ bool pass_int_array(KArray<int32_t> arg) {
         arg[1] == 2;
 }
 
+bool pass_int_narray(KArray<KOptional<int32_t>> arg) {
+    return arg.get_length() == 2 &&
+        arg[0].is_none() &&
+        *arg.get(1) == 1;
+}
+
 bool pass_uint_array(KArray<uint32_t> arg) {
     return arg.get_length() == 2 &&
         arg[0] == 1 &&
         arg[1] == 4294967295u;
+}
+
+bool pass_uint_narray(KArray<KOptional<uint32_t>> arg) {
+    return arg.get_length() == 2 &&
+        arg[0].is_none() &&
+        *arg.get(1) == 4294967295u;
 }
 
 bool pass_long_array(KArray<int64_t> arg) {
@@ -62,10 +110,22 @@ bool pass_long_array(KArray<int64_t> arg) {
         arg[1] == 2;
 }
 
+bool pass_long_narray(KArray<KOptional<int64_t>> arg) {
+    return arg.get_length() == 2 &&
+        arg[0].is_none() &&
+        *arg.get(1) == 1;
+}
+
 bool pass_ulong_array(KArray<uint64_t> arg) {
     return arg.get_length() == 2 &&
         arg[0] == 1 &&
         arg[1] == 18446744073709551615u;
+}
+
+bool pass_ulong_narray(KArray<KOptional<uint64_t>> arg) {
+    return arg.get_length() == 2 &&
+        arg[0].is_none() &&
+        *arg.get(1) == 18446744073709551615u;
 }
 
 bool pass_float_array(KArray<float> arg) {
@@ -74,10 +134,22 @@ bool pass_float_array(KArray<float> arg) {
         arg[1] == 2.2f;
 }
 
+bool pass_float_narray(KArray<KOptional<float>> arg) {
+    return arg.get_length() == 2 &&
+        arg[0].is_none() &&
+        *arg.get(1) == 1.1f;
+}
+
 bool pass_double_array(KArray<double> arg) {
     return arg.get_length() == 2 &&
         arg[0] == 1.1 &&
         arg[1] == 2.2;
+}
+
+bool pass_double_narray(KArray<KOptional<double>> arg) {
+    return arg.get_length() == 2 &&
+        arg[0].is_none() &&
+        *arg.get(1) == 1.1;
 }
 
 bool pass_string_array(KArray<KString> arg) {
@@ -94,6 +166,12 @@ bool pass_enum_array(KArray<MyEnum> arg) {
     return arg.get_length() == 2 &&
         arg[0] == CASE1 &&
         arg[1] == CASE2;
+}
+
+bool pass_enum_narray(KArray<KOptional<MyEnum>> arg) {
+    return arg.get_length() == 2 &&
+        arg[0].is_none() &&
+        *arg.get(1) == CASE2;
 }
 
 bool pass_dictionary_array(KArray<MyDictionary> arg) {

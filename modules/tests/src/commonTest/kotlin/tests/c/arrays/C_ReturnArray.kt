@@ -26,8 +26,18 @@ class C_ReturnArray {
     }
 
     @Test
+    fun returnCharNArray() = withCLib {
+        assertContentEquals(arrayOf(null, 'a'), natives.test.returnCharNArray())
+    }
+
+    @Test
     fun returnBooleanArray() = withCLib {
         assertContentEquals(booleanArrayOf(true, false), natives.test.returnBooleanArray())
+    }
+
+    @Test
+    fun returnBooleanNArray() = withCLib {
+        assertContentEquals(arrayOf(null, true), natives.test.returnBooleanNArray())
     }
 
     @Test
@@ -36,8 +46,18 @@ class C_ReturnArray {
     }
 
     @Test
+    fun returnByteNArray() = withCLib {
+        assertContentEquals(arrayOf(null, 1), natives.test.returnByteNArray())
+    }
+
+    @Test
     fun returnUByteArray() = withCLib {
         assertContentEquals(ubyteArrayOf(1.toUByte(), UByte.MAX_VALUE), natives.test.returnUByteArray())
+    }
+
+    @Test
+    fun returnUByteNArray() = withCLib {
+        assertContentEquals(arrayOf(null, UByte.MAX_VALUE), natives.test.returnUByteNArray())
     }
 
     @Test
@@ -46,8 +66,18 @@ class C_ReturnArray {
     }
 
     @Test
+    fun returnShortNArray() = withCLib {
+        assertContentEquals(arrayOf(null, 1), natives.test.returnShortNArray())
+    }
+
+    @Test
     fun returnUShortArray() = withCLib {
         assertContentEquals(ushortArrayOf(1.toUShort(), UShort.MAX_VALUE), natives.test.returnUShortArray())
+    }
+
+    @Test
+    fun returnUShortNArray() = withCLib {
+        assertContentEquals(arrayOf(null, UShort.MAX_VALUE), natives.test.returnUShortNArray())
     }
 
     @Test
@@ -56,8 +86,18 @@ class C_ReturnArray {
     }
 
     @Test
+    fun returnIntNArray() = withCLib {
+        assertContentEquals(arrayOf(null, 1), natives.test.returnIntNArray())
+    }
+
+    @Test
     fun returnUIntArray() = withCLib {
         assertContentEquals(uintArrayOf(1.toUInt(), UInt.MAX_VALUE), natives.test.returnUIntArray())
+    }
+
+    @Test
+    fun returnUIntNArray() = withCLib {
+        assertContentEquals(arrayOf(null, UInt.MAX_VALUE), natives.test.returnUIntNArray())
     }
 
     @Test
@@ -66,8 +106,18 @@ class C_ReturnArray {
     }
 
     @Test
+    fun returnLongNArray() = withCLib {
+        assertContentEquals(arrayOf(null, 1), natives.test.returnLongNArray())
+    }
+
+    @Test
     fun returnULongArray() = withCLib {
         assertContentEquals(ulongArrayOf(1.toULong(), ULong.MAX_VALUE), natives.test.returnULongArray())
+    }
+
+    @Test
+    fun returnULongNArray() = withCLib {
+        assertContentEquals(arrayOf(null, ULong.MAX_VALUE), natives.test.returnULongNArray())
     }
 
     @Test
@@ -76,8 +126,18 @@ class C_ReturnArray {
     }
 
     @Test
+    fun returnFloatNArray() = withCLib {
+        assertContentEquals(arrayOf(null, 1.1f), natives.test.returnFloatNArray())
+    }
+
+    @Test
     fun returnDoubleArray() = withCLib {
         assertContentEquals(doubleArrayOf(1.1, 2.2), natives.test.returnDoubleArray())
+    }
+
+    @Test
+    fun returnDoubleNArray() = withCLib {
+        assertContentEquals(arrayOf(null, 1.1), natives.test.returnDoubleNArray())
     }
 
     @Test
@@ -93,6 +153,11 @@ class C_ReturnArray {
     @Test
     fun returnEnumArray() = withCLib {
         assertContentEquals(arrayOf(MyEnum.CASE1, MyEnum.CASE2), natives.test.returnEnumArray())
+    }
+
+    @Test
+    fun returnEnumNArray() = withCLib {
+        assertContentEquals(arrayOf(null, MyEnum.CASE2), natives.test.returnEnumNArray())
     }
 
     @Test
