@@ -8,11 +8,6 @@ plugins {
 group = "com.huskerdev"
 version = projectDir.parentFile.parentFile.resolve("VERSION").readText().trim()
 
-repositories {
-    mavenCentral()
-    google()
-}
-
 kotlin {
     compilerOptions {
         jvmTarget = JvmTarget.JVM_17

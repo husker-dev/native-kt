@@ -19,6 +19,8 @@ pluginManagement {
     includeBuild("modules/gradle-plugin")
 
     repositories {
+        if(providers.gradleProperty("mavenLocal").get().isNotEmpty())
+            mavenLocal()
         gradlePluginPortal()
         mavenCentral()
         google()
@@ -27,6 +29,8 @@ pluginManagement {
 
 dependencyResolutionManagement {
     repositories {
+        if(providers.gradleProperty("mavenLocal").get().isNotEmpty())
+            mavenLocal()
         mavenCentral()
         google()
     }
