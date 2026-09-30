@@ -295,15 +295,6 @@ class RustPrinter(
                 else
                     "\n\t$value = $index,"
             }.joinTo(this, "")
-
-            if(context.usedTypes.any { it.isEnum(isNullable = true) && it.declaration == enum }) {
-                append("""
-                    
-                    
-                    #[doc(hidden)] __MinNiche = -2147483648, 
-	                #[doc(hidden)] __MaxNiche = 2147483647
-                """.replaceIndent("\t"))
-            }
             appendLine("\n}")
         }
     }
@@ -375,8 +366,9 @@ class RustPrinter(
 
     private fun toNativeType(type: ResolvedIdlType, content: String): String = when {
         type.isVoid() -> content
+        type.isEnumArray(parameterIsNullable = true) -> "into_raw(pack_enum_array($content))"
         type.isPrimitive() || type.isEnum() ->
-            if (type.isNullable) "obj_opt($content, into_raw_primitive)"
+            if (type.isNullable) "obj_opt($content, into_raw)"
             else content
         else -> if (type.isNullable) "obj_opt($content, into_raw)"
                 else "into_raw($content)"
@@ -384,8 +376,9 @@ class RustPrinter(
 
     private fun toRustType(type: ResolvedIdlType, content: String): String = when {
         type.isVoid() -> content
+        type.isEnumArray(parameterIsNullable = true) -> "unpack_enum_array(from_raw($content))"
         type.isPrimitive() || type.isEnum() ->
-            if (type.isNullable) "ptr_opt($content, from_raw_primitive)"
+            if (type.isNullable) "ptr_opt($content, from_raw)"
             else content
         else -> if (type.isNullable) "ptr_opt($content, from_raw)"
                 else "from_raw($content)"

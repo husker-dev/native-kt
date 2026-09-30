@@ -13,7 +13,7 @@ internal fun StringBuilder.printHeaderDef(context: NativeModuleContext) {
         use std::ffi::c_void;
         use std::ptr::null_mut;
         use std::hash::{Hasher, Hash};
-        use std::mem::ManuallyDrop;
+        use std::mem::{ManuallyDrop, MaybeUninit};
         use std::sync::Arc;
         use std::alloc::{alloc, dealloc, Layout};
         
@@ -48,7 +48,10 @@ internal fun StringBuilder.printHeaderDef(context: NativeModuleContext) {
         }
     """.trimIndent())
 
-    if(context.usedTypes.any { it.isReleasable() }) appendLine("""
+    if(context.usedTypes.any { it.isReleasable() }
+        || context.hasPrimitiveNullable
+        || context.hasEnumNullable
+    ) appendLine("""
         
         fn from_raw<T>(of: *mut T) -> T {
             unsafe { *Box::from_raw(of) }
@@ -68,6 +71,22 @@ internal fun StringBuilder.printHeaderDef(context: NativeModuleContext) {
         
         fn obj_opt<T, R>(ptr: Option<R>, f: fn(R) -> *mut T) -> *mut T {
             if ptr.is_none() { null_mut() } else { f(ptr.unwrap()) }
+        }
+    """.trimIndent())
+    if(context.hasEnumNullableArrayToNative) appendLine("""
+        
+        fn unpack_enum_array<T>(arg: Vec<Option<MaybeUninit<T>>>) -> Vec<Option<T>> {
+            arg.into_iter()
+                .map(|i| i.map(|a| unsafe { a.assume_init() }))
+                .collect()
+        }
+    """.trimIndent())
+    if(context.hasEnumNullableArrayToKotlin) appendLine("""
+        
+        fn pack_enum_array<T>(arg: Vec<Option<T>>) -> Vec<Option<MaybeUninit<T>>> {
+            arg.into_iter()
+                .map(|i| i.map(|a| unsafe { MaybeUninit::new(a) }))
+                .collect()
         }
     """.trimIndent())
     if(context.needsAllocFunctions) appendLine("""
@@ -350,31 +369,16 @@ internal fun StringBuilder.printBoxedPrimitives(context: NativeModuleContext) {
 
     appendLine($$"""
         
-        fn into_raw_primitive<T>(of: T) -> *mut T {
-        	unsafe {
-        		let result = alloc(Layout::from_size_align_unchecked(size_of::<T>(), align_of::<T>())) as *mut T;
-        		result.write(of);
-        		result
-        	}
-        }
-        fn from_raw_primitive<T>(of: *mut T) -> T {
-        	unsafe {
-        		let result = of.read();
-        		dealloc(of as *mut u8, Layout::from_size_align_unchecked(size_of::<T>(), align_of::<T>()));
-        		result
-        	}
-        }
-        
         macro_rules! impl_boxed_primitive {
             ($rsType:ident, 
             $funcNew:ident, $funcNewJs:ident, 
             $funcGet:ident, $funcGetJs:ident) => {
                 export_fn! {
                     fn $funcNew(value: $rsType) -> *mut $rsType as $funcNewJs {
-                        into_raw_primitive(value)
+                        into_raw(value)
                     }
                     fn $funcGet(of: *mut $rsType, free: bool) -> $rsType as $funcGetJs {
-                        if(free) { from_raw_primitive(of) } 
+                        if(free) { from_raw(of) } 
                         else { unsafe { of.read() } }
                     }
                 }

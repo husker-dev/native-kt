@@ -36,6 +36,10 @@ internal val ResolvedIdlInterface.rustName: String
     get() = "crate::${name.upperCamelCase()}"
 
 internal fun ResolvedIdlType.toNativeRustType(ptrType: String = "mut"): String = when {
+    // Rust compiler optimizes Vec<Option<Enum>> into Vec<i32>.
+    // It breaks library architecture, where Option<> must be a pointer.
+    isEnumArray(parameterIsNullable = true) ->
+        "*$ptrType Vec<Option<MaybeUninit<${arrayTypeOrNull()!!.toRustType(printOption = false)}>>>"
     isReleasable() || ((isPrimitive() || isEnum()) && isNullable) -> "*$ptrType ${toRustType(printOption = false)}"
     isRawInterface() -> "usize"
     else -> toRustType()

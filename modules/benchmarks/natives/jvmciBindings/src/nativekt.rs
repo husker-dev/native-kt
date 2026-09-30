@@ -3,7 +3,7 @@
 use std::ffi::c_void;
 use std::ptr::null_mut;
 use std::hash::{Hasher, Hash};
-use std::mem::ManuallyDrop;
+use std::mem::{ManuallyDrop, MaybeUninit};
 use std::sync::Arc;
 use std::alloc::{alloc, dealloc, Layout};
 
