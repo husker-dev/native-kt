@@ -269,9 +269,9 @@ class CJniPrinter(
                 }
 
                 append("\n\tclass_$lowerName = (*env)->NewGlobalRef(env, (*env)->FindClass(env, \"java/lang/$name\"));")
-                if(hasToNativeCast)
-                    append("\n\t${lowerName}_new = (*env)->GetStaticMethodID(env, class_$lowerName, \"valueOf\", \"($d)Ljava/lang/$name;\");")
                 if(hasToKotlinCast)
+                    append("\n\t${lowerName}_new = (*env)->GetStaticMethodID(env, class_$lowerName, \"valueOf\", \"($d)Ljava/lang/$name;\");")
+                if(hasToNativeCast)
                     append("\n\t${lowerName}_get = (*env)->GetMethodID(env, class_$lowerName, \"${lowerName}Value\", \"()$d\");")
             }
             append("\n")

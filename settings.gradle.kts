@@ -2,7 +2,10 @@
 
 rootProject.name = "native-kt"
 
+includeBuild("modules/core")
+
 include("modules:runtime")
+include("modules:cli")
 include("modules:intellij-plugin")
 include("modules:android-critical-stub")
 
@@ -13,7 +16,6 @@ include("modules:benchmarks")
 include("modules:examples:glfw")
 include("modules:examples:freetype")
 
-includeBuild("modules/core")
 
 pluginManagement {
     includeBuild("modules/gradle-plugin")

@@ -1,5 +1,6 @@
 package com.huskerdev.nativekt.printers.rust
 
+import com.huskerdev.nativekt.BuildSystem
 import com.huskerdev.nativekt.NativeModuleContext
 import com.huskerdev.nativekt.utils.camelCase
 import com.huskerdev.nativekt.utils.isReleasable
@@ -7,8 +8,9 @@ import com.huskerdev.nativekt.utils.printLabel
 
 
 internal fun StringBuilder.printHeaderDef(context: NativeModuleContext) {
+    if((context.buildSystem as BuildSystem.Cargo).suppressUnused)
+        append("#![allow(unused)]\n")
     appendLine($$"""
-        #![allow(unused)]
         
         use std::ffi::c_void;
         use std::ptr::null_mut;

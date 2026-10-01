@@ -15,8 +15,6 @@ class RustPrinter(
     init {
         target.parent()!!.createDirectories()
         target.writeSync(buildString {
-            if((context.buildSystem as BuildSystem.Cargo).printApi)
-                printApi()
             printHeaderDef(context)
             printStringDef(context)
             printArraysDef(context)
@@ -27,69 +25,6 @@ class RustPrinter(
             printEnums()
             printFunctions()
         }.replace("\n", SystemLineSeparator))
-    }
-
-    private fun StringBuilder.printApi() {
-        printLabel("API")
-
-        if(context.interfaces.isNotEmpty())
-            append("/*\n======================= Interfaces ========================= *\\")
-
-        context.interfaces.forEach { inter ->
-            val name = inter.rustName.replace("crate::", "")
-
-            append("\n\npub struct $name")
-            if(inter.fields.isEmpty())
-                append(";")
-
-            if(inter.operations.isNotEmpty()) {
-                append("\n\nimpl $name {")
-
-                inter.toOperations().forEach { operation ->
-                    val args = operation.args.map {
-                        val ref = if(it.type.isReleasable()) "&" else ""
-                        "${it.rustName}: $ref${it.type.toRustType()}"
-                    }
-                    val type = if(!operation.type.isVoid())
-                        " -> ${operation.type.toRustType()}"
-                    else ""
-
-                    when {
-                        operation.isInterfaceOperationConstructor() -> {
-                            append("\n\tfn ${operation.rustName}(${args.joinToString()}) -> Self {}")
-                        }
-                        operation.isInterfaceOperationFn() -> {
-                            val args = buildList {
-                                add("&self")
-                                addAll(args.drop(1))
-                            }.joinToString()
-
-                            append("\n\tfn ${operation.rustName}($args)$type {}")
-                        }
-                    }
-                }
-                append("\n}")
-            }
-        }
-
-        if(context.operations.isNotEmpty())
-            append("\n\n======================= Functions =========================== *\\")
-
-        context.operations.forEach { operation ->
-            append("\n\npub fn ${operation.rustName}(")
-            operation.args.joinTo(this, ",") {
-                val ref = if(it.type.isReleasable()) "&" else ""
-                "\n\t${it.rustName}: $ref${it.type.toRustType()}"
-            }
-            if(operation.args.isNotEmpty())
-                append("\n")
-            append(")")
-
-            if(!operation.type.isVoid())
-                append(" -> ${operation.type.toRustType()}")
-            append(" {}")
-        }
-        append("\n\n=============================================================== */\n\n")
     }
 
     private fun StringBuilder.printDictionaries() {
@@ -106,12 +41,15 @@ class RustPrinter(
             val funcNewJs = context.jsMangle["${name.camelCase().lowercase()}_new"]
             val funcFreeJs = context.jsMangle["${name.camelCase().lowercase()}_free"]
 
-            // Struct
-            append("""
-                
-                #[derive(Clone)]
-                pub struct $name {
-            """.trimIndent())
+            // Print struct
+            buildList {
+                if(dictionary.hasAttribute("debug"))
+                    add("Debug")
+                add("Clone")
+            }.joinTo(this, prefix = "\n#[derive(", postfix = ")]")
+
+            append("\npub struct $name {")
+            
             fields.joinTo(this) {
                 "\n\tpub ${it.rustName}: ${it.type.toRustType()}"
             }
@@ -151,8 +89,8 @@ class RustPrinter(
                         val type = it.type.toNativeRustType(ptrType = "const")
                         val call = "(*of).${it.rustName}"
                         val castedCall = when {
-                            it.type.isEnum() -> "$call.clone()"
                             it.type.isNullable -> "(&$call).as_ref().map_or(core::ptr::null(), |it| it as $type)"
+                            it.type.isEnum() -> "$call.clone()"
                             it.type.isReleasable() -> "&$call"
                             else -> call
                         }

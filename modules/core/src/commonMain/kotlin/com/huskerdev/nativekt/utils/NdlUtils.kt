@@ -41,7 +41,7 @@ fun <T> ResolvedIdlType.Default.arrayType(block: (type: ResolvedIdlType.Default)
     return block(arrayTypeOrNull()!!)
 }
 
-private fun ResolvedIdlOperation.hasAttribute(name: String): Boolean =
+internal fun IdlAttributeHolder.hasAttribute(name: String): Boolean =
     attributes?.any { it.name.text.lowercase() == name } ?: false
 
 

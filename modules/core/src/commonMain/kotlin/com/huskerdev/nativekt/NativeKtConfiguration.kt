@@ -186,11 +186,13 @@ sealed interface BuildSystem {
     open class Cargo: BuildSystem {
         override val language: Language = Language.RUST
 
-        var printApi: Boolean = false
-
         var buildType: CargoBuildType = CargoBuildType.RELEASE
 
         var apiRsFile: PlatformFile? = null
+
+        var suppressUnused = true
+
+        var generateApiFile = true
 
         fun apiRsFile(module: NativeProject) =
             apiRsFile ?: module.dir.resolve("src/nativekt.rs")
@@ -204,7 +206,7 @@ sealed interface BuildSystem {
 @Serializable
 sealed class NativeProject {
 
-    abstract val name: String
+    abstract var name: String
 
     /**
      * Directory with CMake project.
@@ -255,7 +257,7 @@ sealed class NativeProject {
 @Serializable
 @SerialName("multiplatform")
 open class Multiplatform(
-    override val name: String,
+    override var name: String,
     override var dir: PlatformFile
 ): NativeProject() {
 
@@ -310,7 +312,7 @@ open class Multiplatform(
 @Serializable
 @SerialName("single")
 class SinglePlatform(
-    override val name: String,
+    override var name: String,
     override var dir: PlatformFile
 ): NativeProject() {
 

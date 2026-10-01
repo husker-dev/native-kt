@@ -4,6 +4,7 @@ import com.huskerdev.nativekt.GradlePluginLogger
 import com.huskerdev.nativekt.GradleTaskExecutor
 import com.huskerdev.nativekt.NativeKtConfiguration
 import com.huskerdev.nativekt.NativeModuleContext
+import com.huskerdev.nativekt.NativeModuleContext.NdlCompilationException
 import com.huskerdev.nativekt.NativeProject
 import com.huskerdev.nativekt.TargetType
 import com.huskerdev.nativekt.createContext
@@ -17,10 +18,8 @@ import org.gradle.api.ExtensiblePolymorphicDomainObjectContainer
 import org.gradle.api.Project
 import org.gradle.api.Task
 import java.io.File
-import kotlin.properties.ReadOnlyProperty
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KMutableProperty
-import kotlin.reflect.KMutableProperty1
 import kotlin.reflect.KProperty
 
 
@@ -42,13 +41,20 @@ internal fun createContextWithProject(
     val buildDir = project.layout.buildDirectory.asFile.get()
     val configuration = extension.cleanWrapper()
 
-    val context = createContext(
-        buildDir = PlatformFile(buildDir).resolve("generated/nativekt"),
-        configuration = configuration,
-        module = module,
-        executor = GradleTaskExecutor(project),
-        logger = GradlePluginLogger(project.logger)
-    )
+    val context = try {
+        createContext(
+            buildDir = PlatformFile(buildDir).resolve("generated/nativekt"),
+            configuration = configuration,
+            module = module,
+            executor = GradleTaskExecutor(project),
+            logger = GradlePluginLogger(project.logger)
+        )
+    } catch (e: NdlCompilationException) {
+        e.errors.forEach {
+            project.logger.error(it.message)
+        }
+        throw UnsupportedOperationException()
+    }
 
     val initTaskName = "init${module.name.upperCamelCase()}"
     val initTask = project.tasks.findByName(initTaskName)

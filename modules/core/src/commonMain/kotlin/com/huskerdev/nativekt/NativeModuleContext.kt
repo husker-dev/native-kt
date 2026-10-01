@@ -40,7 +40,10 @@ class NativeModuleContext(
     private val idl = WebIDL.resolve(
         text = module.resolveNdlFile().readSync(),
         env = NdlEnv
-    )
+    ).also {
+        if(it.mergedErrors.isNotEmpty())
+            throw NdlCompilationException(it.mergedErrors)
+    }
 
     val debug = configuration.debug
 
@@ -113,7 +116,7 @@ class NativeModuleContext(
                     dictionary.fields.forEach { addType(it.type) }
                     dictionary.implements?.let { addType(ResolvedIdlType.Default(it, emptyList(), false)) }
                 }
-                type.isArray() -> addType(type.arrayTypeOrNull()!!)
+                type.isArray() -> type.arrayTypeOrNull()?.let(::addType)
             }
         }
         allOperations.forEach { op ->
@@ -467,6 +470,10 @@ class NativeModuleContext(
         fun error(text: String)
         fun info(text: String)
     }
+
+    class NdlCompilationException(
+        val errors: List<WebIDLErrorException>
+    ): Throwable()
 }
 
 

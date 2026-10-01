@@ -176,9 +176,11 @@ open class WrappedCMake(instance: BuildSystem.CMake): WrappedBuildSystem<BuildSy
 }
 
 open class WrappedCargo(instance: BuildSystem.Cargo): WrappedBuildSystem<BuildSystem.Cargo>(instance) {
-    var printApi: Boolean by instance::printApi
-
     var buildType: CargoBuildType by instance::buildType
 
     var apiRsFile: File? by JavaFile(instance::apiRsFile)
+
+    var suppressUnused: Boolean by instance::suppressUnused
+
+    var generateApiFile: Boolean by instance::generateApiFile
 }

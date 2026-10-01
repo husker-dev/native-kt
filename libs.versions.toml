@@ -20,6 +20,7 @@ webidl = "1.1.1"
 osutils = "1.0.0"
 filekit = "0.16.0"
 env_var = "1.0.6"
+shadow = "9.6.1"
 
 # == Other FFI gen ==
 gobley = "0.3.7"
@@ -61,5 +62,6 @@ intellij-platform            = { id = "org.jetbrains.intellij.platform", version
 gobley-cargo                 = { id = "dev.gobley.cargo", version.ref = "gobley" }
 gobley-uniffy                = { id = "dev.gobley.uniffi", version.ref = "gobley" }
 
+shadow                       = { id = "com.gradleup.shadow", version.ref = "shadow" }
 plugin-publish               = { id = "com.gradle.plugin-publish", version.ref = "gradle_plugin_publish" }
 maven-publish                = { id = "com.vanniktech.maven.publish", version.ref = "maven_publish" }

@@ -41,10 +41,12 @@ abstract class ApiGenTask @Inject constructor(
                 }
             }
             is BuildSystem.Cargo -> {
-                RustPrinter(
-                    context = context,
-                    target = buildSystem.apiRsFile(module)
-                )
+                if(buildSystem.generateApiFile) {
+                    RustPrinter(
+                        context = context,
+                        target = buildSystem.apiRsFile(module)
+                    )
+                }
             }
         }
     }
