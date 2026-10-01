@@ -1015,6 +1015,7 @@ class CJniPrinter(
         val static = if (isStatic) "Static" else ""
         return when {
             isPrimitive() && isUnsigned() -> toSignedType().toMethodCall(isStatic)
+            (isNullablePrimitive() || isNullableEnum()) -> "Call${static}ObjectMethod"
             isVoid() -> "Call${static}VoidMethod"
             isBoolean() -> "Call${static}BooleanMethod"
             isChar() -> "Call${static}CharMethod"
