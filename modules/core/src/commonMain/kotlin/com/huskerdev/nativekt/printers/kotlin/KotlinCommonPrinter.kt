@@ -15,7 +15,11 @@ class KotlinCommonPrinter(
         target.writeSync(buildString {
             printHeader()
             printEnums()
-            printDictionaries()
+            printDictionaries(
+                context = context,
+                expectActual = true,
+                isCommon = true
+            )
             printInterface()
             printCallbacks()
             printOperations()
@@ -146,50 +150,66 @@ class KotlinCommonPrinter(
             append("\n}\n")
         }
     }
+}
 
-    private fun StringBuilder.printDictionaries() {
-        if(context.dictionaries.isEmpty())
-            return
+internal fun StringBuilder.printDictionaries(
+    context: NativeModuleContext,
+    expectActual: Boolean,
+    isCommon: Boolean,
+    isJvm: Boolean = false
+) {
+    if(context.dictionaries.isEmpty())
+        return
 
-        printLabel("Dictionaries")
-        context.dictionaries.forEach { dictionary ->
-            val name = dictionary.kname
-            val parent = if (dictionary.implements != null)
-                ": ${dictionary.implements!!.kname}"
-            else ""
+    printLabel("Dictionaries")
+    context.dictionaries.forEach { dictionary ->
+        val printImpl = !expectActual || !isCommon
 
-            val fields = context.allFields[dictionary]!!
-            val args = fields.joinToString {
-                "${it.kname}: ${it.type.toKotlinType()}"
-            }
-            val argNames = fields.joinToString { it.kname }
+        val actual1 = if(expectActual)
+            if(isCommon) "expect " else "actual "
+        else ""
+        val actual2 = if(expectActual)
+            if(isCommon) "" else "actual "
+        else ""
 
-            // Print
+        val name = dictionary.kname
+        val parent = if (dictionary.implements != null)
+            ": ${dictionary.implements!!.kname}"
+        else ""
 
-            append("\ninterface $name$parent {")
+        val fields = context.allFields[dictionary]!!
+        val args = fields.joinToString {
+            "${it.kname}: ${it.type.toKotlinType()}"
+        }
+        val argNames = fields.joinToString { it.kname }
 
-            // Interface fields
-            dictionary.fields.joinTo(this, separator = "") {
-                "\n\tval ${it.kname}: ${it.type.toKotlinType()}"
-            }
+        // Print
+        append("\n")
+        append("${actual1}interface $name$parent {")
 
-            // Companion
-            append("""
-                
-                
-                companion object {
-                    @kotlin.jvm.JvmStatic
-                    @kotlin.jvm.JvmName("of")
-                    operator fun invoke($args): ${dictionary.kname} = 
-                        Impl($argNames)
-                }
-            """.replaceIndent("\t"))
+        // Interface fields
+        dictionary.fields.joinTo(this, separator = "") {
+            "\n\t${actual2}val ${it.kname}: ${it.type.toKotlinType()}"
+        }
+
+        // Companion
+        append("\n\n\t${actual2}companion object {\n\t\t")
+
+        if(isJvm)
+            append("@JvmStatic\n\t\t@JvmName(\"of\")\n\t\t")
+        append("${actual2}operator fun invoke($args): ${dictionary.kname}")
+
+        if(printImpl)
+            append(" = \n\t\t\tImpl($argNames)")
+        append("\n\t}")
+
+        if(printImpl) {
 
             // Impl (data class)
             if ((context.configuration as? NativeKtJvmConfiguration)?.useJvmRecord ?: false && fields.isNotEmpty())
                 append("\n\t@kotlin.jvm.JvmRecord")
 
-            if(fields.isNotEmpty()) {
+            if (fields.isNotEmpty()) {
                 append("\n\tdata class Impl(")
                 fields.joinTo(this, separator = ",") { field ->
                     "\n\t\toverride val ${field.kname}: ${field.type.toKotlinType()}"
@@ -241,8 +261,8 @@ class KotlinCommonPrinter(
                 append("\n\t\t\treturn result\n\t\t}")
                 append("\n\t}")
             }
-
-            append("\n}\n")
         }
+
+        append("\n}\n")
     }
 }

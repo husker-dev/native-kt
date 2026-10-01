@@ -2,3 +2,7 @@
 namespace global {
     void helloWorld();
 };
+
+dictionary MyDictionary {
+    i32 field;
+};

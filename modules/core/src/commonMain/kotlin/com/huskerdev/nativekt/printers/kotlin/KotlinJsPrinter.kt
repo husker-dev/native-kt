@@ -24,7 +24,8 @@ class KotlinJsPrinter(
             printBasicCasts()
             printCallbacks()
             printModuleApi()
-            printDictionaries()
+            printDictionaries(context, expectActual, isCommon = false)
+            printDictionaryCasts()
             printFunctions()
             printInterfaces()
         })
@@ -802,7 +803,7 @@ class KotlinJsPrinter(
         append("\n}\n")
     }
 
-    private fun StringBuilder.printDictionaries() {
+    private fun StringBuilder.printDictionaryCasts() {
         if(!context.hasDictionary)
             return
         printLabel("Dictionaries")

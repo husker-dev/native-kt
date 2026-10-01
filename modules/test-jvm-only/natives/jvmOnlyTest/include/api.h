@@ -12,6 +12,26 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+// ╔══════════════════════════╗
+// ║     Type definitions     ║
+// ╚══════════════════════════╝
+
+typedef struct MyDictionary MyDictionary;
+
+// ╔═════════════════╗
+// ║     Structs     ║
+// ╚═════════════════╝
+
+struct MyDictionary {	
+	MyDictionary* _Nullable (* _Nullable clone)(const MyDictionary* _Nullable);
+	void (* _Nullable free)(MyDictionary* _Nullable);
+	int32_t field;
+};
+
+MyDictionary* _Nonnull MyDictionary_new(int32_t field);
+MyDictionary* _Nullable MyDictionary_clone(const MyDictionary* _Nullable self);
+void MyDictionary_free(MyDictionary* _Nullable self);
+
 // ╔═══════════════════╗
 // ║     Functions     ║
 // ╚═══════════════════╝

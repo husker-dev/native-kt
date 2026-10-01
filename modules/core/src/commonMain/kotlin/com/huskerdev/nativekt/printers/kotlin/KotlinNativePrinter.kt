@@ -18,7 +18,8 @@ class KotlinNativePrinter(
         target.writeSync(buildString {
             printHeader()
             printBasicCasts()
-            printDictionariesCasts()
+            printDictionaries(context, expectActual, isCommon = false)
+            printDictionaryCasts()
             printCallbacks()
             printFunctions()
             printInterfaces()
@@ -424,7 +425,7 @@ class KotlinNativePrinter(
         }
     }
 
-    private fun StringBuilder.printDictionariesCasts() {
+    private fun StringBuilder.printDictionaryCasts() {
         if(!context.hasDictionary)
             return
         printLabel("Dictionary")

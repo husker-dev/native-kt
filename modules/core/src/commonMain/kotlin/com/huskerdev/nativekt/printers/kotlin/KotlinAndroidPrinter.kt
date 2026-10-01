@@ -23,6 +23,7 @@ class KotlinAndroidPrinter(
         target.parent()!!.createDirectories()
         target.writeSync(buildString {
             printHeader()
+            printDictionaries(context, expectActual, isCommon = false)
             printJvmInterfaces(context)
             printFunction()
 

@@ -30,6 +30,7 @@ class KotlinJvmPrinter(
         target.parent()!!.createDirectories()
         target.writeSync(buildString {
             printHeader()
+            printDictionaries(context, expectActual, isCommon = false, isJvm = true)
             printJvmInterfaces(context)
             printFunctions()
             printInvokerInterface()
