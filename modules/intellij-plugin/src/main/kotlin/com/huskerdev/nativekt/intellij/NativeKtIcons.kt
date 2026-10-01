@@ -5,5 +5,6 @@ import com.intellij.openapi.util.IconLoader
 class NativeKtIcons {
     companion object {
         val treeIcon = IconLoader.getIcon("/com/huskerdev/nativekt/intellij/icons/ocdRunConfiguration.svg", NativeKtIcons::class.java)
+        val constructorIcon = IconLoader.getIcon("/com/huskerdev/nativekt/intellij/icons/constructor.svg", NativeKtIcons::class.java)
     }
 }

@@ -1,5 +1,6 @@
-package com.huskerdev.nativekt.intellij.ndl.navigation
+package com.huskerdev.nativekt.intellij.ndl
 
+import com.huskerdev.nativekt.intellij.NativeKtIcons
 import com.huskerdev.nativekt.intellij.ndl.parser.NdlDefinitionType
 import com.huskerdev.nativekt.intellij.ndl.psi.NdlPsi
 import com.huskerdev.nativekt.intellij.ndl.psi.NdlPsiNamespace
@@ -20,7 +21,7 @@ class NdlIconProvider: IconProvider() {
             NdlDefinitionType.ENUM, NdlDefinitionType.ENUM_ELEMENT -> AllIcons.Nodes.Enum
             NdlDefinitionType.CALLBACK -> AllIcons.Nodes.Lambda
             NdlDefinitionType.OPERATION -> if(element.parent is NdlPsiNamespace) AllIcons.Nodes.Function else AllIcons.Nodes.Method
-            NdlDefinitionType.CONSTRUCTOR -> AllIcons.Nodes.Constructor
+            NdlDefinitionType.CONSTRUCTOR -> NativeKtIcons.constructorIcon
             NdlDefinitionType.DICTIONARY -> AllIcons.Nodes.Models
             NdlDefinitionType.TYPEDEF, NdlDefinitionType.FIELD -> AllIcons.Nodes.Field
             NdlDefinitionType.ARGUMENT -> AllIcons.Nodes.Parameter
