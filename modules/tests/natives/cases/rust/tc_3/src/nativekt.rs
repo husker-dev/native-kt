@@ -56,15 +56,17 @@ export_fn! {
 	fn nativekt_natives_tc_3_rust_tc_3_rust__emptydictionary_new() -> *mut EmptyDictionary as P_ {
 		into_raw(EmptyDictionary {  })
 	}
+	fn nativekt_natives_tc_3_rust_tc_3_rust__emptydictionary_free(of: *mut EmptyDictionary) -> () as Q_ { from_raw(of); }
 }
 
 #[derive(Clone)]
 pub struct EmptyDictionary1 {
 }
 export_fn! {
-	fn nativekt_natives_tc_3_rust_tc_3_rust__emptydictionary1_new() -> *mut EmptyDictionary1 as Q_ {
+	fn nativekt_natives_tc_3_rust_tc_3_rust__emptydictionary1_new() -> *mut EmptyDictionary1 as R_ {
 		into_raw(EmptyDictionary1 {  })
 	}
+	fn nativekt_natives_tc_3_rust_tc_3_rust__emptydictionary1_free(of: *mut EmptyDictionary1) -> () as S_ { from_raw(of); }
 }
 
 #[derive(Clone)]
@@ -72,18 +74,20 @@ pub struct MyDictionary {
 	pub a: i32
 }
 export_fn! {
-	fn nativekt_natives_tc_3_rust_tc_3_rust__mydictionary_new(a: i32) -> *mut MyDictionary as R_ {
+	fn nativekt_natives_tc_3_rust_tc_3_rust__mydictionary_new(a: i32) -> *mut MyDictionary as T_ {
 		into_raw(MyDictionary { a })
 	}
+	fn nativekt_natives_tc_3_rust_tc_3_rust__mydictionary_free(of: *mut MyDictionary) -> () as U_ { from_raw(of); }
+	fn nativekt_natives_tc_3_rust_tc_3_rust__mydictionary__a(of: *mut MyDictionary) -> i32 as V_ { unsafe { (*of).a } }
 }
 
 // ╔═══════════════════╗
 // ║     Functions     ║
 // ╚═══════════════════╝
 
-export_fn!{ fn nativekt_natives_tc_3_rust_tc_3_rust_stub1(e: *mut EmptyDictionary1) -> () as S_ {
+export_fn!{ fn nativekt_natives_tc_3_rust_tc_3_rust_stub1(e: *mut EmptyDictionary1) -> () as W_ {
     crate::stub1(from_raw(e))
 }}
-export_fn!{ fn nativekt_natives_tc_3_rust_tc_3_rust_stub2(e: *mut MyDictionary) -> () as T_ {
+export_fn!{ fn nativekt_natives_tc_3_rust_tc_3_rust_stub2(e: *mut MyDictionary) -> () as X_ {
     crate::stub2(from_raw(e))
 }}

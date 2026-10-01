@@ -96,6 +96,7 @@ class NativeModuleContext(
         allOperations.forEach { op ->
             op.args.forEach { addType(it.type) }
         }
+        dictionaries.forEach { addType(ResolvedIdlType.Default(it)) }
     }
 
     /**
@@ -114,7 +115,7 @@ class NativeModuleContext(
                 type.isDictionary() -> {
                     val dictionary = type.declaration as ResolvedIdlDictionary
                     dictionary.fields.forEach { addType(it.type) }
-                    dictionary.implements?.let { addType(ResolvedIdlType.Default(it, emptyList(), false)) }
+                    dictionary.implements?.let { addType(ResolvedIdlType.Default(it)) }
                 }
                 type.isArray() -> type.arrayTypeOrNull()?.let(::addType)
             }
@@ -122,6 +123,7 @@ class NativeModuleContext(
         allOperations.forEach { op ->
             addType(op.type)
         }
+        dictionaries.forEach { addType(ResolvedIdlType.Default(it)) }
     }
 
     val usedTypes = toNativeTypes + toKotlinTypes
