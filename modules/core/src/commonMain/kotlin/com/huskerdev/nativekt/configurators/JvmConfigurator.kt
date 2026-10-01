@@ -199,6 +199,7 @@ fun compileJvm(
                     sources = emptyList(),
                     includeDirs = emptyList(),
                     linkerArgs = buildList {
+                        add("-O3")
                         add(wholeArchive(jniLib!!.posixPath))
                         add("$rustOutDir/lib${context.moduleName}.a")
                         addAll(rustLinkerFlags)

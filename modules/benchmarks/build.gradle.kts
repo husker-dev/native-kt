@@ -1,5 +1,6 @@
 import gobley.gradle.GobleyHost
 import gobley.gradle.cargo.dsl.jvm
+import gobley.gradle.cargo.tasks.CargoBuildTask
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -80,5 +81,11 @@ benchmark {
             outputTimeUnit = "ns"
             mode = "avgt"
         }
+    }
+}
+
+afterEvaluate {
+    tasks.withType<CargoBuildTask> {
+        nativeStaticLibsDefFile.set(null as File?)
     }
 }

@@ -206,8 +206,8 @@ internal fun StringBuilder.printDictionaries(
         if(printImpl) {
 
             // Impl (data class)
-            if ((context.configuration as? NativeKtJvmConfiguration)?.useJvmRecord ?: false && fields.isNotEmpty())
-                append("\n\t@kotlin.jvm.JvmRecord")
+            if (isJvm && (context.configuration as? NativeKtJvmConfiguration)?.useJvmRecord ?: false && fields.isNotEmpty())
+                append("\n\t@JvmRecord")
 
             if (fields.isNotEmpty()) {
                 append("\n\tdata class Impl(")
