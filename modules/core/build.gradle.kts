@@ -27,7 +27,9 @@ kotlin {
         commonMain.dependencies {
             api(libs.webidl)
             api(libs.osutils)
-            api(libs.filekit)
+            api(libs.filekit.get().toString()) {
+                exclude(group = "androidx.annotation")
+            }
             implementation(libs.envvar)
 
             implementation(libs.kotlinx.serialization)
