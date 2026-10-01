@@ -112,9 +112,12 @@ fun compileAndroid(
     extension.androidTargets.forEach { target ->
         context.logger!!.info("Compiling Android target: $target")
 
+        val cmdExt = if(OS.current == OS.WINDOWS) ".cmd" else ""
         val llvmTarget = toAndroidLlvmTarget(target)
         val ndkClang = toolchainBinDir.list()
-            .filter { it.name.startsWith(llvmTarget) && it.name.endsWith("clang") }
+            .filter {
+                it.name.startsWith(llvmTarget) && it.name.endsWith("clang$cmdExt")
+            }
             .maxByOrNull { it.name }
             ?: throw UnsupportedOperationException("Could not find capable Android LLVM target: $target")
         val ndkAr = toolchainBinDir.resolve("llvm-ar")
