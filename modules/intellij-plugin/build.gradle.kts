@@ -25,7 +25,9 @@ dependencies {
 
         bundledPlugin("org.jetbrains.kotlin")
     }
-    implementation("$group:core")
+
+    val libraryVersion = projectDir.parentFile.parentFile.resolve("VERSION").readText().trim()
+    implementation("$group:native-kt-core:$libraryVersion")
 }
 
 tasks {
@@ -56,5 +58,4 @@ tasks {
     publishPlugin {
         token.set(System.getenv("PUBLISH_TOKEN"))
     }
-
 }

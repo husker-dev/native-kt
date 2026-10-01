@@ -24,7 +24,9 @@ kotlin {
 
 mavenPublishing {
     publishToMavenCentral()
-    signAllPublications()
+
+    if(project.hasProperty("sign"))
+        signAllPublications()
 
     coordinates(group.toString(), "native-kt-android-critical-stub", version.toString())
 

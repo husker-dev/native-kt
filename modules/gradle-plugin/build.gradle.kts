@@ -20,7 +20,7 @@ java {
 }
 
 dependencies {
-    implementation("$group:core")
+    implementation("$group:native-kt-core:$version")
 
     implementation(libs.kotlin.gradle.plugin)
     implementation(libs.kotlinx.serialization)

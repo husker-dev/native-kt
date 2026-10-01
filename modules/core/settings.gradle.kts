@@ -1,6 +1,6 @@
 @file:Suppress("UnstableApiUsage")
 
-rootProject.name = "core"
+rootProject.name = "native-kt-core"
 
 pluginManagement {
     val properties = java.util.Properties()

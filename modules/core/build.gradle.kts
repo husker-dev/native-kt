@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.maven.publish)
 }
 
 group = "com.huskerdev"
@@ -52,4 +53,39 @@ project.afterEvaluate {
             const val VERSION = "$version"
         }
     """.trimIndent().replace("\n", System.lineSeparator()))
+}
+
+mavenPublishing {
+    publishToMavenCentral()
+
+    if(project.hasProperty("sign"))
+        signAllPublications()
+
+    coordinates(group.toString(), "native-kt-core", version.toString())
+
+    pom {
+        name = "native-kt-core"
+        description = "Core native-kt library"
+
+        url = "https://github.com/husker-dev/native-kt"
+
+        licenses {
+            license {
+                name = "The Apache License, Version 2.0"
+                url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
+            }
+        }
+        developers {
+            developer {
+                id = "husker-dev"
+                name = "Nikita Shtengauer"
+                email = "shtengauer.nikita@gmail.com"
+            }
+        }
+        scm {
+            connection = "https://github.com/husker-dev/native-kt.git"
+            developerConnection = "https://github.com/husker-dev/native-kt.git"
+            url = "https://github.com/husker-dev/native-kt"
+        }
+    }
 }

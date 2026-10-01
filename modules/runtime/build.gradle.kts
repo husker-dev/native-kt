@@ -102,7 +102,9 @@ tasks.withType<KotlinJvmCompile>().configureEach {
 
 mavenPublishing {
     publishToMavenCentral()
-    signAllPublications()
+
+    if(project.hasProperty("sign"))
+        signAllPublications()
 
     coordinates(group.toString(), "native-kt-runtime", version.toString())
 
