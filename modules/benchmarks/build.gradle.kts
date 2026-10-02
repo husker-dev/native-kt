@@ -84,6 +84,7 @@ benchmark {
     }
 }
 
+// Gobley hack to run
 afterEvaluate {
     tasks.withType<CargoBuildTask> {
         nativeStaticLibsDefFile.set(null as File?)

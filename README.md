@@ -17,7 +17,7 @@ https://native-kt.com/
 
 ## JVM Benchmark
 
-Tested on Apple M4 Pro (GraalVM 23):
+Tested:
 - [BoltFFI](https://github.com/boltffi/boltffi)
 - [Gobley/UniFFI](https://github.com/gobley/gobley)
 - native-kt (this project)
@@ -28,32 +28,29 @@ Cases:
 - Sum of two integers
 - Pass string
 
-```agsl
-Benchmark                         Mode  Cnt     Score      Error  Units
-boltffi_empty                     avgt    5     2,253 ±    0,012  ns/op
-boltffi_add                       avgt    5     2,332 ±    0,618  ns/op
-boltffi_string                    avgt    5    78,223 ±    0,334  ns/op
+Targets:
+- Apple M4 Pro (macOS, arm64, GraalVM 23)
+- Ryzen AI 9 HX 370 (Windows, x86-64, GraalVM 23)
 
-gobley_empty                      avgt    5  2490,096 ±  684,183  ns/op
-gobley_add                        avgt    5  2951,996 ± 2526,199  ns/op
-gobley_string                     avgt    5  7155,289 ± 3574,407  ns/op
-
-nativekt_foreign_empty            avgt    5     3,408 ±    0,223  ns/op
-nativekt_foreign_add              avgt    5     3,753 ±    0,022  ns/op
-nativekt_foreign_string           avgt    5    26,302 ±    0,872  ns/op
-
-nativekt_foreign_critical_empty   avgt    5     3,000 ±    0,014  ns/op
-nativekt_foreign_critical_add     avgt    5     3,254 ±    0,019  ns/op
-nativekt_foreign_critical_string  avgt    5     7,403 ±    0,183  ns/op
-
-nativekt_jni_empty                avgt    5     2,499 ±    0,006  ns/op
-nativekt_jni_add                  avgt    5     2,522 ±    0,092  ns/op
-nativekt_jni_string               avgt    5    52,576 ±    0,437  ns/op
-nativekt_jni_critical_string      avgt    5    36,366 ±    0,314  ns/op
-
-nativekt_jvmci_empty              avgt    5     1,249 ±    0,011  ns/op
-nativekt_jvmci_add                avgt    5     1,254 ±    0,021  ns/op
-nativekt_jvmci_string             avgt    5     2,998 ±    0,044  ns/op
-
-jvm_add                           avgt    5     0,348 ±    0,116  ns/op
-```
+|                                  | Apple M4 Pro | Ryzen AI 9 HX 370 |
+|----------------------------------|-------------:|------------------:|
+| boltffi_empty                    |        2,253 |             6,130 |
+| boltffi_add                      |        2,332 |             6,180 |
+| boltffi_string                   |       78,223 |            34,885 |
+| gobley_empty                     |     2490,096 |          4653,434 |
+| gobley_add                       |     2951,996 |          4769,567 |
+| gobley_string                    |     7155,289 |         11746,325 |
+| nativekt_foreign_empty           |        3,408 |             6,678 |
+| nativekt_foreign_add             |        3,753 |             6,979 |
+| nativekt_foreign_string          |       26,302 |            49,330 |
+| nativekt_foreign_critical_empty  |        3,000 |             3,053 |
+| nativekt_foreign_critical_add    |        3,254 |             3,066 |
+| nativekt_foreign_critical_string |        7,403 |             7,763 |
+| nativekt_jni_empty               |        2,499 |             6,112 |
+| nativekt_jni_add                 |        2,522 |             6,046 |
+| nativekt_jni_string              |       52,576 |            52,273 |
+| nativekt_jni_critical_string     |       36,366 |            18,412 |
+| nativekt_jvmci_empty             |        1,249 |             1,007 |
+| nativekt_jvmci_add               |        1,254 |             1,217 |
+| nativekt_jvmci_string            |        2,998 |             2,548 |
+| jvm_add                          |        0,348 |             0,269 |
