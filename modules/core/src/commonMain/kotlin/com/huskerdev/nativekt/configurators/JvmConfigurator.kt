@@ -203,14 +203,18 @@ fun compileJvm(
                         add(wholeArchive(jniLib!!.posixPath))
                         add("$rustOutDir/lib${context.moduleName}.a")
                         addAll(rustLinkerFlags)
-                        if (OS.current == OS.WINDOWS)
+                        if (OS.current == OS.WINDOWS) {
                             add("-Wl,--export-all-symbols")
+                            add("-l:libunwind.a")
+                        }
                     },
                     dynamicLib = true,
                     workingDir = cargoBuildDir
                 )
-            } else
-                rustOutDir.resolve("lib${context.moduleName}.${OS.current.dylibExtension}")
+            } else {
+                val prefix = if(OS.current == OS.WINDOWS) "" else "lib"
+                rustOutDir.resolve("$prefix${context.moduleName}.${OS.current.dylibExtension}")
+            }
         }
     }
 
