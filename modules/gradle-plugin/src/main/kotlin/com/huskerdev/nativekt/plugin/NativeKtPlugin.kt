@@ -1,11 +1,8 @@
 package com.huskerdev.nativekt.plugin
 
-import com.huskerdev.nativekt.TargetType
-import com.huskerdev.osutils.Arch
-import com.huskerdev.osutils.OS
-import org.gradle.api.ExtensiblePolymorphicDomainObjectContainer
-import org.gradle.api.Plugin
-import org.gradle.api.Project
+import com.huskerdev.nativekt.*
+import com.huskerdev.osutils.*
+import org.gradle.api.*
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget

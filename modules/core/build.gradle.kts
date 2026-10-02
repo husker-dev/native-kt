@@ -49,7 +49,7 @@ java {
 
 project.afterEvaluate {
     file("src/commonMain/kotlin/com/huskerdev/nativekt/NativeKtInfo.kt").writeText("""
-        package com.huskerdev.nativekt.plugin
+        package com.huskerdev.nativekt
         
         object NativeKtInfo {
             const val VERSION = "$version"

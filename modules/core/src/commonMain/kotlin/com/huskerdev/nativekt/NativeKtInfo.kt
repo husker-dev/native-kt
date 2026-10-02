@@ -1,5 +1,5 @@
-package com.huskerdev.nativekt.plugin
+package com.huskerdev.nativekt
 
 object NativeKtInfo {
-    const val VERSION = "3.0.3"
+    const val VERSION = "3.0.4"
 }
