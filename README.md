@@ -18,10 +18,10 @@ https://native-kt.com/
 ## JVM Benchmark
 
 Tested:
-- [BoltFFI](https://github.com/boltffi/boltffi)
-- [Gobley/UniFFI](https://github.com/gobley/gobley)
+- [BoltFFI](https://github.com/boltffi/boltffi) (v0.31.0)
+- [Gobley/UniFFI](https://github.com/gobley/gobley) (v0.29.4)
 - native-kt (this project)
-- JVM
+- JVM (GraalVM 23)
 
 Cases:
 - Empty function
@@ -29,8 +29,8 @@ Cases:
 - Pass string
 
 Targets:
-- Apple M4 Pro (macOS, arm64, GraalVM 23)
-- Ryzen AI 9 HX 370 (Windows, x86-64, GraalVM 23)
+- Apple M4 Pro (macOS, arm64)
+- Ryzen AI 9 HX 370 (Windows, x86-64)
 
 |                                  | Apple M4 Pro | Ryzen AI 9 HX 370 |
 |----------------------------------|-------------:|------------------:|
