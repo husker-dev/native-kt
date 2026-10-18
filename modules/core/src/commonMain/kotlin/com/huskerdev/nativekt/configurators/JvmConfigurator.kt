@@ -5,9 +5,8 @@ import com.huskerdev.nativekt.printers.c.*
 import com.huskerdev.nativekt.printers.cpp.*
 import com.huskerdev.nativekt.printers.kotlin.*
 import com.huskerdev.nativekt.utils.*
-import com.huskerdev.osutils.*
-import dev.scottpierce.envvar.EnvVar
-import io.github.vinceglb.filekit.*
+import com.huskerdev.stdlibx.*
+import com.huskerdev.stdlibx.fs.SyncPath
 
 fun prepareJvm(
     context: NativeModuleContext,
@@ -75,7 +74,7 @@ fun prepareJvm(
 
     when(buildSystem) {
         is BuildSystem.CMake -> {
-            layout.nativeSourcesDir.resolve("CMakeLists.txt").writeSync($$"""
+            layout.nativeSourcesDir.resolve("CMakeLists.txt").writeString($$"""
                     cmake_minimum_required(VERSION 3.15)
             
                     project("$$moduleName"$${if(buildSystem.language == Language.CPP) " LANGUAGES CXX" else ""})
@@ -90,7 +89,7 @@ fun prepareJvm(
                     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
                     add_compile_options(-Wno-initializer-overrides)
                     
-                    add_subdirectory("$${context.module.dir.posixPath}" "$${layout.nativeBuildDir.resolve("cmake/sub").posixPath}")
+                    add_subdirectory("$${context.module.dir.invariantSeparatorsPath}" "$${layout.nativeBuildDir.resolve("cmake/sub").invariantSeparatorsPath}")
                     
                     add_library(lib_$$moduleName SHARED api.$${context.language.sourceExtension})
                     
@@ -105,7 +104,7 @@ fun prepareJvm(
 
 fun compileJvm(
     context: NativeModuleContext,
-    existingJdkIncludeDir: PlatformFile?
+    existingJdkIncludeDir: SyncPath?
 ) {
     val layout = DirectoryLayout.of(context, TargetType.JVM)
     layout.nativeBuildDir.createDirectories()
@@ -116,14 +115,14 @@ fun compileJvm(
     // Compile JNI if needed
     val jniLib = if(useJni) {
         val jniIncludeDir = existingJdkIncludeDir ?: run {
-            val javaDir = if(EnvVar["JAVA_HOME"] != null)
-                PlatformFile(EnvVar["JAVA_HOME"]!!)
+            val javaDir = if(getenv("JAVA_HOME") != null)
+                SyncPath(getenv("JAVA_HOME")!!)
             else if(OS.current != OS.WINDOWS)
-                PlatformFile(context.execute("which java"))
+                SyncPath(context.execute("which java"))
             else throw NullPointerException("Could not find JDK. Environment variable 'JAVA_HOME' is not defined.")
 
             if(!javaDir.exists() || !javaDir.resolve("include").exists())
-                throw NullPointerException("Current Java directory is not a valid JDK: ${javaDir.absolutePath()}")
+                throw NullPointerException("Current Java directory is not a valid JDK: ${javaDir.absoluteString()}")
             javaDir.resolve("include")
         }
         val jniDir = layout.nativeSourcesDir.resolve("jni")
@@ -136,10 +135,10 @@ fun compileJvm(
         }
 
         clangCompile(context,
-            sources = listOf(jniDir.resolve("impl.c").posixPath),
+            sources = listOf(jniDir.resolve("impl.c").invariantSeparatorsPath),
             includeDirs = listOf(
-                jniIncludeDir.posixPath,
-                jniIncludeDir.resolve(platformDirName).posixPath
+                jniIncludeDir.invariantSeparatorsPath,
+                jniIncludeDir.resolve(platformDirName).invariantSeparatorsPath
             ),
             linkerArgs = listOf("-O3"),
             dynamicLib = false,
@@ -158,7 +157,7 @@ fun compileJvm(
                 "-DCMAKE_CXX_COMPILER=clang++"
             )
             if(jniLib != null)
-                args += "-DJNI_LIBRARY=${jniLib.posixPath}"
+                args += "-DJNI_LIBRARY=${jniLib.invariantSeparatorsPath}"
             if (OS.current == OS.MACOS && extension.useUniversalMacOSLib) {
                 args += setOf(
                     "-DCMAKE_C_FLAGS=\"-arch x86_64 -arch arm64\"",
@@ -200,7 +199,7 @@ fun compileJvm(
                     includeDirs = emptyList(),
                     linkerArgs = buildList {
                         add("-O3")
-                        add(wholeArchive(jniLib!!.posixPath))
+                        add(wholeArchive(jniLib!!.invariantSeparatorsPath))
                         add("$rustOutDir/lib${context.moduleName}.a")
                         addAll(rustLinkerFlags)
                         if (OS.current == OS.WINDOWS) {
@@ -224,5 +223,7 @@ fun compileJvm(
 
     val targetLibFile = "lib${context.moduleName}-$libArch.${OS.current.dylibExtension}"
 
-    libFile.copyToSync(layout.kotlinResourcesDir!!.resolve(targetLibFile))
+    val dst = layout.kotlinResourcesDir!!.resolve(targetLibFile)
+    dst.parent!!.createDirectories()
+    libFile.copyTo(dst)
 }

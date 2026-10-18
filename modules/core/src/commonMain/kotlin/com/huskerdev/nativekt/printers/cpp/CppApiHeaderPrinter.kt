@@ -2,17 +2,17 @@ package com.huskerdev.nativekt.printers.cpp
 
 import com.huskerdev.nativekt.*
 import com.huskerdev.nativekt.utils.*
-import io.github.vinceglb.filekit.*
-import kotlinx.io.SystemLineSeparator
+import com.huskerdev.stdlibx.fs.SyncPath
+import com.huskerdev.stdlibx.systemLineSeparator
 
 class CppApiHeaderPrinter(
     val context: NativeModuleContext,
-    target: PlatformFile,
-    tppTarget: PlatformFile
+    target: SyncPath,
+    tppTarget: SyncPath
 ) {
     init {
-        target.parent()!!.createDirectories()
-        target.writeSync(buildString {
+        target.parent!!.createDirectories()
+        target.writeString(buildString {
             printHeader()
             printStdLib()
             printTypeDefs()
@@ -22,12 +22,12 @@ class CppApiHeaderPrinter(
             printStructs()
             printFunctions()
             append("\n#include \"api.tpp\"")
-        }.replace("\n", SystemLineSeparator))
+        }.replace("\n", systemLineSeparator))
 
-        tppTarget.parent()!!.createDirectories()
-        tppTarget.writeSync(buildString {
+        tppTarget.parent!!.createDirectories()
+        tppTarget.writeString(buildString {
             printTtp()
-        }.replace("\n", SystemLineSeparator))
+        }.replace("\n", systemLineSeparator))
     }
 
     private fun StringBuilder.printHeader(){

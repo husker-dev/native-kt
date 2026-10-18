@@ -3,10 +3,9 @@ package com.huskerdev.nativekt.utils
 import com.huskerdev.nativekt.CargoBuildType
 import com.huskerdev.nativekt.NativeModuleContext
 import com.huskerdev.nativekt.TargetType
-import com.huskerdev.osutils.Arch
-import com.huskerdev.osutils.OS
-import io.github.vinceglb.filekit.PlatformFile
-import io.github.vinceglb.filekit.resolve
+import com.huskerdev.stdlibx.Arch
+import com.huskerdev.stdlibx.OS
+import com.huskerdev.stdlibx.fs.SyncPath
 
 private val rustcCurrentTaget: String
     get() {
@@ -75,21 +74,21 @@ internal fun ensureWasmOptInstalled(context: NativeModuleContext) {
 }
 
 internal fun cargoTargetDir(
-    buildDir: PlatformFile,
+    buildDir: SyncPath,
     buildType: CargoBuildType,
     target: String = rustcCurrentTaget
-) = PlatformFile(buildDir, "$target/${buildType.cargoName}")
+) = buildDir.resolve("$target/${buildType.cargoName}")
 
 internal fun cargoLinkerFlags(
     context: NativeModuleContext,
-    project: PlatformFile,
-    buildDir: PlatformFile,
+    project: SyncPath,
+    buildDir: SyncPath,
     buildType: CargoBuildType,
     target: String = rustcCurrentTaget,
     env: Map<String, String>? = null,
     isKN: Boolean = false
 ): List<String> {
-    val buildDirClean = buildDir.posixPath
+    val buildDirClean = buildDir.invariantSeparatorsPath
 
     ensureTargetInstalled(context, target)
 
@@ -113,7 +112,7 @@ internal fun cargoLinkerFlags(
         if(isKN)
             flags.add(0, "-L${konanSysroot(KONAN_SYSROOT_MINGW)}/x86_64-w64-mingw32/lib")
         else
-            flags.add(0, "-L${locateMingw(context).posixPath}/lib")
+            flags.add(0, "-L${locateMingw(context).invariantSeparatorsPath}/lib")
     }
     if(OS.current == OS.MACOS) {
         flags -= "-lm"
@@ -131,14 +130,14 @@ internal fun cargoLinkerFlags(
 
 internal fun cargoBuild(
     context: NativeModuleContext,
-    project: PlatformFile,
-    buildDir: PlatformFile,
+    project: SyncPath,
+    buildDir: SyncPath,
     buildType: CargoBuildType,
     target: String = rustcCurrentTaget,
     additionalArgs: String = "",
     env: Map<String, String>? = null
-): PlatformFile {
-    val buildDirClean = buildDir.posixPath
+): SyncPath {
+    val buildDirClean = buildDir.invariantSeparatorsPath
 
     ensureTargetInstalled(context, target)
 
@@ -153,16 +152,16 @@ internal fun cargoBuild(
 
 internal fun wasmBindgenBuild(
     context: NativeModuleContext,
-    project: PlatformFile,
+    project: SyncPath,
     buildType: CargoBuildType,
-    buildDir: PlatformFile
-): PlatformFile {
-    val buildDirClean = buildDir.posixPath
+    buildDir: SyncPath
+): SyncPath {
+    val buildDirClean = buildDir.invariantSeparatorsPath
     val pkgDir = buildDir.resolve("pkg")
 
     val target = "wasm32-unknown-unknown"
-    val wasmFilePath = "${cargoTargetDir(buildDir, buildType, target).posixPath}/${context.moduleName}.wasm"
-    val pkgWasmFilePath = pkgDir.resolve("${context.moduleName}_bg.wasm").posixPath
+    val wasmFilePath = cargoTargetDir(buildDir, buildType, target).resolve("${context.moduleName}.wasm").invariantSeparatorsPath
+    val pkgWasmFilePath = pkgDir.resolve("${context.moduleName}_bg.wasm").invariantSeparatorsPath
 
     ensureTargetInstalled(context, target)
     ensureWasmBindgenInstalled(context)
@@ -174,7 +173,7 @@ internal fun wasmBindgenBuild(
         errAsStd = true
     )
     context.execute(
-        command = "wasm-bindgen --target web --out-dir ${pkgDir.posixPath} $wasmFilePath",
+        command = "wasm-bindgen --target web --out-dir ${pkgDir.invariantSeparatorsPath} $wasmFilePath",
         workingDir = project,
         errAsStd = true
     )

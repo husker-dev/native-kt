@@ -1,24 +1,25 @@
+package com.huskerdev.nativekt.cli
+
 import com.huskerdev.nativekt.BuildSystem
 import com.huskerdev.nativekt.Multiplatform
 import com.huskerdev.nativekt.NativeKtMultiplatformConfiguration
 import com.huskerdev.nativekt.NativeProject
 import com.huskerdev.nativekt.createContext
 import com.huskerdev.nativekt.printers.rust.RustPrinter
-import io.github.vinceglb.filekit.PlatformFile
-import io.github.vinceglb.filekit.exists
-import io.github.vinceglb.filekit.path
+import com.huskerdev.stdlibx.fs.SyncPath
+import com.huskerdev.stdlibx.process.exitProcess
 
 
 fun main(args: Array<String>) {
-    var ndlFile: PlatformFile? = null
-    val module = Multiplatform("example", PlatformFile("./"))
+    var ndlFile: SyncPath? = null
+    val module = Multiplatform("example", SyncPath("./"))
 
     var i = 0
     while (i < args.size) {
         if(args[i].startsWith("-")) {
             if(args[i] == "-cargo") {
                 module.cargo {
-                    apiRsFile = PlatformFile(args[++i])
+                    apiRsFile = SyncPath(args[++i])
                     suppressUnused = false
                 }
             }
@@ -27,9 +28,9 @@ fun main(args: Array<String>) {
             if(args[i] == "-classpath")
                 module.classPath = args[++i]
         } else {
-            ndlFile = PlatformFile(args[i])
+            ndlFile = SyncPath(args[i])
             if(!ndlFile.exists())
-                error("NDL file does not exist: '${ndlFile.path}'")
+                error("NDL file does not exist: '${ndlFile.pathString}'")
         }
         i++
     }
@@ -41,18 +42,18 @@ fun main(args: Array<String>) {
 }
 
 private fun run(
-    ndlFile: PlatformFile,
+    ndlFile: SyncPath,
     module: NativeProject
 ) {
     module.ndlFile = ndlFile
 
     val context = createContext(
-        buildDir = PlatformFile("./tmp"),
+        buildDir = SyncPath("./tmp"),
         configuration = NativeKtMultiplatformConfiguration.Impl(),
         module = module,
         executor = NativeKtExecutor(),
         logger = NativeKtLogger()
-    ) ?: exit(1)
+    ) ?: exitProcess(1)
 
     when (val buildSystem = context.buildSystem) {
         is BuildSystem.Cargo -> {

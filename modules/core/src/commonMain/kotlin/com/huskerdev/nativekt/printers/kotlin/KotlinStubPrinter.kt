@@ -2,12 +2,12 @@ package com.huskerdev.nativekt.printers.kotlin
 
 import com.huskerdev.nativekt.*
 import com.huskerdev.nativekt.utils.*
+import com.huskerdev.stdlibx.fs.SyncPath
 import com.huskerdev.webidl.isVoid
-import io.github.vinceglb.filekit.*
 
 class KotlinStubPrinter(
     context: NativeModuleContext,
-    target: PlatformFile
+    target: SyncPath
 ) {
     init {
         val builder = StringBuilder()
@@ -34,8 +34,8 @@ class KotlinStubPrinter(
             builder.append("\nexpect fun ${operation.kname}($args):$type{\n\t// TODO\n}\n")
         }
 
-        target.parent()!!.createDirectories()
-        target.writeSync(builder.toString())
+        target.parent!!.createDirectories()
+        target.writeString(builder.toString())
     }
 
 }

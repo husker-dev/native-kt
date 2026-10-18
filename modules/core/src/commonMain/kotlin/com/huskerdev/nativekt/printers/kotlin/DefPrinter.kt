@@ -3,15 +3,13 @@ package com.huskerdev.nativekt.printers.kotlin
 import com.huskerdev.nativekt.NativeModuleContext
 import com.huskerdev.nativekt.printers.c.*
 import com.huskerdev.nativekt.utils.*
+import com.huskerdev.stdlibx.fs.SyncPath
 import com.huskerdev.webidl.*
-import io.github.vinceglb.filekit.PlatformFile
-import io.github.vinceglb.filekit.createDirectories
-import io.github.vinceglb.filekit.parent
 
 class DefPrinter(
     context: NativeModuleContext,
-    target: PlatformFile,
-    headerFile: PlatformFile,
+    target: SyncPath,
+    headerFile: SyncPath,
     linkerOpts: List<String>
 ) {
     init {
@@ -23,9 +21,9 @@ class DefPrinter(
             }
         }
 
-        target.parent()!!.createDirectories()
-        target.writeSync(buildString {
-            append("headers = ${headerFile.posixPath}\n")
+        target.parent!!.createDirectories()
+        target.writeString(buildString {
+            append("headers = ${headerFile.invariantSeparatorsPath}\n")
             append("package = cinterop.${context.classPath}\n")
             append("noStringConversion = ${stringFunctions.joinToString(" ")}\n")
             if(linkerOpts.isNotEmpty())

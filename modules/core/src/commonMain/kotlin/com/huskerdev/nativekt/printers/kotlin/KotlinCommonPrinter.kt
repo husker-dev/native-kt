@@ -2,17 +2,17 @@ package com.huskerdev.nativekt.printers.kotlin
 
 import com.huskerdev.nativekt.*
 import com.huskerdev.nativekt.utils.*
+import com.huskerdev.stdlibx.fs.SyncPath
 import com.huskerdev.webidl.*
 import com.huskerdev.webidl.resolver.*
-import io.github.vinceglb.filekit.*
 
 class KotlinCommonPrinter(
     val context: NativeModuleContext,
-    target: PlatformFile
+    target: SyncPath
 ) {
     init {
-        target.parent()!!.createDirectories()
-        target.writeSync(buildString {
+        target.parent!!.createDirectories()
+        target.writeString(buildString {
             printHeader()
             printEnums()
             printDictionaries(

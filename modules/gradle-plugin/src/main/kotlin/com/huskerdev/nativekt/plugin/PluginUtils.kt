@@ -1,7 +1,5 @@
 package com.huskerdev.nativekt.plugin
 
-import com.huskerdev.nativekt.GradlePluginLogger
-import com.huskerdev.nativekt.GradleTaskExecutor
 import com.huskerdev.nativekt.NativeKtConfiguration
 import com.huskerdev.nativekt.NativeModuleContext
 import com.huskerdev.nativekt.NativeModuleContext.NdlCompilationException
@@ -10,10 +8,10 @@ import com.huskerdev.nativekt.TargetType
 import com.huskerdev.nativekt.createContext
 import com.huskerdev.nativekt.plugin.tasks.InitTask
 import com.huskerdev.nativekt.utils.upperCamelCase
-import com.huskerdev.osutils.Arch
-import com.huskerdev.osutils.OS
-import io.github.vinceglb.filekit.PlatformFile
-import io.github.vinceglb.filekit.resolve
+import com.huskerdev.stdlibx.Arch
+import com.huskerdev.stdlibx.OS
+import com.huskerdev.stdlibx.fs.SyncPath
+import com.huskerdev.stdlibx.fs.file
 import org.gradle.api.ExtensiblePolymorphicDomainObjectContainer
 import org.gradle.api.Project
 import org.gradle.api.Task
@@ -43,7 +41,7 @@ internal fun createContextWithProject(
 
     val context = try {
         createContext(
-            buildDir = PlatformFile(buildDir).resolve("generated/nativekt"),
+            buildDir = SyncPath(buildDir.absolutePath).resolve("generated/nativekt"),
             configuration = configuration,
             module = module,
             executor = GradleTaskExecutor(project),
@@ -97,10 +95,10 @@ internal fun ExtensiblePolymorphicDomainObjectContainer<*>.cleanWrapper(): Nativ
     else -> throw UnsupportedOperationException()
 }
 
-class JavaFile<T: PlatformFile?>(val file: KMutableProperty<T>): ReadWriteProperty<Any, File?> {
+class JavaFile<T: SyncPath?>(val file: KMutableProperty<T>): ReadWriteProperty<Any, File?> {
     override fun getValue(thisRef: Any, property: KProperty<*>): File =
         file.getter.call()!!.file
 
     override fun setValue(thisRef: Any, property: KProperty<*>, value: File?) =
-        file.setter.call(value?.run { PlatformFile(this) })
+        file.setter.call(value?.run { SyncPath(this.absolutePath) })
 }

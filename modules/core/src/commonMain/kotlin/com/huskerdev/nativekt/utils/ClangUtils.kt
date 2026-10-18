@@ -1,27 +1,28 @@
 package com.huskerdev.nativekt.utils
 
 import com.huskerdev.nativekt.*
-import com.huskerdev.osutils.OS
-import io.github.vinceglb.filekit.*
+import com.huskerdev.stdlibx.OS
+import com.huskerdev.stdlibx.fs.FileSystem
+import com.huskerdev.stdlibx.fs.SyncPath
 
 internal const val KONAN_SYSROOT_MINGW         = "msys2-mingw-w64-x86_64"
 internal const val KONAN_SYSROOT_LINUX_X86_64  = "x86_64-unknown-linux-gnu"
 internal const val KONAN_SYSROOT_LINUX_AARCH64 = "aarch64-unknown-linux-gnu"
 
 internal fun konanSysroot(name: String): String {
-    return FileKit.downloadsDir.parent()!!.resolve(".konan/dependencies")
+    return FileSystem.default!!.asSync()!!.homeDir()!!.resolve(".konan/dependencies")
         .list()
         .filter { it.name.startsWith(name) }
         .maxBy { it.name }
-        .posixPath
+        .invariantSeparatorsPath
 }
 
-internal fun locateClang(context: NativeModuleContext): PlatformFile {
+internal fun locateClang(context: NativeModuleContext): SyncPath {
     return locate(context, "clang")
         ?: run {
             if (OS.current == OS.WINDOWS) {
                 listOf("A", "B", "C", "D", "E", "F", "G", "H").forEach {
-                    val file = PlatformFile("$it:/msys64/clang64/bin/clang.exe")
+                    val file = SyncPath("$it:/msys64/clang64/bin/clang.exe")
                     if (file.exists())
                         return@run file
                 }
@@ -32,7 +33,7 @@ internal fun locateClang(context: NativeModuleContext): PlatformFile {
 
 internal fun locateMingw(
     context: NativeModuleContext,
-) = locateClang(context).parent()!!.parent()!!
+) = locateClang(context).parent!!.parent!!
 
 internal fun getAppleSdkName(
     targetType: TargetType,
@@ -75,14 +76,14 @@ internal fun clangCompile(
     includeDirs: List<String> = emptyList(),
     linkerArgs: List<String> = emptyList(),
     dynamicLib: Boolean,
-    workingDir: PlatformFile,
+    workingDir: SyncPath,
     outputBaseName: String = "out",
     extension: String = if(dynamicLib) OS.current.dylibExtension else OS.current.staticLibExtension
-): PlatformFile {
+): SyncPath {
     workingDir.createDirectories()
 
     val sourcesObj = sources.map {
-        PlatformFile(it).name.replace(".c", ".o")
+        SyncPath(it).name.replace(".c", ".o")
     }
 
     // Compile into .o
@@ -111,7 +112,7 @@ internal fun clangCompile(
 
     // Delete .o files
     sourcesObj.forEach {
-        workingDir.resolve(it).deleteSync()
+        workingDir.resolve(it).deleteRecursively()
     }
     return workingDir.resolve("$outputBaseName.$extension")
 }
@@ -216,11 +217,11 @@ internal fun getClangTargetArgs(
  */
 internal fun prepareNativeLibraryForKN(
     context: NativeModuleContext,
-    lib: PlatformFile,
+    lib: SyncPath,
     initSymbolName: String,
     targetArgs: List<String> = emptyList(),
 ) {
-    val libDir = lib.parent()!!
+    val libDir = lib.parent!!
     val tmpDir = libDir.resolve("_tmp")
     tmpDir.createDirectories()
 
@@ -256,24 +257,25 @@ internal fun prepareNativeLibraryForKN(
     )
 
     // Archive into .a
-    lib.deleteSync()
+    lib.deleteRecursively()
     context.execute(
         "$ar rcs ../${lib.name} ${objFiles.joinToString(" ") { it.name }}",
         workingDir = tmpDir
     )
 
     // Remove temporary dir
-    tmpDir.deleteSync()
+    tmpDir.deleteRecursively()
 }
 
 private fun createCppInitFunction(
     context: NativeModuleContext,
     objcopy: String,
-    dir: PlatformFile,
-    objFiles: List<PlatformFile>,
+    dir: SyncPath,
+    objFiles: List<SyncPath>,
     initSymbolName: String,
     targetArgs: List<String>
-): PlatformFile {
+): SyncPath {
+    dir.createDirectories()
 
     // Detect and globalize C++ ctor symbols in individual .o files
     val ctorSymbols = objFiles
@@ -290,17 +292,17 @@ private fun createCppInitFunction(
             objFiles.forEach { globalizeMachOSymbols(it, ctorSymbols) }
         } else {
             val tmpSymbolsFile = dir.resolve("__symbols.txt")
-            tmpSymbolsFile.writeSync(ctorSymbols.joinToString("\n"))
+            tmpSymbolsFile.writeString(ctorSymbols.joinToString("\n"))
             objFiles.forEach {
                 context.execute("$objcopy --globalize-symbols=${tmpSymbolsFile.name} ${it.name}", workingDir = dir)
             }
-            tmpSymbolsFile.deleteSync()
+            tmpSymbolsFile.deleteRecursively()
         }
     }
 
     // Generate C file with init function that calls each ctor
-    val initC = PlatformFile(dir, "__init.c")
-    initC.writeSync(buildString {
+    val initC = dir.resolve("__init.c")
+    initC.writeString(buildString {
         append("void $initSymbolName() {")
         ctorSymbols.forEachIndexed { i, sym ->
             append("\n\textern void _ctor_$i(void) __asm__(\"$sym\");")

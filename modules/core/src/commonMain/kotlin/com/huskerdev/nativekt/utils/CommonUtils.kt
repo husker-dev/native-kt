@@ -1,13 +1,8 @@
 package com.huskerdev.nativekt.utils
 
 import com.huskerdev.nativekt.NativeModuleContext
-import com.huskerdev.osutils.OS
-import io.github.vinceglb.filekit.*
-import kotlinx.io.buffered
-import kotlinx.io.files.Path
-import kotlinx.io.files.SystemFileSystem
-import kotlinx.io.readString
-import kotlinx.io.writeString
+import com.huskerdev.stdlibx.OS
+import com.huskerdev.stdlibx.fs.SyncPath
 
 
 fun asyncLoadFunctionName(context: NativeModuleContext) =
@@ -18,49 +13,6 @@ fun syncLoadFunctionName(context: NativeModuleContext) =
 
 fun loadFieldName(context: NativeModuleContext) =
     "isLib${context.moduleName.upperCamelCase()}Loaded"
-
-val PlatformFile.posixPath: String
-    get() = absolutePath().replace("\\", "/")
-
-fun PlatformFile.writeSync(text: String) {
-    parent()?.createDirectories()
-    SystemFileSystem.sink(Path(posixPath)).buffered().use {
-        it.writeString(text)
-        it.flush()
-    }
-}
-
-fun PlatformFile.readSync(): String {
-    return SystemFileSystem.source(Path(posixPath)).buffered().use {
-        it.readString()
-    }
-}
-
-fun PlatformFile.copyToSync(destination: PlatformFile) {
-    destination.parent()?.createDirectories()
-    val source = SystemFileSystem.source(Path(posixPath)).buffered()
-    val sink = SystemFileSystem.sink(Path(destination.posixPath)).buffered()
-    try {
-        sink.transferFrom(source)
-        sink.flush()
-    } finally {
-        source.close()
-        sink.close()
-    }
-}
-
-fun PlatformFile.deleteSync() {
-    val path = Path(posixPath)
-    if (isDirectory())
-        SystemFileSystem.list(path).forEach { PlatformFile(it).deleteSync() }
-    SystemFileSystem.delete(path)
-}
-
-fun PlatformFile.fresh(): PlatformFile {
-    deleteSync()
-    createDirectories()
-    return this
-}
 
 fun String.snakeCase(): String = buildString {
     this@snakeCase.forEachIndexed { index, c ->
@@ -144,9 +96,9 @@ fun StringBuilder.printLabel(text: String, padding: Int = 5, indent: String = ""
     append("╝\n")
 }
 
-internal fun locate(context: NativeModuleContext, binary: String): PlatformFile? {
+internal fun locate(context: NativeModuleContext, binary: String): SyncPath? {
     return try {
-        PlatformFile(context.execute(
+        SyncPath(context.execute(
             command = when(OS.current) {
                 OS.WINDOWS -> "where $binary"
                 else -> "which $binary"

@@ -2,13 +2,14 @@ package com.huskerdev.nativekt.plugin.configurators
 
 import com.android.build.gradle.internal.tasks.factory.dependsOn
 import com.huskerdev.nativekt.DirectoryLayout
-import com.huskerdev.nativekt.GradleTaskExecutor
-import com.huskerdev.nativekt.GradlePluginLogger
+import com.huskerdev.nativekt.plugin.GradleTaskExecutor
+import com.huskerdev.nativekt.plugin.GradlePluginLogger
 import com.huskerdev.nativekt.NativeModuleContext
 import com.huskerdev.nativekt.TargetType
 import com.huskerdev.nativekt.configurators.prepareStub
 import com.huskerdev.nativekt.utils.camelCase
 import com.huskerdev.nativekt.plugin.dependsOnProjectReload
+import com.huskerdev.stdlibx.fs.file
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.tasks.Input

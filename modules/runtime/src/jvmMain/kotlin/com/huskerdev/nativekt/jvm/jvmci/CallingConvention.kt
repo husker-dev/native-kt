@@ -2,8 +2,8 @@
 
 package com.huskerdev.nativekt.jvm.jvmci
 
-import com.huskerdev.osutils.Arch
-import com.huskerdev.osutils.OS
+import com.huskerdev.stdlibx.Arch
+import com.huskerdev.stdlibx.OS
 import com.huskerdev.nativekt.jvm.jvmci.conventions.AMD64LinuxCallingConvention
 import com.huskerdev.nativekt.jvm.jvmci.conventions.AMD64WindowsCallingConvention
 import com.huskerdev.nativekt.jvm.jvmci.conventions.ARM64CallingConvention

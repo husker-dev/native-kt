@@ -5,7 +5,6 @@ import com.huskerdev.nativekt.printers.c.*
 import com.huskerdev.nativekt.printers.cpp.*
 import com.huskerdev.nativekt.printers.kotlin.*
 import com.huskerdev.nativekt.utils.*
-import io.github.vinceglb.filekit.*
 
 
 fun prepareNative(
@@ -78,7 +77,7 @@ fun prepareNative(
             } else listOf("", "", "")
 
             // Create CMake file
-            layout.nativeSourcesDir.resolve("CMakeLists.txt").writeSync($$"""
+            layout.nativeSourcesDir.resolve("CMakeLists.txt").writeString($$"""
                 cmake_minimum_required(VERSION 3.15)
         
                 project("$$moduleName")
@@ -86,15 +85,15 @@ fun prepareNative(
                 $${if (buildSystem.language == Language.CPP) "set(CMAKE_CXX_STANDARD 17)" else ""}
                 $${if (buildSystem.language == Language.CPP) "set(CMAKE_CXX_STANDARD_REQUIRED ON)" else ""}
                 
-                set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY $${layout.nativeBuildDir.posixPath})
-                set(CMAKE_LIBRARY_OUTPUT_DIRECTORY $${layout.nativeBuildDir.posixPath})
-                set(CMAKE_RUNTIME_OUTPUT_DIRECTORY $${layout.nativeBuildDir.posixPath})
+                set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY $${layout.nativeBuildDir.invariantSeparatorsPath})
+                set(CMAKE_LIBRARY_OUTPUT_DIRECTORY $${layout.nativeBuildDir.invariantSeparatorsPath})
+                set(CMAKE_RUNTIME_OUTPUT_DIRECTORY $${layout.nativeBuildDir.invariantSeparatorsPath})
                 
                 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
                 
                 add_compile_options(-Wno-initializer-overrides)
                 
-                add_subdirectory("$${context.module.dir.posixPath}" "$${layout.nativeBuildDir.resolve("sub").posixPath}")
+                add_subdirectory("$${context.module.dir.invariantSeparatorsPath}" "$${layout.nativeBuildDir.resolve("sub").invariantSeparatorsPath}")
                     
                 add_library(lib_$$moduleName SHARED api.$$sourceExtension)
                 target_link_libraries(lib_$$moduleName PUBLIC $$moduleName)
@@ -117,7 +116,7 @@ fun prepareNative(
                     cmakeBuildType = buildSystem.buildType
                 )
 
-                linkerOpts += layout.nativeBuildDir.resolve("liblibstatic_$moduleName.a").posixPath
+                linkerOpts += layout.nativeBuildDir.resolve("liblibstatic_$moduleName.a").invariantSeparatorsPath
 
                 // Get linker opts
                 linkerOpts += extractLinkerOpts(
@@ -146,7 +145,7 @@ fun prepareNative(
 
                 linkerOpts += listOf(
                     *rustFlags.toTypedArray(),
-                    rustBuildDir.resolve("lib$moduleName.a").posixPath
+                    rustBuildDir.resolve("lib$moduleName.a").invariantSeparatorsPath
                 )
             }
         }

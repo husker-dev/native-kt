@@ -1,7 +1,7 @@
 package com.huskerdev.nativekt.jvm
 
-import com.huskerdev.osutils.Arch
-import com.huskerdev.osutils.OS
+import com.huskerdev.stdlibx.Arch
+import com.huskerdev.stdlibx.OS
 import sun.misc.Unsafe
 import java.io.File
 import java.io.IOException

@@ -85,7 +85,7 @@ kotlin {
     */
 
     sourceSets.commonMain.dependencies {
-        implementation(libs.osutils)
+        implementation(libs.stdlibx)
     }
 }
 

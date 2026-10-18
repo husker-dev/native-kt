@@ -1,8 +1,10 @@
-package com.huskerdev.nativekt
+package com.huskerdev.nativekt.plugin
 
-import com.huskerdev.osutils.OS
-import io.github.vinceglb.filekit.PlatformFile
-import io.github.vinceglb.filekit.absolutePath
+import com.huskerdev.nativekt.DebugKind
+import com.huskerdev.nativekt.NativeModuleContext
+import com.huskerdev.stdlibx.OS
+import com.huskerdev.stdlibx.fs.SyncPath
+import com.huskerdev.stdlibx.fs.file
 import org.gradle.api.Project
 import org.gradle.process.ExecOperations
 import org.gradle.api.logging.Logger
@@ -28,14 +30,14 @@ class GradleTaskExecutor private constructor(
     override fun exec(
         context: NativeModuleContext,
         command: String,
-        workingDir: PlatformFile?,
+        workingDir: SyncPath?,
         silent: Boolean,
         errAsStd: Boolean,
         environment: Map<String, String>?
     ): String {
         val printExec = DebugKind.PRINT_EXEC in context.debug
         if(printExec) {
-            val dir = workingDir?.absolutePath() ?: File("./").absolutePath
+            val dir = workingDir?.absoluteString() ?: File("./").absolutePath
             context.logger!!.error("Executed command for '${context.moduleName}': \n\t$command\n\tat: $dir")
         }
 

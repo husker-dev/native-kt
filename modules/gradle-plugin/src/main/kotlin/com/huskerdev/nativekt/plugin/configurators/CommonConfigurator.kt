@@ -2,8 +2,11 @@ package com.huskerdev.nativekt.plugin.configurators
 
 import com.huskerdev.nativekt.*
 import com.huskerdev.nativekt.configurators.prepareCommon
+import com.huskerdev.nativekt.plugin.GradlePluginLogger
+import com.huskerdev.nativekt.plugin.GradleTaskExecutor
 import com.huskerdev.nativekt.plugin.dependsOnProjectReload
 import com.huskerdev.nativekt.utils.*
+import com.huskerdev.stdlibx.fs.file
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.tasks.*

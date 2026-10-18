@@ -1,10 +1,11 @@
 package com.huskerdev.nativekt.plugin.tasks
 
 import com.huskerdev.nativekt.*
+import com.huskerdev.nativekt.plugin.GradlePluginLogger
+import com.huskerdev.nativekt.plugin.GradleTaskExecutor
 import com.huskerdev.nativekt.printers.c.CApiHeaderPrinter
 import com.huskerdev.nativekt.printers.cpp.CppApiHeaderPrinter
 import com.huskerdev.nativekt.printers.rust.RustPrinter
-import io.github.vinceglb.filekit.*
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.*
 import org.gradle.process.ExecOperations
@@ -31,7 +32,7 @@ abstract class ApiGenTask @Inject constructor(
                     Language.CPP -> CppApiHeaderPrinter(
                         context = context,
                         target = headerFile,
-                        tppTarget = headerFile.parent()!!.resolve("${headerFile.nameWithoutExtension}.tpp")
+                        tppTarget = headerFile.parent!!.resolve("${headerFile.nameWithoutExtension}.tpp")
                     )
                     Language.C -> CApiHeaderPrinter(
                         context = context,

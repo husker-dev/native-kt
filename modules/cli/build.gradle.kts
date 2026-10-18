@@ -4,6 +4,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.shadow)
+    alias(libs.plugins.proguard)
 }
 
 group = "com.huskerdev"
@@ -12,6 +13,7 @@ version = projectDir.parentFile.parentFile.resolve("VERSION").readText().trim()
 kotlin {
     sourceSets.commonMain.dependencies {
         implementation("$group:native-kt-core:$version")
+        implementation(libs.stdlibx.process)
     }
 
     jvm {
@@ -29,7 +31,8 @@ kotlin {
     ).forEach {
         it.binaries {
             executable {
-                entryPoint = "main"
+                binaryOption("smallBinary", "true")
+                entryPoint = "com.huskerdev.nativekt.cli.main"
             }
         }
     }
@@ -42,12 +45,32 @@ java {
 
 tasks.shadowJar {
     archiveBaseName = "nativekt-cli"
-    archiveClassifier = ""
+    archiveClassifier = "fat"
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     manifest {
         attributes(
-            "Main-Class" to "MainKt",
+            "Main-Class" to "com.huskerdev.nativekt.cli.MainKt",
             "Implementation-Title" to "native-kt-cli",
             "Implementation-Version" to project.version
         )
     }
+}
+
+tasks.register("proguardJar", proguard.taskClass) {
+    group = "build"
+    description = "ProGuard task"
+    addInput {
+        classpath.from(tasks.shadowJar)
+    }
+    addOutput {
+        archiveFile.set(base.libsDirectory.file("nativekt-cli-${project.version}.jar"))
+    }
+    jdkModules.add("java.base")
+    rules.addAll(
+        "-dontoptimize",
+        "-dontwarn !com.huskerdev.**",
+        "-flattenpackagehierarchy",
+        "-keep class com.huskerdev.nativekt.cli.MainKt { public static void main(java.lang.String[]); }",
+        "-keepattributes Signature,InnerClasses,*Annotation*"
+    )
 }

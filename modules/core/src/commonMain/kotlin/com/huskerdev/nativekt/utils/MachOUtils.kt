@@ -1,7 +1,6 @@
 package com.huskerdev.nativekt.utils
 
-import io.github.vinceglb.filekit.*
-import kotlinx.io.*
+import com.huskerdev.stdlibx.fs.SyncPath
 
 /**
  * Globalizes (makes external) the specified local symbols in a Mach-O object file
@@ -9,10 +8,10 @@ import kotlinx.io.*
  *
  * This replaces `objcopy --globalize-symbols` which is unavailable on macOS.
  */
-internal fun globalizeMachOSymbols(file: PlatformFile, symbols: List<String>) {
+internal fun globalizeMachOSymbols(file: SyncPath, symbols: List<String>) {
     if (symbols.isEmpty()) return
 
-    val content = file.source().buffered().use { it.readByteArray() }
+    val content = file.readBytes()
 
     val is64 = when (content.getUIntLe(0)) {
         0xFEEDFACFu -> true
@@ -68,7 +67,7 @@ internal fun globalizeMachOSymbols(file: PlatformFile, symbols: List<String>) {
 
     if (changed) {
         // Write the modified image back through a kotlinx-io sink.
-        file.sink().buffered().use { it.write(content) }
+        file.writeBytes(content)
     }
 }
 

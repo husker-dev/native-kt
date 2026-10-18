@@ -5,11 +5,11 @@ import com.huskerdev.nativekt.printers.c.cname
 import com.huskerdev.nativekt.serialzation.ContextSerializer
 import com.huskerdev.nativekt.serialzation.nativektJson
 import com.huskerdev.nativekt.utils.*
+import com.huskerdev.stdlibx.fs.SyncPath
 import com.huskerdev.webidl.*
 import com.huskerdev.webidl.parser.*
 import com.huskerdev.webidl.resolver.*
 import com.huskerdev.webidl.resolver.WebIDLBuiltinKind.*
-import io.github.vinceglb.filekit.*
 import kotlinx.serialization.*
 
 
@@ -21,7 +21,7 @@ import kotlinx.serialization.*
 class NativeModuleContext(
     val configuration: NativeKtConfiguration,
     val module: NativeProject,
-    val buildDir: PlatformFile,
+    val buildDir: SyncPath,
     var executor: CommandExecutor?,
     var logger: Logger?,
     validate: Boolean = true
@@ -38,7 +38,7 @@ class NativeModuleContext(
     }
 
     private val idl = WebIDL.resolve(
-        text = module.resolveNdlFile().readSync(),
+        text = module.resolveNdlFile().readString(),
         env = NdlEnv
     ).also {
         if(it.mergedErrors.isNotEmpty())
@@ -449,7 +449,7 @@ class NativeModuleContext(
 
     fun execute(
         command: String,
-        workingDir: PlatformFile? = null,
+        workingDir: SyncPath? = null,
         silent: Boolean = false,
         errAsStd: Boolean = false,
         environment: Map<String, String>? = null
@@ -462,7 +462,7 @@ class NativeModuleContext(
         fun exec(
             context: NativeModuleContext,
             command: String,
-            workingDir: PlatformFile? = null,
+            workingDir: SyncPath? = null,
             silent: Boolean = false,
             errAsStd: Boolean = false,
             environment: Map<String, String>? = null
@@ -484,7 +484,7 @@ class NativeModuleContext(
  * Creates a NdlContext and validates the configuration and NDL file.
  */
 fun createContext(
-    buildDir: PlatformFile,
+    buildDir: SyncPath,
     configuration: NativeKtConfiguration,
     module: NativeProject,
     executor: CommandExecutor,

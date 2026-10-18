@@ -3,19 +3,19 @@ package com.huskerdev.nativekt.printers.cpp
 import com.huskerdev.nativekt.*
 import com.huskerdev.nativekt.printers.c.*
 import com.huskerdev.nativekt.utils.*
+import com.huskerdev.stdlibx.fs.SyncPath
+import com.huskerdev.stdlibx.systemLineSeparator
 import com.huskerdev.webidl.*
 import com.huskerdev.webidl.resolver.*
-import io.github.vinceglb.filekit.*
-import kotlinx.io.SystemLineSeparator
 
 
 class CppApiImplPrinter(
     val context: NativeModuleContext,
-    target: PlatformFile
+    target: SyncPath
 ) {
     init {
-        target.parent()!!.createDirectories()
-        target.writeSync(buildString {
+        target.parent!!.createDirectories()
+        target.writeString(buildString {
             printHeader()
             printStdLib()
             printBoxedPrimitives()
@@ -23,7 +23,7 @@ class CppApiImplPrinter(
             printCallbacks()
             printStructs()
             printFunctions()
-        }.replace("\n", SystemLineSeparator))
+        }.replace("\n", systemLineSeparator))
     }
 
     private fun StringBuilder.printHeader() {

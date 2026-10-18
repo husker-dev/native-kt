@@ -1,8 +1,8 @@
 package com.huskerdev.nativekt.plugin.tasks
 
 import com.huskerdev.nativekt.BuildSystem
-import com.huskerdev.nativekt.GradleTaskExecutor
-import com.huskerdev.nativekt.GradlePluginLogger
+import com.huskerdev.nativekt.plugin.GradleTaskExecutor
+import com.huskerdev.nativekt.plugin.GradlePluginLogger
 import com.huskerdev.nativekt.Language
 import com.huskerdev.nativekt.NativeKtConfiguration
 import com.huskerdev.nativekt.NativeProject
@@ -10,10 +10,8 @@ import com.huskerdev.nativekt.plugin.*
 import com.huskerdev.nativekt.printers.c.CApiHeaderPrinter
 import com.huskerdev.nativekt.printers.cpp.CppApiHeaderPrinter
 import com.huskerdev.nativekt.printers.rust.RustPrinter
-import io.github.vinceglb.filekit.PlatformFile
-import io.github.vinceglb.filekit.nameWithoutExtension
-import io.github.vinceglb.filekit.parent
-import io.github.vinceglb.filekit.resolve
+import com.huskerdev.stdlibx.fs.SyncPath
+import com.huskerdev.stdlibx.fs.file
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
@@ -68,7 +66,7 @@ abstract class InitTask @Inject constructor(
 
     private fun createContext() =
         com.huskerdev.nativekt.createContext(
-            buildDir = PlatformFile(buildDir),
+            buildDir = SyncPath(buildDir),
             configuration = configuration,
             module = module,
             executor = GradleTaskExecutor(execOps),
@@ -131,7 +129,7 @@ abstract class InitTask @Inject constructor(
         CppApiHeaderPrinter(
             context = createContext(),
             target = headerFile,
-            tppTarget = headerFile.parent()!!.resolve("${headerFile.nameWithoutExtension}.tpp")
+            tppTarget = headerFile.parent!!.resolve("${headerFile.nameWithoutExtension}.tpp")
         )
     }
 

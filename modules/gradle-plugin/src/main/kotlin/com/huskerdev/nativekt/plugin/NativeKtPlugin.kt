@@ -1,7 +1,8 @@
 package com.huskerdev.nativekt.plugin
 
 import com.huskerdev.nativekt.*
-import com.huskerdev.osutils.*
+import com.huskerdev.stdlibx.Arch
+import com.huskerdev.stdlibx.OS
 import org.gradle.api.*
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension

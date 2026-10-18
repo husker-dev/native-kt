@@ -2,7 +2,7 @@
 
 package com.huskerdev.nativekt
 
-import io.github.vinceglb.filekit.*
+import com.huskerdev.stdlibx.fs.SyncPath
 import kotlinx.serialization.*
 
 
@@ -163,7 +163,7 @@ sealed interface BuildSystem {
          *
          * Default value: `natives/[name]/include/api.*`
          */
-        var headerFile: PlatformFile? = null
+        var headerFile: SyncPath? = null
 
         fun headerFile(module: NativeProject) =
             headerFile ?: module.dir.resolve("include/api.${language.headerExtension}")
@@ -188,7 +188,7 @@ sealed interface BuildSystem {
 
         var buildType: CargoBuildType = CargoBuildType.RELEASE
 
-        var apiRsFile: PlatformFile? = null
+        var apiRsFile: SyncPath? = null
 
         var suppressUnused = true
 
@@ -213,7 +213,7 @@ sealed class NativeProject {
      *
      * Default value: `natives/[name]`
      */
-    abstract var dir: PlatformFile
+    abstract var dir: SyncPath
 
     var buildSystem: BuildSystem = BuildSystem.CMake(Language.C)
         private set
@@ -223,7 +223,7 @@ sealed class NativeProject {
      *
      * Default value: `natives/[name]/api.ndl`
      */
-    var ndlFile: PlatformFile? = null
+    var ndlFile: SyncPath? = null
 
     fun resolveNdlFile() = ndlFile ?: dir.resolve("api.ndl")
 
@@ -258,7 +258,7 @@ sealed class NativeProject {
 @SerialName("multiplatform")
 open class Multiplatform(
     override var name: String,
-    override var dir: PlatformFile
+    override var dir: SyncPath
 ): NativeProject() {
 
     /**
@@ -313,7 +313,7 @@ open class Multiplatform(
 @SerialName("single")
 class SinglePlatform(
     override var name: String,
-    override var dir: PlatformFile
+    override var dir: SyncPath
 ): NativeProject() {
 
     /**

@@ -8,7 +8,8 @@ import com.huskerdev.nativekt.configurators.compileAndroid
 import com.huskerdev.nativekt.configurators.prepareAndroid
 import com.huskerdev.nativekt.plugin.*
 import com.huskerdev.nativekt.utils.*
-import io.github.vinceglb.filekit.PlatformFile
+import com.huskerdev.stdlibx.fs.SyncPath
+import com.huskerdev.stdlibx.fs.file
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
@@ -139,7 +140,7 @@ private abstract class CompileNativesAndroid @Inject constructor(
                 logger = GradlePluginLogger(logger)
             ),
             compileSdk = compileSdk,
-            existingSdkDir = PlatformFile(sdkDir)
+            existingSdkDir = SyncPath(sdkDir)
         )
     }
 }

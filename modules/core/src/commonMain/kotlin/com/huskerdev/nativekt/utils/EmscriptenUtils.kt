@@ -3,15 +3,14 @@ package com.huskerdev.nativekt.utils
 import com.huskerdev.nativekt.JsTarget
 import com.huskerdev.nativekt.NativeKtJsConfiguration
 import com.huskerdev.nativekt.NativeModuleContext
-import dev.scottpierce.envvar.EnvVar
-import io.github.vinceglb.filekit.PlatformFile
-import io.github.vinceglb.filekit.resolve
+import com.huskerdev.stdlibx.getenv
+import com.huskerdev.stdlibx.fs.SyncPath
 
-internal fun locateEmcc(context: NativeModuleContext): PlatformFile {
+internal fun locateEmcc(context: NativeModuleContext): SyncPath {
     return locate(context, "emcc")
         ?: run {
-            if(EnvVar["EMSDK"] != null)
-                return@run PlatformFile(EnvVar["EMSDK"]!!).resolve("upstream/emscripten/emcc")
+            if(getenv("EMSDK") != null)
+                return@run SyncPath(getenv("EMSDK")!!).resolve("upstream/emscripten/emcc")
             throw UnsupportedOperationException("Could not locate 'emcc'")
         }
 }

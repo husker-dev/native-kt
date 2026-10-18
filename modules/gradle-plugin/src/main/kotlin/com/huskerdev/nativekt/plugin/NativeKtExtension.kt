@@ -1,7 +1,7 @@
 package com.huskerdev.nativekt.plugin
 
 import com.huskerdev.nativekt.*
-import io.github.vinceglb.filekit.PlatformFile
+import com.huskerdev.stdlibx.fs.SyncPath
 import org.gradle.api.ExtensiblePolymorphicDomainObjectContainer
 import org.gradle.api.Named
 import org.gradle.api.model.ObjectFactory
@@ -115,7 +115,7 @@ open class WrappedMultiplatform @Inject constructor(
     name: String,
     dir: File
 ): WrappedNativeProject<Multiplatform>(
-    Multiplatform(name, PlatformFile(dir))
+    Multiplatform(name, SyncPath(dir.absolutePath))
 ) {
     /**
      * SourceSet that will have 'expect' api
@@ -137,7 +137,7 @@ open class WrappedSinglePlatform @Inject constructor(
     name: String,
     dir: File
 ): WrappedNativeProject<SinglePlatform>(
-    SinglePlatform(name, PlatformFile(dir))
+    SinglePlatform(name, SyncPath(dir.absolutePath))
 ) {
     var targetSourceSet: String by instance::targetSourceSet
 }

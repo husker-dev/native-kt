@@ -3,13 +3,13 @@ package com.huskerdev.nativekt.printers.kotlin
 import com.huskerdev.nativekt.*
 import com.huskerdev.nativekt.printers.kotlin.jvm.*
 import com.huskerdev.nativekt.utils.*
+import com.huskerdev.stdlibx.fs.SyncPath
 import com.huskerdev.webidl.*
 import com.huskerdev.webidl.resolver.*
-import io.github.vinceglb.filekit.*
 
 class KotlinJvmPrinter(
     val context: NativeModuleContext,
-    target: PlatformFile,
+    target: SyncPath,
     val expectActual: Boolean
 ) {
     private val moduleName = context.moduleName
@@ -27,8 +27,8 @@ class KotlinJvmPrinter(
     private val implFieldName = "${moduleName}Impl"
 
     init {
-        target.parent()!!.createDirectories()
-        target.writeSync(buildString {
+        target.parent!!.createDirectories()
+        target.writeString(buildString {
             printHeader()
             printDictionaries(context, expectActual, isCommon = false, isJvm = true)
             printJvmInterfaces(context)

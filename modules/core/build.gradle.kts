@@ -25,16 +25,11 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
+            api(libs.stdlibx.fs)
             api(libs.webidl)
-            api(libs.osutils)
-            api(libs.filekit.get().toString()) {
-                exclude(group = "androidx.annotation")
-            }
-            implementation(libs.envvar)
 
             implementation(libs.kotlinx.serialization)
             implementation(libs.kotlinx.coroutines)
-            implementation(libs.kotlinx.io)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))

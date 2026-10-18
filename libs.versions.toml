@@ -17,10 +17,9 @@ android_test_juint = "1.1.5"  # old versions to allow testing on SDK < 21
 # == Tools ==
 intellij_platform = "2.19.0"
 webidl = "1.1.2"
-osutils = "1.0.0"
-filekit = "0.16.0"
-env_var = "1.0.6"
+stdlibx = "2.0.0"
 shadow = "9.6.1"
+proguard = "0.9.0"
 
 # == Other FFI gen ==
 gobley = "0.3.7"
@@ -35,7 +34,6 @@ kotlinx-coroutines      = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-c
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlin_coroutines" }
 kotlinx-benchmark       = { module = "org.jetbrains.kotlinx:kotlinx-benchmark-runtime", version.ref = "kotlin_benchmark" }
 kotlinx-serialization   = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlin_serialization" }
-kotlinx-io              = { module = "org.jetbrains.kotlinx:kotlinx-io-core", version.ref = "kotlinx_io" }
 kotlin-gradle-plugin    = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 
 android-gradle          = { module = "com.android.tools.build:gradle", version.ref = "android_plugin" }
@@ -43,9 +41,9 @@ androidx-test-runner    = { module = "androidx.test:runner", version.ref = "andr
 androidx-test-ext-junit = { module = "androidx.test.ext:junit", version.ref = "android_test_juint" }
 
 webidl                  = { module = "com.huskerdev:webidl-kt", version.ref = "webidl" }
-osutils                 = { module = "com.huskerdev:os-utils", version.ref = "osutils" }
-filekit                 = { module = "io.github.vinceglb:filekit-core", version.ref = "filekit" }
-envvar                  = { module = "dev.scottpierce:kotlin-env-var", version.ref = "env_var" }
+stdlibx                 = { module = "com.huskerdev:stdlibx", version.ref = "stdlibx" }
+stdlibx-fs              = { module = "com.huskerdev:stdlibx-fs", version.ref = "stdlibx" }
+stdlibx-process         = { module = "com.huskerdev:stdlibx-process", version.ref = "stdlibx" }
 
 [plugins]
 
@@ -63,5 +61,6 @@ gobley-cargo                 = { id = "dev.gobley.cargo", version.ref = "gobley"
 gobley-uniffy                = { id = "dev.gobley.uniffi", version.ref = "gobley" }
 
 shadow                       = { id = "com.gradleup.shadow", version.ref = "shadow" }
+proguard                     = { id = "io.github.sgtsilvio.gradle.proguard", version.ref = "proguard" }
 plugin-publish               = { id = "com.gradle.plugin-publish", version.ref = "gradle_plugin_publish" }
 maven-publish                = { id = "com.vanniktech.maven.publish", version.ref = "maven_publish" }

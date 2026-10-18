@@ -1,19 +1,18 @@
 package com.huskerdev.nativekt
 
 import com.huskerdev.nativekt.utils.uppercaseFirstChar
-import com.huskerdev.osutils.Arch
-import com.huskerdev.osutils.OS
-import io.github.vinceglb.filekit.PlatformFile
-import io.github.vinceglb.filekit.resolve
+import com.huskerdev.stdlibx.Arch
+import com.huskerdev.stdlibx.OS
+import com.huskerdev.stdlibx.fs.SyncPath
 
 data class DirectoryLayout(
-    val nativeSourcesDir: PlatformFile,
-    val nativeBuildDir: PlatformFile,
-    val kotlinSourcesDir: PlatformFile,
-    val kotlinSourceFile: PlatformFile,
-    val kotlinResourcesDir: PlatformFile?,
-    val cinteropDir: PlatformFile?,
-    val cinteropFile: PlatformFile?,
+    val nativeSourcesDir: SyncPath,
+    val nativeBuildDir: SyncPath,
+    val kotlinSourcesDir: SyncPath,
+    val kotlinSourceFile: SyncPath,
+    val kotlinResourcesDir: SyncPath?,
+    val cinteropDir: SyncPath?,
+    val cinteropFile: SyncPath?,
 ) {
     companion object {
         fun of(

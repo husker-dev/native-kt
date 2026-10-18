@@ -3,14 +3,14 @@ package com.huskerdev.nativekt.utils
 import com.huskerdev.nativekt.CMakeBuildType
 import com.huskerdev.nativekt.NativeModuleContext
 import com.huskerdev.nativekt.TargetType
-import com.huskerdev.osutils.OS
-import io.github.vinceglb.filekit.*
-import kotlinx.io.SystemLineSeparator
+import com.huskerdev.stdlibx.OS
+import com.huskerdev.stdlibx.fs.SyncPath
+import com.huskerdev.stdlibx.systemLineSeparator
 
 internal fun cmakeGen(
     context: NativeModuleContext,
-    dir: PlatformFile,
-    buildDir: PlatformFile,
+    dir: SyncPath,
+    buildDir: SyncPath,
     buildType: CMakeBuildType,
     args: LinkedHashSet<String> = linkedSetOf()
 ){
@@ -18,7 +18,7 @@ internal fun cmakeGen(
     val command = arrayListOf(
         "cmake \"${dir}\"",
         "-B \"$buildDir\"",
-        "-G \"${if(OS.current == OS.WINDOWS) "MinGW Makefiles" else "Unix Makefiles"}\"",
+        "-G \"${if(OS.isWindows) "MinGW Makefiles" else "Unix Makefiles"}\"",
         "-DCMAKE_BUILD_TYPE=${buildType.cmakeName}"
     )
     command += args
@@ -28,15 +28,15 @@ internal fun cmakeGen(
 
 internal fun cmakeBuild(
     context: NativeModuleContext,
-    buildDir: PlatformFile,
-) = context.execute("cmake --build \"${buildDir.posixPath}\"", buildDir)
+    buildDir: SyncPath,
+) = context.execute("cmake --build \"${buildDir.invariantSeparatorsPath}\"", buildDir)
 
 internal fun configureCMake(
     context: NativeModuleContext,
     targetType: TargetType,
     cmakeArgs: LinkedHashSet<String>,
-    cmakeDir: PlatformFile,
-    cmakeBuildDir: PlatformFile,
+    cmakeDir: SyncPath,
+    cmakeBuildDir: SyncPath,
     cmakeBuildType: CMakeBuildType
 ) {
     val args = LinkedHashSet(cmakeArgs)
@@ -60,7 +60,7 @@ internal fun configureCMake(
 
 internal fun extractLinkerOpts(
     context: NativeModuleContext,
-    cmakeBuildDir: PlatformFile,
+    cmakeBuildDir: SyncPath,
     moduleName: String,
     isKN: Boolean = false
 ): List<String> = buildList {
@@ -73,16 +73,16 @@ internal fun extractLinkerOpts(
     // Collect linker flags from 'linkLibs.rsp' or 'link.txt'
 
     if(linkLibs.exists()) {
-        addAll(linkLibs.readSync()
+        addAll(linkLibs.readString()
             .splitRespectingQuotes()
             .map {
-                if(!it.startsWith("-l") && !PlatformFile(it).isAbsolute())
-                    PlatformFile(cmakeBuildDir, it).posixPath
+                if(!it.startsWith("-l") && !SyncPath(it).isAbsolute)
+                    cmakeBuildDir.resolve(it).invariantSeparatorsPath
                 else it
             }
             .filter { it !in setOf("-lpthread") })
     } else if(link.exists()) {
-        val parts = link.readSync()
+        val parts = link.readString()
             .splitRespectingQuotes()
 
         var i = 0
@@ -97,10 +97,10 @@ internal fun extractLinkerOpts(
                 part.endsWith(".so") ||
                 part.endsWith(".dll")
             ) {
-                val path = if(!PlatformFile(part).isAbsolute())
-                    PlatformFile(cmakeBuildDir, part).absolutePath()
+                val path = if(!SyncPath(part).isAbsolute)
+                    cmakeBuildDir.resolve(part).absoluteString()
                 else part
-                if(PlatformFile(path).exists())
+                if(SyncPath(path).exists())
                     this += path
             }
             if(part == "-framework") {
@@ -113,7 +113,7 @@ internal fun extractLinkerOpts(
 
     // Try to resolve libs from 'PkgConfig'
 
-    val cmakeCacheText = cmakeCache.readSync().split(SystemLineSeparator)
+    val cmakeCacheText = cmakeCache.readString().split(systemLineSeparator)
 
     if(cmakeCacheText.any { "_STATIC_LDFLAGS:INTERNAL=" in it && !it.endsWith("=") }) {
         addAll(cmakeCacheText
@@ -140,9 +140,9 @@ internal fun extractLinkerOpts(
             this.remove("-l$lib")
 
             libDirs.forEach { dir ->
-                val file = PlatformFile(dir).resolve("lib${lib}.a")
+                val file = SyncPath(dir).resolve("lib${lib}.a")
                 if(file.exists())
-                    this += file.posixPath
+                    this += file.invariantSeparatorsPath
             }
         }
     }
@@ -153,7 +153,7 @@ internal fun extractLinkerOpts(
         if(isKN)
             add(0, "-L${konanSysroot(KONAN_SYSROOT_MINGW)}/x86_64-w64-mingw32/lib")
         else
-            add(0, "-L${locateMingw(context).posixPath}/lib")
+            add(0, "-L${locateMingw(context).invariantSeparatorsPath}/lib")
     }
 }
 

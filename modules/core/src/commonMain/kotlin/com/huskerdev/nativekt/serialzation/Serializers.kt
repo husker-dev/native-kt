@@ -1,7 +1,7 @@
 package com.huskerdev.nativekt.serialzation
 
 import com.huskerdev.nativekt.*
-import io.github.vinceglb.filekit.*
+import com.huskerdev.stdlibx.fs.SyncPath
 import kotlinx.serialization.*
 import kotlinx.serialization.descriptors.*
 import kotlinx.serialization.encoding.*
@@ -41,7 +41,7 @@ object ContextSerializer: KSerializer<NativeModuleContext> {
         encoder.encodeStructure(descriptor) {
             encodeSerializableElement(descriptor, 0, configurationPolymorphicSerializer, value.configuration as NativeKtConfiguration.Impl)
             encodeSerializableElement(descriptor, 1, modulePolymorphicSerializer, value.module)
-            encodeStringElement(descriptor, 2, value.buildDir.absolutePath())
+            encodeStringElement(descriptor, 2, value.buildDir.absoluteString())
         }
     }
 
@@ -68,7 +68,7 @@ object ContextSerializer: KSerializer<NativeModuleContext> {
             NativeModuleContext(
                 configuration = configuration,
                 module = module,
-                buildDir = PlatformFile(buildDir),
+                buildDir = SyncPath(buildDir),
                 executor = null,
                 logger = null
             )

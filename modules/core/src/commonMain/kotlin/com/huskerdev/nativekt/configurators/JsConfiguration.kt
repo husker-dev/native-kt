@@ -5,8 +5,8 @@ import com.huskerdev.nativekt.printers.c.*
 import com.huskerdev.nativekt.printers.cpp.*
 import com.huskerdev.nativekt.printers.kotlin.*
 import com.huskerdev.nativekt.utils.*
-import io.github.vinceglb.filekit.*
-import kotlinx.io.SystemLineSeparator
+import com.huskerdev.stdlibx.fs.SyncPath
+import com.huskerdev.stdlibx.systemLineSeparator
 
 fun prepareJs(
     context: NativeModuleContext,
@@ -58,8 +58,8 @@ fun prepareJs(
     when(context.buildSystem) {
         is BuildSystem.CMake -> {
             val targetName = "lib${context.moduleName}"
-            val projectPath = context.module.dir.posixPath
-            val projectBuildPath = layout.nativeBuildDir.resolve("sub").posixPath
+            val projectPath = context.module.dir.invariantSeparatorsPath
+            val projectBuildPath = layout.nativeBuildDir.resolve("sub").invariantSeparatorsPath
 
             val languages = buildList {
                 add("C")
@@ -73,7 +73,7 @@ fun prepareJs(
                 add("api.${context.language.sourceExtension}")
             }.joinToString(" ")
 
-            layout.nativeSourcesDir.resolve("CMakeLists.txt").writeSync($$"""
+            layout.nativeSourcesDir.resolve("CMakeLists.txt").writeString($$"""
                 cmake_minimum_required(VERSION 3.15)
         
                 project("$${context.moduleName}" LANGUAGES $$languages)
@@ -103,9 +103,9 @@ fun compileJs(
 ) {
     val layout = DirectoryLayout.of(context, targetType)
 
-    fun packResult(jsFile: PlatformFile, wasmFile: PlatformFile) {
-        jsFile.copyToSync(layout.kotlinResourcesDir!!.resolve("lib${context.moduleName}.mjs"))
-        wasmFile.copyToSync(layout.kotlinResourcesDir.resolve("lib${context.moduleName}.wasm"))
+    fun packResult(jsFile: SyncPath, wasmFile: SyncPath) {
+        jsFile.copyTo(layout.kotlinResourcesDir!!.resolve("lib${context.moduleName}.mjs"))
+        wasmFile.copyTo(layout.kotlinResourcesDir.resolve("lib${context.moduleName}.wasm"))
     }
 
     when(val buildSystem = context.buildSystem) {
@@ -113,7 +113,7 @@ fun compileJs(
             val emcc = locateEmcc(context)
 
             // Generate CMake build
-            val toolchain = emcc.parent()!!.resolve("cmake/Modules/Platform/Emscripten.cmake")
+            val toolchain = emcc.parent!!.resolve("cmake/Modules/Platform/Emscripten.cmake")
 
             cmakeGen(
                 context,
@@ -127,8 +127,8 @@ fun compileJs(
 
             // Reload with extra flags
             val extraFlags = layout.nativeBuildDir.resolve("sub/CMakeFiles/${context.moduleName}.dir/flags.make")
-                .readSync()
-                .split(SystemLineSeparator)
+                .readString()
+                .split(systemLineSeparator)
                 .firstOrNull { it.startsWith("C_FLAGS = ") }
                 ?.replaceFirst("C_FLAGS = ", "")
                 ?.trim()
@@ -167,7 +167,7 @@ fun compileJs(
             val wasmFile = pkgDir.resolve("${moduleName}_bg.wasm")
 
             // Change `name_bg.wasm` references to `libname.wasm`
-            jsFile.writeSync(jsFile.readSync()
+            jsFile.writeString(jsFile.readString()
                 .replace(wasmFile.name, "lib$moduleName.wasm")
                 .replace("/* @ts-self-types=\"./$moduleName.d.ts\" */", "")
             )

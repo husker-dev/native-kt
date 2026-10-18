@@ -3,14 +3,14 @@ package com.huskerdev.nativekt.printers.c
 import com.huskerdev.nativekt.*
 import com.huskerdev.nativekt.printers.kotlin.*
 import com.huskerdev.nativekt.utils.*
+import com.huskerdev.stdlibx.fs.SyncPath
 import com.huskerdev.webidl.resolver.*
 import com.huskerdev.webidl.*
-import io.github.vinceglb.filekit.*
 
 class CJniPrinter(
     val context: NativeModuleContext,
-    target: PlatformFile,
-    headerTarget: PlatformFile,
+    target: SyncPath,
+    headerTarget: SyncPath,
     val isAndroid: Boolean
 ) {
     private val isAndroidCriticalEnabled =
@@ -18,7 +18,7 @@ class CJniPrinter(
 
     init {
         val castsFunctions = arrayListOf<String>()
-        target.writeSync(buildString {
+        target.writeString(buildString {
             append("#include \"${headerTarget.name}\"\n\n")
             printBasicCasts(castsFunctions)
             printDictionaries(castsFunctions)
@@ -28,7 +28,7 @@ class CJniPrinter(
             printFunctions()
             printFunctionsList()
         })
-        headerTarget.writeSync(buildString {
+        headerTarget.writeString(buildString {
             printHeader()
             castsFunctions.joinTo(this, prefix = "\n", separator = "\n")
         })

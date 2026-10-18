@@ -1,15 +1,15 @@
 package com.huskerdev.nativekt.utils
 
 import com.huskerdev.nativekt.*
-import dev.scottpierce.envvar.*
-import io.github.vinceglb.filekit.*
+import com.huskerdev.stdlibx.getenv
+import com.huskerdev.stdlibx.fs.SyncPath
 
 internal fun getNdkDir(
     extension: NativeKtAndroidConfiguration,
-    existingSdkDir: PlatformFile?
-): PlatformFile {
+    existingSdkDir: SyncPath?
+): SyncPath {
     val sdk = existingSdkDir
-        ?: EnvVar["ANDROID_SDK_ROOT"]?.run { PlatformFile(this) }
+        ?: getenv("ANDROID_SDK_ROOT")?.run { SyncPath(this) }
         ?: throw NullPointerException("Could not find Android SDK. Environment variable 'ANDROID_SDK_ROOT' is not specified.")
     val ndk = sdk.resolve("ndk")
 
@@ -22,8 +22,8 @@ internal fun getNdkDir(
 
         if (!dir.exists()) {
             val available = arrayListOf<String>()
-            if (dir.parent()!!.exists())
-                available += dir.parent()!!.list().map { it.name }
+            if (dir.parent!!.exists())
+                available += dir.parent!!.list().map { it.name }
 
             var message = "NDK ${extension.ndkVersion} is not installed."
             if (available.isNotEmpty())
