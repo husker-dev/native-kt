@@ -225,5 +225,5 @@ fun compileJvm(
 
     val dst = layout.kotlinResourcesDir!!.resolve(targetLibFile)
     dst.parent!!.createDirectories()
-    libFile.copyTo(dst)
+    libFile.copyTo(dst, overwrite = true)
 }

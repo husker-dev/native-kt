@@ -104,8 +104,8 @@ fun compileJs(
     val layout = DirectoryLayout.of(context, targetType)
 
     fun packResult(jsFile: SyncPath, wasmFile: SyncPath) {
-        jsFile.copyTo(layout.kotlinResourcesDir!!.resolve("lib${context.moduleName}.mjs"))
-        wasmFile.copyTo(layout.kotlinResourcesDir.resolve("lib${context.moduleName}.wasm"))
+        jsFile.copyTo(layout.kotlinResourcesDir!!.resolve("lib${context.moduleName}.mjs"), overwrite = true)
+        wasmFile.copyTo(layout.kotlinResourcesDir.resolve("lib${context.moduleName}.wasm"), overwrite = true)
     }
 
     when(val buildSystem = context.buildSystem) {
