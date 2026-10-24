@@ -191,7 +191,7 @@ class KotlinJsPrinter(
                     else -> ""
                 }
                 val castToKotlin = when (name) {
-                    "Char" -> ".toInt().toChar()"
+                    "Char" -> ".code.toChar()"
                     "Boolean" -> ".toBoolean()"
                     "Float" -> ".truncF32()"
                     else -> ""
