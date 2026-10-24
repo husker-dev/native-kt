@@ -3,14 +3,14 @@ package com.huskerdev.nativekt
 import com.huskerdev.nativekt.NativeModuleContext.CommandExecutor
 import com.huskerdev.nativekt.printers.c.cname
 import com.huskerdev.nativekt.serialzation.ContextSerializer
-import com.huskerdev.nativekt.serialzation.nativektJson
 import com.huskerdev.nativekt.utils.*
 import com.huskerdev.stdlibx.fs.SyncPath
 import com.huskerdev.webidl.*
 import com.huskerdev.webidl.parser.*
 import com.huskerdev.webidl.resolver.*
 import com.huskerdev.webidl.resolver.WebIDLBuiltinKind.*
-import kotlinx.serialization.*
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
 
 /**
@@ -19,35 +19,35 @@ import kotlinx.serialization.*
  */
 @Serializable(with = ContextSerializer::class)
 class NativeModuleContext(
-    val configuration: NativeKtConfiguration,
-    val module: NativeProject,
+    val module: NativeKtModule,
     val buildDir: SyncPath,
     var executor: CommandExecutor?,
     var logger: Logger?,
-    validate: Boolean = true
+    validate: Boolean = true,
+    ndlText: (SyncPath) -> String = { it.readString() }
 ) {
     companion object {
         fun deserialize(
             json: String,
             executor: CommandExecutor,
             logger: Logger
-        ) = nativektJson.decodeFromString<NativeModuleContext>(json).also {
+        ) = Json.decodeFromString<NativeModuleContext>(json).also {
             it.executor = executor
             it.logger = logger
         }
     }
 
     private val idl = WebIDL.resolve(
-        text = module.resolveNdlFile().readString(),
+        text = ndlText(module.apiFile),
         env = NdlEnv
     ).also {
         if(it.mergedErrors.isNotEmpty())
             throw NdlCompilationException(it.mergedErrors)
     }
 
-    val debug = configuration.debug
+    val debug = module.debug
 
-    val classPath = module.resolveClassPath()
+    val classPath = module.classPath
     val moduleName = module.name
     val buildSystem = module.buildSystem
 
@@ -346,7 +346,7 @@ class NativeModuleContext(
             if (module.name.startsWith("_") || module.name.endsWith("_"))
                 throw Exception("Native module '${module.name}' name must not begin or end with an underscore.")
 
-            if (!module.resolveClassPath().matches("^([a-zA-Z_$][a-zA-Z\\d_$]*\\.)*[a-zA-Z_$][a-zA-Z\\d_$]*$".toRegex()))
+            if (!module.classPath.matches("^([a-zA-Z_$][a-zA-Z\\d_$]*\\.)*[a-zA-Z_$][a-zA-Z\\d_$]*$".toRegex()))
                 throw Exception("The classpath of the native module '${module.name}' must comply with Kotlin standards.")
 
             validateIDL()
@@ -456,7 +456,7 @@ class NativeModuleContext(
     ) = executor?.exec(this, command, workingDir, silent, errAsStd, environment)
         ?: throw NullPointerException("Executor is null")
 
-    fun serialize() = nativektJson.encodeToString<NativeModuleContext>(this)
+    fun serialize() = Json.encodeToString<NativeModuleContext>(this)
 
     interface CommandExecutor {
         fun exec(
@@ -485,16 +485,14 @@ class NativeModuleContext(
  */
 fun createContext(
     buildDir: SyncPath,
-    configuration: NativeKtConfiguration,
-    module: NativeProject,
+    module: NativeKtModule,
     executor: CommandExecutor,
     logger: NativeModuleContext.Logger
 ): NativeModuleContext? {
-    if(!module.resolveNdlFile().exists())
+    if(!module.apiFile.exists())
         return null
 
     return NativeModuleContext(
-        configuration = configuration,
         module = module,
         buildDir = buildDir,
         executor = executor,

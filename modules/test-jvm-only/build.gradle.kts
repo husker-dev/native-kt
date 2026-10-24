@@ -17,9 +17,8 @@ dependencies {
 
 natives {
     applyRuntime = false
-    useJvmRecord = false
 
-    create("jvmOnlyTest")
+    add("jvmOnlyTest")
 }
 
 tasks.withType<Test>().configureEach {

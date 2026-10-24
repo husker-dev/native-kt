@@ -1,0 +1,66 @@
+# $scheme:nativekt
+
+[description]
+name = "freetypeBindings"
+api_file = "./api.ndl"
+
+# stub
+[cmake]
+project_dir = "."
+header_file = "include/api.h"
+language = "c"
+
+[kotlin]
+package = "natives.freetypeBindings"
+use_coroutines = false
+
+[jvm]
+use_records = true
+backends = ["jni", "foreign", "jvmci"]
+
+[js]
+use_bigint = true
+target = "node"
+
+[android]
+ndk_version = "latest"
+abis = ["arm64-v8a", "armeabi-v7a", "x86_64"]
+critical_natives = true
+
+[compilation]
+common_target = "common"
+targets = [
+    "jvm",
+    "android",
+
+    "js",
+    "wasmJs",
+
+    "mingwX64",
+
+    "macosArm64",
+    "macosX64",
+
+    "linuxArm64",
+    "linuxX64",
+
+    "iosArm64",
+    "iosX64",
+    "iosSimulatorArm64",
+
+    "watchosX64",
+    "watchosArm32",
+    "watchosArm64",
+    "watchosDeviceArm64",
+    "watchosSimulatorArm64",
+
+    "tvosX64",
+    "tvosArm64",
+    "tvosSimulatorArm64",
+
+    "androidNativeX64",
+    "androidNativeX86",
+    "androidNativeArm32",
+    "androidNativeArm64"
+]
+stubs = []

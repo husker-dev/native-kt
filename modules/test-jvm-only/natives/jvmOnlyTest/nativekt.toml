@@ -1,0 +1,24 @@
+# $scheme:nativekt
+
+[description]
+name = "jvmOnlyTest"
+api_file = "./api.ndl"
+
+# stub
+[cmake]
+project_dir = "."
+header_file = "include/api.h"
+language = "c"
+
+[kotlin]
+package = "natives.jvmOnlyTest"
+use_coroutines = false
+
+[jvm]
+use_records = true
+backends = ["jni", "foreign", "jvmci"]
+
+[compilation]
+common_target = "jvm"
+targets = ["jvm"]
+stubs = []

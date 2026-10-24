@@ -45,7 +45,7 @@ class KotlinJsPrinter(
             import kotlin.js.*
         """.trimIndent())
 
-        if(context.configuration.useCoroutines) {
+        if(context.module.useCoroutines) {
             appendLine("""
                 import kotlinx.coroutines.suspendCancellableCoroutine
                 import kotlin.coroutines.resume
@@ -87,7 +87,7 @@ class KotlinJsPrinter(
         """.trimIndent())
 
         when (context.language) {
-            Language.RUST -> when (context.module.jsTarget) {
+            Language.RUST -> when (context.module.js.target) {
                 JsTarget.WEB -> appendLine("""
                     _module.default().then {
                         _wasmMemory = it.memory
@@ -122,7 +122,7 @@ class KotlinJsPrinter(
         }
         append("}\n")
 
-        if(context.configuration.useCoroutines) {
+        if(context.module.useCoroutines) {
             appendLine("""
                 
                 ${actual}suspend fun ${asyncLoadFunctionName(context)}() {
@@ -583,7 +583,7 @@ class KotlinJsPrinter(
                     @JsModule("$fileName") ${if(isWasm) "" else "@JsNonModule"}
                     private external object RustLib: JsAny {
                 """.trimIndent())
-                appendLine(when (context.module.jsTarget) {
+                appendLine(when (context.module.js.target) {
                     JsTarget.NODE -> "\tfun initSync(module: JsAny): InitOutput"
                     else -> "\tfun default(): Promise<InitOutput>"
                 })

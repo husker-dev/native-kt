@@ -42,17 +42,10 @@ kotlin {
 
 natives {
     applyRuntime = false
-    useCoroutines = false
 
-    create("jniBindings") {
-        cargo()
-    }
-    create("foreignBindings") {
-        cargo()
-    }
-    create("jvmciBindings") {
-        cargo()
-    }
+    add("foreignBindings")
+    add("jniBindings")
+    add("jvmciBindings")
 }
 
 cargo {

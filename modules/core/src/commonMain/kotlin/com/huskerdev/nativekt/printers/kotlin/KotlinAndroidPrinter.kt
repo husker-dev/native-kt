@@ -13,8 +13,7 @@ class KotlinAndroidPrinter(
     target: SyncPath,
     val expectActual: Boolean
 ) {
-    private val extension = context.configuration as NativeKtAndroidConfiguration
-    private val criticalEnabled = extension.useAndroidCriticalNative
+    private val criticalEnabled = context.module.android.useCriticalNative
 
     private val jniClassName = "${context.moduleName.upperCamelCase()}JNI"
     private val actual = if(expectActual) "actual " else ""
@@ -48,7 +47,7 @@ class KotlinAndroidPrinter(
             import com.huskerdev.nativekt.jvm.*
         """.trimIndent())
 
-        if(extension.useAndroidCriticalNative)
+        if(criticalEnabled)
             appendLine("import dalvik.annotation.optimization.*")
 
         appendLine("""
@@ -73,7 +72,7 @@ class KotlinAndroidPrinter(
             }
         """.trimIndent())
 
-        if(context.configuration.useCoroutines) appendLine("""
+        if(context.module.useCoroutines) appendLine("""
             
             ${actual}suspend fun ${asyncLoadFunctionName(context)}() =
                 ${syncLoadFunctionName(context)}()

@@ -2,7 +2,7 @@
 
 package com.huskerdev.nativekt.utils
 
-import com.huskerdev.nativekt.NativeKtJsConfiguration
+import com.huskerdev.nativekt.NativeKtModule
 import com.huskerdev.nativekt.NativeModuleContext
 import com.huskerdev.nativekt.TargetType
 import com.huskerdev.webidl.*
@@ -97,10 +97,10 @@ internal fun ResolvedIdlEnum.defaultValue(): String? =
 
 fun checkForLongTypes(
     context: NativeModuleContext,
-    extension: NativeKtJsConfiguration,
+    configuration: NativeKtModule.Js,
     targetName: TargetType
 ) {
-    if(extension.useJsBigInt)
+    if(configuration.useJsBigInt)
         return
 
     // Collect long fields/operations

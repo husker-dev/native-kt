@@ -14,8 +14,7 @@ class KotlinJvmJniPrinter(
     val isAndroid: Boolean,
     indent: String = ""
 ) {
-    private val isAndroidCriticalEnabled =
-        isAndroid && (context.configuration as? NativeKtAndroidConfiguration)?.useAndroidCriticalNative ?: false
+    private val isAndroidCriticalEnabled = isAndroid && context.module.android.useCriticalNative
 
     private val indent1 = indent + "\t"
     private val indent2 = indent1 + "\t"

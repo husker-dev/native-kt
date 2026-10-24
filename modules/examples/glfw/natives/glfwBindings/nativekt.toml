@@ -1,0 +1,34 @@
+# $scheme:nativekt
+
+[description]
+name = "glfwBindings"
+api_file = "./api.ndl"
+
+# stub
+[cmake]
+project_dir = "."
+header_file = "include/api.h"
+language = "c"
+
+[kotlin]
+package = "natives.glfwBindings"
+use_coroutines = false
+
+[jvm]
+use_records = true
+backends = ["jni", "foreign", "jvmci"]
+
+[compilation]
+common_target = "common"
+targets = [
+    "jvm",
+
+    "mingwX64",
+
+    "macosArm64",
+    "macosX64",
+
+    "linuxArm64",
+    "linuxX64",
+]
+stubs = []

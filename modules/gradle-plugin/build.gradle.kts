@@ -38,7 +38,7 @@ gradlePlugin {
     plugins {
         create("native-kt") {
             id = "com.huskerdev.native-kt"
-            implementationClass = "com.huskerdev.nativekt.plugin.NativeKtPlugin"
+            implementationClass = "com.huskerdev.nativekt.gradle.NativeKtPlugin"
             displayName = "native-kt"
             description = "Gradle plugin for convenient C/C++/Rust integration into a Kotlin Multiplatform project."
             tags.set(listOf("kotlin", "multiplatform", "native"))

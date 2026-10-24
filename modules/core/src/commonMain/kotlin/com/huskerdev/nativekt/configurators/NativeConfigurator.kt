@@ -93,7 +93,7 @@ fun prepareNative(
                 
                 add_compile_options(-Wno-initializer-overrides)
                 
-                add_subdirectory("$${context.module.dir.invariantSeparatorsPath}" "$${layout.nativeBuildDir.resolve("sub").invariantSeparatorsPath}")
+                add_subdirectory("$${buildSystem.projectDir.invariantSeparatorsPath}" "$${layout.nativeBuildDir.resolve("sub").invariantSeparatorsPath}")
                     
                 add_library(lib_$$moduleName SHARED api.$$sourceExtension)
                 target_link_libraries(lib_$$moduleName PUBLIC $$moduleName)
@@ -131,7 +131,7 @@ fun prepareNative(
             if(shouldInit) {
                 val rustFlags = cargoLinkerFlags(
                     context,
-                    project = context.module.dir,
+                    project = buildSystem.projectDir,
                     buildType = buildSystem.buildType,
                     buildDir = layout.nativeBuildDir,
                     target = getCargoTarget(targetType),
@@ -189,7 +189,7 @@ fun compileNative(
         }
         is BuildSystem.Cargo -> {
             cargoBuild(context,
-                project = context.module.dir,
+                project = buildSystem.projectDir,
                 buildType = buildSystem.buildType,
                 buildDir = layout.nativeBuildDir,
                 target = getCargoTarget(targetType)

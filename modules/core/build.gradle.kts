@@ -27,6 +27,7 @@ kotlin {
         commonMain.dependencies {
             api(libs.stdlibx.fs)
             api(libs.webidl)
+            implementation(libs.ktoml)
 
             implementation(libs.kotlinx.serialization)
             implementation(libs.kotlinx.coroutines)

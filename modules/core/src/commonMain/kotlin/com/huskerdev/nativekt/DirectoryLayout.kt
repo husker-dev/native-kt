@@ -46,11 +46,8 @@ data class DirectoryLayout(
                         OS.LINUX -> "linux"
                         else -> throw UnsupportedOperationException()
                     }
-                    val arch = when {
-                        OS.current == OS.MACOS && (context.configuration as NativeKtJvmConfiguration).useUniversalMacOSLib
-                            -> "universal"
-                        else -> Arch.current.name.lowercase()
-                    }
+                    val arch = Arch.current.name.lowercase()
+
                     nativeBuild = nativeBuild.resolve("${platformName}${arch.uppercaseFirstChar()}")
                 }
                 else -> Unit

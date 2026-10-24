@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "com.huskerdev"
-version = "1.3.0"
+version = "1.4.0"
 
 repositories {
     mavenCentral()
@@ -21,9 +21,12 @@ repositories {
 
 dependencies {
     intellijPlatform {
-        intellijIdea("2025.3.3")
+        intellijIdea("2026.2.3")
 
         bundledPlugin("org.jetbrains.kotlin")
+        bundledPlugin("org.toml.lang")
+        bundledPlugin("com.intellij.modules.json")
+        bundledPlugin("com.intellij.gradle")
     }
 
     val libraryVersion = projectDir.parentFile.parentFile.resolve("VERSION").readText().trim()

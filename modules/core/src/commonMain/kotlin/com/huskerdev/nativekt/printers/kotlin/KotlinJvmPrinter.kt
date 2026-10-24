@@ -13,11 +13,9 @@ class KotlinJvmPrinter(
     val expectActual: Boolean
 ) {
     private val moduleName = context.moduleName
-    private val extension = context.configuration as NativeKtJvmConfiguration
-
-    private val useJNI = extension.useJNI
-    private val useForeignApi = extension.useForeignApi
-    private val useJVMCI = extension.useJVMCI
+    private val useJNI = context.module.jvm.useJNI
+    private val useForeignApi = context.module.jvm.useForeignApi
+    private val useJVMCI = context.module.jvm.useJVMCI
 
     private val commonInvokerName = "${moduleName.upperCamelCase()}NativeInvoker"
     private val jniInvokerName = "${moduleName.upperCamelCase()}Jni"
@@ -104,7 +102,7 @@ class KotlinJvmPrinter(
                 if(_$$isLibLoadedField) return
                 _$$isLibLoadedField = true
                 
-                val libraryPath = NativeKtUtils.resolveLibraryFile("$$moduleName", $${extension.useUniversalMacOSLib})
+                val libraryPath = NativeKtUtils.resolveLibraryFile("$$moduleName")
 
         """.trimIndent())
 
@@ -139,7 +137,7 @@ class KotlinJvmPrinter(
             }
         """.trimIndent())
 
-        if(context.configuration.useCoroutines) appendLine("""
+        if(context.module.useCoroutines) appendLine("""
             
             ${actual}suspend fun ${asyncLoadFunctionName(context)}() =
                 ${syncLoadFunctionName(context)}()

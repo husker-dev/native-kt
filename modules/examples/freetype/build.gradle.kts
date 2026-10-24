@@ -1,7 +1,6 @@
 @file:OptIn(ExperimentalKotlinGradlePluginApi::class)
 
-import com.huskerdev.nativekt.JsTarget
-import com.huskerdev.nativekt.plugin.currentNativeDesktopTargets
+import com.huskerdev.nativekt.gradle.currentNativeDesktopTargets
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JsModuleKind
 import org.jetbrains.kotlin.gradle.targets.js.npm.LockFileMismatchReport
@@ -55,13 +54,7 @@ kotlin {
 }
 
 natives {
-    useCoroutines = false
-    useUniversalMacOSLib = false
-
-    // Remove auto runtime applying to use local version
     applyRuntime = false
 
-    create("freetypeBindings") {
-        jsTarget = JsTarget.NODE
-    }
+    add("freetypeBindings")
 }

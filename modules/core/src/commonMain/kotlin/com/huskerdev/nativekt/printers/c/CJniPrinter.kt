@@ -13,8 +13,7 @@ class CJniPrinter(
     headerTarget: SyncPath,
     val isAndroid: Boolean
 ) {
-    private val isAndroidCriticalEnabled =
-        isAndroid && (context.configuration as? NativeKtAndroidConfiguration)?.useAndroidCriticalNative ?: false
+    private val isAndroidCriticalEnabled = isAndroid && context.module.android.useCriticalNative
 
     init {
         val castsFunctions = arrayListOf<String>()

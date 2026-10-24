@@ -55,10 +55,10 @@ fun prepareJs(
         }
     }
 
-    when(context.buildSystem) {
+    when(val buildSystem = context.buildSystem) {
         is BuildSystem.CMake -> {
             val targetName = "lib${context.moduleName}"
-            val projectPath = context.module.dir.invariantSeparatorsPath
+            val projectPath = buildSystem.projectDir.invariantSeparatorsPath
             val projectBuildPath = layout.nativeBuildDir.resolve("sub").invariantSeparatorsPath
 
             val languages = buildList {
@@ -157,9 +157,9 @@ fun compileJs(
         is BuildSystem.Cargo -> {
             val pkgDir = wasmBindgenBuild(
                 context,
-                context.module.dir,
-                buildSystem.buildType,
-                layout.nativeBuildDir
+                project = buildSystem.projectDir,
+                buildType = buildSystem.buildType,
+                buildDir = layout.nativeBuildDir
             )
 
             val moduleName = context.moduleName

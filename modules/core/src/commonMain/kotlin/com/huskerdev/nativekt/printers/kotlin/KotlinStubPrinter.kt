@@ -21,7 +21,7 @@ class KotlinStubPrinter(
             
         """.trimIndent())
 
-        if(context.configuration.useCoroutines)
+        if(context.module.useCoroutines)
             builder.append("actual suspend fun ${asyncLoadFunctionName(context)}() = Unit")
 
         context.operations.forEach { operation ->

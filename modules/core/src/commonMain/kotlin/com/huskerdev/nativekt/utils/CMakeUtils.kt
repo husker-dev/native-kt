@@ -1,6 +1,6 @@
 package com.huskerdev.nativekt.utils
 
-import com.huskerdev.nativekt.CMakeBuildType
+import com.huskerdev.nativekt.BuildSystem
 import com.huskerdev.nativekt.NativeModuleContext
 import com.huskerdev.nativekt.TargetType
 import com.huskerdev.stdlibx.OS
@@ -11,7 +11,7 @@ internal fun cmakeGen(
     context: NativeModuleContext,
     dir: SyncPath,
     buildDir: SyncPath,
-    buildType: CMakeBuildType,
+    buildType: BuildSystem.CMake.BuildType,
     args: LinkedHashSet<String> = linkedSetOf()
 ){
     buildDir.createDirectories()
@@ -37,7 +37,7 @@ internal fun configureCMake(
     cmakeArgs: LinkedHashSet<String>,
     cmakeDir: SyncPath,
     cmakeBuildDir: SyncPath,
-    cmakeBuildType: CMakeBuildType
+    cmakeBuildType: BuildSystem.CMake.BuildType
 ) {
     val args = LinkedHashSet(cmakeArgs)
     args += linkedSetOf(

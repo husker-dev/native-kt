@@ -46,7 +46,7 @@ class KotlinCommonPrinter(
             expect fun ${asyncLoadFunctionName(context)}(onReady: () -> Unit)
             
         """.trimIndent())
-        if(context.configuration.useCoroutines) append("""
+        if(context.module.useCoroutines) append("""
             
             /**
              * Initializes the native library `${context.moduleName}` asynchronously.
@@ -206,7 +206,7 @@ internal fun StringBuilder.printDictionaries(
         if(printImpl) {
 
             // Impl (data class)
-            if (isJvm && (context.configuration as? NativeKtJvmConfiguration)?.useJvmRecord ?: false && fields.isNotEmpty())
+            if (isJvm && context.module.jvm.useJvmRecord && fields.isNotEmpty())
                 append("\n\t@JvmRecord")
 
             if (fields.isNotEmpty()) {

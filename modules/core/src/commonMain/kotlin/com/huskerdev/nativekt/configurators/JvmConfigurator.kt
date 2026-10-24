@@ -13,8 +13,7 @@ fun prepareJvm(
     useExpectActual: Boolean
 ) {
     val layout = DirectoryLayout.of(context, TargetType.JVM)
-    val extension = context.configuration as NativeKtJvmConfiguration
-    val useJni = extension.useJNI
+    val useJni = context.module.jvm.useJNI
 
     val moduleName = context.moduleName
     val buildSystem = context.buildSystem
@@ -89,7 +88,7 @@ fun prepareJvm(
                     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
                     add_compile_options(-Wno-initializer-overrides)
                     
-                    add_subdirectory("$${context.module.dir.invariantSeparatorsPath}" "$${layout.nativeBuildDir.resolve("cmake/sub").invariantSeparatorsPath}")
+                    add_subdirectory("$${buildSystem.projectDir.invariantSeparatorsPath}" "$${layout.nativeBuildDir.resolve("cmake/sub").invariantSeparatorsPath}")
                     
                     add_library(lib_$$moduleName SHARED api.$${context.language.sourceExtension})
                     
@@ -109,8 +108,7 @@ fun compileJvm(
     val layout = DirectoryLayout.of(context, TargetType.JVM)
     layout.nativeBuildDir.createDirectories()
 
-    val extension = context.configuration as NativeKtJvmConfiguration
-    val useJni = extension.useJNI
+    val useJni = context.module.jvm.useJNI
 
     // Compile JNI if needed
     val jniLib = if(useJni) {
@@ -158,12 +156,6 @@ fun compileJvm(
             )
             if(jniLib != null)
                 args += "-DJNI_LIBRARY=${jniLib.invariantSeparatorsPath}"
-            if (OS.current == OS.MACOS && extension.useUniversalMacOSLib) {
-                args += setOf(
-                    "-DCMAKE_C_FLAGS=\"-arch x86_64 -arch arm64\"",
-                    "-DCMAKE_CXX_FLAGS=\"-arch x86_64 -arch arm64\""
-                )
-            }
 
             val cmakeBuildDir = layout.nativeBuildDir.resolve("cmake")
             cmakeGen(context,
@@ -182,14 +174,14 @@ fun compileJvm(
         is BuildSystem.Cargo -> {
             val cargoBuildDir = layout.nativeBuildDir.resolve("cargo")
             val rustOutDir = cargoBuild(context,
-                project = context.module.dir,
+                project = buildSystem.projectDir,
                 buildType = buildSystem.buildType,
                 buildDir = cargoBuildDir
             )
 
             if (useJni) {
                 val rustLinkerFlags = cargoLinkerFlags(context,
-                    project = context.module.dir,
+                    project = buildSystem.projectDir,
                     buildType = buildSystem.buildType,
                     buildDir = cargoBuildDir
                 )
@@ -218,10 +210,7 @@ fun compileJvm(
     }
 
     // Copy library to resources
-    val libArch = if(OS.current == OS.MACOS && extension.useUniversalMacOSLib)
-        "universal" else Arch.current.name.lowercase()
-
-    val targetLibFile = "lib${context.moduleName}-$libArch.${OS.current.dylibExtension}"
+    val targetLibFile = "lib${context.moduleName}-${Arch.current.name.lowercase()}.${OS.current.dylibExtension}"
 
     val dst = layout.kotlinResourcesDir!!.resolve(targetLibFile)
     dst.parent!!.createDirectories()

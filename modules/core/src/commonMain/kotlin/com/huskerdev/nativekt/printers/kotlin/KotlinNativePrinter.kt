@@ -54,7 +54,7 @@ class KotlinNativePrinter(
             }
             
         """.trimIndent())
-        if(context.configuration.useCoroutines)
+        if(context.module.useCoroutines)
             append("\n${actual}suspend fun ${asyncLoadFunctionName(context)}() = ${syncLoadFunctionName(context)}()\n")
     }
 

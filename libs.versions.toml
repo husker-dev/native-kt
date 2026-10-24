@@ -1,11 +1,10 @@
 [versions]
 
 # == Kotlin ==
-kotlin = "2.4.20"
+kotlin = "2.4.21"
 kotlin_serialization = "1.11.0"
 kotlin_coroutines = "1.11.0"
 kotlin_benchmark = "0.5.0"
-kotlinx_io = "0.9.1"
 
 # == Android ==
 android_plugin = "9.4.1"
@@ -18,6 +17,7 @@ android_test_juint = "1.1.5"  # old versions to allow testing on SDK < 21
 intellij_platform = "2.19.0"
 webidl = "1.1.2"
 stdlibx = "2.0.0"
+ktoml = "0.7.1"
 shadow = "9.6.1"
 proguard = "0.9.0"
 
@@ -44,6 +44,8 @@ webidl                  = { module = "com.huskerdev:webidl-kt", version.ref = "w
 stdlibx                 = { module = "com.huskerdev:stdlibx", version.ref = "stdlibx" }
 stdlibx-fs              = { module = "com.huskerdev:stdlibx-fs", version.ref = "stdlibx" }
 stdlibx-process         = { module = "com.huskerdev:stdlibx-process", version.ref = "stdlibx" }
+
+ktoml                   = { module = "com.akuleshov7:ktoml-core", version.ref = "ktoml" }
 
 [plugins]
 

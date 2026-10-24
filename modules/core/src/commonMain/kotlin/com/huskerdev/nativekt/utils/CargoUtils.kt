@@ -1,6 +1,6 @@
 package com.huskerdev.nativekt.utils
 
-import com.huskerdev.nativekt.CargoBuildType
+import com.huskerdev.nativekt.BuildSystem
 import com.huskerdev.nativekt.NativeModuleContext
 import com.huskerdev.nativekt.TargetType
 import com.huskerdev.stdlibx.Arch
@@ -75,7 +75,7 @@ internal fun ensureWasmOptInstalled(context: NativeModuleContext) {
 
 internal fun cargoTargetDir(
     buildDir: SyncPath,
-    buildType: CargoBuildType,
+    buildType: BuildSystem.Cargo.BuildType,
     target: String = rustcCurrentTaget
 ) = buildDir.resolve("$target/${buildType.cargoName}")
 
@@ -83,7 +83,7 @@ internal fun cargoLinkerFlags(
     context: NativeModuleContext,
     project: SyncPath,
     buildDir: SyncPath,
-    buildType: CargoBuildType,
+    buildType: BuildSystem.Cargo.BuildType,
     target: String = rustcCurrentTaget,
     env: Map<String, String>? = null,
     isKN: Boolean = false
@@ -132,7 +132,7 @@ internal fun cargoBuild(
     context: NativeModuleContext,
     project: SyncPath,
     buildDir: SyncPath,
-    buildType: CargoBuildType,
+    buildType: BuildSystem.Cargo.BuildType,
     target: String = rustcCurrentTaget,
     additionalArgs: String = "",
     env: Map<String, String>? = null
@@ -153,7 +153,7 @@ internal fun cargoBuild(
 internal fun wasmBindgenBuild(
     context: NativeModuleContext,
     project: SyncPath,
-    buildType: CargoBuildType,
+    buildType: BuildSystem.Cargo.BuildType,
     buildDir: SyncPath
 ): SyncPath {
     val buildDirClean = buildDir.invariantSeparatorsPath

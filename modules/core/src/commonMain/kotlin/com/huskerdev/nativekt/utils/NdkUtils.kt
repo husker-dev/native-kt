@@ -5,7 +5,7 @@ import com.huskerdev.stdlibx.getenv
 import com.huskerdev.stdlibx.fs.SyncPath
 
 internal fun getNdkDir(
-    extension: NativeKtAndroidConfiguration,
+    extension: NativeKtModule.Android,
     existingSdkDir: SyncPath?
 ): SyncPath {
     val sdk = existingSdkDir

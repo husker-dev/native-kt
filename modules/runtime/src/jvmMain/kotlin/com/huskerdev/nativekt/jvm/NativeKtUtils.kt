@@ -85,19 +85,16 @@ object NativeKtUtils {
     /**
      *
      * @param baseName base library name, without prefix, extension and arch (e.g. 'some')
-     * @param macosUniversal indicates if macOS lib is universal (fat)
      * @return Full library file path (e.g. C:/libsome-x64.dll)
      * @throws IOException If file not found in resources
      */
-    fun resolveLibraryFile(baseName: String, macosUniversal: Boolean): String {
+    fun resolveLibraryFile(baseName: String): String {
 
         // Get OS
         val os = OS.current
 
         // Get lib arch
-        val arch = if(macosUniversal && os == OS.MACOS)
-            "universal"
-        else Arch.current.name.lowercase(Locale.US)
+        val arch = Arch.current.name.lowercase(Locale.US)
 
         // Construct full lib file name
         val fileName = "lib$baseName-$arch.${os.dylibExtension}"

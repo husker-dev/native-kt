@@ -1,6 +1,6 @@
 @file:Suppress("UnstableApiUsage")
 
-import com.huskerdev.nativekt.plugin.*
+import com.huskerdev.nativekt.gradle.*
 import com.huskerdev.nativekt.*
 import org.jetbrains.kotlin.gradle.dsl.*
 import org.jetbrains.kotlin.gradle.tasks.KotlinNativeLink
@@ -92,60 +92,37 @@ natives {
     applyRuntime = false
     applyAndroidCriticalStub = false
 
-    useJsBigInt = true
-    useJvmRecord = false
+    var printedInfo = false
+    fun addTest(path: String, configure: NativeKtModule.() -> Unit = {}) {
+        addFile(file("$path/nativekt.toml")) {
+            js.target = if(project.hasProperty("useNode"))
+                JsTarget.NODE else JsTarget.WEB
+            jvm.useJNI = true
+            jvm.useForeignApi = !project.hasProperty("disableForeign")
+            jvm.useJVMCI = !project.hasProperty("disableJVMCI")
 
-    val currentJsTarget = if(project.hasProperty("useNode"))
-        JsTarget.NODE else JsTarget.WEB
-    logger.info("Using JS/Wasm target: $currentJsTarget")
-
-    if(project.hasProperty("disableForeign")) {
-        logger.info("Disable: Foreign")
-        useForeignApi = false
+            if(!printedInfo) {
+                printedInfo = true
+                logger.info("Using JS/Wasm target: ${js.target}")
+                if(!jvm.useForeignApi)
+                    logger.info("Disable: Foreign")
+                if(!jvm.useJVMCI)
+                    logger.info("Disable: JVMCI")
+            }
+            configure()
+        }
     }
 
-    if(project.hasProperty("disableJVMCI")) {
-        logger.info("Disable: JVMCI")
-        useJVMCI = false
-    }
+    // Add basic tests (C/C++/Rust)
+    addTest("natives/test")
+    addTest("natives/testcpp")
+    addTest("natives/testrs")
 
-    // Configure modules
-    val commonNdl = file("natives/api.ndl")
-    create("test") {
-        cmake(Language.C)
-        ndlFile = commonNdl
-        jsTarget = currentJsTarget
-    }
-    create("testcpp") {
-        cmake(Language.CPP)
-        ndlFile = commonNdl
-        jsTarget = currentJsTarget
-    }
-    create("testrs") {
-        cargo()
-        ndlFile = commonNdl
-        jsTarget = currentJsTarget
-    }
-
-    // Test cases
-    val casesDir = file("natives/cases")
+    // Add micro test cases
     for(i in 0 until 7) {
-        val ndl = File(casesDir, "tc_$i.ndl")
-        create("tc_${i}_rust") {
-            ndlFile = ndl
-            dir = File(casesDir, "rust/tc_$i")
-            cargo()
-        }
-        create("tc_${i}_c") {
-            ndlFile = ndl
-            dir = File(casesDir, "c/tc_$i")
-            cmake()
-        }
-        create("tc_${i}_cpp") {
-            ndlFile = ndl
-            dir = File(casesDir, "cpp/tc_$i")
-            cmake(Language.CPP)
-        }
+        addTest("natives/cases/rust/tc_${i}")
+        addTest("natives/cases/c/tc_${i}")
+        addTest("natives/cases/cpp/tc_${i}")
     }
 }
 

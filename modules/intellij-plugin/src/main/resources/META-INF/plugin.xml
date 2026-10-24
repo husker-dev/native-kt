@@ -5,12 +5,25 @@
     <description>Syntax highlight for native-kt gradle plugin</description>
 
     <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.vcs</depends>
     <depends>org.jetbrains.kotlin</depends>
-    <depends>org.jetbrains.plugins.gradle</depends>
+    <depends>com.intellij.gradle</depends>
+    <depends>com.intellij.modules.json</depends>
+    <depends>org.toml.lang</depends>
 
     <!-- K2 mode compatibility -->
     <extensions defaultExtensionNs="org.jetbrains.kotlin">
         <supportsKotlinPluginMode supportsK2="true" />
+    </extensions>
+
+    <extensions defaultExtensionNs="JavaScript">
+        <JsonSchema.ProviderFactory
+            implementation="com.huskerdev.nativekt.intellij.NativeKtSchemaProvider"/>
+    </extensions>
+
+    <extensions defaultExtensionNs="org.jetbrains.plugins.gradle">
+        <projectResolve
+            implementation="com.huskerdev.nativekt.intellij.NativeKtProjectResolver"/>
     </extensions>
 
     <extensions defaultExtensionNs="com.intellij">
@@ -18,11 +31,6 @@
             kind="kotlin"
             coordinate="com.huskerdev:native-kt-runtime"
             displayName="native-kt"/>
-
-        <projectService
-                serviceImplementation="com.huskerdev.nativekt.intellij.tree.NativeKtService"/>
-        <postStartupActivity
-                implementation="com.huskerdev.nativekt.intellij.tree.NativeKtStartupActivity"/>
 
         <fileType
             name="NDL"
@@ -35,6 +43,9 @@
 
         <projectViewNodeDecorator
             implementation="com.huskerdev.nativekt.intellij.tree.NativeKtTreeDecorator"/>
+
+        <editorFactoryDocumentListener
+            implementation="com.huskerdev.nativekt.intellij.tree.NativeKtDocumentListener"/>
 
         <!-- Completion -->
 
@@ -105,4 +116,41 @@
             implementationClass="com.huskerdev.nativekt.intellij.ndl.structure.NdlStructureViewFactory"/>
 
     </extensions>
+
+    <actions>
+        <group
+            id="com.huskerdev.nativekt"
+            class="com.huskerdev.nativekt.intellij.actions.NativeKtNewGroup"
+            text="Native Module"
+            popup="true"
+            icon="/com/huskerdev/nativekt/intellij/icons/ocdRunConfiguration.svg">
+
+            <add-to-group group-id="NewGroup" anchor="after" relative-to-action="NewDir"/>
+
+            <group
+                id="com.huskerdev.nativekt.cmake"
+                text="CMake"
+                popup="true"
+                icon="/com/huskerdev/nativekt/intellij/icons/CMake.svg">
+
+                <action
+                    id="com.huskerdev.nativekt.cmake.c"
+                    class="com.huskerdev.nativekt.intellij.actions.NewCAction"
+                    text="C"
+                    icon="/com/huskerdev/nativekt/intellij/icons/c.svg"/>
+
+                <action
+                    id="com.huskerdev.nativekt.cmake.cpp"
+                    class="com.huskerdev.nativekt.intellij.actions.NewCppAction"
+                    text="C++"
+                    icon="/com/huskerdev/nativekt/intellij/icons/cpp.svg"/>
+            </group>
+
+            <action
+                id="com.huskerdev.nativekt.cargo"
+                class="com.huskerdev.nativekt.intellij.actions.NewCargoAction"
+                text="Rust (Cargo)"
+                icon="/com/huskerdev/nativekt/intellij/icons/rustFile.svg"/>
+        </group>
+    </actions>
 </idea-plugin>

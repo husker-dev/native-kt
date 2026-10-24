@@ -75,11 +75,11 @@ natives {
 : Specifies the NDK version to use.
 : Default: `latest`
 
-### `androidTargets`
+### `targets`
 : Specifies the Android architectures to compile. Typically this setting does not need to be changed.
 : Default: `arm64-v8a`, `armeabi-v7a`, `x86_64`
 
-### `useAndroidCriticalNative`
+### `useCriticalNative`
 : Specifies whether to use the `@CriticalNative` annotation.
 : Default: `true`
 

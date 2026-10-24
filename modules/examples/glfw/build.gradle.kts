@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalKotlinGradlePluginApi::class)
 
-import com.huskerdev.nativekt.plugin.currentNativeDesktopTargets
+import com.huskerdev.nativekt.gradle.currentNativeDesktopTargets
 import org.apache.tools.ant.taskdefs.condition.Os
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.konan.target.KonanTarget
@@ -40,10 +40,7 @@ kotlin {
 }
 
 natives {
-    useCoroutines = false
-
-    // Remove auto runtime applying to use local version
     applyRuntime = false
 
-    create("glfwBindings")
+    add("glfwBindings")
 }

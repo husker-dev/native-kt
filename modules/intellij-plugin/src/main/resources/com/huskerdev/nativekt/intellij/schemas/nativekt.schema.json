@@ -1,0 +1,220 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "nativekt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["description", "kotlin", "compilation"],
+  "properties": {
+    "description": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "api_file"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[a-zA-Z_$][a-zA-Z0-9_$]*$",
+          "description": "Module name"
+        },
+        "api_file": {
+          "type": "string",
+          "minLength": 1,
+          "default": "./api.ndl",
+          "description": "Relative path to '.ndl' file"
+        }
+      }
+    },
+    "cargo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project_dir"],
+      "properties": {
+        "project_dir": {
+          "type": "string",
+          "default": ".",
+          "description": "Relative pth to the Cargo project"
+        },
+        "profile": {
+          "type": "string",
+          "default": "release",
+          "description": "Cargo build profile"
+        }
+      }
+    },
+    "kotlin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["package"],
+      "properties": {
+        "package": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*(\\\\.[a-z][a-z0-9_]*)*$",
+          "description": "Package for the generated sources"
+        },
+        "use_coroutines": {
+          "type": "boolean",
+          "default": "false",
+          "description": "Specifies when to use coroutines"
+        }
+      }
+    },
+    "jvm": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "use_records": {
+          "type": "boolean",
+          "default": "true",
+          "description": "If enabled, data classes will be annotated with @JvmRecord"
+        },
+        "backends": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["jni", "foreign", "jvmci"]
+          },
+          "uniqueItems": true,
+          "minItems": 1
+        }
+      }
+    },
+    "js": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "use_bigint": {
+          "type": "boolean",
+          "default": "true",
+          "description": "If enabled, JS/Wasm will be allowed to use Long (BigInt)"
+        },
+        "target": {
+          "type": "string",
+          "enum": ["web", "node"],
+          "default": "web",
+          "description": "JS target environment"
+        }
+      }
+    },
+    "android": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ndk_version": {
+          "type": "string",
+          "default": "latest",
+          "description": "NDK version"
+        },
+        "abis": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["arm64-v8a", "armeabi-v7a", "x86_64"]
+          },
+          "uniqueItems": true,
+          "minItems": 1
+        },
+        "critical_natives": {
+          "type": "boolean",
+          "default": "true",
+          "description": "If enabled, native functions will be annotated with @CriticalNative"
+        }
+      }
+    },
+    "compilation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["common_target", "targets"],
+      "properties": {
+        "common_target": {
+          "type": "string",
+          "default": "common",
+          "description": "Common target (or 'common')"
+        },
+        "targets": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "jvm",
+              "android",
+
+              "js",
+              "wasmJs",
+
+              "mingwX64",
+
+              "macosArm64",
+              "macosX64",
+
+              "linuxArm64",
+              "linuxX64",
+
+              "iosArm64",
+              "iosX64",
+              "iosSimulatorArm64",
+
+              "watchosX64",
+              "watchosArm32",
+              "watchosArm64",
+              "watchosDeviceArm64",
+              "watchosSimulatorArm64",
+
+              "tvosX64",
+              "tvosArm64",
+              "tvosSimulatorArm64",
+
+              "androidNativeX64",
+              "androidNativeX86",
+              "androidNativeArm32",
+              "androidNativeArm64"
+            ]
+          },
+          "uniqueItems": true,
+          "minItems": 1
+        }
+      },
+      "stubs": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": [
+            "jvm",
+            "android",
+
+            "js",
+            "wasmJs",
+
+            "mingwX64",
+
+            "macosArm64",
+            "macosX64",
+
+            "linuxArm64",
+            "linuxX64",
+
+            "iosArm64",
+            "iosX64",
+            "iosSimulatorArm64",
+
+            "watchosX64",
+            "watchosArm32",
+            "watchosArm64",
+            "watchosDeviceArm64",
+            "watchosSimulatorArm64",
+
+            "tvosX64",
+            "tvosArm64",
+            "tvosSimulatorArm64",
+
+            "androidNativeX64",
+            "androidNativeX86",
+            "androidNativeArm32",
+            "androidNativeArm64"
+          ]
+        },
+        "uniqueItems": true,
+        "minItems": 1
+      }
+    }
+  }
+}

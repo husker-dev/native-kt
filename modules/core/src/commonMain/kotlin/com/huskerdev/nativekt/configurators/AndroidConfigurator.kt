@@ -81,7 +81,7 @@ fun prepareAndroid(
                 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
                 add_compile_options(-Wno-initializer-overrides)
                 
-                add_subdirectory("$${context.module.dir.invariantSeparatorsPath}" "$${layout.nativeBuildDir.invariantSeparatorsPath}/${ANDROID_ABI}/cmake/sub")
+                add_subdirectory("$${context.module.buildSystem.projectDir.invariantSeparatorsPath}" "$${layout.nativeBuildDir.invariantSeparatorsPath}/${ANDROID_ABI}/cmake/sub")
             
                 add_library(lib$$moduleName SHARED $<TARGET_OBJECTS:$$moduleName> api.$${context.language.sourceExtension})
                 
@@ -98,8 +98,7 @@ fun compileAndroid(
     existingSdkDir: SyncPath?
 ) {
     val layout = DirectoryLayout.of(context, TargetType.ANDROID)
-    val extension = context.configuration as NativeKtAndroidConfiguration
-    val ndkDir = getNdkDir(extension, existingSdkDir)
+    val ndkDir = getNdkDir(context.module.android, existingSdkDir)
 
     // Find toolchain
     val toolchainDir = ndkDir.resolve("toolchains/llvm/prebuilt")
@@ -109,7 +108,7 @@ fun compileAndroid(
     val toolchainIncludeDir = toolchainDir.resolve("sysroot/usr/include")
 
     // Compile each target
-    extension.androidTargets.forEach { target ->
+    context.module.android.targets.forEach { target ->
         context.logger!!.info("Compiling Android target: $target")
 
         val cmdExt = if(OS.isWindows) ".cmd" else ""
@@ -191,9 +190,9 @@ fun compileAndroid(
                 val rustTarget = toAndroidLlvmTarget(target, rustc = true)
                 val rustOutDir = cargoBuild(
                     context,
-                    project = context.module.dir,
-                    buildDir = rustBuildDir,
+                    project = buildSystem.projectDir,
                     buildType = buildSystem.buildType,
+                    buildDir = rustBuildDir,
                     target = rustTarget,
                     env = mapOf(
                         "CARGO_TARGET_${rustTarget.replace("-", "_").uppercase()}_LINKER" to ndkClang.invariantSeparatorsPath
@@ -202,7 +201,7 @@ fun compileAndroid(
 
                 val rustLinkerFlags = cargoLinkerFlags(
                     context,
-                    project = context.module.dir,
+                    project = buildSystem.projectDir,
                     buildType = buildSystem.buildType,
                     buildDir = rustBuildDir,
                     target = rustTarget,
