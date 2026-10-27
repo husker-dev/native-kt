@@ -6,7 +6,7 @@ api_file = "../api.ndl"
 
 [cmake]
 project_dir = "."
-header_file = "include/api.hpp"
+library_name = "testcpp"
 language = "cpp"
 
 [kotlin]

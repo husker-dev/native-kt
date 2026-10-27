@@ -2,7 +2,6 @@ package com.huskerdev.nativekt.configurators
 
 import com.huskerdev.nativekt.*
 import com.huskerdev.nativekt.printers.c.*
-import com.huskerdev.nativekt.printers.cpp.*
 import com.huskerdev.nativekt.printers.kotlin.*
 import com.huskerdev.nativekt.utils.*
 import com.huskerdev.stdlibx.OS
@@ -34,42 +33,16 @@ fun prepareAndroid(
 
     CApiHeaderPrinter(
         context = context,
-        target = jniSourcesDir.resolve("api.h"),
+        target = jniSourcesDir.resolve("nativekt.h"),
         language = null,
-        isInternal = true,
+        isImpl = true,
     )
-
-    // Native API
-
-    when (context.language) {
-        Language.C -> {
-            CApiHeaderPrinter(
-                context = context,
-                target = layout.nativeSourcesDir.resolve("api.h"),
-                isInternal = true,
-            )
-            CApiImplPrinter(
-                context = context,
-                target = layout.nativeSourcesDir.resolve("api.c")
-            )
-        }
-        Language.CPP -> {
-            CppApiHeaderPrinter(
-                context = context,
-                target = layout.nativeSourcesDir.resolve("api.hpp"),
-                tppTarget = layout.nativeSourcesDir.resolve("api.tpp"),
-            )
-            CppApiImplPrinter(
-                context = context,
-                target = layout.nativeSourcesDir.resolve("api.cpp")
-            )
-        }
-        Language.RUST -> Unit
-    }
 
     when(val buildSystem = context.buildSystem) {
         is BuildSystem.CMake -> {
             val moduleName = context.moduleName
+
+            layout.nativeSourcesDir.resolve("dummy.${context.language.sourceExtension}").writeString("")
             layout.nativeSourcesDir.resolve("CMakeLists.txt").writeString($$"""
                 cmake_minimum_required(VERSION 3.15)
         
@@ -83,9 +56,11 @@ fun prepareAndroid(
                 
                 add_subdirectory("$${context.module.buildSystem.projectDir.invariantSeparatorsPath}" "$${layout.nativeBuildDir.invariantSeparatorsPath}/${ANDROID_ABI}/cmake/sub")
             
-                add_library(lib$$moduleName SHARED $<TARGET_OBJECTS:$$moduleName> api.$${context.language.sourceExtension})
+                add_library(shared SHARED dummy.$${context.language.sourceExtension})
+                target_link_libraries(shared PRIVATE $${buildSystem.libraryName})
                 
-                target_link_libraries(lib$$moduleName PRIVATE -Wl,--whole-archive ${JNI_LIBRARY} -Wl,--no-whole-archive)
+                add_library(static STATIC dummy.$${context.language.sourceExtension})
+                target_link_libraries(static PRIVATE $${buildSystem.libraryName})
             """.trimIndent())
         }
         is BuildSystem.Cargo -> Unit
@@ -119,6 +94,7 @@ fun compileAndroid(
             }
             .maxByOrNull { it.name }
             ?: throw UnsupportedOperationException("Could not find capable Android LLVM target: $target")
+        val ndkClangPp = ndkClang.parent!!.resolve(ndkClang.nameWithoutExtension + "++" + ndkClang.extension)
         val ndkAr = toolchainBinDir.resolve("llvm-ar")
 
         val targetBuildDir = layout.nativeBuildDir.resolve(target)
@@ -157,9 +133,31 @@ fun compileAndroid(
             outputBaseName = "libjni"
         )
 
+        fun linkJni(
+            linkerArgs: List<String>,
+            staticLib: SyncPath
+        ) = clangCompile(context,
+            clang = (if(context.language == Language.CPP) ndkClangPp else ndkClang).invariantSeparatorsPath,
+            sources = emptyList(),
+            includeDirs = emptyList(),
+            linkerArgs = buildList {
+                add("-O3")
+                add("-Wl,--whole-archive")
+                add(libJni.invariantSeparatorsPath)
+                add("-Wl,--no-whole-archive")
+                add(staticLib.absoluteString())
+                addAll(linkerArgs)
+                if(context.language == Language.CPP)
+                    add("-static-libstdc++")
+            },
+            dynamicLib = true,
+            outputBaseName = "libjni",
+            workingDir = targetBuildDir
+        )
+
         // Compile and link language
 
-        val libFile = when (val buildSystem = context.buildSystem) {
+        val (staticLib, linkerArgs) = when (val buildSystem = context.buildSystem) {
             is BuildSystem.CMake -> {
                 val cmakeBuildDir = targetBuildDir.resolve("cmake")
                 val cmakeToolchain = ndkDir.resolve("build/cmake/android.toolchain.cmake")
@@ -174,20 +172,26 @@ fun compileAndroid(
                         this += "-DCMAKE_TOOLCHAIN_FILE=\"$cmakeToolchain\""
                         this += "-DANDROID_ABI=$target"
                         this += "-DANDROID_PLATFORM=android-$compileSdk"
-                        this += "-DJNI_LIBRARY=${libJni.invariantSeparatorsPath}"
                     }
                 )
 
                 // Build
                 cmakeBuild(context, cmakeBuildDir)
 
-                cmakeBuildDir.resolve("liblib${context.moduleName}.so")
+                Pair(
+                    cmakeBuildDir.resolve("libstatic.a"),
+                    cmakeLinkerArgs(context,
+                        cmakeBuildDir = cmakeBuildDir,
+                        moduleName = "shared"
+                    )
+                )
             }
 
             is BuildSystem.Cargo -> {
                 val rustBuildDir = targetBuildDir.resolve("rust")
-
                 val rustTarget = toAndroidLlvmTarget(target, rustc = true)
+                val rustTargetSnakeCase = rustTarget.replace("-", "_").uppercase()
+
                 val rustOutDir = cargoBuild(
                     context,
                     project = buildSystem.projectDir,
@@ -195,10 +199,9 @@ fun compileAndroid(
                     buildDir = rustBuildDir,
                     target = rustTarget,
                     env = mapOf(
-                        "CARGO_TARGET_${rustTarget.replace("-", "_").uppercase()}_LINKER" to ndkClang.invariantSeparatorsPath
+                        "CARGO_TARGET_${rustTargetSnakeCase}_LINKER" to ndkClang.invariantSeparatorsPath
                     )
                 )
-
                 val rustLinkerFlags = cargoLinkerFlags(
                     context,
                     project = buildSystem.projectDir,
@@ -206,30 +209,27 @@ fun compileAndroid(
                     buildDir = rustBuildDir,
                     target = rustTarget,
                     env = mapOf(
-                        "CARGO_TARGET_${rustTarget.replace("-", "_").uppercase()}_LINKER" to ndkClang.invariantSeparatorsPath
+                        "CARGO_TARGET_${rustTargetSnakeCase}_LINKER" to ndkClang.invariantSeparatorsPath
                     )
                 )
-
-                clangCompileAndroidTarget(
-                    sources = listOf(),
-                    linkerArgs = listOf(
-                        "-Wl,--whole-archive",
-                        libJni.invariantSeparatorsPath,
-                        "-Wl,--no-whole-archive",
-                        rustOutDir.resolve("lib${context.moduleName}.a").invariantSeparatorsPath,
-                        *rustLinkerFlags.toTypedArray()
-                    ),
-                    dynamicLib = true,
-                    extension = "so"
+                Pair(
+                    rustOutDir.resolve("lib${context.moduleName}.a"),
+                    rustLinkerFlags
                 )
             }
         }
+
+        // Link JNI
+        val libFile = linkJni(
+            linkerArgs = linkerArgs,
+            staticLib = staticLib
+        )
 
         // Copy library to jniLibs dir
         val targetLibName = "$target/lib${context.moduleName}.so"
 
         val dst = layout.kotlinResourcesDir!!.resolve(targetLibName)
         dst.parent!!.createDirectories()
-        libFile.copyTo(dst)
+        libFile.copyTo(dst, overwrite = true)
     }
 }

@@ -26,7 +26,7 @@ class CEmscriptenPrinter(
 
     private fun StringBuilder.printHeader() {
         appendLine("""
-            #include "api.h"
+            #include "nativekt.h"
             #include <emscripten.h>
             
         """.trimIndent())

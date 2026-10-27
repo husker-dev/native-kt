@@ -7,7 +7,7 @@ api_file = "./api.ndl"
 # stub
 [cmake]
 project_dir = "."
-header_file = "include/api.h"
+library_name = "freetypeBindings"
 language = "c"
 
 [kotlin]

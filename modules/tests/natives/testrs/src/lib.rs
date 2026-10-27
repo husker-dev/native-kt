@@ -1,7 +1,10 @@
 use std::sync::Arc;
-use crate::nativekt::*;
 
-mod nativekt;
+pub mod nativekt {
+    //nativekt::include!();
+    include!(concat!(env!("OUT_DIR"), "/nativekt.rs"));
+}
+use nativekt::*;
 
 pub struct MyInterface;
 

@@ -26,7 +26,7 @@ fun prepareNative(
         context = context,
         target = cinteropHeaderFile,
         language = null,
-        isInternal = true,
+        isImpl = true,
     )
 
     // Generate api sources if needed
@@ -36,7 +36,7 @@ fun prepareNative(
                 CApiHeaderPrinter(
                     context = context,
                     target = layout.nativeSourcesDir.resolve("api.h"),
-                    isInternal = true
+                    isImpl = true
                 )
                 CApiImplPrinter(
                     context = context,
@@ -71,12 +71,13 @@ fun prepareNative(
                     .joinToString(" ") { "${it.cname}=${it.cnameMangled(context)}__impl" }
                 listOf(
                     "target_compile_definitions($moduleName PRIVATE $symbolDefines)",
-                    "target_compile_definitions(lib_$moduleName PRIVATE $symbolDefines)",
-                    "target_compile_definitions(libstatic_$moduleName PRIVATE $symbolDefines)"
+                    "target_compile_definitions(shared PRIVATE $symbolDefines)",
+                    "target_compile_definitions(static PRIVATE $symbolDefines)"
                 )
             } else listOf("", "", "")
 
             // Create CMake file
+            layout.nativeSourcesDir.resolve("dummy.${context.language.sourceExtension}").writeString("")
             layout.nativeSourcesDir.resolve("CMakeLists.txt").writeString($$"""
                 cmake_minimum_required(VERSION 3.15)
         
@@ -94,12 +95,12 @@ fun prepareNative(
                 add_compile_options(-Wno-initializer-overrides)
                 
                 add_subdirectory("$${buildSystem.projectDir.invariantSeparatorsPath}" "$${layout.nativeBuildDir.resolve("sub").invariantSeparatorsPath}")
-                    
-                add_library(lib_$$moduleName SHARED api.$$sourceExtension)
-                target_link_libraries(lib_$$moduleName PUBLIC $$moduleName)
                 
-                add_library(libstatic_$$moduleName STATIC api.$$sourceExtension)
-                target_link_libraries(libstatic_$$moduleName PRIVATE $$moduleName)
+                add_library(shared SHARED dummy.$$sourceExtension)
+                target_link_libraries(shared PUBLIC $${buildSystem.libraryName})
+                
+                add_library(static STATIC dummy.$$sourceExtension)
+                target_link_libraries(static PRIVATE $${buildSystem.libraryName})
                 
                 $${funcRedefines[0]}
                 $${funcRedefines[1]}
@@ -116,10 +117,10 @@ fun prepareNative(
                     cmakeBuildType = buildSystem.buildType
                 )
 
-                linkerOpts += layout.nativeBuildDir.resolve("liblibstatic_$moduleName.a").invariantSeparatorsPath
+                linkerOpts += layout.nativeBuildDir.resolve("libstatic.a").invariantSeparatorsPath
 
                 // Get linker opts
-                linkerOpts += extractLinkerOpts(
+                linkerOpts += cmakeLinkerArgs(
                     context,
                     layout.nativeBuildDir,
                     moduleName,
@@ -175,14 +176,13 @@ fun compileNative(
     targetType: TargetType,
 ) {
     val layout = DirectoryLayout.of(context, targetType)
-    val moduleName = context.moduleName
 
     when(val buildSystem = context.buildSystem) {
         is BuildSystem.CMake -> {
             cmakeBuild(context, layout.nativeBuildDir)
 
             prepareNativeLibraryForKN(context,
-                lib = layout.nativeBuildDir.resolve("liblibstatic_$moduleName.a"),
+                lib = layout.nativeBuildDir.resolve("libstatic.a"),
                 initSymbolName = context.mangle("init"),
                 targetArgs = getClangTargetArgs(context, targetType)
             )

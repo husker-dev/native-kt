@@ -9,9 +9,15 @@ import com.huskerdev.webidl.*
 import com.huskerdev.webidl.resolver.*
 
 
+private const val EXPORT_MACRO = "NKT_EXPORT"
+
+private fun NativeModuleContext.exportC(name: String, isInternal: Boolean = true) =
+    "$EXPORT_MACRO(${mangle(name, isInternal = isInternal)}, ${jsMangle[name]})"
+
 class CppApiImplPrinter(
     val context: NativeModuleContext,
-    target: SyncPath
+    target: SyncPath,
+    val includePath: String = "nativekt.hpp"
 ) {
     init {
         target.parent!!.createDirectories()
@@ -28,25 +34,26 @@ class CppApiImplPrinter(
 
     private fun StringBuilder.printHeader() {
         appendLine("""
-            #include "api.hpp"
+            #include "$includePath"
             
-            #ifndef LIB_EXPORT
-                #if defined(_WIN32) || defined(__CYGWIN__)
-                    #define LIB_EXPORT extern "C" __declspec(dllexport)
+            #ifndef $EXPORT_MACRO
+                #if defined(__EMSCRIPTEN__)
+                    #include <emscripten.h>
+                    #define $EXPORT_MACRO(full_name, short_name) EMSCRIPTEN_KEEPALIVE short_name
                 #else
-                    #define LIB_EXPORT extern "C" __attribute__((visibility("default")))
+                    #define $EXPORT_MACRO(full_name, short_name) __attribute__((visibility("default"))) full_name
                 #endif
             #endif
             
-            LIB_EXPORT void ${context.mangle("init")}();
+            extern "C" void ${context.exportC("init")}();
         """.trimIndent())
         if(context.needsAllocFunctions) appendLine("""
             
-            LIB_EXPORT void* ${context.mangle("alloc")}(size_t size) {
+            extern "C" void* ${context.exportC("alloc")}(size_t size) {
                 return size == 0 ? nullptr : malloc(size);
             }
             
-            LIB_EXPORT void ${context.mangle("dealloc")}(void* ptr, size_t size) {
+            extern "C" void ${context.exportC("dealloc")}(void* ptr, size_t size __attribute__((unused))) {
                 if(ptr != nullptr) free(ptr);
             }
         """.trimIndent())
@@ -65,28 +72,28 @@ class CppApiImplPrinter(
         if(context.hasInterface || context.hasCallback) appendLine("""
             
             template <typename T>
-            std::shared_ptr<T> arc_unwrap(std::shared_ptr<T>* _Nonnull arg) {
+            static std::shared_ptr<T> arc_unwrap(std::shared_ptr<T>* _Nonnull arg) {
                 auto result = std::move(*arg);
                 delete arg;
                 return result;
             }
             
             template <typename T>
-            std::shared_ptr<T>* _Nonnull arc_wrap(std::shared_ptr<T> value) { 
+            static std::shared_ptr<T>* _Nonnull arc_wrap(std::shared_ptr<T> value) { 
                 return new std::shared_ptr(value); 
             }
         """.trimIndent())
         if(context.hasPrimitiveNullable || context.hasEnumNullable) appendLine("""
             
             template <typename T>
-            T primitive_unwrap(T* _Nonnull arg) {
+            static T primitive_unwrap(T* _Nonnull arg) {
                 T result = *arg;
                 free(arg);
                 return result;
             }
             
             template <typename T>
-            T* _Nonnull primitive_wrap(T value) { 
+            static T* _Nonnull primitive_wrap(T value) { 
                 T* result = (T*) malloc(sizeof(T));
                 *result = value;
                 return result;
@@ -99,7 +106,7 @@ class CppApiImplPrinter(
 
             if(context.hasStringToNative) appendLine("""
                 
-                KString kstring_unwrap(KString* _Nonnull arg) {
+                static KString kstring_unwrap(KString* _Nonnull arg) {
                     KString result = std::move(*arg);
                     delete arg;
                     return result;
@@ -107,7 +114,7 @@ class CppApiImplPrinter(
             """.trimIndent())
             if(context.hasStringToKotlin) appendLine("""
                 
-                KString* _Nonnull kstring_wrap(KString value) { 
+                static KString* _Nonnull kstring_wrap(KString value) { 
                     return new KString(std::move(value)); 
                 }
             """.trimIndent())
@@ -192,21 +199,21 @@ class CppApiImplPrinter(
 
             if(context.hasStringToNative) appendLine("""
                 
-                LIB_EXPORT void* _Nonnull ${context.mangle("string_new")}(char* _Nonnull data, size_t size, bool make_copy) {
+                extern "C" void* _Nonnull ${context.exportC("string_new")}(char* _Nonnull data, size_t size, bool make_copy) {
                     return new KString(data, size, make_copy);
                 }
             """.trimIndent())
             if(context.hasStringToKotlin) appendLine("""
                 
-                LIB_EXPORT const char* _Nonnull ${context.mangle("string_data")}(void* _Nonnull self) {
+                extern "C" const char* _Nonnull ${context.exportC("string_data")}(void* _Nonnull self) {
                     return static_cast<KString*>(self)->get_data();
                 }
                 
-                LIB_EXPORT size_t ${context.mangle("string_size")}(void* _Nonnull self) {
+                extern "C" size_t ${context.exportC("string_size")}(void* _Nonnull self) {
                     return static_cast<KString*>(self)->get_size();
                 }
                 
-                LIB_EXPORT void ${context.mangle("string_free")}(void* _Nonnull self) {
+                extern "C" void ${context.exportC("string_free")}(void* _Nonnull self) {
                     if(self == NULL) return;
                     delete static_cast<KString*>(self);
                 }
@@ -221,16 +228,16 @@ class CppApiImplPrinter(
                 // Primitive arrays
                 
                 #define IMPL_TYPED_ARRAY(T, FUNC_NEW, FUNC_ELEMENTS, FUNC_LENGTH, FUNC_FREE) \
-                LIB_EXPORT void* FUNC_NEW(T* elements, int32_t length, bool make_copy) {  \
+                extern "C" void* FUNC_NEW(T* elements, int32_t length, bool make_copy) {  \
                     return new KArray<T>(elements, length, make_copy);                    \
                 }                                                                         \
-                LIB_EXPORT T* FUNC_ELEMENTS(void* self) {                                 \
+                extern "C" T* FUNC_ELEMENTS(void* self) {                                 \
                     return const_cast<T*>(static_cast<KArray<T>*>(self)->get_elements()); \
                 }                                                                         \
-                LIB_EXPORT int32_t FUNC_LENGTH(void* self) {                              \
+                extern "C" int32_t FUNC_LENGTH(void* self) {                              \
                     return static_cast<KArray<T>*>(self)->get_length();                   \
                 }                                                                         \
-                LIB_EXPORT void FUNC_FREE(void* self) {                                   \
+                extern "C" void FUNC_FREE(void* self) {                                   \
                     delete static_cast<KArray<T>*>(self);                                 \
                 }
             """.trimIndent())
@@ -250,10 +257,10 @@ class CppApiImplPrinter(
                     appendLine("""
                         
                         IMPL_TYPED_ARRAY($type,
-                            ${context.mangle("${name}_new")},
-                            ${context.mangle("${name}_elements")},
-                            ${context.mangle("${name}_length")},
-                            ${context.mangle("${name}_free")}
+                            ${context.exportC("${name}_new")},
+                            ${context.exportC("${name}_elements")},
+                            ${context.exportC("${name}_length")},
+                            ${context.exportC("${name}_free")}
                         );
                     """.trimIndent())
                 }
@@ -266,15 +273,15 @@ class CppApiImplPrinter(
                 // Typed array macros
                 
                 #define IMPL_OBJECT_ARRAY(T, FUNC_NEW, FUNC_LENGTH, FUNC_PUSH, FUNC_GET, FUNC_FREE) \
-                LIB_EXPORT void* FUNC_NEW(int32_t capacity, bool ne) {                    \
+                extern "C" void* FUNC_NEW(int32_t capacity, bool ne) {                    \
                     if (ne) return new KArray<KOptional<T>>(capacity);                    \
                     return new KArray<T>(capacity);                                       \
                 }                                                                         \
-                LIB_EXPORT int32_t FUNC_LENGTH(void* arr, bool ne) {                      \
+                extern "C" int32_t FUNC_LENGTH(void* arr, bool ne) {                      \
                     if (ne) return static_cast<KArray<KOptional<T>>*>(arr)->get_length(); \
                     return static_cast<KArray<T>*>(arr)->get_length();                    \
                 }                                                                         \
-                LIB_EXPORT void FUNC_PUSH(void* array, void* element, bool ne) {          \
+                extern "C" void FUNC_PUSH(void* array, void* element, bool ne) {          \
                     const auto el = static_cast<T*>(element);                             \
                     if (ne) {                                                             \
                         const auto arr = static_cast<KArray<KOptional<T>>*>(array);       \
@@ -285,7 +292,7 @@ class CppApiImplPrinter(
                         arr->push(std::move(*el)); delete el;                             \
                     }                                                                     \
                 }                                                                         \
-                LIB_EXPORT void* FUNC_GET(void* array, int32_t index, bool ne) {          \
+                extern "C" void* FUNC_GET(void* array, int32_t index, bool ne) {          \
                     if (ne) {                                                             \
                         const auto arr = static_cast<KArray<KOptional<T>>*>(array);       \
                         const KOptional<T>* opt = arr->get_elements() + index;            \
@@ -295,7 +302,7 @@ class CppApiImplPrinter(
                     const auto arr = static_cast<KArray<T>*>(array);                      \
                     return const_cast<T*>(arr->get_elements() + index);                   \
                 }                                                                         \
-                LIB_EXPORT void FUNC_FREE(void* array, bool ne) {                         \
+                extern "C" void FUNC_FREE(void* array, bool ne) {                         \
                     if (ne) delete static_cast<KArray<KOptional<T>>*>(array);             \
                     else delete static_cast<KArray<T>*>(array);                           \
                 }
@@ -321,11 +328,11 @@ class CppApiImplPrinter(
                 appendLine("""
         
                     IMPL_OBJECT_ARRAY(${it.first},
-                        ${context.mangle("array_${it.second}_new")},
-                        ${context.mangle("array_${it.second}_length")},
-                        ${context.mangle("array_${it.second}_push")},
-                        ${context.mangle("array_${it.second}_get")},
-                        ${context.mangle("array_${it.second}_free")}
+                        ${context.exportC("array_${it.second}_new")},
+                        ${context.exportC("array_${it.second}_length")},
+                        ${context.exportC("array_${it.second}_push")},
+                        ${context.exportC("array_${it.second}_get")},
+                        ${context.exportC("array_${it.second}_free")}
                     )
                 """.trimIndent())
             }
@@ -338,16 +345,16 @@ class CppApiImplPrinter(
 
         appendLine("""
             
-            #define IMPL_BOXED_PRIMITIVE(T, FUNC_NEW, FUNC_GET, FUNC_FREE) \
-            LIB_EXPORT T* FUNC_NEW(T value) {            \
-                T* result = (T*) malloc(sizeof(T));      \
-                result[0] = value;                       \
-                return result;                           \
-            }                                            \
-            LIB_EXPORT T FUNC_GET(T* self, bool _free) { \
-                T value = self[0];                       \
-                if(_free) free((void*) self);            \
-                return value;                            \
+            #define IMPL_BOXED_PRIMITIVE(T, FUNC_NEW, FUNC_GET) \
+            extern "C" T* FUNC_NEW(T value) {                   \
+                T* result = (T*) malloc(sizeof(T));             \
+                result[0] = value;                              \
+                return result;                                  \
+            }                                                   \
+            extern "C" T FUNC_GET(T* self, bool _free) {        \
+                T value = self[0];                              \
+                if(_free) free((void*) self);                   \
+                return value;                                   \
             }
         """.trimIndent())
 
@@ -365,9 +372,8 @@ class CppApiImplPrinter(
             appendLine("""
                 IMPL_BOXED_PRIMITIVE(
                     $type,
-                    ${context.mangle("${name}_new")},
-                    ${context.mangle("${name}_get")},
-                    ${context.mangle("${name}_free")}
+                    ${context.exportC("${name}_new")},
+                    ${context.exportC("${name}_get")}
                 )
             """.trimIndent())
         }
@@ -400,11 +406,11 @@ class CppApiImplPrinter(
             #define KCallbackImpl(Name, InvokeBlock, FUNC_NEW, FUNC_ID, FUNC_FREE)                  \
             Name::Name(                                                                             \
                 const size_t id,                                                                    \
-                const int32_t hash_code,                                                               \
+                const int32_t hash_code,                                                            \
                 void* _Nonnull invoke,                                                              \
                 bool (* _Nonnull equals)(size_t, size_t),                                           \
                 void (* _Nonnull free)(size_t)                                                      \
-            ) : id(id), _invoke(invoke), _equals(equals), _free(free), hash_code(hash_code) {}      \
+            ) : _invoke(invoke), _equals(equals), _free(free), id(id), hash_code(hash_code) {}      \
             Name::~Name() {                                                                         \
                 _free(id);                                                                          \
             }                                                                                       \
@@ -419,7 +425,7 @@ class CppApiImplPrinter(
             };                                                                                      \
             InvokeBlock                                                                             \
                                                                                                     \
-            LIB_EXPORT std::shared_ptr<Name>* FUNC_NEW(                                             \
+            extern "C" std::shared_ptr<Name>* FUNC_NEW(                                             \
                 const size_t id,                                                                    \
                 const int32_t hash_code,                                                            \
                 void* _Nonnull invoke,                                                              \
@@ -428,10 +434,10 @@ class CppApiImplPrinter(
             ) {                                                                                     \
                 return new std::shared_ptr<Name>(new Name(id, hash_code, invoke, equals, free));    \
             }                                                                                       \
-            LIB_EXPORT size_t FUNC_ID(std::shared_ptr<Name>* _self) {                               \
+            extern "C" size_t FUNC_ID(std::shared_ptr<Name>* _self) {                               \
                 return (*_self)->id;                                                                \
             }                                                                                       \
-            LIB_EXPORT void FUNC_FREE(std::shared_ptr<Name>* _self) {                               \
+            extern "C" void FUNC_FREE(std::shared_ptr<Name>* _self) {                               \
                 delete _self;                                                                       \
             }
             
@@ -465,9 +471,9 @@ class CppApiImplPrinter(
                 KCallbackImpl(
                     $name, 
                     $type $name::invoke($args) const { ${ret}${toCppType(callback.type, call)}; },
-                    ${context.mangle("${lower}_new")},
-                    ${context.mangle("${lower}_id")},
-                    ${context.mangle("${lower}_free")}
+                    ${context.exportC("${lower}_new")},
+                    ${context.exportC("${lower}_id")},
+                    ${context.exportC("${lower}_free")}
                 );
             """.trimIndent())
         }
@@ -518,7 +524,7 @@ class CppApiImplPrinter(
                 // $name
                 
                 $name::$name($allArgs)$constructorInit {}
-                $name::$name(const $name& other)$copyInit {}
+                $name::$name(const $name& other)$copyInit { (void)other; }
             """.trimIndent())
 
             // Unwrap
@@ -542,20 +548,20 @@ class CppApiImplPrinter(
             // Default
             if(dictionary in context.toNativeDeclaration) appendLine("""
                 
-                LIB_EXPORT void* ${dictionary.subCFunc(context, "new")}($allNativeArgs) {
+                extern "C" void* ${context.exportC(dictionary.subCFunc("new"))}($allNativeArgs) {
                     return new $name($castedArgs);
                 }
             """.trimIndent())
             if(dictionary in context.toKotlinDeclaration) {
                 appendLine("""
                     
-                    LIB_EXPORT void ${dictionary.subCFunc(context, "free")}(void* self) {
+                    extern "C" void ${context.exportC(dictionary.subCFunc("free"))}(void* self) {
                         delete static_cast<$name*>(self);
                     }
                 """.trimIndent())
                 allFields.forEach { field ->
                     val nativeType = if(field.type.isReleasable()) "void*" else field.type.toCType()
-                    val funcName = dictionary.subFieldCFunc(context, field)
+                    val funcName = context.exportC(dictionary.subFieldCFunc(field))
 
                     val ref = "static_cast<$name*>(self)->${field.cppName}"
 
@@ -564,7 +570,7 @@ class CppApiImplPrinter(
                         field.type.isReleasable() -> "&$ref"
                         else -> ref
                     }
-                    append("\nLIB_EXPORT $nativeType $funcName(void* self) { return $call; }")
+                    append("\nextern \"C\" $nativeType $funcName(void* self) { return $call; }")
                 }
                 append("\n")
             }
@@ -579,8 +585,10 @@ class CppApiImplPrinter(
         context.allOperations.forEach { function ->
             val critical = function.isCritical()
             val name = function.cppName
-            val mangledName = function.cnameMangled(context)
-            val type = function.type.toCppType(printOption = false, ptr = true)
+            val mangledName = context.exportC(function.cname, isInternal = false)
+            val type = if(!function.isInterfaceOperationAddress())
+                function.type.toCppType(printOption = false, ptr = true)
+            else "intptr_t"
             val args = function.args.joinToString {
                 val name = it.cppName
                 when {
@@ -607,15 +615,13 @@ class CppApiImplPrinter(
                         if(it.type.isNullable) "_${name}_length == -1 ? $newOptional<KArray<$type>>() : $newOptional($newArray(const_cast<$type*>($name), _${name}_length, false))"
                         else "$newArray(const_cast<$type*>($name), _${name}_length, false)"
                     }
-                    it.type.isReleasable() && !function.isCritical() ->
-                        "std::move(${toCppType(it.type, it.cppName)})"
                     else -> toCppType(it.type, it.cppName)
                 }
             }
 
             if(function.isInterfaceOperation()) {
                 val interName = "I" + function.interfaceName().upperCamelCase()
-                append("\nLIB_EXPORT $type ${mangledName}($args) {\n\t")
+                append("\nextern \"C\" $type ${mangledName}($args) {\n\t")
                 append(when {
                     function.isInterfaceOperationConstructor() ->
                         "return new std::shared_ptr<$interName>($interName::$name(${castedNames.joinToString()}));"
@@ -633,7 +639,7 @@ class CppApiImplPrinter(
                     function.isInterfaceOperationClone() ->
                         "return new std::shared_ptr<$interName>(*${function.args[0].cppName});"
                     function.isInterfaceOperationAddress() ->
-                        "return (int64_t) ${function.args[0].cppName}->get();"
+                        "return (intptr_t) ${function.args[0].cppName}->get();"
                     else -> throw UnsupportedOperationException()
                 })
                 append("\n}")
@@ -645,7 +651,7 @@ class CppApiImplPrinter(
 
                 append("""
                     
-                    LIB_EXPORT $type $mangledName($args) {
+                    extern "C" $type $mangledName($args) {
                         $expr;
                     }
                 """.trimIndent())

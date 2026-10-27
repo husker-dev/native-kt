@@ -4,6 +4,7 @@ import com.huskerdev.nativekt.*
 import com.huskerdev.nativekt.configurators.prepareCommon
 import com.huskerdev.nativekt.gradle.GradlePluginLogger
 import com.huskerdev.nativekt.gradle.GradleTaskExecutor
+import com.huskerdev.nativekt.gradle.NativeKtPrepareTask
 import com.huskerdev.nativekt.gradle.dependsOnProjectReload
 import com.huskerdev.nativekt.utils.*
 import com.huskerdev.stdlibx.fs.file
@@ -40,9 +41,9 @@ internal fun configureCommon(
     return prepareTask
 }
 
-private abstract class PrepareNativesCommon @Inject constructor(
+abstract class PrepareNativesCommon @Inject constructor(
     private val execOps: ExecOperations,
-): DefaultTask() {
+): DefaultTask(), NativeKtPrepareTask {
     @get:Input abstract var context: String
 
     @TaskAction

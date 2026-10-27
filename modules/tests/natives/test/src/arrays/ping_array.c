@@ -1,4 +1,4 @@
-#include <api.h>
+#include <nativekt.h>
 
 KCharArray* ping_char_array(KCharArray* arg) {
     return arg->clone(arg);

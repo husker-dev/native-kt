@@ -7,6 +7,7 @@ import com.huskerdev.nativekt.gradle.GradlePluginLogger
 import com.huskerdev.nativekt.NativeModuleContext
 import com.huskerdev.nativekt.TargetType
 import com.huskerdev.nativekt.configurators.prepareStub
+import com.huskerdev.nativekt.gradle.NativeKtPrepareTask
 import com.huskerdev.nativekt.utils.camelCase
 import com.huskerdev.nativekt.gradle.dependsOnProjectReload
 import com.huskerdev.stdlibx.fs.file
@@ -46,7 +47,7 @@ internal fun configureStub(
 
 private abstract class PrepareNativesStub @Inject constructor(
     private val execOps: ExecOperations,
-): DefaultTask() {
+): DefaultTask(), NativeKtPrepareTask {
     @get:Input abstract var context: String
     @get:Input abstract var targetType: TargetType
 

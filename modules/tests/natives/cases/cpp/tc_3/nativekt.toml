@@ -6,7 +6,7 @@ api_file = "../../tc_3.ndl"
 
 [cmake]
 project_dir = "."
-header_file = "include/api.hpp"
+library_name = "tc_3_cpp"
 language = "cpp"
 
 [kotlin]

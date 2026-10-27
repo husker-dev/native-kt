@@ -1,5 +1,8 @@
 @file:OptIn(ExperimentalKotlinGradlePluginApi::class)
 
+import com.huskerdev.nativekt.gradle.NativeKtCompileTask
+import com.huskerdev.nativekt.gradle.NativeKtPrepareTask
+import com.huskerdev.nativekt.gradle.configurators.PrepareNativesCommon
 import com.huskerdev.nativekt.gradle.currentNativeDesktopTargets
 import org.apache.tools.ant.taskdefs.condition.Os
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
@@ -43,4 +46,10 @@ natives {
     applyRuntime = false
 
     add("glfwBindings")
+}
+
+gradle.taskGraph.whenReady {
+    if(allTasks.any { it is NativeKtCompileTask })
+        allTasks.first { it is NativeKtPrepareTask }
+            .dependsOn(":modules:cli:packAll")
 }

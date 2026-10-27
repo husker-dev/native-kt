@@ -1,4 +1,6 @@
-#include "glad/glad.h"
+#include <nativekt.h>
+
+#include "glad/gl.h"
 #include "GLFW/glfw3.h"
 
 
@@ -9,7 +11,7 @@ void run() {
 
     GLFWwindow* glfw_window = glfwCreateWindow(800, 600, "OpenGL window", NULL, NULL);
     glfwMakeContextCurrent(glfw_window);
-    gladLoadGL();
+    gladLoadGL(glfwGetProcAddress);
     glfwSwapInterval(1);
 
     while (!glfwWindowShouldClose(glfw_window)) {

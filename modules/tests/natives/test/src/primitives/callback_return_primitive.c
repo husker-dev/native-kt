@@ -1,4 +1,4 @@
-#include <api.h>
+#include <nativekt.h>
 #include <string.h>
 
 bool callback_return_char(RC_CallbackReturnChar* arg) {

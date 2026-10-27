@@ -432,7 +432,7 @@ class KotlinNativePrinter(
 
         context.castedDictionaries.forEach { dictionary ->
             val name = dictionary.kname
-            val funcNew = dictionary.subCFunc(context, "new")
+            val funcNew = dictionary.subCFuncMangled(context, "new")
             val fields = context.allFields[dictionary]!!
 
             appendLine("\n// $name")
@@ -466,10 +466,10 @@ class KotlinNativePrinter(
                 """.trimIndent())
 
                 fields.joinTo(this) {
-                    val func = "${dictionary.subFieldCFunc(context, it)}(of)"
+                    val func = "${dictionary.subFieldCFuncMangled(context, it)}(of)"
                     "\n\t\t${it.kname} = ${castToKotlin(it.type, func, false)}"
                 }
-                append("\n\t).also { if(free) ${dictionary.subCFunc(context, "free")}(of) }")
+                append("\n\t).also { if(free) ${dictionary.subCFuncMangled(context, "free")}(of) }")
                 append("\n}\n")
             }
         }

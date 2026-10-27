@@ -1,0 +1,4 @@
+package com.huskerdev.nativekt.gradle
+
+interface NativeKtPrepareTask
+interface NativeKtCompileTask

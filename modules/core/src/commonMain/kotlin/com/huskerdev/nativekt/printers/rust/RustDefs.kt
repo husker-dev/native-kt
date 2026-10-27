@@ -17,7 +17,9 @@ internal fun StringBuilder.printHeaderDef(context: NativeModuleContext) {
         use std::alloc::{alloc, dealloc, Layout};
         
         #[cfg(target_arch = "wasm32")]
-        use wasm_bindgen::prelude::*;
+        use ::nativekt::wasm_bindgen;
+        #[cfg(target_arch = "wasm32")]
+        use ::nativekt::wasm_bindgen::prelude::*;
         
         #[cfg(not(target_arch = "wasm32"))]
         #[no_mangle] 
@@ -84,7 +86,7 @@ internal fun StringBuilder.printHeaderDef(context: NativeModuleContext) {
         
         fn pack_enum_array<T>(arg: Vec<Option<T>>) -> Vec<Option<MaybeUninit<T>>> {
             arg.into_iter()
-                .map(|i| i.map(|a| unsafe { MaybeUninit::new(a) }))
+                .map(|i| i.map(|a| MaybeUninit::new(a)))
                 .collect()
         }
     """.trimIndent())
@@ -106,7 +108,7 @@ internal fun StringBuilder.printHeaderDef(context: NativeModuleContext) {
         // Macro: External function type declaration
         
         #[cfg(target_arch = "wasm32")]
-        use wasm_bindgen::JsValue;
+        use ::nativekt::wasm_bindgen::JsValue;
         
         #[cfg(target_arch = "wasm32")]
         macro_rules! external_fn_type {

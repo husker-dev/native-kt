@@ -2,6 +2,7 @@
 
 import com.huskerdev.nativekt.gradle.*
 import com.huskerdev.nativekt.*
+import com.huskerdev.nativekt.gradle.configurators.PrepareNativesCommon
 import org.jetbrains.kotlin.gradle.dsl.*
 import org.jetbrains.kotlin.gradle.tasks.KotlinNativeLink
 
@@ -144,4 +145,10 @@ tasks.withType<AbstractTestTask>().configureEach {
 tasks.withType<KotlinNativeLink>().configureEach {
     outputs.cacheIf { false }
     outputs.upToDateWhen { false }
+}
+
+gradle.taskGraph.whenReady {
+    if(allTasks.any { it is NativeKtCompileTask })
+        allTasks.first { it is NativeKtPrepareTask }
+            .dependsOn(":modules:cli:packAll")
 }

@@ -467,10 +467,26 @@ class NativeModuleContext(
             errAsStd: Boolean = false,
             environment: Map<String, String>? = null
         ): String
+
+        class Noop: CommandExecutor {
+            override fun exec(
+                context: NativeModuleContext,
+                command: String,
+                workingDir: SyncPath?,
+                silent: Boolean,
+                errAsStd: Boolean,
+                environment: Map<String, String>?
+            ): String = ""
+        }
     }
     interface Logger {
         fun error(text: String)
         fun info(text: String)
+
+        class Noop: Logger {
+            override fun error(text: String) = Unit
+            override fun info(text: String) = Unit
+        }
     }
 
     class NdlCompilationException(
@@ -501,6 +517,7 @@ fun createContext(
 }
 
 private fun createJsMangleMap(context: NativeModuleContext) = buildList {
+    add("init")
     if(context.needsAllocFunctions) {
         add("alloc")
         add("dealloc")

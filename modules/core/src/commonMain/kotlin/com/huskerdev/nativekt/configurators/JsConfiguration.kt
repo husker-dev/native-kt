@@ -23,41 +23,8 @@ fun prepareJs(
         isWasm = targetType == TargetType.WASM_JS
     )
 
-    if(context.language == Language.C || context.language == Language.CPP) {
-        // Generate Emscripten wrapper + C header
-        CEmscriptenPrinter(
-            context = context,
-            target = layout.nativeSourcesDir.resolve("emscripten_bindings.c")
-        )
-        CApiHeaderPrinter(
-            context = context,
-            target = layout.nativeSourcesDir.resolve("api.h"),
-            isInternal = true
-        )
-        if(context.language == Language.C) {
-            // Generate C sources (header is already generated)
-            CApiImplPrinter(
-                context = context,
-                target = layout.nativeSourcesDir.resolve("api.c")
-            )
-        }
-        if(context.language == Language.CPP) {
-            // generate C++ sources and header
-            CppApiHeaderPrinter(
-                context = context,
-                target = layout.nativeSourcesDir.resolve("api.hpp"),
-                tppTarget = layout.nativeSourcesDir.resolve("api.tpp")
-            )
-            CppApiImplPrinter(
-                context = context,
-                target = layout.nativeSourcesDir.resolve("api.cpp")
-            )
-        }
-    }
-
     when(val buildSystem = context.buildSystem) {
         is BuildSystem.CMake -> {
-            val targetName = "lib${context.moduleName}"
             val projectPath = buildSystem.projectDir.invariantSeparatorsPath
             val projectBuildPath = layout.nativeBuildDir.resolve("sub").invariantSeparatorsPath
 
@@ -67,12 +34,7 @@ fun prepareJs(
                     add("CXX")
             }.joinToString(" ")
 
-            val sources = buildList {
-                add("$<TARGET_OBJECTS:${context.moduleName}>")
-                add("emscripten_bindings.c")
-                add("api.${context.language.sourceExtension}")
-            }.joinToString(" ")
-
+            layout.nativeSourcesDir.resolve("dummy.${context.language.sourceExtension}").writeString("")
             layout.nativeSourcesDir.resolve("CMakeLists.txt").writeString($$"""
                 cmake_minimum_required(VERSION 3.15)
         
@@ -87,10 +49,11 @@ fun prepareJs(
                 add_subdirectory("$$projectPath" "$$projectBuildPath")
             
                 # Add sources + child project
-                add_executable($$targetName $$sources)
+                add_executable(lib$${context.moduleName} dummy.$${context.language.sourceExtension})
+                target_link_libraries(lib$${context.moduleName} PRIVATE $${buildSystem.libraryName})
                 
                 # Add Emscripten linker flags
-                set_target_properties($$targetName PROPERTIES LINK_FLAGS "${EXTRA_LINK_FLAGS} $${getEmccArgs(context)}")
+                set_target_properties(lib$${context.moduleName} PROPERTIES LINK_FLAGS "$${getEmccArgs(context)}")
             """.trimIndent())
         }
         is BuildSystem.Cargo -> Unit // Do nothing
@@ -111,8 +74,6 @@ fun compileJs(
     when(val buildSystem = context.buildSystem) {
         is BuildSystem.CMake -> {
             val emcc = locateEmcc(context)
-
-            // Generate CMake build
             val toolchain = emcc.parent!!.resolve("cmake/Modules/Platform/Emscripten.cmake")
 
             cmakeGen(
@@ -124,27 +85,6 @@ fun compileJs(
                     this += "-DCMAKE_TOOLCHAIN_FILE=\"$toolchain\""
                 }
             )
-
-            // Reload with extra flags
-            val extraFlags = layout.nativeBuildDir.resolve("sub/CMakeFiles/${context.moduleName}.dir/flags.make")
-                .readString()
-                .split(systemLineSeparator)
-                .firstOrNull { it.startsWith("C_FLAGS = ") }
-                ?.replaceFirst("C_FLAGS = ", "")
-                ?.trim()
-                ?: ""
-            if(extraFlags.isNotEmpty()) {
-                cmakeGen(
-                    context,
-                    dir = layout.nativeSourcesDir,
-                    buildDir = layout.nativeBuildDir,
-                    buildType = buildSystem.buildType,
-                    args = LinkedHashSet(buildSystem.args).apply {
-                        this += "-DCMAKE_TOOLCHAIN_FILE=\"$toolchain\""
-                        this += "-DEXTRA_LINK_FLAGS=\"${extraFlags}\""
-                    }
-                )
-            }
 
             // Build
             cmakeBuild(context, layout.nativeBuildDir)

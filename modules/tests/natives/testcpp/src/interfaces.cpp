@@ -1,4 +1,4 @@
-#include <api.hpp>
+#include <nativekt.hpp>
 #include <iostream>
 
 namespace {
@@ -18,7 +18,7 @@ namespace {
         }
 
         void pass_interface(std::shared_ptr<IMyInterface> a1) override {
-
+            (void) a1;
         }
 
         std::shared_ptr<IMyInterface> return_interface() override {
@@ -32,5 +32,6 @@ IMyInterface* IMyInterface::_create() {
 }
 
 IMyInterface* IMyInterface::new_critical(int32_t a1) {
+    (void)a1;
     return new MyInterface();
 }

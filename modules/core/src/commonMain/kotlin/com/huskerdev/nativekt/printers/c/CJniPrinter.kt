@@ -38,7 +38,9 @@ class CJniPrinter(
             #pragma once
             
             #include <jni.h>
-            #include "api.h"
+            #include <string.h>
+            
+            #include "nativekt.h"
             
             static JavaVM *jvm;
         """.trimIndent())
@@ -626,7 +628,7 @@ class CJniPrinter(
                     add("_class")
                     add(dictionary.constructorMethod)
                     fields.mapTo(this) { field ->
-                        val expr = "${dictionary.subFieldCFunc(context, field)}(src)"
+                        val expr = "${dictionary.subFieldCFuncMangled(context, field)}(src)"
                         "\n\t\t${castToKotlin(field.type, expr, false)}"
                     }
                 }.joinTo(this)

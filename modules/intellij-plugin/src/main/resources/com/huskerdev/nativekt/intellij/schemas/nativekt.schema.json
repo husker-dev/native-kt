@@ -27,17 +27,57 @@
     "cargo": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["project_dir"],
+      "required": ["project_dir", "package_name"],
       "properties": {
         "project_dir": {
           "type": "string",
           "default": ".",
-          "description": "Relative pth to the Cargo project"
+          "description": "Relative path to the configuration"
+        },
+        "package_name": {
+          "type": "string",
+          "description": "Cargo package name"
         },
         "profile": {
           "type": "string",
           "default": "release",
           "description": "Cargo build profile"
+        }
+      }
+    },
+    "cmake": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project_dir", "library_name", "language"],
+      "properties": {
+        "project_dir": {
+          "type": "string",
+          "default": ".",
+          "description": "Relative path to the configuration"
+        },
+        "library_name": {
+          "type": "string",
+          "default": ".",
+          "description": "Library name that implements native-kt API"
+        },
+        "profile": {
+          "type": "string",
+          "default": "Release",
+          "enum": ["Release", "Debug", "RelWithDebInfo", "MinSizeRel"],
+          "description": "CMake build profile"
+        },
+        "language": {
+          "type": "string",
+          "enum": ["c", "cpp", "c++"],
+          "default": "c",
+          "description": "CMake target language"
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "CMake arguments"
         }
       }
     },

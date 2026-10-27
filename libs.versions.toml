@@ -2,7 +2,7 @@
 
 # == Kotlin ==
 kotlin = "2.4.21"
-kotlin_serialization = "1.11.0"
+kotlin_serialization = "1.12.0"
 kotlin_coroutines = "1.11.0"
 kotlin_benchmark = "0.5.0"
 
@@ -16,10 +16,11 @@ android_test_juint = "1.1.5"  # old versions to allow testing on SDK < 21
 # == Tools ==
 intellij_platform = "2.19.0"
 webidl = "1.1.2"
-stdlibx = "2.0.0"
+stdlibx = "2.0.1"
 ktoml = "0.7.1"
 shadow = "9.6.1"
 proguard = "0.9.0"
+clikt = "5.1.0"
 
 # == Other FFI gen ==
 gobley = "0.3.7"
@@ -43,9 +44,9 @@ androidx-test-ext-junit = { module = "androidx.test.ext:junit", version.ref = "a
 webidl                  = { module = "com.huskerdev:webidl-kt", version.ref = "webidl" }
 stdlibx                 = { module = "com.huskerdev:stdlibx", version.ref = "stdlibx" }
 stdlibx-fs              = { module = "com.huskerdev:stdlibx-fs", version.ref = "stdlibx" }
-stdlibx-process         = { module = "com.huskerdev:stdlibx-process", version.ref = "stdlibx" }
 
 ktoml                   = { module = "com.akuleshov7:ktoml-core", version.ref = "ktoml" }
+clikt                   = { module = "com.github.ajalt.clikt:clikt", version.ref = "clikt" }
 
 [plugins]
 

@@ -1,4 +1,4 @@
-#include <api.hpp>
+#include <nativekt.hpp>
 
 bool pass_char_array(KArray<uint16_t> arg) {
     return arg.get_length() == 2 &&

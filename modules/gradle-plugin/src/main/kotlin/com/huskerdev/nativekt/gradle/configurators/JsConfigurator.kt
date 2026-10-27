@@ -3,10 +3,7 @@ package com.huskerdev.nativekt.gradle.configurators
 import com.huskerdev.nativekt.*
 import com.huskerdev.nativekt.configurators.compileJs
 import com.huskerdev.nativekt.configurators.prepareJs
-import com.huskerdev.nativekt.gradle.GradlePluginLogger
-import com.huskerdev.nativekt.gradle.GradleTaskExecutor
-import com.huskerdev.nativekt.gradle.NATIVE_TASK_GROUP
-import com.huskerdev.nativekt.gradle.dependsOnProjectReload
+import com.huskerdev.nativekt.gradle.*
 import com.huskerdev.nativekt.utils.*
 import com.huskerdev.stdlibx.fs.file
 import org.gradle.api.DefaultTask
@@ -75,7 +72,7 @@ internal fun configureJs(
 
 private abstract class PrepareNativesJs @Inject constructor(
     private val execOps: ExecOperations,
-): DefaultTask() {
+): DefaultTask(), NativeKtPrepareTask {
     @get:Input abstract var useExpectActual: Boolean
     @get:Input abstract var targetType: TargetType
     @get:Input abstract var context: String
@@ -95,7 +92,7 @@ private abstract class PrepareNativesJs @Inject constructor(
 
 private abstract class CompileNativesJs @Inject constructor(
     private val execOps: ExecOperations,
-): DefaultTask() {
+): DefaultTask(), NativeKtCompileTask {
     @get:Input abstract var targetType: TargetType
     @get:Input abstract var context: String
 

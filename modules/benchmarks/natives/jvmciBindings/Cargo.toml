@@ -6,6 +6,15 @@ edition = "2021"
 crate-type = ["cdylib", "staticlib"]
 name = "jvmciBindings"
 
+[dependencies]
+nativekt = { path = "../../../cli/cargo", default-features = false }
+
+[build-dependencies]
+nativekt = { path = "../../../cli/cargo", default-features = false }
+
+[lints.cargo]
+unused_dependencies = "allow"
+
 [profile.release]
 opt-level = 3
 lto = "fat"

@@ -58,7 +58,7 @@ internal fun configureCMake(
     )
 }
 
-internal fun extractLinkerOpts(
+internal fun cmakeLinkerArgs(
     context: NativeModuleContext,
     cmakeBuildDir: SyncPath,
     moduleName: String,
@@ -66,8 +66,8 @@ internal fun extractLinkerOpts(
 ): List<String> = buildList {
     // Tip: arguments generates only with executable or shared libraries, so our CMakeLists.txt contains `SHARED` target
 
-    val linkLibs = cmakeBuildDir.resolve("CMakeFiles/lib_$moduleName.dir/linkLibs.rsp")
-    val link = cmakeBuildDir.resolve("CMakeFiles/lib_$moduleName.dir/link.txt")
+    val linkLibs = cmakeBuildDir.resolve("CMakeFiles/$moduleName.dir/linkLibs.rsp")
+    val link = cmakeBuildDir.resolve("CMakeFiles/$moduleName.dir/link.txt")
     val cmakeCache = cmakeBuildDir.resolve("CMakeCache.txt")
 
     // Collect linker flags from 'linkLibs.rsp' or 'link.txt'

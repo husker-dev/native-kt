@@ -1,4 +1,4 @@
-#include <api.hpp>
+#include <nativekt.hpp>
 
 bool callback_return_char(std::shared_ptr<CallbackReturnChar> arg) {
     return arg->invoke() == 'a';

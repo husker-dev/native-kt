@@ -6,6 +6,7 @@ api_file = "./api.ndl"
 
 [cargo]
 project_dir = "./"
+package_name = "foreignBindings"
 profile = "release"
 
 [kotlin]

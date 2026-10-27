@@ -8,9 +8,15 @@ import com.huskerdev.stdlibx.systemLineSeparator
 import com.huskerdev.webidl.*
 import com.huskerdev.webidl.resolver.*
 
+private const val EXPORT_MACRO = "NKT_NAME"
+
+private fun NativeModuleContext.exportedC(name: String, isInternal: Boolean = true) =
+    "$EXPORT_MACRO(${mangle(name, isInternal = isInternal)}, ${jsMangle[name]})"
+
 class CApiImplPrinter(
     val context: NativeModuleContext,
-    target: SyncPath
+    target: SyncPath,
+    val includePath: String = "nativekt.h"
 ) {
     init {
         target.parent!!.createDirectories()
@@ -21,21 +27,30 @@ class CApiImplPrinter(
             printStructs()
             printCallbacks()
             printFunctions()
+
+            append("\n#undef $EXPORT_MACRO")
         }.replace("\n", systemLineSeparator))
     }
 
     private fun StringBuilder.printHeader() {
         append("""
-            #include "api.h"
+            #include "$includePath"
             
+            #ifndef $EXPORT_MACRO
+                #if defined(__EMSCRIPTEN__)
+                    #define $EXPORT_MACRO(full_name, short_name) short_name
+                #else
+                    #define $EXPORT_MACRO(full_name, short_name) full_name
+                #endif
+            #endif
             
         """.trimIndent())
-        if(context.needsAllocFunctions) append("""
+        if(context.needsAllocFunctions) appendLine("""
             
-            LIB_EXPORT void* ${context.mangle("alloc")}(size_t size) {
+            void* ${context.exportedC("alloc")}(size_t size) {
                 return size <= 0 ? NULL : malloc(size);
             }
-            LIB_EXPORT void ${context.mangle("dealloc")}(void* ptr, size_t size) {
+            void ${context.exportedC("dealloc")}(void* ptr, size_t size __attribute__((unused))) {
                 if(ptr != NULL) free(ptr);
             }
         """.trimIndent())
@@ -155,23 +170,22 @@ class CApiImplPrinter(
             """.trimIndent())
             if(context.hasStringToNative) append("""
                 
-                KString* ${context.mangle("string_new")}(const char* data, const int32_t size, bool make_copy) {
+                KString* ${context.exportedC("string_new")}(const char* data, const int32_t size, bool make_copy) {
                     return kstring_new(data, .size = size, .make_copy = make_copy);
                 }
             """.trimIndent())
             if(context.hasStringToKotlin) append("""
                 
-                const char* ${context.mangle("string_data")}(const KString* self) {
+                const char* ${context.exportedC("string_data")}(const KString* self) {
                     return self->data;
                 }
-                size_t ${context.mangle("string_size")}(const KString* self) {
+                size_t ${context.exportedC("string_size")}(const KString* self) {
                     return self->size;
                 }
-                
             """.trimIndent())
             append("""
                 
-                void ${context.mangle("string_free")}(KString* self) {
+                void ${context.exportedC("string_free")}(KString* self) {
                     kstring_free(self);
                 }
             """.trimIndent())
@@ -273,22 +287,22 @@ class CApiImplPrinter(
 
                 if(hasToNativeCast) append("""
                     
-                    $name* ${context.mangle("${lowerName}_new")}(const $type* elements, const int32_t length, const bool make_copy) {
+                    $name* ${context.exportedC("${lowerName}_new")}(const $type* elements, const int32_t length, const bool make_copy) {
                         return ${funcName}_new(elements, length, make_copy);
                     }
                 """.trimIndent())
                 if(hasToKotlinCast) append("""
                     
-                    const $type* ${context.mangle("${lowerName}_elements")}(const $name* self) {
+                    const $type* ${context.exportedC("${lowerName}_elements")}(const $name* self) {
                         return self->elements;
                     }
-                    int32_t ${context.mangle("${lowerName}_length")}(const $name* self) {
+                    int32_t ${context.exportedC("${lowerName}_length")}(const $name* self) {
                         return self->length;
                     }
                 """.trimIndent())
                 appendLine("""
                     
-                    void ${context.mangle("${lowerName}_free")}($name* self) {
+                    void ${context.exportedC("${lowerName}_free")}($name* self) {
                         ${funcName}_free(self);
                     }
                 """.trimIndent())
@@ -363,20 +377,20 @@ class CApiImplPrinter(
                 }
                 
                 #define IMPL_OBJECT_ARRAY(T, FUNC_NEW, FUNC_LENGTH, FUNC_PUSH, FUNC_GET, FUNC_FREE) \
-                LIB_EXPORT KArray* FUNC_NEW(int32_t capacity, bool ne) {                  \
-                    return karray_with_capacity(capacity);                                \
-                }                                                                         \
-                LIB_EXPORT int32_t FUNC_LENGTH(KArray* self, bool ne) {                   \
-                    return ((KArray*) self)->length;                                      \
-                }                                                                         \
-                LIB_EXPORT void FUNC_PUSH(KArray* self, void* element, bool ne) {         \
-                    karray_push((KArray*) self, element);                                 \
-                }                                                                         \
-                LIB_EXPORT T* FUNC_GET(KArray* self, int32_t index, bool ne) {            \
-                    return (void*) ((KArray*) self)->elements[index];                     \
-                }                                                                         \
-                LIB_EXPORT void FUNC_FREE(KArray* self, bool ne) {                        \
-                    karray_free((KArray*) self);                                          \
+                KArray* FUNC_NEW(int32_t capacity, bool ne __attribute__((unused))) {          \
+                    return karray_with_capacity(capacity);                                     \
+                }                                                                              \
+                int32_t FUNC_LENGTH(KArray* self, bool ne __attribute__((unused))) {           \
+                    return ((KArray*) self)->length;                                           \
+                }                                                                              \
+                void FUNC_PUSH(KArray* self, void* element, bool ne __attribute__((unused))) { \
+                    karray_push((KArray*) self, element);                                      \
+                }                                                                              \
+                T* FUNC_GET(KArray* self, int32_t index, bool ne __attribute__((unused))) {    \
+                    return (void*) ((KArray*) self)->elements[index];                          \
+                }                                                                              \
+                void FUNC_FREE(KArray* self, bool ne __attribute__((unused))) {                \
+                    karray_free((KArray*) self);                                               \
                 }
                 
             """.trimIndent())
@@ -401,11 +415,11 @@ class CApiImplPrinter(
                 """
         
                     IMPL_OBJECT_ARRAY($type,
-                        ${context.mangle("array_${name}_new")},
-                        ${context.mangle("array_${name}_length")},
-                        ${context.mangle("array_${name}_push")},
-                        ${context.mangle("array_${name}_get")},
-                        ${context.mangle("array_${name}_free")}
+                        ${context.exportedC("array_${name}_new")},
+                        ${context.exportedC("array_${name}_length")},
+                        ${context.exportedC("array_${name}_push")},
+                        ${context.exportedC("array_${name}_get")},
+                        ${context.exportedC("array_${name}_free")}
                     )
                 """.trimIndent()
             }
@@ -432,10 +446,10 @@ class CApiImplPrinter(
             void FUNC_FREE(NAME* self) {                           \
                 free((void*) self);                                \
             }                                                      \
-            LIB_EXPORT NAME* FUNC_NEW_EXPORT(T value) {            \
+            NAME* FUNC_NEW_EXPORT(T value) {                       \
                 return FUNC_NEW(value);                            \
             }                                                      \
-            LIB_EXPORT T FUNC_GET_EXPORT(NAME* self, bool _free) { \
+            T FUNC_GET_EXPORT(NAME* self, bool _free) {            \
                 T value = self->value;                             \
                 if(_free) FUNC_FREE(self);                         \
                 return value;                                      \
@@ -457,8 +471,8 @@ class CApiImplPrinter(
                 IMPL_BOXED_PRIMITIVE(
                     $type, Boxed${name.uppercaseFirstChar()}, 
                     boxed_${name}_new, _boxed_${name}_free, boxed_${name}_clone, 
-                    ${context.mangle("${name}_new")},
-                    ${context.mangle("${name}_get")}
+                    ${context.exportedC("${name}_new")},
+                    ${context.exportedC("${name}_get")}
                 )
             """.trimIndent())
         }
@@ -485,8 +499,8 @@ class CApiImplPrinter(
                 freeFuncFor(context, field.type, "self->${field.cname}")
             }
 
-            val funcNew = dictionary.subCFunc(context, "new")
-            val funcFree = dictionary.subCFunc(context, "free")
+            val funcNew = context.exportedC(dictionary.subCFunc("new"))
+            val funcFree = context.exportedC(dictionary.subCFunc("free"))
 
             append("""
                 
@@ -514,23 +528,23 @@ class CApiImplPrinter(
 
             if(dictionary in context.toNativeDeclaration) append("""
                 
-                LIB_EXPORT $name* $funcNew(${args.joinToString()}) {
+                $name* $funcNew(${args.joinToString()}) {
                     return ${name}_new(${argNames.joinToString()});
                 }
             """.trimIndent())
             if(dictionary in context.castedDeclarations) append("""
                 
-                LIB_EXPORT void $funcFree($name* self) {
+                void $funcFree($name* self) {
                     ${name}_free(self);
                 }
             """.trimIndent())
             if(dictionary in context.toKotlinDeclaration) {
                 fields.forEach { field ->
                     val type = field.type.toCType(printNullable = true)
-                    val func = dictionary.subFieldCFunc(context, field)
+                    val func = context.exportedC(dictionary.subFieldCFunc(field))
                     append("""
                         
-                        LIB_EXPORT $type $func(const $name* self) {
+                        $type $func(const $name* self) {
                             return (($name*) self)->${field.cname};
                         }
                     """.trimIndent())
@@ -547,7 +561,7 @@ class CApiImplPrinter(
         append("""
             
             #define KCallbackImpl(Name, Lower, FUNC_NEW, FUNC_ID, FUNC_FREE, FuncHeader) \
-            LIB_EXPORT RC_##Name* FUNC_NEW(                                     \
+            RC_##Name* FUNC_NEW(                                                \
                 const size_t id,                                                \
                 const int32_t hash_code,                                        \
                 void* invoke,                                                   \
@@ -558,10 +572,10 @@ class CApiImplPrinter(
             	*callback = (Name) { id, hash_code, invoke, equals, free };     \
             	return rc_##Lower##_new(callback);                              \
             }                                                                   \
-            LIB_EXPORT size_t FUNC_ID(RC_##Name* _self) {                       \
+            size_t FUNC_ID(RC_##Name* _self) {                                  \
                 return _self->pointed->id;                                      \
             }                                                                   \
-            LIB_EXPORT void FUNC_FREE(RC_##Name* _self) {                       \
+            void FUNC_FREE(RC_##Name* _self) {                                  \
                 _self->free(_self);                                             \
             }                                                                   \
             FuncHeader
@@ -574,12 +588,12 @@ class CApiImplPrinter(
             val lower = callback.name.camelCase().lowercase()
             append("KCallbackImpl(")
             append("\n\t$name, $lower,")
-            append("\n\t${context.mangle("${lower}_new")},")
-            append("\n\t${context.mangle("${lower}_id")},")
-            append("\n\t${context.mangle("${lower}_free")},\n\t")
+            append("\n\t${context.exportedC("${lower}_new")},")
+            append("\n\t${context.exportedC("${lower}_id")},")
+            append("\n\t${context.exportedC("${lower}_free")},")
 
             // func
-            append("${callback.type.toCType()} ${lower}_invoke")
+            append("\n\t${callback.type.toCType()} ${lower}_invoke")
             buildList {
                 add("RC_$name* self")
                 callback.args.mapTo(this) {
@@ -606,8 +620,10 @@ class CApiImplPrinter(
         context.allOperations.forEach { function ->
             val critical = function.isCritical()
             val name = function.cname
-            val mangledName = function.cnameMangled(context)
-            val type = function.type.toCType(printNullable = true)
+            val mangledName = context.exportedC(function.cname, isInternal = false)
+            val type = if(!function.isInterfaceOperationAddress())
+                function.type.toCType(printNullable = true)
+            else "intptr_t"
 
             val args = function.args.joinToString {
                 val name = it.cname
@@ -654,11 +670,11 @@ class CApiImplPrinter(
                 function.isInterfaceOperationClone() ->
                     "_self == NULL ? NULL : _self->clone(_self);"
                 function.isInterfaceOperationAddress() ->
-                    "(int64_t) _self->pointed;"
+                    "(intptr_t) _self->pointed;"
                 else -> call
             }
 
-            append("\nLIB_EXPORT $type $mangledName($args) {")
+            append("\n$type $mangledName($args) {")
             append("\n\t")
             if(!function.type.isVoid())
                 append("return ")
@@ -683,10 +699,10 @@ class CApiImplPrinter(
         type.isString() -> "kstring_clone($content)"
         type.isDictionary() -> "${type.declaration.cname}_clone($content)"
         type.isInterface() ->
-            (type.declaration as ResolvedIdlInterface)
+            context.exportedC((type.declaration as ResolvedIdlInterface)
                 .toOperations()
                 .first { it.isInterfaceOperationClone() }
-                .cnameMangled(context) + "($content)"
+                .cname, isInternal = false) + "($content)"
         else -> content
     }
 }
@@ -702,18 +718,18 @@ internal fun freeFuncFor(
                 arrType.isPrimitive() -> {
                     val cast = if(arrType.isUnsigned())
                         "(${type.toCType(ignoreUnsigned = true)}) " else ""
-                    "${context.mangle("${arrType.toKotlinType(ignoreUnsigned = true).lowercase()}array_free")}($cast$content)"
+                    "${context.exportedC("${arrType.toKotlinType(ignoreUnsigned = true).lowercase()}array_free")}($cast$content)"
                 }
-                arrType.isEnum() -> "${context.mangle("intarray_free")}($content)"
-                else -> "${context.mangle("array_${arrType.declaration.name.camelCase().lowercase()}_free")}($content, ${arrType.isNullable})"
+                arrType.isEnum() -> "${context.exportedC("intarray_free")}($content)"
+                else -> "${context.exportedC("array_${arrType.declaration.name.camelCase().lowercase()}_free")}($content, ${arrType.isNullable})"
             }
         }
         type.isCallback() -> "if($content != NULL) $content->free($content)"
-        type.isDictionary() || type.isString() -> "${context.mangle("${type.toKotlinType(printNullable = false).lowercase()}_free")}($content)"
-        type.isInterface() -> (type.declaration as ResolvedIdlInterface)
+        type.isDictionary() || type.isString() -> "${context.exportedC("${type.toKotlinType(printNullable = false).lowercase()}_free")}($content)"
+        type.isInterface() -> context.exportedC((type.declaration as ResolvedIdlInterface)
             .toOperations()
             .first { it.isInterfaceOperationFree() }
-            .cnameMangled(context) + "($content)"
+            .cname, isInternal = false) + "($content)"
         else -> null
     }
 }

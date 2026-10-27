@@ -2,14 +2,7 @@ package com.huskerdev.nativekt.gradle
 
 import com.android.build.api.variant.KotlinMultiplatformAndroidComponentsExtension
 import com.huskerdev.nativekt.*
-import com.huskerdev.nativekt.gradle.configurators.configureAndroidSourceSet
-import com.huskerdev.nativekt.gradle.configurators.configureCommon
-import com.huskerdev.nativekt.gradle.configurators.configureJs
-import com.huskerdev.nativekt.gradle.configurators.configureJvm
-import com.huskerdev.nativekt.gradle.configurators.configureNative
-import com.huskerdev.nativekt.gradle.configurators.configureStub
-import com.huskerdev.nativekt.gradle.tasks.ApiGenTask
-import com.huskerdev.nativekt.utils.upperCamelCase
+import com.huskerdev.nativekt.gradle.configurators.*
 import kotlinx.serialization.json.Json
 import org.gradle.api.Project
 import org.gradle.api.tasks.TaskProvider
@@ -73,16 +66,6 @@ internal fun configureKotlin(
                     args.add("-Xexpect-actual-classes")
             }
 
-            // API generation task
-            val apiGenTask = project.tasks.register(
-                "nativeApi${context.moduleName.upperCamelCase()}",
-                ApiGenTask::class.java
-            )
-            apiGenTask.get().let {
-                it.context = context.serialize()
-                it.dependsOnProjectReload()
-            }
-
             // Common generation task
             var commonTask: TaskProvider<*>? = null
             if(module.expectActual) {
@@ -91,7 +74,6 @@ internal fun configureKotlin(
                     context = context,
                     sourceSet = commonSourceSet
                 )
-                commonTask.get().dependsOn(apiGenTask)
             }
 
             // Configure targets

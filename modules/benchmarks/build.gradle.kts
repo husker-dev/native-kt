@@ -1,3 +1,5 @@
+import com.huskerdev.nativekt.gradle.NativeKtCompileTask
+import com.huskerdev.nativekt.gradle.NativeKtPrepareTask
 import gobley.gradle.GobleyHost
 import gobley.gradle.cargo.dsl.jvm
 import gobley.gradle.cargo.tasks.CargoBuildTask
@@ -82,4 +84,10 @@ afterEvaluate {
     tasks.withType<CargoBuildTask> {
         nativeStaticLibsDefFile.set(null as File?)
     }
+}
+
+gradle.taskGraph.whenReady {
+    if(allTasks.any { it is NativeKtCompileTask })
+        allTasks.first { it is NativeKtPrepareTask }
+            .dependsOn(":modules:cli:packAll")
 }

@@ -2,7 +2,6 @@ package com.huskerdev.nativekt.configurators
 
 import com.huskerdev.nativekt.*
 import com.huskerdev.nativekt.printers.c.*
-import com.huskerdev.nativekt.printers.cpp.*
 import com.huskerdev.nativekt.printers.kotlin.*
 import com.huskerdev.nativekt.utils.*
 import com.huskerdev.stdlibx.*
@@ -14,9 +13,6 @@ fun prepareJvm(
 ) {
     val layout = DirectoryLayout.of(context, TargetType.JVM)
     val useJni = context.module.jvm.useJNI
-
-    val moduleName = context.moduleName
-    val buildSystem = context.buildSystem
 
     // Generate all files
 
@@ -39,44 +35,20 @@ fun prepareJvm(
 
         CApiHeaderPrinter(
             context = context,
-            target = jniSourcesDir.resolve("api.h"),
+            target = jniSourcesDir.resolve("nativekt.h"),
             language = null,
-            isInternal = true,
+            isImpl = true,
         )
     }
 
-    when (context.language) {
-        Language.C -> {
-            CApiHeaderPrinter(
-                context = context,
-                target = layout.nativeSourcesDir.resolve("api.h"),
-                isInternal = true
-            )
-            CApiImplPrinter(
-                context = context,
-                target = layout.nativeSourcesDir.resolve("api.c")
-            )
-        }
-        Language.CPP -> {
-            CppApiHeaderPrinter(
-                context = context,
-                target = layout.nativeSourcesDir.resolve("api.hpp"),
-                tppTarget = layout.nativeSourcesDir.resolve("api.tpp"),
-            )
-            CppApiImplPrinter(
-                context = context,
-                target = layout.nativeSourcesDir.resolve("api.cpp")
-            )
-        }
-        Language.RUST -> Unit
-    }
-
-    when(buildSystem) {
+    when(val buildSystem = context.buildSystem) {
         is BuildSystem.CMake -> {
-            layout.nativeSourcesDir.resolve("CMakeLists.txt").writeString($$"""
+            layout.nativeSourcesDir.resolve("dummy.${context.language.sourceExtension}").writeString("")
+            layout.nativeSourcesDir.resolve("CMakeLists.txt").writeString(
+                $$"""
                     cmake_minimum_required(VERSION 3.15)
             
-                    project("$$moduleName"$${if(buildSystem.language == Language.CPP) " LANGUAGES CXX" else ""})
+                    project("native-kt"$${if (buildSystem.language == Language.CPP) " LANGUAGES CXX" else ""})
                     
                     $${if (buildSystem.language == Language.CPP) "set(CMAKE_CXX_STANDARD 17)" else ""}
                     $${if (buildSystem.language == Language.CPP) "set(CMAKE_CXX_STANDARD_REQUIRED ON)" else ""}
@@ -88,14 +60,17 @@ fun prepareJvm(
                     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
                     add_compile_options(-Wno-initializer-overrides)
                     
-                    add_subdirectory("$${buildSystem.projectDir.invariantSeparatorsPath}" "$${layout.nativeBuildDir.resolve("cmake/sub").invariantSeparatorsPath}")
+                    add_subdirectory("$${buildSystem.projectDir.invariantSeparatorsPath}" "$${
+                        layout.nativeBuildDir.resolve("cmake/sub").invariantSeparatorsPath
+                    }")
                     
-                    add_library(lib_$$moduleName SHARED api.$${context.language.sourceExtension})
+                    add_library(shared SHARED dummy.$${context.language.sourceExtension})
+                    target_link_libraries(shared PRIVATE $${buildSystem.libraryName})
                     
-                    target_link_libraries(lib_$$moduleName PRIVATE $$moduleName)
-                    
-                    $${if(!useJni) "" else "target_link_libraries(lib_$moduleName PRIVATE ${wholeArchive($$"${JNI_LIBRARY}")})" }
-                """.trimIndent())
+                    add_library(static STATIC dummy.$${context.language.sourceExtension})
+                    target_link_libraries(static PRIVATE $${buildSystem.libraryName})
+                """.trimIndent()
+            )
         }
         is BuildSystem.Cargo -> Unit
     }
@@ -145,30 +120,58 @@ fun compileJvm(
         )
     } else null
 
-    val libFile = when(val buildSystem = context.buildSystem) {
+    fun linkJni(
+        linkerArgs: List<String>,
+        staticLib: SyncPath
+    ) = clangCompile(context,
+        clang = if(context.language == Language.CPP) "clang++" else "clang",
+        sources = emptyList(),
+        includeDirs = emptyList(),
+        linkerArgs = buildList {
+            add("-O3")
+            add(wholeArchive(jniLib!!.invariantSeparatorsPath))
+            add(staticLib.absoluteString())
+            addAll(linkerArgs)
+            if (OS.current == OS.WINDOWS) {
+                add("-Wl,--export-all-symbols")
+                add("-l:libunwind.a")
+            }
+        },
+        dynamicLib = true,
+        outputBaseName = "libjni",
+        workingDir = layout.nativeBuildDir
+    )
+
+    val (
+        staticLib: SyncPath,
+        dynLib: SyncPath,
+        linkerArgs: () -> List<String>
+    ) = when(val buildSystem = context.buildSystem) {
         is BuildSystem.CMake -> {
-
-            // Generate CMake build
-            val args = LinkedHashSet(buildSystem.args)
-            args += setOf(
-                "-DCMAKE_C_COMPILER=clang",
-                "-DCMAKE_CXX_COMPILER=clang++"
-            )
-            if(jniLib != null)
-                args += "-DJNI_LIBRARY=${jniLib.invariantSeparatorsPath}"
-
             val cmakeBuildDir = layout.nativeBuildDir.resolve("cmake")
+
             cmakeGen(context,
                 dir = layout.nativeSourcesDir,
                 buildDir = cmakeBuildDir,
                 buildType = buildSystem.buildType,
-                args = args
+                args = LinkedHashSet<String>().apply {
+                    addAll(buildSystem.args)
+                    add("-DCMAKE_C_COMPILER=clang")
+                    add("-DCMAKE_CXX_COMPILER=clang++")
+                }
             )
-
-            // Build
             cmakeBuild(context, cmakeBuildDir)
 
-            cmakeBuildDir.resolve("liblib_${context.moduleName}.${OS.current.dylibExtension}")
+            Triple(
+                cmakeBuildDir.resolve("libstatic.a"),
+                cmakeBuildDir.resolve("libshared.${OS.current.dylibExtension}")
+            ) {
+                cmakeLinkerArgs(
+                    context,
+                    cmakeBuildDir = cmakeBuildDir,
+                    moduleName = "shared"
+                )
+            }
         }
 
         is BuildSystem.Cargo -> {
@@ -179,35 +182,28 @@ fun compileJvm(
                 buildDir = cargoBuildDir
             )
 
-            if (useJni) {
-                val rustLinkerFlags = cargoLinkerFlags(context,
+            val prefix = if(OS.current == OS.WINDOWS) "" else "lib"
+            Triple(
+                rustOutDir.resolve("lib${buildSystem.packageName}.a"),
+                rustOutDir.resolve("${prefix}${buildSystem.packageName}.${OS.current.dylibExtension}")
+            ) {
+                cargoLinkerFlags(
+                    context,
                     project = buildSystem.projectDir,
                     buildType = buildSystem.buildType,
                     buildDir = cargoBuildDir
                 )
-
-                clangCompile(context,
-                    sources = emptyList(),
-                    includeDirs = emptyList(),
-                    linkerArgs = buildList {
-                        add("-O3")
-                        add(wholeArchive(jniLib!!.invariantSeparatorsPath))
-                        add("$rustOutDir/lib${context.moduleName}.a")
-                        addAll(rustLinkerFlags)
-                        if (OS.current == OS.WINDOWS) {
-                            add("-Wl,--export-all-symbols")
-                            add("-l:libunwind.a")
-                        }
-                    },
-                    dynamicLib = true,
-                    workingDir = cargoBuildDir
-                )
-            } else {
-                val prefix = if(OS.current == OS.WINDOWS) "" else "lib"
-                rustOutDir.resolve("$prefix${context.moduleName}.${OS.current.dylibExtension}")
             }
         }
     }
+
+    // Link JNI if needed
+    val libFile = if(useJni) {
+        linkJni(
+            linkerArgs = linkerArgs(),
+            staticLib = staticLib
+        )
+    } else dynLib
 
     // Copy library to resources
     val targetLibFile = "lib${context.moduleName}-${Arch.current.name.lowercase()}.${OS.current.dylibExtension}"

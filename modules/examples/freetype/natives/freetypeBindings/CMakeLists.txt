@@ -2,7 +2,14 @@ cmake_minimum_required(VERSION 3.15)
 
 project("freetypeBindings")
 
+# Install: nativekt (local)
+include("${CMAKE_CURRENT_LIST_DIR}/../../../../tests/natives/LocalNativeKt.cmake")
+
+# Setup
 add_library(${PROJECT_NAME} STATIC src/freetypeBindings.c)
+
+nativekt_generate("nativekt.toml")
+target_link_libraries(${PROJECT_NAME} PRIVATE NativeKt::bindings)
 
 if(EMSCRIPTEN)
     set(EM_FLAGS "-sUSE_FREETYPE=1")
@@ -19,5 +26,3 @@ else()
     target_include_directories(${PROJECT_NAME} PRIVATE ${FREETYPE_INCLUDE_DIRS})
     target_link_libraries(${PROJECT_NAME} PRIVATE Freetype::Freetype)
 endif()
-
-target_include_directories(${PROJECT_NAME} PRIVATE include)

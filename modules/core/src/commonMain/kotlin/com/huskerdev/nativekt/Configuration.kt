@@ -72,7 +72,7 @@ sealed interface BuildSystem {
         override val language: Language,
         var buildType: BuildType = BuildType.RELEASE,
         var args: List<String> = emptyList(),
-        var headerFile: SyncPath = projectDir.resolve("include/header/api.${language.headerExtension}"),
+        var libraryName: String,
     ): BuildSystem {
         enum class BuildType(val cmakeName: String) {
             DEBUG("Debug"),
@@ -86,6 +86,7 @@ sealed interface BuildSystem {
     @SerialName("cargo")
     data class Cargo(
         override var projectDir: SyncPath,
+        var packageName: String,
         var buildType: BuildType = BuildType.RELEASE
     ): BuildSystem {
         override val language: Language = Language.RUST
@@ -176,6 +177,7 @@ fun parseModuleFromToml(text: String, relativePath: SyncPath): NativeKtModule {
         buildSystem = when {
             "cargo" in values -> BuildSystem.Cargo(
                 projectDir = relativePath.resolve(stringRequired("cargo", "project_dir")).normalize(),
+                packageName = stringRequired("cargo", "package_name"),
                 buildType = when(string("cargo", "build_type")) {
                     "release", null -> BuildSystem.Cargo.BuildType.RELEASE
                     "debug" -> BuildSystem.Cargo.BuildType.DEBUG
@@ -184,7 +186,7 @@ fun parseModuleFromToml(text: String, relativePath: SyncPath): NativeKtModule {
             )
             "cmake" in values -> BuildSystem.CMake(
                 projectDir = relativePath.resolve(stringRequired("cmake", "project_dir")).normalize(),
-                headerFile = relativePath.resolve(stringRequired("cmake", "header_file")).normalize(),
+                libraryName = stringRequired("cmake", "library_name"),
                 buildType = when(string("cmake", "build_type")) {
                     "Release", null -> BuildSystem.CMake.BuildType.RELEASE
                     "Debug" -> BuildSystem.CMake.BuildType.DEBUG

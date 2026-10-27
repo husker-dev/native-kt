@@ -1,4 +1,4 @@
-#include <api.h>
+#include <nativekt.h>
 
 void stub(MyEnum e) {
 }

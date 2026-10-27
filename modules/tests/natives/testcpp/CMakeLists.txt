@@ -1,9 +1,11 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.24)
 
 project("testcpp" LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+include("${CMAKE_CURRENT_LIST_DIR}/../LocalNativeKt.cmake")
 
 add_library(${PROJECT_NAME} OBJECT
         src/interfaces.cpp
@@ -22,4 +24,6 @@ add_library(${PROJECT_NAME} OBJECT
         src/arrays/callback_return_array.cpp
 )
 
-target_include_directories(${PROJECT_NAME} PRIVATE include)
+# Generate and add native-kt files
+nativekt_generate("nativekt.toml")
+target_link_libraries(${PROJECT_NAME} PRIVATE NativeKt::bindings)

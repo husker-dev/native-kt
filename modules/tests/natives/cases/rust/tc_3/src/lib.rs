@@ -1,6 +1,9 @@
-use crate::nativekt::{EmptyDictionary1, MyDictionary};
-
-mod nativekt;
+pub mod nativekt {
+    //nativekt::include!();
+    #![allow(unused)]
+    include!(concat!(env!("OUT_DIR"), "/nativekt.rs"));
+}
+use nativekt::*;
 
 fn stub1(_e: EmptyDictionary1) {
 

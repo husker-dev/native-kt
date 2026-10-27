@@ -1,3 +1,7 @@
+import com.huskerdev.nativekt.gradle.NativeKtCompileTask
+import com.huskerdev.nativekt.gradle.NativeKtPrepareTask
+import com.huskerdev.nativekt.gradle.configurators.PrepareNativesCommon
+
 plugins {
     alias(libs.plugins.kotlin.jvm)
 
@@ -25,4 +29,10 @@ tasks.withType<Test>().configureEach {
     if (name.contains("jvm", ignoreCase = true)) {
         jvmArgs = listOf("--enable-native-access=ALL-UNNAMED")
     }
+}
+
+gradle.taskGraph.whenReady {
+    if(allTasks.any { it is NativeKtCompileTask })
+        allTasks.first { it is NativeKtPrepareTask }
+            .dependsOn(":modules:cli:packAll")
 }

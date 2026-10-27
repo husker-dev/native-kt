@@ -6,10 +6,7 @@ import com.android.build.gradle.internal.tasks.factory.dependsOn
 import com.huskerdev.nativekt.*
 import com.huskerdev.nativekt.configurators.compileAndroid
 import com.huskerdev.nativekt.configurators.prepareAndroid
-import com.huskerdev.nativekt.gradle.GradlePluginLogger
-import com.huskerdev.nativekt.gradle.GradleTaskExecutor
-import com.huskerdev.nativekt.gradle.NATIVE_TASK_GROUP
-import com.huskerdev.nativekt.gradle.dependsOnProjectReload
+import com.huskerdev.nativekt.gradle.*
 import com.huskerdev.nativekt.utils.*
 import com.huskerdev.stdlibx.fs.SyncPath
 import com.huskerdev.stdlibx.fs.file
@@ -92,7 +89,7 @@ internal fun configureAndroidSourceSet(
 
 private abstract class PrepareNativesAndroid @Inject constructor(
     private val execOps: ExecOperations,
-): DefaultTask() {
+): DefaultTask(), NativeKtPrepareTask {
     @get:Input abstract var context: String
     @get:Input abstract var useExpectActual: Boolean
 
@@ -111,7 +108,7 @@ private abstract class PrepareNativesAndroid @Inject constructor(
 
 private abstract class CompileNativesAndroid @Inject constructor(
     private val execOps: ExecOperations
-): DefaultTask() {
+): DefaultTask(), NativeKtCompileTask {
     @get:OutputDirectory
     abstract val outputFolder: DirectoryProperty
 

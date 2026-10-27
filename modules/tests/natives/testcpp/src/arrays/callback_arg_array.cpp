@@ -1,4 +1,4 @@
-#include <api.hpp>
+#include <nativekt.hpp>
 
 bool callback_arg_char_array(std::shared_ptr<CallbackPassCharArray> arg) {
     return arg->invoke(KArray<uint16_t> {

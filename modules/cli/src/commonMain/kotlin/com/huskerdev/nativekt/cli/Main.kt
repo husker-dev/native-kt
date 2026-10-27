@@ -1,67 +1,106 @@
 package com.huskerdev.nativekt.cli
 
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.main
+import com.github.ajalt.clikt.core.subcommands
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.required
+import com.github.ajalt.mordant.platform.MultiplatformSystem.exitProcess
 import com.huskerdev.nativekt.BuildSystem
-import com.huskerdev.nativekt.Multiplatform
-import com.huskerdev.nativekt.NativeKtMultiplatformConfiguration
-import com.huskerdev.nativekt.NativeProject
+import com.huskerdev.nativekt.Language
+import com.huskerdev.nativekt.NativeModuleContext
 import com.huskerdev.nativekt.createContext
+import com.huskerdev.nativekt.parseModuleFromToml
+import com.huskerdev.nativekt.printers.c.CApiHeaderPrinter
+import com.huskerdev.nativekt.printers.c.CApiImplPrinter
+import com.huskerdev.nativekt.printers.cpp.CppApiHeaderPrinter
+import com.huskerdev.nativekt.printers.cpp.CppApiImplPrinter
 import com.huskerdev.nativekt.printers.rust.RustPrinter
 import com.huskerdev.stdlibx.fs.SyncPath
-import com.huskerdev.stdlibx.process.exitProcess
 
+fun main(argv: Array<String>) = NativeKtCli()
+    .subcommands(PrintNdlPath(), Generate())
+    .main(argv)
 
-fun main(args: Array<String>) {
-    var ndlFile: SyncPath? = null
-    val module = Multiplatform("example", SyncPath("./"))
-
-    var i = 0
-    while (i < args.size) {
-        if(args[i].startsWith("-")) {
-            if(args[i] == "-cargo") {
-                module.cargo {
-                    apiRsFile = SyncPath(args[++i])
-                    suppressUnused = false
-                }
-            }
-            if(args[i] == "-name")
-                module.name = args[++i]
-            if(args[i] == "-classpath")
-                module.classPath = args[++i]
-        } else {
-            ndlFile = SyncPath(args[i])
-            if(!ndlFile.exists())
-                error("NDL file does not exist: '${ndlFile.pathString}'")
-        }
-        i++
-    }
-
-    if(ndlFile == null)
-        error("NDL file is not specified")
-
-    run(ndlFile, module)
+class NativeKtCli: CliktCommand(name = "nativekt-cli") {
+    override fun run() = Unit
 }
 
-private fun run(
-    ndlFile: SyncPath,
-    module: NativeProject
-) {
-    module.ndlFile = ndlFile
+class PrintNdlPath: CliktCommand(name = "print-ndl-path") {
+    val config by option(help = "Toml configuration file").required()
 
-    val context = createContext(
-        buildDir = SyncPath("./tmp"),
-        configuration = NativeKtMultiplatformConfiguration.Impl(),
-        module = module,
-        executor = NativeKtExecutor(),
-        logger = NativeKtLogger()
-    ) ?: exitProcess(1)
-
-    when (val buildSystem = context.buildSystem) {
-        is BuildSystem.Cargo -> {
-            RustPrinter(
-                context,
-                buildSystem.apiRsFile!!
-            )
+    override fun run() {
+        try {
+            val module = parseModuleFromToml(SyncPath(config))
+            echo(module.apiFile.absoluteString())
+        } catch (e: Throwable) {
+            e.printStackTrace()
+            exitProcess(1)
         }
-        else -> throw UnsupportedOperationException()
+    }
+}
+
+class Generate: CliktCommand(name = "generate") {
+    val config by option(help = "Toml configuration file").required()
+    val outputDir by option("--output", help = "Directory where the files will be generated").required()
+
+    override fun run() {
+        try {
+            val outputPath = SyncPath(outputDir)
+
+            val module = parseModuleFromToml(SyncPath(config))
+            val context = createContext(
+                buildDir = outputPath,
+                module = module,
+                executor = NativeModuleContext.CommandExecutor.Noop(),
+                logger = NativeModuleContext.Logger.Noop()
+            )!!
+
+            when (val buildSystem = module.buildSystem) {
+                is BuildSystem.CMake -> {
+                    val sourcesDir = outputPath.resolve("sources").createDirectories()
+                    val includeDir = outputPath.resolve("include").createDirectories()
+
+                    when (buildSystem.language) {
+                        Language.C -> {
+                            CApiHeaderPrinter(
+                                context = context,
+                                target = includeDir.resolve("nativekt.h"),
+                            )
+                            CApiHeaderPrinter(
+                                context = context,
+                                target = includeDir.resolve("nativekt_impl.h"),
+                                isImpl = true
+                            )
+                            CApiImplPrinter(
+                                context = context,
+                                target = sourcesDir.resolve("nativekt.c"),
+                                includePath = "nativekt_impl.h"
+                            )
+                        }
+                        Language.CPP -> {
+                            CppApiHeaderPrinter(
+                                context = context,
+                                target = includeDir.resolve("nativekt.hpp"),
+                                tppTarget = includeDir.resolve("nativekt.tpp")
+                            )
+                            CppApiImplPrinter(
+                                context = context,
+                                target = sourcesDir.resolve("nativekt.cpp"),
+                                includePath = "nativekt.hpp"
+                            )
+                        }
+                        else -> throw UnsupportedOperationException()
+                    }
+                }
+                is BuildSystem.Cargo -> RustPrinter(
+                    context = context,
+                    target = outputPath.resolve("nativekt.rs")
+                )
+            }
+        } catch (e: Throwable) {
+            e.printStackTrace()
+            exitProcess(1)
+        }
     }
 }

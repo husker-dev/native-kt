@@ -21,7 +21,8 @@ class CppApiHeaderPrinter(
             printCallbacks()
             printStructs()
             printFunctions()
-            append("\n#include \"api.tpp\"")
+
+            append("\n#include \"${tppTarget.name}\"")
         }.replace("\n", systemLineSeparator))
 
         tppTarget.parent!!.createDirectories()
@@ -199,11 +200,11 @@ class CppApiHeaderPrinter(
                 void (* _Nonnull _free)(size_t);              \
             public:                                           \
                 size_t id;                                    \
-            	int32_t hash_code;                               \
+            	int32_t hash_code;                            \
             	~Name();                                      \
                 Name(                                         \
                     size_t id,                                \
-                    int32_t hash_code,                           \
+                    int32_t hash_code,                        \
                     void* _Nonnull invoke,                    \
                     bool (* _Nonnull equals)(size_t, size_t), \
                     void (* _Nonnull free)(size_t)            \
@@ -277,7 +278,9 @@ class CppApiHeaderPrinter(
 
         context.allOperations.forEach { function ->
             val name = function.cppName
-            val type = function.type.toCppType()
+            val type = if(!function.isInterfaceOperationAddress())
+                function.type.toCppType()
+            else "intptr_t"
             val args = function.args.joinToString {
                 val type = if(it.type.isReleasable() && function.isCritical())
                     "const ${it.type.toCppType()}&"
