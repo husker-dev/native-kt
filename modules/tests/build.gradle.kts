@@ -4,6 +4,8 @@ import com.huskerdev.nativekt.gradle.*
 import com.huskerdev.nativekt.*
 import com.huskerdev.nativekt.gradle.configurators.PrepareNativesCommon
 import org.jetbrains.kotlin.gradle.dsl.*
+import org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootExtension
+import org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootPlugin
 import org.jetbrains.kotlin.gradle.tasks.KotlinNativeLink
 
 plugins {
@@ -145,6 +147,13 @@ tasks.withType<AbstractTestTask>().configureEach {
 tasks.withType<KotlinNativeLink>().configureEach {
     outputs.cacheIf { false }
     outputs.upToDateWhen { false }
+}
+
+// Workaround for: https://youtrack.jetbrains.com/issue/KT-90417
+plugins.withType<NodeJsRootPlugin> {
+    extensions.configure<NodeJsRootExtension>("kotlinNodeJs") {
+        versions.webpack.version = "5.112.0"
+    }
 }
 
 afterEvaluate {
