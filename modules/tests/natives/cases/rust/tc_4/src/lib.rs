@@ -6,8 +6,8 @@ pub mod nativekt {
     include!(concat!(env!("OUT_DIR"), "/nativekt.rs"));
 }
 
-struct EmptyInterface;
-struct MyInterface;
+pub struct EmptyInterface;
+pub struct MyInterface;
 
 fn stub1(_e: Arc<EmptyInterface>) {
 

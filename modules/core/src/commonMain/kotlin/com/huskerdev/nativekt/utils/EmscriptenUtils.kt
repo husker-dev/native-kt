@@ -20,7 +20,6 @@ internal fun getEmccArgs(context: NativeModuleContext): String = listOfNotNull(
     "ALLOW_TABLE_GROWTH=1",
     "MODULARIZE=1",
     "EXPORT_ES6=1",
-    "WASM_BIGINT=${if (context.module.js.useJsBigInt) "1" else "0"}",
     "ENVIRONMENT=${if (context.module.js.target == JsTarget.WEB) "web" else "node"}",
     "EXPORTED_RUNTIME_METHODS=addFunction,wasmMemory",
 ).joinToString(separator = " ") { "-s $it" }
