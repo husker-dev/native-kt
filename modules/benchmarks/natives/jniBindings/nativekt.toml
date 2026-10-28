@@ -6,7 +6,7 @@ api_file = "./api.ndl"
 
 [cargo]
 project_dir = "."
-package_name = "jniBindings"
+lib_name = "jni_bindings"
 profile = "release"
 
 [kotlin]

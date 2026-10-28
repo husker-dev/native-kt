@@ -6,7 +6,7 @@ api_file = "./api.ndl"
 
 [cargo]
 project_dir = "."
-package_name = "jvmciBindings"
+lib_name = "jvmci_bindings"
 profile = "release"
 
 [kotlin]

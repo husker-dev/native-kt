@@ -34,9 +34,9 @@
           "default": ".",
           "description": "Relative path to the configuration"
         },
-        "package_name": {
+        "lib_name": {
           "type": "string",
-          "description": "Cargo package name"
+          "description": "Cargo lib name"
         },
         "profile": {
           "type": "string",

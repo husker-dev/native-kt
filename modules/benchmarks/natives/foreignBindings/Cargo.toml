@@ -4,7 +4,7 @@ edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "staticlib"]
-name = "foreignBindings"
+name = "foreign_bindings"
 
 [dependencies]
 nativekt = { path = "../../../cli/cargo", default-features = false }

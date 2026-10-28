@@ -4,7 +4,7 @@ edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "staticlib"]
-name = "jniBindings"
+name = "jni_bindings"
 
 [dependencies]
 nativekt = { path = "../../../cli/cargo", default-features = false }

@@ -86,7 +86,7 @@ sealed interface BuildSystem {
     @SerialName("cargo")
     data class Cargo(
         override var projectDir: SyncPath,
-        var packageName: String,
+        var libraryName: String,
         var buildType: BuildType = BuildType.RELEASE
     ): BuildSystem {
         override val language: Language = Language.RUST
@@ -177,7 +177,7 @@ fun parseModuleFromToml(text: String, relativePath: SyncPath): NativeKtModule {
         buildSystem = when {
             "cargo" in values -> BuildSystem.Cargo(
                 projectDir = relativePath.resolve(stringRequired("cargo", "project_dir")).normalize(),
-                packageName = stringRequired("cargo", "package_name"),
+                libraryName = stringRequired("cargo", "lib_name"),
                 buildType = when(string("cargo", "build_type")) {
                     "release", null -> BuildSystem.Cargo.BuildType.RELEASE
                     "debug" -> BuildSystem.Cargo.BuildType.DEBUG

@@ -182,8 +182,8 @@ fun compileJvm(
 
             val prefix = if(OS.current == OS.WINDOWS) "" else "lib"
             Triple(
-                rustOutDir.resolve("lib${buildSystem.packageName}.a"),
-                rustOutDir.resolve("${prefix}${buildSystem.packageName}.${OS.current.dylibExtension}")
+                rustOutDir.resolve("lib${buildSystem.libraryName}.a"),
+                rustOutDir.resolve("${prefix}${buildSystem.libraryName}.${OS.current.dylibExtension}")
             ) {
                 cargoLinkerFlags(
                     context,
