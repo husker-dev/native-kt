@@ -32,7 +32,7 @@ class PrintNdlPath: CliktCommand(name = "print-ndl-path") {
     override fun run() {
         try {
             val module = parseModuleFromToml(SyncPath(config))
-            echo(module.apiFile.absoluteString())
+            echo(module.apiFile.invariantSeparatorsPath)
         } catch (e: Throwable) {
             e.printStackTrace()
             exitProcess(1)
