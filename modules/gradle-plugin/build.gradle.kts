@@ -1,3 +1,4 @@
+import org.gradle.plugin.compatibility.compatibility
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -42,6 +43,13 @@ gradlePlugin {
             displayName = "native-kt"
             description = "Gradle plugin for convenient C/C++/Rust integration into a Kotlin Multiplatform project."
             tags.set(listOf("kotlin", "multiplatform", "native"))
+
+            compatibility {
+                features {
+                    configurationCache = true
+                    isolatedProjects = true
+                }
+            }
         }
     }
 }
