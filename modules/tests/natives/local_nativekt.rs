@@ -10,7 +10,7 @@ pub fn generate(config_file: impl AsRef<Path>) -> io::Result<PathBuf> {
 
     nativekt::generate_with_bin_dir(
         config_file,
-        root.join("modules/cli/build/nativekt-cargo/bin"),
+        root.join("modules/cli/build/nativekt-cargo/nativekt-build/bin"),
     )
 }
 

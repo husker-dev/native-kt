@@ -1,0 +1,13 @@
+[package]
+name = "nativekt-macros"
+version = "0.1.0"
+edition = "2021"
+description = "Procedural macros for Native-Kt bindings"
+license = "Apache-2.0"
+repository = "https://github.com/husker-dev/native-kt"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+quote = "1"

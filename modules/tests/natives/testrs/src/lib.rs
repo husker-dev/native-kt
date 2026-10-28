@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-pub mod nativekt {
-    //nativekt::include!();
-    include!(concat!(env!("OUT_DIR"), "/nativekt.rs"));
+#[allow(unused)]
+pub mod imported {
+    nativekt::include_source!();
 }
-use nativekt::*;
+use imported::*;
 
 pub struct MyInterface;
 

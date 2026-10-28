@@ -38,8 +38,8 @@ class RustPrinter(
 
             val funcNew = dictionary.subCFuncMangled(context, "new")
             val funcFree = dictionary.subCFuncMangled(context, "free")
-            val funcNewJs = context.jsMangle["${name.camelCase().lowercase()}_new"]
-            val funcFreeJs = context.jsMangle["${name.camelCase().lowercase()}_free"]
+            val funcNewJs = context.jsMangle[dictionary.subCFunc("new")]
+            val funcFreeJs = context.jsMangle[dictionary.subCFunc("free")]
 
             // Print struct
             buildList {
@@ -84,7 +84,7 @@ class RustPrinter(
                     // field getters
                     fields.joinTo(this, separator = "") {
                         val funcName = dictionary.subFieldCFuncMangled(context, it)
-                        val funcNameJs = context.jsMangle["${name.camelCase().lowercase()}__${it.name.camelCase().lowercase()}"]
+                        val funcNameJs = context.jsMangle[dictionary.subFieldCFunc(it)]
 
                         val type = it.type.toNativeRustType(ptrType = "const")
                         val call = "(*of).${it.rustName}"

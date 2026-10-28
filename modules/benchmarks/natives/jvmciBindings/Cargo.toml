@@ -7,10 +7,10 @@ crate-type = ["cdylib", "staticlib"]
 name = "jvmci_bindings"
 
 [dependencies]
-nativekt = { path = "../../../cli/cargo", default-features = false }
+nativekt = { path = "../../../cli/cargo", features = ["macro"] }
 
 [build-dependencies]
-nativekt = { path = "../../../cli/cargo", default-features = false }
+nativekt = { path = "../../../cli/cargo", features = ["build"] }
 
 [lints.cargo]
 unused_dependencies = "allow"

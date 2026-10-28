@@ -126,7 +126,7 @@ tasks.register<Tar>("packCMake") {
 
 tasks.register<Sync>("packCargoPackage") {
     group = "cli"
-    description = "Stages nativekt-build with bundled CLI executables for Cargo packaging"
+    description = "Stages Native-Kt Cargo crates with bundled CLI executables"
 
     val packageVersion = project.version.toString()
     inputs.property("packageVersion", packageVersion)
@@ -135,14 +135,26 @@ tasks.register<Sync>("packCargoPackage") {
 
     // Copy cargo files
     from(file("cargo")) {
-        include("Cargo.toml", "README.md", "src/**", "LICENSE*")
-        filesMatching("Cargo.toml") {
+        include(
+            "Cargo.toml", "README.md", "src/**", "LICENSE*",
+            "nativekt-build/Cargo.toml", "nativekt-build/src/**",
+            "nativekt-macros/Cargo.toml", "nativekt-macros/src/**"
+        )
+        filesMatching(listOf("Cargo.toml", "nativekt-build/Cargo.toml", "nativekt-macros/Cargo.toml")) {
             filter { line ->
-                if (line.startsWith("version = ")) "version = \"$packageVersion\"" else line
+                if (line.trimStart().startsWith("version = "))
+                    line.replace(Regex("\"[^\"]*\""), "\"$packageVersion\"")
+                else line
             }
         }
     }
     from(rootProject.file("LICENSE"))
+    from(rootProject.file("LICENSE")) {
+        into("nativekt-build")
+    }
+    from(rootProject.file("LICENSE")) {
+        into("nativekt-macros")
+    }
 
     // Copy binaries
     kotlin.targets.withType<KotlinNativeTarget>().forEach { target ->
@@ -158,7 +170,7 @@ tasks.register<Sync>("packCargoPackage") {
 
         dependsOn(executable.linkTaskProvider)
         from(executable.outputFile) {
-            into("bin")
+            into("nativekt-build/bin")
             rename { "nativekt-cli-$platform$extension" }
             filePermissions {
                 unix("755")

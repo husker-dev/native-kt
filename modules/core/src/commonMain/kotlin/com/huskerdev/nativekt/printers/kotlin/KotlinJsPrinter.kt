@@ -733,21 +733,20 @@ class KotlinJsPrinter(
 
         // Dictionaries
         context.castedDictionaries.forEach { dictionary ->
-            val name = dictionary.name.camelCase().lowercase()
             val fields = context.allFields[dictionary]!!
             val args = fields.joinToString { "${it.kname}: ${it.type.toKtJsType()}" }
 
             if(dictionary in context.toNativeDeclaration) append("""
                 
-                @JsName("${jsMangle("${name}_new")}") fun ${name}_new($args): Int
+                @JsName("${jsMangle(dictionary.subCFunc("new"))}") fun ${dictionary.subCFunc("new")}($args): Int
             """.replaceIndent("\t"))
             if(dictionary in context.toKotlinDeclaration) {
                 append("""
                     
-                    @JsName("${jsMangle("${name}_free")}") fun ${name}_free(self: Int)
+                    @JsName("${jsMangle(dictionary.subCFunc("free"))}") fun ${dictionary.subCFunc("free")}(self: Int)
                 """.replaceIndent("\t"))
                 fields.forEach {
-                    val name = "${name}__${it.name.camelCase().lowercase()}"
+                    val name = dictionary.subFieldCFunc(it)
                     append("\n\t@JsName(\"${jsMangle(name)}\") fun $name(self: Int): ${it.type.toKtJsType()}")
                 }
             }
@@ -810,14 +809,13 @@ class KotlinJsPrinter(
 
         context.castedDictionaries.forEach { dictionary ->
             val name = dictionary.kname
-            val lower = name.lowercase()
             val fields = context.allFields[dictionary]!!
 
             if(dictionary in context.toNativeDeclaration) {
                 append("""
                     
                     private fun toNative$name(of: $name?) = of?.run {
-                        _module.${lower}_new(
+                        _module.${dictionary.subCFunc("new")}(
                 """.trimIndent())
                 fields.forEachIndexed { i, it ->
                     append("\n\t\t")
@@ -836,11 +834,11 @@ class KotlinJsPrinter(
                 """.trimIndent())
                 fields.forEachIndexed { i, it ->
                     append("\n\t\t")
-                    append(castToKotlin(it.type, "_module.${lower}__${it.name.camelCase().lowercase()}(of)")).append(",")
+                    append(castToKotlin(it.type, "_module.${dictionary.subFieldCFunc(it)}(of)")).append(",")
                     if(i == fields.lastIndex)
                         append("\n\t")
                 }
-                append(").also { if(free) _module.${lower}_free(of) }\n}\n")
+                append(").also { if(free) _module.${dictionary.subCFunc("free")}(of) }\n}\n")
             }
         }
     }

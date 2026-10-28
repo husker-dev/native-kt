@@ -2,6 +2,8 @@ package com.huskerdev.nativekt
 
 import com.huskerdev.nativekt.NativeModuleContext.CommandExecutor
 import com.huskerdev.nativekt.printers.c.cname
+import com.huskerdev.nativekt.printers.c.subCFunc
+import com.huskerdev.nativekt.printers.c.subFieldCFunc
 import com.huskerdev.nativekt.serialzation.ContextSerializer
 import com.huskerdev.nativekt.utils.*
 import com.huskerdev.stdlibx.fs.SyncPath
@@ -590,13 +592,12 @@ private fun createJsMangleMap(context: NativeModuleContext) = buildList {
     }
     // Dictionaries
     context.castedDictionaries.forEach { dictionary ->
-        val name = dictionary.name.camelCase().lowercase()
         if(dictionary in context.toNativeDeclaration)
-            add("${name}_new")
+            add(dictionary.subCFunc("new"))
         if(dictionary in context.toKotlinDeclaration) {
-            add("${name}_free")
+            add(dictionary.subCFunc("free"))
             context.allFields[dictionary]!!.mapTo(this) {
-                "${name}__${it.name.camelCase().lowercase()}"
+                add(dictionary.subFieldCFunc(it))
             }
         }
     }

@@ -1,8 +1,7 @@
 
-pub mod nativekt {
-    //nativekt::include!();
-    #![allow(unused)]
-    include!(concat!(env!("OUT_DIR"), "/nativekt.rs"));
+#[allow(unused)]
+pub mod imported {
+    nativekt::include_source!();
 }
 
 fn hello_world() {

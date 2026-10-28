@@ -1,0 +1,13 @@
+[package]
+name = "nativekt-build"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+description = "Build-time Native-Kt bindings generation with a bundled CLI"
+license = "Apache-2.0"
+repository = "https://github.com/husker-dev/native-kt"
+include = ["src/**", "bin/**", "Cargo.toml", "LICENSE*"]
+
+[features]
+default = ["bundled"]
+bundled = []
