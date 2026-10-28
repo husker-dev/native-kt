@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "com.huskerdev"
-version = "1.4.0"
+version = projectDir.parentFile.parentFile.resolve("VERSION").readText().trim()
 
 repositories {
     mavenCentral()

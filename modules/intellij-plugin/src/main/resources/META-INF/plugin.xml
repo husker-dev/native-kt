@@ -2,7 +2,7 @@
     <id>com.huskerdev.native-kt</id>
     <name>Native-Kt Utils</name>
     <vendor email="redfancoestar@gmail.com" url="https://www.huskerdev.com">husker-dev</vendor>
-    <description>Syntax highlight for native-kt gradle plugin</description>
+    <description>Utils for native-kt</description>
 
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.vcs</depends>
