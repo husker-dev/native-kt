@@ -2,7 +2,7 @@
     <id>com.huskerdev.native-kt</id>
     <name>Native-Kt Utils</name>
     <vendor email="redfancoestar@gmail.com" url="https://www.huskerdev.com">husker-dev</vendor>
-    <description>Utils for native-kt</description>
+    <description>Utils for native-kt. Includes .ndl syntax highlighting and auto code generation.</description>
 
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.vcs</depends>
