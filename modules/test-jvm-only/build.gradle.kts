@@ -31,8 +31,9 @@ tasks.withType<Test>().configureEach {
     }
 }
 
-gradle.taskGraph.whenReady {
-    if(allTasks.any { it is NativeKtCompileTask })
-        allTasks.first { it is NativeKtPrepareTask }
-            .dependsOn(":modules:cli:packAll")
+afterEvaluate {
+    tasks.filterIsInstance<NativeKtCompileTask>()
+        .forEach { it.dependsOn(":modules:cli:packAll") }
+    tasks.filterIsInstance<NativeKtPrepareTask>()
+        .forEach { it.mustRunAfter(":modules:cli:packAll") }
 }

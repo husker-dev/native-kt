@@ -271,7 +271,7 @@ class NewCAction: ActionBase() {
         profile = "Release"
     """.trimIndent()) { root, name ->
         VfsUtil.saveText(root.findOrCreateFile("CMakeLists.txt"), $$"""
-            cmake_minimum_required(VERSION 3.15)
+            cmake_minimum_required(VERSION 3.24)
 
             project("$$name")
             
@@ -307,7 +307,7 @@ class NewCppAction: ActionBase() {
         profile = "Release"
     """.trimIndent()) { root, name ->
         VfsUtil.saveText(root.findOrCreateFile("CMakeLists.txt"), $$"""
-            cmake_minimum_required(VERSION 3.15)
+            cmake_minimum_required(VERSION 3.24)
 
             project("$$name" LANGUAGES CXX)
             

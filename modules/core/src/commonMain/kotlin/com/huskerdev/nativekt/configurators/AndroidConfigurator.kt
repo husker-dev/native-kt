@@ -44,7 +44,7 @@ fun prepareAndroid(
 
             layout.nativeSourcesDir.resolve("dummy.${context.language.sourceExtension}").writeString("")
             layout.nativeSourcesDir.resolve("CMakeLists.txt").writeString($$"""
-                cmake_minimum_required(VERSION 3.15)
+                 cmake_minimum_required(VERSION 3.24)
         
                 project("$$moduleName"$${if (buildSystem.language == Language.CPP) " LANGUAGES CXX" else ""})
                 

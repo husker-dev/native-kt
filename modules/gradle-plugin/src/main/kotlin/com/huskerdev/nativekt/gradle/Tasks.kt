@@ -1,4 +1,6 @@
 package com.huskerdev.nativekt.gradle
 
-interface NativeKtPrepareTask
-interface NativeKtCompileTask
+import org.gradle.api.Task
+
+interface NativeKtPrepareTask: Task
+interface NativeKtCompileTask: Task

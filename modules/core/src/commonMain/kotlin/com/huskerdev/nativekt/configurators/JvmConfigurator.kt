@@ -44,33 +44,31 @@ fun prepareJvm(
     when(val buildSystem = context.buildSystem) {
         is BuildSystem.CMake -> {
             layout.nativeSourcesDir.resolve("dummy.${context.language.sourceExtension}").writeString("")
-            layout.nativeSourcesDir.resolve("CMakeLists.txt").writeString(
-                $$"""
-                    cmake_minimum_required(VERSION 3.15)
-            
-                    project("native-kt"$${if (buildSystem.language == Language.CPP) " LANGUAGES CXX" else ""})
-                    
-                    $${if (buildSystem.language == Language.CPP) "set(CMAKE_CXX_STANDARD 17)" else ""}
-                    $${if (buildSystem.language == Language.CPP) "set(CMAKE_CXX_STANDARD_REQUIRED ON)" else ""}
-                    
-                    if(CMAKE_C_COMPILER)
-                        set(DUMMY ${CMAKE_C_COMPILER})
-                    endif()
-                    
-                    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-                    add_compile_options(-Wno-initializer-overrides)
-                    
-                    add_subdirectory("$${buildSystem.projectDir.invariantSeparatorsPath}" "$${
-                        layout.nativeBuildDir.resolve("cmake/sub").invariantSeparatorsPath
-                    }")
-                    
-                    add_library(shared SHARED dummy.$${context.language.sourceExtension})
-                    target_link_libraries(shared PRIVATE $${buildSystem.libraryName})
-                    
-                    add_library(static STATIC dummy.$${context.language.sourceExtension})
-                    target_link_libraries(static PRIVATE $${buildSystem.libraryName})
-                """.trimIndent()
-            )
+            layout.nativeSourcesDir.resolve("CMakeLists.txt").writeString($$"""
+                cmake_minimum_required(VERSION 3.24)
+        
+                project("native-kt"$${if (buildSystem.language == Language.CPP) " LANGUAGES CXX" else ""})
+                
+                $${if (buildSystem.language == Language.CPP) "set(CMAKE_CXX_STANDARD 17)" else ""}
+                $${if (buildSystem.language == Language.CPP) "set(CMAKE_CXX_STANDARD_REQUIRED ON)" else ""}
+                
+                if(CMAKE_C_COMPILER)
+                    set(DUMMY ${CMAKE_C_COMPILER})
+                endif()
+                
+                set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+                add_compile_options(-Wno-initializer-overrides)
+                
+                add_subdirectory("$${buildSystem.projectDir.invariantSeparatorsPath}" "$${
+                    layout.nativeBuildDir.resolve("cmake/sub").invariantSeparatorsPath
+                }")
+                
+                add_library(shared SHARED dummy.$${context.language.sourceExtension})
+                target_link_libraries(shared PRIVATE $${buildSystem.libraryName})
+                
+                add_library(static STATIC dummy.$${context.language.sourceExtension})
+                target_link_libraries(static PRIVATE $${buildSystem.libraryName})
+            """.trimIndent())
         }
         is BuildSystem.Cargo -> Unit
     }

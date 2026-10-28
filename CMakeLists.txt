@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.24)
 project(root)
 
 add_subdirectory(./modules/examples/freetype/natives/freetypeBindings)
