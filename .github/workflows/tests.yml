@@ -146,6 +146,16 @@ jobs:
           arch: x86_64
           target: google_apis
           script: ./gradlew :modules:tests:connectedAndroidTest --stacktrace
+
+      - name: Upload Android test reports
+        if: ${{ always() && runner.os == 'Linux' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-test-reports
+          path: |
+            modules/tests/build/reports/androidTests/
+            modules/tests/build/outputs/androidTest-results/
+          if-no-files-found: warn
           
       - name: Kotlin/Native tests (Linux x64)
         if: runner.os == 'Linux'
