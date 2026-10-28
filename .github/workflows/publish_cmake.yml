@@ -1,0 +1,37 @@
+name: Publish (CMake)
+on: workflow_dispatch
+jobs:
+  cargo:
+    name: Publish (CMake)
+    runs-on: macOS-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      - name: "Prepare"
+        run: |
+          chmod +x ./gradlew
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'graalvm'
+          java-version: 25
+          
+      - name: Pack CMake package
+        run: ./gradlew :modules:cli:packCMake
+
+      - name: Read Version
+        id: get_version
+        run: |
+          VERSION_VALUE=$(cat VERSION)
+          echo "version=$VERSION_VALUE" >> $GITHUB_OUTPUT
+
+      - name: Pack CMake package
+        uses: softprops/action-gh-release@v3
+        if: github.ref_type == 'tag'
+        with:
+          files: './modules/cli/build/distributions/nativekt-cmake-${{ steps.get_version.outputs.version }}.tar.gz'

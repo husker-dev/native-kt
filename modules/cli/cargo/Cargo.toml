@@ -8,6 +8,7 @@ license = "Apache-2.0"
 repository = "https://github.com/husker-dev/native-kt"
 readme = "README.md"
 include = ["src/**", "bin/**", "Cargo.toml", "README.md", "LICENSE*"]
+keywords = ["nativekt", "kotlin", "kmp"]
 
 [features]
 default = ["bundled"]
