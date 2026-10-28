@@ -1,5 +1,8 @@
 name: Publish (core & runtime)
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+  release:
+    types: [ released, prereleased ]
 jobs:
   publish:
     name: Publish (core & runtime)

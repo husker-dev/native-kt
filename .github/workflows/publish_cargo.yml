@@ -1,5 +1,8 @@
 name: Publish (Cargo)
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+  release:
+    types: [ released, prereleased ]
 jobs:
   cargo:
     name: Publish (Cargo)
