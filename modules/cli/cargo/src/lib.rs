@@ -84,8 +84,8 @@ pub fn generate_with_bin_dir(
 }
 
 fn generate_impl(config_file: &Path, bin_dir: Option<&Path>) -> io::Result<PathBuf> {
-    let manifest_dir = fs::canonicalize(env::var_os("CARGO_MANIFEST_DIR").unwrap())?;
-    let out_dir = fs::canonicalize(env::var_os("OUT_DIR").unwrap())?;
+    let manifest_dir = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").unwrap());
+    let out_dir = PathBuf::from(env::var_os("OUT_DIR").unwrap());
     let config = manifest_dir.join(config_file);
     println!("cargo:rerun-if-changed={}", config.display());
 
