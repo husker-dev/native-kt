@@ -88,8 +88,8 @@ internal fun ResolvedIdlOperation.isCriticalCapable(): Boolean =
 
 // Same as default critical, but without array and string args
 internal fun ResolvedIdlOperation.isAndroidCriticalCapable(): Boolean =
-    !type.isArray() && !type.isString() && !type.isDictionary() && !type.isNullablePrimitive() && !type.isNullableEnum() &&
-            args.all { !it.type.isArray() && !it.type.isString() && !it.type.isNullablePrimitive() && !it.type.isNullableEnum() }
+    !type.isArray() && !type.isString() && !type.isDictionary() && !type.isNullablePrimitive() && !type.isNullableEnum() && !(type.isInterface() && !type.isRawInterface()) &&
+            args.all { !it.type.isArray() && !it.type.isString() && !it.type.isNullablePrimitive() && !it.type.isNullableEnum() && !(it.type.isInterface() && !it.type.isRawInterface()) }
 
 internal fun ResolvedIdlEnum.defaultValue(): String? =
     attributes?.filterIsInstance<IdlExtendedAttribute.IdentifierValue>()
