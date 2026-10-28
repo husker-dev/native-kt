@@ -149,13 +149,6 @@ tasks.withType<KotlinNativeLink>().configureEach {
     outputs.upToDateWhen { false }
 }
 
-// Workaround for: https://youtrack.jetbrains.com/issue/KT-90417
-plugins.withType<NodeJsRootPlugin> {
-    extensions.configure<NodeJsRootExtension>("kotlinNodeJs") {
-        versions.webpack.version = "5.112.0"
-    }
-}
-
 afterEvaluate {
     tasks.filterIsInstance<NativeKtCompileTask>()
         .forEach { it.dependsOn(":modules:cli:packAll") }
