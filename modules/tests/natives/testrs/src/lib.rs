@@ -29,6 +29,7 @@ impl MyInterface {
     fn return_interface(&self) -> Arc<MyInterface> {
         Arc::new(MyInterface::new())
     }
+    fn snake_case(&self) {}
 }
 
 impl Drop for MyInterface {
@@ -1585,7 +1586,7 @@ pub fn callback_return_interface_array_n(
 pub fn pass_big_dictionary(
     arg: TypeDictionary
 ) -> bool {
-    arg.a1 == 'a' as u16 &&
+    arg.a_1 == 'a' as u16 &&
         arg.a2 == true &&
         arg.a3 == 123 &&
         arg.a4 == 123 &&
@@ -1637,7 +1638,7 @@ pub fn return_big_dictionary(
     inter: Arc<MyInterface>
 ) -> TypeDictionary {
     TypeDictionary {
-        a1: 'a' as u16,
+        a_1: 'a' as u16,
         a2: true,
         a3: 123,
         a4: 123,

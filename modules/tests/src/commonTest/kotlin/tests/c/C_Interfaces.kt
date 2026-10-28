@@ -11,6 +11,7 @@ class C_Interfaces {
         val a = MyInterface()
         a.test()
         a.testCritical()
+        a.snakeCase()
         a.close()
     }
 }

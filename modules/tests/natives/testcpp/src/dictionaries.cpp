@@ -1,7 +1,7 @@
 #include <nativekt.hpp>
 
 bool pass_big_dictionary(const TypeDictionary arg) {
-    return arg.a1 == 'a' &&
+    return arg.a_1 == 'a' &&
         arg.a2 == true &&
         arg.a3 == 123 &&
         arg.a4 == 123 &&

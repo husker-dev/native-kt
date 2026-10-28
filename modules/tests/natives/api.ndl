@@ -464,7 +464,7 @@ dictionary MyDictionary: ParentDictionary {
 };
 
 dictionary TypeDictionary {
-    char a1;
+    char a_1;
     bool a2;
     i8 a3;
     u8 a4;
@@ -508,4 +508,5 @@ interface MyInterface {
     [critical] bool testCritical();
     [critical] void passInterface(MyInterface a1);
     [critical] MyInterface returnInterface();
+    void snake_case();
 };

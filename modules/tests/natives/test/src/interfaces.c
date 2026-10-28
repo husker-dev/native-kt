@@ -30,6 +30,9 @@ RC_MyInterface* _Nonnull _interface_myinterface_fn_return_interface(void* _Nonnu
     (void)_self;
     return (void*) 1;
 }
+void _interface_myinterface_fn_snake_case(void* _Nonnull _self) {
+    (void)_self;
+}
 
 void _interface_myinterface_free(void* _self) {
     (void)_self;

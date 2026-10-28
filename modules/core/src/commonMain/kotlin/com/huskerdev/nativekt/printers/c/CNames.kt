@@ -13,12 +13,12 @@ fun ResolvedIdlOperation.cnameMangled(
 fun ResolvedIdlDictionary.subCFuncMangled(
     context: NativeModuleContext,
     func: String
-): String = context.mangle("${name.camelCase().lowercase()}_$func")
+): String = context.mangle(subCFunc(func))
 
 fun ResolvedIdlDictionary.subFieldCFuncMangled(
     context: NativeModuleContext,
     field: ResolvedIdlField.Declaration
-): String = context.mangle("${name.camelCase().lowercase()}__${field.name.camelCase().lowercase()}")
+): String = context.mangle(subFieldCFunc(field))
 
 fun ResolvedIdlDictionary.subCFunc(
     func: String
@@ -26,7 +26,7 @@ fun ResolvedIdlDictionary.subCFunc(
 
 fun ResolvedIdlDictionary.subFieldCFunc(
     field: ResolvedIdlField.Declaration
-): String = "${name.camelCase().lowercase()}__${field.name.camelCase().lowercase()}"
+): String = "${name.camelCase().lowercase()}__${field.cname}"
 
 val ResolvedIdlDeclaration.cname: String
     get() = when (this) {

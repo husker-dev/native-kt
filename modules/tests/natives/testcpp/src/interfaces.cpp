@@ -24,6 +24,9 @@ namespace {
         std::shared_ptr<IMyInterface> return_interface() override {
             return std::make_shared<MyInterface>();
         }
+
+        void snake_case() override {
+        }
     };
 }
 
