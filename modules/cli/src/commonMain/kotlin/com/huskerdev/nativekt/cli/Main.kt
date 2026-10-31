@@ -19,8 +19,11 @@ import com.huskerdev.nativekt.printers.rust.RustPrinter
 import com.huskerdev.stdlibx.fs.SyncPath
 
 fun main(argv: Array<String>) = NativeKtCli()
-    .subcommands(PrintNdlPath(), Generate())
-    .main(argv)
+    .subcommands(
+        PrintNdlPath(),
+        PrintName(),
+        Generate()
+    ).main(argv)
 
 class NativeKtCli: CliktCommand(name = "nativekt-cli") {
     override fun run() = Unit
@@ -33,6 +36,20 @@ class PrintNdlPath: CliktCommand(name = "print-ndl-path") {
         try {
             val module = parseModuleFromToml(SyncPath(config))
             echo(module.apiFile.invariantSeparatorsPath)
+        } catch (e: Throwable) {
+            e.printStackTrace()
+            exitProcess(1)
+        }
+    }
+}
+
+class PrintName: CliktCommand(name = "print-name") {
+    val config by option(help = "Toml configuration file").required()
+
+    override fun run() {
+        try {
+            val module = parseModuleFromToml(SyncPath(config))
+            echo(module.name)
         } catch (e: Throwable) {
             e.printStackTrace()
             exitProcess(1)
@@ -95,7 +112,7 @@ class Generate: CliktCommand(name = "generate") {
                 }
                 is BuildSystem.Cargo -> RustPrinter(
                     context = context,
-                    target = outputPath.resolve("nativekt.rs")
+                    target = outputPath.resolve("${module.name}.nativekt.rs")
                 )
             }
         } catch (e: Throwable) {

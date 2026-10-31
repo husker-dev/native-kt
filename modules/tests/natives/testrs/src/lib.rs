@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 #[allow(unused)]
 pub mod imported {
-    nativekt::include_source!();
+    nativekt::include_source!("testrs");
 }
 use imported::*;
 

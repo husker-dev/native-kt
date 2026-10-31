@@ -13,11 +13,13 @@ import com.intellij.psi.PsiFile
 
 typealias Errors = List<WebIDLErrorException>
 
-class NdlSyntaxErrorAnnotator: ExternalAnnotator<Errors, Errors>() {
+class NdlSyntaxErrorAnnotator: ExternalAnnotator<String?, Errors>() {
 
-    override fun collectInformation(file: PsiFile): Errors {
+    override fun collectInformation(file: PsiFile): String? = file.text
+
+    override fun doAnnotate(collectedInfo: String?): Errors {
         return try {
-            val text = file.text
+            val text = collectedInfo ?: return emptyList()
             if (text.isEmpty()) return emptyList()
 
             WebIDL.resolve(text, NdlEnv).mergedErrors
@@ -25,8 +27,6 @@ class NdlSyntaxErrorAnnotator: ExternalAnnotator<Errors, Errors>() {
             emptyList()
         }
     }
-
-    override fun doAnnotate(collectedInfo: Errors): Errors = collectedInfo
 
     override fun apply(
         file: PsiFile,

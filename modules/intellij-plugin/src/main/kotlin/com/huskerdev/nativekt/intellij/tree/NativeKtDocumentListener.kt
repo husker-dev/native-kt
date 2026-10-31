@@ -1,6 +1,7 @@
 package com.huskerdev.nativekt.intellij.tree
 
-import com.huskerdev.nativekt.intellij.NativeKtUpdateService
+import com.huskerdev.nativekt.intellij.asSyncPath
+import com.huskerdev.nativekt.intellij.listeners.NativeKtUpdateService
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
@@ -13,17 +14,21 @@ class NativeKtDocumentListener: DocumentListener {
         val file = FileDocumentManager.getInstance()
             .getFile(event.document) ?: return
 
-        val isNdl = file.extension == "ndl"
-        val isToml = file.name == "nativekt.toml"
-
-        if(!isNdl && !isToml) return
+        if(file.extension != "ndl" && file.extension != "toml") return
 
         val project = ProjectLocator.getInstance()
             .guessProjectForFile(file) ?: return
 
-        if(isNdl)
-            service<NativeKtUpdateService>().scheduleFromNdl(project, file, event.document.text)
-        if(isToml)
-            service<NativeKtUpdateService>().scheduleFromToml(project, file, event.document.text)
+        val filePath = file.asSyncPath()
+        if(!filePath.exists()) return
+        
+        val service = project.service<NativeKtUpdateService>()
+
+        service.modules.forEach { module ->
+            if(
+                filePath.isSameFileAs(module.ndlFile) ||
+                filePath.isSameFileAs(module.configFile)
+            ) service.schedule(module.configFile)
+        }
     }
 }

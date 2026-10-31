@@ -27,6 +27,7 @@ dependencies {
         bundledPlugin("org.toml.lang")
         bundledPlugin("com.intellij.modules.json")
         bundledPlugin("com.intellij.gradle")
+        plugin("com.jetbrains.rust:262.10968.75")
     }
 
     val libraryVersion = projectDir.parentFile.parentFile.resolve("VERSION").readText().trim()

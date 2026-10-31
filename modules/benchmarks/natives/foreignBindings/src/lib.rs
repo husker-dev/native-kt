@@ -1,6 +1,6 @@
 #[allow(unused)]
 pub mod imported {
-    nativekt::include_source!();
+    nativekt::include_source!("foreignBindings");
 }
 
 fn call_foreign() {

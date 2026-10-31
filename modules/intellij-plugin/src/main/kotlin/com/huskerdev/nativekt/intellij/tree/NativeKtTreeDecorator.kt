@@ -1,16 +1,15 @@
 package com.huskerdev.nativekt.intellij.tree
 
-import com.huskerdev.nativekt.NativeKtModule
 import com.huskerdev.nativekt.intellij.NativeKtIcons
-import com.huskerdev.nativekt.intellij.getAllModels
-import com.huskerdev.stdlibx.fs.SyncPath
+import com.huskerdev.nativekt.intellij.asSyncPath
+import com.huskerdev.nativekt.intellij.listeners.NativeKtUpdateService
 import com.intellij.ide.projectView.PresentationData
 import com.intellij.ide.projectView.ProjectViewNode
 import com.intellij.ide.projectView.ProjectViewNodeDecorator
+import com.intellij.openapi.components.service
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDirectory
 import com.intellij.ui.SimpleTextAttributes
-import kotlinx.serialization.json.Json
 
 class NativeKtTreeDecorator: ProjectViewNodeDecorator {
     override fun decorate(
@@ -20,14 +19,11 @@ class NativeKtTreeDecorator: ProjectViewNodeDecorator {
         val file = extractVirtualFile(node) ?: return
         if (!file.isDirectory) return
 
-        val path = SyncPath(file.canonicalPath!!)
+        val project = node.project ?: return
+        val path = file.asSyncPath()
+        val modules = project.service<NativeKtUpdateService>().modules
 
-        if (getAllModels(node.project).any { model ->
-                model.serializedModules.any {
-                    Json.decodeFromString<NativeKtModule>(it)
-                        .buildSystem.projectDir.isSameFileAs(path)
-                }
-        }) {
+        if (modules.any { it.nativeProjectDir.isSameFileAs(path) }) {
             data.setIcon(NativeKtIcons.treeIcon)
             data.clearText()
             data.addText(file.name, SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES)

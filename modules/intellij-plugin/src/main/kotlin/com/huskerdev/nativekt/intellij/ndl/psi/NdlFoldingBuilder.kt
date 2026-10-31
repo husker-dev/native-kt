@@ -58,7 +58,7 @@ class NdlFoldingBuilder: FoldingBuilder {
 
     private fun commentRegion(node: ASTNode): FoldingDescriptor? {
         if (node.text.startsWith("/*") && node.text.contains('\n'))
-            FoldingDescriptor(node, node.textRange, null, "/*...*/")
+            return FoldingDescriptor(node, node.textRange, null, "/*...*/")
         return null
     }
 

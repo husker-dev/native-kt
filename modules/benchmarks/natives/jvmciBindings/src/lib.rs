@@ -1,6 +1,6 @@
 #[allow(unused)]
 pub mod imported {
-    nativekt::include_source!();
+    nativekt::include_source!("jvmciBindings");
 }
 
 fn call_critical_jvmci() {

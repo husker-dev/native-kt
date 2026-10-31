@@ -1,8 +1,9 @@
 use std::env;
 use std::fs;
 use std::io;
+use std::io::Error;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
+use std::process::Command;
 
 #[cfg(all(
     feature = "bundled",
@@ -82,21 +83,29 @@ fn generate_impl(config_file: &Path, bin_dir: Option<&Path>) -> io::Result<PathB
         None => match CLI {
             Some(bytes) => extract_cli(&out_dir, bytes)?,
             None => {
-                return Err(io::Error::other("No bundled Native-Kt CLI for this host"));
+                return Err(Error::other("No bundled Native-Kt CLI for this host"));
             }
         },
     };
 
     // Get NDL path
-    let query = checked_output(
+    let ndl_path = PathBuf::from(checked_output(
         Command::new(&tool)
             .args(["print-ndl-path", "--config"])
             .arg(&config)
             .current_dir(&manifest_dir),
         "NDL path query",
+    )?);
+    println!("cargo:rerun-if-changed={}", ndl_path.display());
+
+    // Get Name
+    let name = checked_output(
+        Command::new(&tool)
+            .args(["print-name", "--config"])
+            .arg(&config)
+            .current_dir(&manifest_dir),
+        "Name query",
     )?;
-    let ndl = PathBuf::from(std::str::from_utf8(&query.stdout).unwrap().trim_end_matches(['\r', '\n']));
-    println!("cargo:rerun-if-changed={}", ndl.display());
 
     // Generate
     fs::create_dir_all(&out_dir)?;
@@ -109,20 +118,18 @@ fn generate_impl(config_file: &Path, bin_dir: Option<&Path>) -> io::Result<PathB
             .current_dir(&manifest_dir),
         "generation",
     )?;
-    let generated = out_dir.join("nativekt.rs");
-    if !generated.is_file() {
-        return Err(io::Error::new(
-            io::ErrorKind::NotFound,
-            format!("Native-Kt CLI succeeded but did not generate {}", generated.display()),
-        ));
-    }
-    Ok(generated)
+
+    // Generate description
+    fs::write(out_dir.join(name.clone() + ".nativekt.txt"), config.display().to_string())
+        .expect("Failed to write description");
+
+    Ok(out_dir.join(name + ".nativekt.rs"))
 }
 
 fn cli_from_dir(manifest_dir: &Path, bin_dir: &Path) -> io::Result<PathBuf> {
     let directory = manifest_dir.join(bin_dir);
     if !directory.is_dir() {
-        return Err(io::Error::other(format!(
+        return Err(Error::other(format!(
             "Native-Kt binary directory does not exist or is not a directory: {}",
             directory.display(),
         )));
@@ -134,7 +141,7 @@ fn cli_from_dir(manifest_dir: &Path, bin_dir: &Path) -> io::Result<PathBuf> {
         ("macos", "aarch64") => "nativekt-cli-macos-arm64",
         ("windows", "x86_64" | "aarch64") => "nativekt-cli-windows-x64.exe",
         _ => {
-            return Err(io::Error::other(format!(
+            return Err(Error::other(format!(
                 "Unsupported Native-Kt CLI host: {}/{} (Linux requires glibc)",
                 env::consts::OS, env::consts::ARCH
             )))
@@ -143,22 +150,22 @@ fn cli_from_dir(manifest_dir: &Path, bin_dir: &Path) -> io::Result<PathBuf> {
     Ok(directory.join(name))
 }
 
-fn checked_output(command: &mut Command, operation: &str) -> io::Result<Output> {
+fn checked_output(command: &mut Command, operation: &str) -> Result<String, Error> {
     let output = command.output().map_err(|error| {
-        io::Error::new(
+        Error::new(
             error.kind(),
             format!("Cannot start Native-Kt {operation}: {error}"),
         )
     })?;
     if !output.status.success() {
-        return Err(io::Error::other(format!(
+        return Err(Error::other(format!(
             "Native-Kt {operation} failed ({}).\nstdout:\n{}\nstderr:\n{}",
             output.status,
             String::from_utf8_lossy(&output.stdout),
             String::from_utf8_lossy(&output.stderr),
         )));
     }
-    Ok(output)
+    Ok(std::str::from_utf8(&output.stdout).unwrap().trim_end_matches(['\r', '\n']).to_string())
 }
 
 fn extract_cli(out_dir: &Path, bytes: &[u8]) -> io::Result<PathBuf> {

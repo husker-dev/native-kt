@@ -16,7 +16,7 @@ class NdlChooseByNameContributor: ChooseByNameContributorEx {
         scope: GlobalSearchScope,
         filter: IdFilter?
     ) {
-        val names = collectAllTypeDeclarations(scope.project!!).map { it.text }
+        val names = collectAllTypeDeclarations(scope.project!!).map { it.name }
         ContainerUtil.process(names, processor)
     }
 

@@ -10,6 +10,7 @@
     <depends>com.intellij.gradle</depends>
     <depends>com.intellij.modules.json</depends>
     <depends>org.toml.lang</depends>
+    <depends optional="true" config-file="nativekt-rust.xml">com.jetbrains.rust</depends>
 
     <!-- K2 mode compatibility -->
     <extensions defaultExtensionNs="org.jetbrains.kotlin">
@@ -23,7 +24,7 @@
 
     <extensions defaultExtensionNs="org.jetbrains.plugins.gradle">
         <projectResolve
-            implementation="com.huskerdev.nativekt.intellij.NativeKtProjectResolver"/>
+            implementation="com.huskerdev.nativekt.intellij.listeners.NativeKtGradleProjectResolver"/>
     </extensions>
 
     <extensions defaultExtensionNs="com.intellij">
@@ -38,6 +39,11 @@
             fieldName="INSTANCE"
             language="NDL"
             extensions="ndl"/>
+
+        <!-- Activity + services -->
+
+        <postStartupActivity
+            implementation="com.huskerdev.nativekt.intellij.NativeKtActivity"/>
 
         <!-- Tree -->
 

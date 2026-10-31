@@ -13,7 +13,7 @@ class NativeKtSchemaProvider : JsonSchemaProviderFactory {
         object : JsonSchemaFileProvider {
             override fun isAvailable(file: VirtualFile): Boolean =
                 file.inputStream.reader().useLines {
-                    it.first().trim().replace("\\s+".toRegex()," ") == FILE_PREFIX
+                    it.firstOrNull()?.trim()?.replace("\\s+".toRegex()," ") == FILE_PREFIX
                 }
 
             override fun getName(): String = "Native-kt"
