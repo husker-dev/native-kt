@@ -6,7 +6,6 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 #[cfg(all(
-    feature = "bundled",
     target_os = "linux",
     target_arch = "x86_64",
     target_env = "gnu"
@@ -14,42 +13,35 @@ use std::process::Command;
 const CLI: Option<&[u8]> = Some(include_bytes!(concat!("../bin/nativekt-cli-linux-x64")));
 
 #[cfg(all(
-    feature = "bundled",
     target_os = "linux",
     target_arch = "aarch64",
     target_env = "gnu"
 ))]
 const CLI: Option<&[u8]> = Some(include_bytes!(concat!("../bin/nativekt-cli-linux-arm64")));
 
-#[cfg(all(feature = "bundled",
+#[cfg(all(
     target_os = "macos",
     target_arch = "aarch64"
 ))]
 const CLI: Option<&[u8]> = Some(include_bytes!(concat!("../bin/nativekt-cli-macos-arm64")));
 
 #[cfg(all(
-    feature = "bundled",
     target_os = "windows",
     any(target_arch = "x86_64", target_arch = "aarch64")
 ))]
-const CLI: Option<&[u8]> = Some(include_bytes!(concat!(
-    "../bin/nativekt-cli-windows-x64.exe"
-)));
+const CLI: Option<&[u8]> = Some(include_bytes!(concat!("../bin/nativekt-cli-windows-x64.exe")));
 
-#[cfg(not(all(
-    feature = "bundled",
-    any(
-        all(
-            target_os = "linux",
-            target_env = "gnu",
-            any(target_arch = "x86_64", target_arch = "aarch64")
-        ),
-        all(target_os = "macos", target_arch = "aarch64"),
-        all(
-            target_os = "windows",
-            any(target_arch = "x86_64", target_arch = "aarch64")
-        ),
-    )
+#[cfg(not(any(
+    all(
+        target_os = "linux",
+        target_env = "gnu",
+        any(target_arch = "x86_64", target_arch = "aarch64")
+    ),
+    all(target_os = "macos", target_arch = "aarch64"),
+    all(
+        target_os = "windows",
+        any(target_arch = "x86_64", target_arch = "aarch64")
+    ),
 )))]
 const CLI: Option<&[u8]> = None;
 
