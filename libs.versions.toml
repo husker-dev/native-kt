@@ -7,7 +7,7 @@ kotlin_coroutines = "1.11.0"
 kotlin_benchmark = "0.5.0"
 
 # == Android ==
-android_plugin = "9.4.1"
+android_plugin = "9.5.0"
 # noinspection GradleDependency
 android_test_runner = "1.2.0" # old versions to allow testing on SDK < 21
 # noinspection GradleDependency
