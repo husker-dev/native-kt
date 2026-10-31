@@ -17,7 +17,7 @@ build = ["dep:nativekt-build"]
 bundled = ["build", "nativekt-build/bundled"]
 
 [dependencies]
-wasm-bindgen = "~0.2.128"
+wasm-bindgen = "0.2"
 nativekt-macros = {
     version = "0.1.0",
     path = "nativekt-macros",
