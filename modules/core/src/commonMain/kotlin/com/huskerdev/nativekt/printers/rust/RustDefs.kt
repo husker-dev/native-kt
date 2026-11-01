@@ -71,7 +71,7 @@ internal fun StringBuilder.printHeaderDef(context: NativeModuleContext) {
     if(context.hasNullableToKotlin) appendLine("""
         
         fn obj_opt<T, R>(ptr: Option<R>, f: fn(R) -> *mut T) -> *mut T {
-            if ptr.is_none() { null_mut() } else { f(ptr.unwrap()) }
+            ptr.map_or(null_mut(), f)
         }
     """.trimIndent())
     if(context.hasEnumNullableArrayToNative) appendLine("""

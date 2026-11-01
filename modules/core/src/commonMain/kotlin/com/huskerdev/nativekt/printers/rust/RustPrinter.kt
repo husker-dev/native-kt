@@ -89,8 +89,7 @@ class RustPrinter(
                         val type = it.type.toNativeRustType(ptrType = "const")
                         val call = "(*of).${it.rustName}"
                         val castedCall = when {
-                            it.type.isNullable -> "(&$call).as_ref().map_or(core::ptr::null(), |it| it as $type)"
-                            it.type.isEnum() -> "$call.clone()"
+                            it.type.isNullable -> "$call.as_ref().map_or(core::ptr::null(), |it| it as $type)"
                             it.type.isReleasable() -> "&$call"
                             else -> call
                         }

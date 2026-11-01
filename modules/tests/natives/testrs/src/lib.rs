@@ -65,13 +65,13 @@ pub fn pass_char_n(
 pub fn pass_boolean(
     arg: bool
 ) -> bool {
-    arg == true
+    arg
 }
 
 pub fn pass_boolean_n(
     arg: Option<bool>
 ) -> bool {
-    arg.is_none() || arg.unwrap() == true
+    arg.is_none() || arg.unwrap()
 }
 
 pub fn pass_byte(
@@ -658,7 +658,7 @@ pub fn callback_return_char(
 pub fn callback_return_boolean(
     arg: Arc<CallbackReturnBoolean>
 ) -> bool {
-    arg.invoke() == true
+    arg.invoke()
 }
 
 pub fn callback_return_byte(
@@ -1002,11 +1002,11 @@ pub fn pass_interface_array_n(
 }
 
 pub fn return_char_array() -> Vec<u16> {
-    vec!('a' as u16, 'b' as u16)
+    vec!['a' as u16, 'b' as u16]
 }
 
 pub fn return_char_array_empty() -> Vec<u16> {
-    vec!()
+    vec![]
 }
 
 pub fn return_char_array_n() -> Option<Vec<u16>> {
@@ -1014,122 +1014,122 @@ pub fn return_char_array_n() -> Option<Vec<u16>> {
 }
 
 pub fn return_char_narray() -> Vec<Option<u16>> {
-    vec!(None, Some('a' as u16))
+    vec![None, Some('a' as u16)]
 }
 
 pub fn return_boolean_array() -> Vec<bool> {
-    vec!(true, false)
+    vec![true, false]
 }
 
 pub fn return_boolean_narray() -> Vec<Option<bool>> {
-    vec!(None, Some(true))
+    vec![None, Some(true)]
 }
 
 pub fn return_byte_array() -> Vec<i8> {
-    vec!(1, 2)
+    vec![1, 2]
 }
 
 pub fn return_byte_narray() -> Vec<Option<i8>> {
-    vec!(None, Some(1))
+    vec![None, Some(1)]
 }
 
 pub fn return_ubyte_array() -> Vec<u8> {
-    vec!(1, 255)
+    vec![1, 255]
 }
 
 pub fn return_ubyte_narray() -> Vec<Option<u8>> {
-    vec!(None, Some(255))
+    vec![None, Some(255)]
 }
 
 pub fn return_short_array() -> Vec<i16> {
-    vec!(1, 2)
+    vec![1, 2]
 }
 
 pub fn return_short_narray() -> Vec<Option<i16>> {
-    vec!(None, Some(1))
+    vec![None, Some(1)]
 }
 
 pub fn return_ushort_array() -> Vec<u16> {
-    vec!(1, 65535)
+    vec![1, 65535]
 }
 
 pub fn return_ushort_narray() -> Vec<Option<u16>> {
-    vec!(None, Some(65535))
+    vec![None, Some(65535)]
 }
 
 pub fn return_int_array() -> Vec<i32> {
-    vec!(1, 2)
+    vec![1, 2]
 }
 
 pub fn return_int_narray() -> Vec<Option<i32>> {
-    vec!(None, Some(1))
+    vec![None, Some(1)]
 }
 
 pub fn return_uint_array() -> Vec<u32> {
-    vec!(1, 4294967295)
+    vec![1, 4294967295]
 }
 
 pub fn return_uint_narray() -> Vec<Option<u32>> {
-    vec!(None, Some(4294967295))
+    vec![None, Some(4294967295)]
 }
 
 pub fn return_long_array() -> Vec<i64> {
-    vec!(1, 2)
+    vec![1, 2]
 }
 
 pub fn return_long_narray() -> Vec<Option<i64>> {
-    vec!(None, Some(1))
+    vec![None, Some(1)]
 }
 
 pub fn return_ulong_array() -> Vec<u64> {
-    vec!(1, 18446744073709551615)
+    vec![1, 18446744073709551615]
 }
 
 pub fn return_ulong_narray() -> Vec<Option<u64>> {
-    vec!(None, Some(18446744073709551615))
+    vec![None, Some(18446744073709551615)]
 }
 
 pub fn return_float_array() -> Vec<f32> {
-    vec!(1.1, 2.2)
+    vec![1.1, 2.2]
 }
 
 pub fn return_float_narray() -> Vec<Option<f32>> {
-    vec!(None, Some(1.1))
+    vec![None, Some(1.1)]
 }
 
 pub fn return_double_array() -> Vec<f64> {
-    vec!(1.1, 2.2)
+    vec![1.1, 2.2]
 }
 
 pub fn return_double_narray() -> Vec<Option<f64>> {
-    vec!(None, Some(1.1))
+    vec![None, Some(1.1)]
 }
 
 pub fn return_string_array() -> Vec<String> {
-    vec!("string1".to_string(), "string2".to_string())
+    vec!["string1".to_string(), "string2".to_string()]
 }
 
 pub fn return_string_array_n() -> Vec<Option<String>> {
-    vec!(None, None)
+    vec![None, None]
 }
 
 pub fn return_enum_array() -> Vec<MyEnum> {
-    vec!(MyEnum::CASE1, MyEnum::CASE2)
+    vec![MyEnum::CASE1, MyEnum::CASE2]
 }
 
 pub fn return_enum_narray() -> Vec<Option<MyEnum>> {
-    vec!(None, Some(MyEnum::CASE2))
+    vec![None, Some(MyEnum::CASE2)]
 }
 
 pub fn return_dictionary_array() -> Vec<MyDictionary> {
-    vec!(
+    vec![
         MyDictionary { a: 1, b: 2, c: 3, d: 4 },
         MyDictionary { a: 5, b: 6, c: 7, d: 8 }
-    )
+    ]
 }
 
 pub fn return_dictionary_array_n() -> Vec<Option<MyDictionary>> {
-    vec!(None, None)
+    vec![None, None]
 }
 
 pub fn ping_char_array(
@@ -1261,13 +1261,13 @@ pub fn ping_interface_array_n(
 pub fn callback_arg_char_array(
     arg: Arc<CallbackPassCharArray>
 ) -> bool {
-    arg.invoke(vec!('a' as u16, 'b' as u16))
+    arg.invoke(vec!['a' as u16, 'b' as u16])
 }
 
 pub fn callback_arg_char_array_empty(
     arg: Arc<CallbackPassCharArrayEmpty>
 ) -> bool {
-    arg.invoke(vec!())
+    arg.invoke(vec![])
 }
 
 pub fn callback_arg_char_array_n(
@@ -1279,121 +1279,121 @@ pub fn callback_arg_char_array_n(
 pub fn callback_arg_boolean_array(
     arg: Arc<CallbackPassBooleanArray>
 ) -> bool {
-    arg.invoke(vec!(true, false))
+    arg.invoke(vec![true, false])
 }
 
 pub fn callback_arg_byte_array(
     arg: Arc<CallbackPassByteArray>
 ) -> bool {
-    arg.invoke(vec!(1, 2))
+    arg.invoke(vec![1, 2])
 }
 
 pub fn callback_arg_ubyte_array(
     arg: Arc<CallbackPassUByteArray>
 ) -> bool {
-    arg.invoke(vec!(1, 255))
+    arg.invoke(vec![1, 255])
 }
 
 pub fn callback_arg_short_array(
     arg: Arc<CallbackPassShortArray>
 ) -> bool {
-    arg.invoke(vec!(1, 2))
+    arg.invoke(vec![1, 2])
 }
 
 pub fn callback_arg_ushort_array(
     arg: Arc<CallbackPassUShortArray>
 ) -> bool {
-    arg.invoke(vec!(1, 65535))
+    arg.invoke(vec![1, 65535])
 }
 
 pub fn callback_arg_int_array(
     arg: Arc<CallbackPassIntArray>
 ) -> bool {
-    arg.invoke(vec!(1, 2))
+    arg.invoke(vec![1, 2])
 }
 
 pub fn callback_arg_uint_array(
     arg: Arc<CallbackPassUIntArray>
 ) -> bool {
-    arg.invoke(vec!(1, 4294967295))
+    arg.invoke(vec![1, 4294967295])
 }
 
 pub fn callback_arg_long_array(
     arg: Arc<CallbackPassLongArray>
 ) -> bool {
-    arg.invoke(vec!(1, 2))
+    arg.invoke(vec![1, 2])
 }
 
 pub fn callback_arg_ulong_array(
     arg: Arc<CallbackPassULongArray>
 ) -> bool {
-    arg.invoke(vec!(1, 18446744073709551615))
+    arg.invoke(vec![1, 18446744073709551615])
 }
 
 pub fn callback_arg_float_array(
     arg: Arc<CallbackPassFloatArray>
 ) -> bool {
-    arg.invoke(vec!(1.1, 2.2))
+    arg.invoke(vec![1.1, 2.2])
 }
 
 pub fn callback_arg_double_array(
     arg: Arc<CallbackPassDoubleArray>
 ) -> bool {
-    arg.invoke(vec!(1.1, 2.2))
+    arg.invoke(vec![1.1, 2.2])
 }
 
 pub fn callback_arg_string_array(
     arg: Arc<CallbackPassStringArray>
 ) -> bool {
-    arg.invoke(vec!(
+    arg.invoke(vec![
         "string1".to_string(),
         "string2".to_string()
-    ))
+    ])
 }
 
 pub fn callback_arg_string_array_n(
     arg: Arc<CallbackPassStringArrayN>
 ) -> bool {
-    arg.invoke(vec!(None, None))
+    arg.invoke(vec![None, None])
 }
 
 pub fn callback_arg_enum_array(
     arg: Arc<CallbackPassEnumArray>
 ) -> bool {
-    arg.invoke(vec!(
+    arg.invoke(vec![
         MyEnum::CASE1,
         MyEnum::CASE2
-    ))
+    ])
 }
 
 pub fn callback_arg_dictionary_array(
     arg: Arc<CallbackPassDictionaryArray>
 ) -> bool {
-    arg.invoke(vec!(
+    arg.invoke(vec![
         MyDictionary { a: 1, b: 2, c: 3, d: 4 },
         MyDictionary { a: 5, b: 6, c: 7, d: 8 }
-    ))
+    ])
 }
 
 pub fn callback_arg_dictionary_array_n(
     arg: Arc<CallbackPassDictionaryArrayN>
 ) -> bool {
-    arg.invoke(vec!(None, None))
+    arg.invoke(vec![None, None])
 }
 
 pub fn callback_arg_interface_array(
     arg: Arc<CallbackPassInterfaceArray>
 ) -> bool {
-    arg.invoke(vec!(
+    arg.invoke(vec![
         Arc::new(MyInterface::new()),
         Arc::new(MyInterface::new())
-    ))
+    ])
 }
 
 pub fn callback_arg_interface_array_n(
     arg: Arc<CallbackPassInterfaceArrayN>
 ) -> bool {
-    arg.invoke(vec!(None, None))
+    arg.invoke(vec![None, None])
 }
 
 pub fn callback_return_char_array(
@@ -1422,8 +1422,7 @@ pub fn callback_return_boolean_array(
 ) -> bool {
     let result = arg.invoke();
     let arr = result.as_slice();
-    arr[0] == true &&
-        arr[1] == false
+    arr[0] && !arr[1]
 }
 
 pub fn callback_return_byte_array(
@@ -1587,7 +1586,7 @@ pub fn pass_big_dictionary(
     arg: TypeDictionary
 ) -> bool {
     arg.a_1 == 'a' as u16 &&
-        arg.a2 == true &&
+        arg.a2 &&
         arg.a3 == 123 &&
         arg.a4 == 123 &&
         arg.a5 == 123 &&
@@ -1657,31 +1656,31 @@ pub fn return_big_dictionary(
         a17: inter.clone(),
         a18: None,
         a19: callback.clone(),
-        a20: vec!('a' as u16, 'b' as u16),
-        a21: vec!(true, false),
-        a22: vec!(1, 2),
-        a23: vec!(1, 2),
-        a24: vec!(1, 2),
-        a25: vec!(1, 2),
-        a26: vec!(1, 2),
-        a27: vec!(1, 2),
-        a28: vec!(1, 2),
-        a29: vec!(1, 2),
-        a30: vec!(1.2, 3.4),
-        a31: vec!(1.2, 3.4),
-        a32: vec!(
+        a20: vec!['a' as u16, 'b' as u16],
+        a21: vec![true, false],
+        a22: vec![1, 2],
+        a23: vec![1, 2],
+        a24: vec![1, 2],
+        a25: vec![1, 2],
+        a26: vec![1, 2],
+        a27: vec![1, 2],
+        a28: vec![1, 2],
+        a29: vec![1, 2],
+        a30: vec![1.2, 3.4],
+        a31: vec![1.2, 3.4],
+        a32: vec![
             "string1".to_string(),
             "string2".to_string()
-        ),
-        a33: vec!(MyEnum::CASE1, MyEnum::CASE2),
-        a34: vec!(
+        ],
+        a33: vec![MyEnum::CASE1, MyEnum::CASE2],
+        a34: vec![
             MyDictionary { a: 1, b: 2, c: 3, d: 4 },
             MyDictionary { a: 5, b: 6, c: 7, d: 8 }
-        ),
-        a35: vec!(
+        ],
+        a35: vec![
             inter.clone(),
             inter.clone()
-        )
+        ]
     }
 }
 
@@ -1723,7 +1722,7 @@ pub fn critical_primitives(
 ) -> bool {
     println!();
     a1 == 'a' as u16 &&
-        a2 == true &&
+        a2 &&
         a3 == 1 &&
         a4 == 255 &&
         a5 == 3 &&
