@@ -31,13 +31,8 @@ function(nativekt_generate config_file)
         message(FATAL_ERROR "Unsupported Native-Kt host: ${CMAKE_HOST_SYSTEM_NAME}/${arch}")
     endif()
 
-    # Find CLI executable
-    file(GLOB tools LIST_DIRECTORIES false "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/nativekt-cli-*-${platform}${extension}")
-    list(LENGTH tools tool_count)
-    if(NOT tool_count EQUAL 1)
-        message(FATAL_ERROR "Expected one Native-Kt executable for ${platform}, found ${tool_count}")
-    endif()
-    list(GET tools 0 tool)
+    # CLI executable
+    set(tool "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/nativekt-cli-${platform}${extension}")
 
     # Get absolute configuration path
     get_filename_component(config "${config_file}" ABSOLUTE BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")

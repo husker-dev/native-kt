@@ -81,7 +81,6 @@ tasks.register("proguardJar", proguard.taskClass) {
 val prepareCMakeBundle = tasks.register<Copy>("prepareCMakeBundle") {
     description = "Prepares CMake CLI bundle"
 
-    val bundleVersion = project.version.toString()
     into(layout.buildDirectory.dir("nativekt-cmake"))
     from(file("CMakeLists.txt"))
 
@@ -98,7 +97,7 @@ val prepareCMakeBundle = tasks.register<Copy>("prepareCMakeBundle") {
 
         dependsOn(executable.linkTaskProvider)
         from(executable.outputFile) {
-            rename { "nativekt-cli-$bundleVersion-$platform$extension" }
+            rename { "nativekt-cli-$platform$extension" }
         }
     }
 }
@@ -107,12 +106,11 @@ tasks.register<Tar>("packCMake") {
     group = "cli"
     description = "Packs CMake CLI bundle as a tar.gz archive"
 
-    val bundleVersion = project.version.toString()
-    archiveFileName.set("nativekt-cmake-$bundleVersion.tar.gz")
+    archiveFileName.set("nativekt-cmake.tar.gz")
     destinationDirectory.set(layout.buildDirectory.dir("distributions"))
     compression = Compression.GZIP
 
-    into("nativekt-cmake-$bundleVersion")
+    into("nativekt-cmake")
     from(prepareCMakeBundle) {
         include("nativekt-cli-*")
         filePermissions {

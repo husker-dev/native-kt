@@ -6,7 +6,7 @@ api_file = "../api.ndl"
 
 [cargo]
 project_dir = "."
-lib_name = "testrs"
+lib_name = "testrs_lib"
 profile = "release"
 
 [kotlin]

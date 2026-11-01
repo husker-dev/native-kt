@@ -213,7 +213,7 @@ fun compileAndroid(
                     )
                 )
                 Pair(
-                    rustOutDir.resolve("lib${context.moduleName}.a"),
+                    rustOutDir.resolve("lib${buildSystem.libraryName}.a"),
                     rustLinkerFlags
                 )
             }

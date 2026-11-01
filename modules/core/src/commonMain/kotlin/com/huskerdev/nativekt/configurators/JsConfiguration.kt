@@ -102,14 +102,15 @@ fun compileJs(
                 buildDir = layout.nativeBuildDir
             )
 
-            val moduleName = context.moduleName
-            val jsFile = pkgDir.resolve("$moduleName.js")
-            val wasmFile = pkgDir.resolve("${moduleName}_bg.wasm")
+            val libName = buildSystem.libraryName
+
+            val jsFile = pkgDir.resolve("$libName.js")
+            val wasmFile = pkgDir.resolve("${libName}_bg.wasm")
 
             // Change `name_bg.wasm` references to `libname.wasm`
             jsFile.writeString(jsFile.readString()
-                .replace(wasmFile.name, "lib$moduleName.wasm")
-                .replace("/* @ts-self-types=\"./$moduleName.d.ts\" */", "")
+                .replace(wasmFile.name, "lib${context.moduleName}.wasm")
+                .replace("/* @ts-self-types=\"./$libName.d.ts\" */", "")
             )
 
             packResult(jsFile, wasmFile)

@@ -5,6 +5,7 @@ edition = "2021"
 
 [lib]
 crate-type = ["staticlib", "cdylib"]
+name = "testrs_lib"
 
 [dependencies]
 nativekt = { path = "../../../cli/cargo", features = ["macro"] }

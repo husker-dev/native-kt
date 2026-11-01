@@ -156,12 +156,14 @@ internal fun wasmBindgenBuild(
     buildType: BuildSystem.Cargo.BuildType,
     buildDir: SyncPath
 ): SyncPath {
+    val libName = (context.buildSystem as BuildSystem.Cargo).libraryName
+
     val buildDirClean = buildDir.invariantSeparatorsPath
     val pkgDir = buildDir.resolve("pkg")
 
     val target = "wasm32-unknown-unknown"
-    val wasmFilePath = cargoTargetDir(buildDir, buildType, target).resolve("${context.moduleName}.wasm").invariantSeparatorsPath
-    val pkgWasmFilePath = pkgDir.resolve("${context.moduleName}_bg.wasm").invariantSeparatorsPath
+    val wasmFilePath = cargoTargetDir(buildDir, buildType, target).resolve("$libName.wasm").invariantSeparatorsPath
+    val pkgWasmFilePath = pkgDir.resolve("${libName}_bg.wasm").invariantSeparatorsPath
 
     ensureTargetInstalled(context, target)
     ensureWasmBindgenInstalled(context)

@@ -5,7 +5,7 @@ project("test")
 include("${CMAKE_CURRENT_LIST_DIR}/../LocalNativeKt.cmake")
 
 # Create lib
-add_library(${PROJECT_NAME} OBJECT
+add_library(test_lib OBJECT
         src/interfaces.c
         src/jvmci.c
         src/dictionaries.c
@@ -24,4 +24,4 @@ add_library(${PROJECT_NAME} OBJECT
 
 # Generate and add native-kt files
 nativekt_generate("nativekt.toml")
-target_link_libraries(${PROJECT_NAME} PRIVATE NativeKt::bindings)
+target_link_libraries(test_lib PRIVATE NativeKt::bindings)

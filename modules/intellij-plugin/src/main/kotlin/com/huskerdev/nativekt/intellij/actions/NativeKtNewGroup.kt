@@ -262,7 +262,7 @@ class NewCAction: ActionBase() {
             
             # Load dependencies
             include(FetchContent)
-            FetchContent_Declare(nativekt URL "https://github.com/husker-dev/native-kt/releases/download/$${NativeKtInfo.VERSION}/nativekt-cmake-$$${NativeKtInfo.VERSION}.tar.gz")
+            FetchContent_Declare(nativekt URL "https://github.com/husker-dev/native-kt/releases/download/$${NativeKtInfo.VERSION}/nativekt-cmake.tar.gz")
             FetchContent_MakeAvailable(nativekt)
             
             # Create library
@@ -308,7 +308,7 @@ class NewCppAction: ActionBase() {
             
             # Load dependencies
             include(FetchContent)
-            FetchContent_Declare(nativekt URL "https://github.com/husker-dev/native-kt/releases/download/$${NativeKtInfo.VERSION}/nativekt-cmake-$$${NativeKtInfo.VERSION}.tar.gz")
+            FetchContent_Declare(nativekt URL "https://github.com/husker-dev/native-kt/releases/download/$${NativeKtInfo.VERSION}/nativekt-cmake.tar.gz")
             FetchContent_MakeAvailable(nativekt)
             
             # Create library

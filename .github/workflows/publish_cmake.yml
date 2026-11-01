@@ -27,14 +27,8 @@ jobs:
       - name: Pack CMake package
         run: ./gradlew :modules:cli:packCMake
 
-      - name: Read Version
-        id: get_version
-        run: |
-          VERSION_VALUE=$(cat VERSION)
-          echo "version=$VERSION_VALUE" >> $GITHUB_OUTPUT
-
       - name: Publish CMake package
         uses: softprops/action-gh-release@v3
         if: github.ref_type == 'tag'
         with:
-          files: './modules/cli/build/distributions/nativekt-cmake-${{ steps.get_version.outputs.version }}.tar.gz'
+          files: './modules/cli/build/distributions/nativekt-cmake.tar.gz'

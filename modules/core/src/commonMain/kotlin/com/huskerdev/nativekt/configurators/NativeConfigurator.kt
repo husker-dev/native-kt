@@ -70,7 +70,7 @@ fun prepareNative(
                 val symbolDefines = context.allOperations
                     .joinToString(" ") { "${it.cname}=${it.cnameMangled(context)}__impl" }
                 listOf(
-                    "target_compile_definitions($moduleName PRIVATE $symbolDefines)",
+                    "target_compile_definitions(${buildSystem.libraryName} PRIVATE $symbolDefines)",
                     "target_compile_definitions(shared PRIVATE $symbolDefines)",
                     "target_compile_definitions(static PRIVATE $symbolDefines)"
                 )
@@ -146,7 +146,7 @@ fun prepareNative(
 
                 linkerOpts += listOf(
                     *rustFlags.toTypedArray(),
-                    rustBuildDir.resolve("lib$moduleName.a").invariantSeparatorsPath
+                    rustBuildDir.resolve("lib${buildSystem.libraryName}.a").invariantSeparatorsPath
                 )
             }
         }
