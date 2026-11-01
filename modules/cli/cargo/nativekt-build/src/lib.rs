@@ -5,31 +5,22 @@ use std::io::Error;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-#[cfg(all(
-    target_os = "linux",
-    target_arch = "x86_64",
-    target_env = "gnu"
-))]
+#[cfg(all(target_os = "linux", target_arch = "x86_64", target_env = "gnu"))]
 const CLI: Option<&[u8]> = Some(include_bytes!(concat!("../bin/nativekt-cli-linux-x64")));
 
-#[cfg(all(
-    target_os = "linux",
-    target_arch = "aarch64",
-    target_env = "gnu"
-))]
+#[cfg(all(target_os = "linux", target_arch = "aarch64", target_env = "gnu"))]
 const CLI: Option<&[u8]> = Some(include_bytes!(concat!("../bin/nativekt-cli-linux-arm64")));
 
-#[cfg(all(
-    target_os = "macos",
-    target_arch = "aarch64"
-))]
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 const CLI: Option<&[u8]> = Some(include_bytes!(concat!("../bin/nativekt-cli-macos-arm64")));
 
 #[cfg(all(
     target_os = "windows",
     any(target_arch = "x86_64", target_arch = "aarch64")
 ))]
-const CLI: Option<&[u8]> = Some(include_bytes!(concat!("../bin/nativekt-cli-windows-x64.exe")));
+const CLI: Option<&[u8]> = Some(include_bytes!(concat!(
+    "../bin/nativekt-cli-windows-x64.exe"
+)));
 
 #[cfg(not(any(
     all(
@@ -112,8 +103,11 @@ fn generate_impl(config_file: &Path, bin_dir: Option<&Path>) -> io::Result<PathB
     )?;
 
     // Generate description
-    fs::write(out_dir.join(name.clone() + ".nativekt.txt"), config.display().to_string())
-        .expect("Failed to write description");
+    fs::write(
+        out_dir.join(name.clone() + ".nativekt.txt"),
+        config.display().to_string(),
+    )
+    .expect("Failed to write description");
 
     Ok(out_dir.join(name + ".nativekt.rs"))
 }
@@ -135,9 +129,10 @@ fn cli_from_dir(manifest_dir: &Path, bin_dir: &Path) -> io::Result<PathBuf> {
         _ => {
             return Err(Error::other(format!(
                 "Unsupported Native-Kt CLI host: {}/{} (Linux requires glibc)",
-                env::consts::OS, env::consts::ARCH
-            )))
-        },
+                env::consts::OS,
+                env::consts::ARCH
+            )));
+        }
     };
     Ok(directory.join(name))
 }
@@ -157,7 +152,10 @@ fn checked_output(command: &mut Command, operation: &str) -> Result<String, Erro
             String::from_utf8_lossy(&output.stderr),
         )));
     }
-    Ok(std::str::from_utf8(&output.stdout).unwrap().trim_end_matches(['\r', '\n']).to_string())
+    Ok(std::str::from_utf8(&output.stdout)
+        .unwrap()
+        .trim_end_matches(['\r', '\n'])
+        .to_string())
 }
 
 fn extract_cli(out_dir: &Path, bytes: &[u8]) -> io::Result<PathBuf> {

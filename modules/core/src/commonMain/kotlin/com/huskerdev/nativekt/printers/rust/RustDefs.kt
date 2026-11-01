@@ -9,12 +9,16 @@ import com.huskerdev.nativekt.utils.printLabel
 internal fun StringBuilder.printHeaderDef(context: NativeModuleContext) {
     appendLine($$"""
         
+        #[allow(unused)]
         use std::mem::{ManuallyDrop, MaybeUninit};
+        #[allow(unused)]
         use std::sync::Arc;
         
         #[cfg(target_arch = "wasm32")]
+        #[allow(unused)]
         use ::nativekt::wasm_bindgen;
         #[cfg(target_arch = "wasm32")]
+        #[allow(unused)]
         use ::nativekt::wasm_bindgen::prelude::*;
         
         #[cfg(not(target_arch = "wasm32"))]
@@ -22,6 +26,7 @@ internal fun StringBuilder.printHeaderDef(context: NativeModuleContext) {
         unsafe extern "C" fn $${context.mangle("init")}() {}
         
         // Macro: Function export
+        #[allow(unused)]
         macro_rules! export_fn {
             (@parse
                 fn $native:ident($($arg:ident : $ty:ty),* $(,)?) -> $ret:ty as $js:ident $body:block

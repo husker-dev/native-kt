@@ -15,5 +15,6 @@ pub fn include_source(udl_stem: TokenStream) -> TokenStream {
     let udl_stem = syn::parse_macro_input!(udl_stem as LitStr);
     quote! {
         include!(concat!(env!("OUT_DIR"), "/", #udl_stem, ".nativekt.rs"));
-    }.into()
+    }
+    .into()
 }

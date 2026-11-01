@@ -2,6 +2,5 @@
 mod local_nativekt;
 
 fn main() {
-    local_nativekt::generate("nativekt.toml")
-        .expect("Native-Kt generation failed");
+    local_nativekt::generate("nativekt.toml").expect("Native-Kt generation failed");
 }
