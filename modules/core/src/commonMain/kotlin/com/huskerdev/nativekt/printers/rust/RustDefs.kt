@@ -9,12 +9,8 @@ import com.huskerdev.nativekt.utils.printLabel
 internal fun StringBuilder.printHeaderDef(context: NativeModuleContext) {
     appendLine($$"""
         
-        use std::ffi::c_void;
-        use std::ptr::null_mut;
-        use std::hash::{Hasher, Hash};
         use std::mem::{ManuallyDrop, MaybeUninit};
         use std::sync::Arc;
-        use std::alloc::{alloc, dealloc, Layout};
         
         #[cfg(target_arch = "wasm32")]
         use ::nativekt::wasm_bindgen;
@@ -71,7 +67,7 @@ internal fun StringBuilder.printHeaderDef(context: NativeModuleContext) {
     if(context.hasNullableToKotlin) appendLine("""
         
         fn obj_opt<T, R>(ptr: Option<R>, f: fn(R) -> *mut T) -> *mut T {
-            ptr.map_or(null_mut(), f)
+            ptr.map_or(std::ptr::null_mut(), f)
         }
     """.trimIndent())
     if(context.hasEnumNullableArrayToNative) appendLine("""
@@ -94,11 +90,11 @@ internal fun StringBuilder.printHeaderDef(context: NativeModuleContext) {
         
         export_fn! {
             fn ${context.mangle("alloc")}(size: usize) -> *mut u8 as ${context.jsMangle["alloc"]} {
-                unsafe { alloc(Layout::from_size_align_unchecked(size, 1)) }
+                unsafe { std::alloc::alloc(std::alloc::Layout::from_size_align_unchecked(size, 1)) }
             }
             fn ${context.mangle("dealloc")}(ptr: *mut u8, size: usize) -> () as ${context.jsMangle["dealloc"]} {
                 if ptr.is_null() { return }
-                unsafe { dealloc(ptr, Layout::from_size_align_unchecked(size, 1)) }
+                unsafe { std::alloc::dealloc(ptr, std::alloc::Layout::from_size_align_unchecked(size, 1)) }
             }
         }
     """.trimIndent())
@@ -276,44 +272,44 @@ internal fun StringBuilder.printArraysDef(context: NativeModuleContext) {
                 $funcGet:ident, $funcGetJs:ident, 
                 $funcFree:ident, $funcFreeJs:ident) => {
                     export_fn! {
-                        fn $funcNew(capacity: i32, nullable_elements: bool) -> *mut c_void as $funcNewJs {
+                        fn $funcNew(capacity: i32, nullable_elements: bool) -> *mut () as $funcNewJs {
                             match nullable_elements {
-                                true => into_raw(Vec::<Option<$T>>::with_capacity(capacity as usize)) as *mut c_void,
-                                false => into_raw(Vec::<$T>::with_capacity(capacity as usize)) as *mut c_void,
+                                true => into_raw(Vec::<Option<$T>>::with_capacity(capacity as usize)) as *mut (),
+                                false => into_raw(Vec::<$T>::with_capacity(capacity as usize)) as *mut (),
                             }
                         }
-                        fn $funcLength(arr: *mut c_void, nullable_elements: bool) -> i32 as $funcLengthJs {
+                        fn $funcLength(arr: *mut (), nullable_elements: bool) -> i32 as $funcLengthJs {
                             unsafe { match nullable_elements {
                                 true => (&mut *(arr as *mut Vec<Option<$T>>)).len() as i32,
                                 false => (&mut *(arr as *mut Vec<$T>)).len() as i32
                             } }
                         }
-                        fn $funcPush(arr: *mut c_void, element: *mut c_void, nullable_elements: bool) -> () as $funcPushJs {
+                        fn $funcPush(arr: *mut (), element: *mut $T, nullable_elements: bool) -> () as $funcPushJs {
                             unsafe { if(nullable_elements) {
                                 let arr = &mut *(arr as *mut Vec<Option<$T>>);
                                 arr.push(match element.is_null() {
                                     true => None,
-                                    false => Some(*Box::from_raw(element as *mut $T)),
+                                    false => Some(*Box::from_raw(element)),
                                 });
                             } else {
                                 let arr = &mut *(arr as *mut Vec<$T>);
-                                arr.push(*Box::from_raw(element as *mut $T));
+                                arr.push(*Box::from_raw(element));
                             } }
                         }
-                        fn $funcGet(arr: *mut c_void, index: i32, nullable_elements: bool) -> *mut c_void as $funcGetJs {
+                        fn $funcGet(arr: *mut (), index: i32, nullable_elements: bool) -> *mut $T as $funcGetJs {
                             unsafe { if(nullable_elements) {
                                 let arr = &mut *(arr as *mut Vec<Option<$T>>);
                                 let element = arr.get_unchecked_mut(index as usize);
                                 match element {
-                                    Some(obj) => obj as *mut $T as *mut c_void,
-                                    None => null_mut(),
+                                    Some(obj) => obj as *mut $T,
+                                    None => std::ptr::null_mut(),
                                 }
                             } else {
                                 let arr = &mut *(arr as *mut Vec<$T>);
-                                arr.get_unchecked_mut(index as usize) as *mut $T as *mut c_void
+                                arr.get_unchecked_mut(index as usize) as *mut $T
                             } }
                         }
-                        fn $funcFree(arr: *mut c_void, nullable_elements: bool) -> () as $funcFreeJs {
+                        fn $funcFree(arr: *mut (), nullable_elements: bool) -> () as $funcFreeJs {
                             if(nullable_elements) {
                                 drop(from_raw(arr as *mut Vec<Option<$T>>));
                             } else {

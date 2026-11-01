@@ -126,8 +126,8 @@ class RustPrinter(
             		impl Drop for $name {
                         fn drop(&mut self) { external_fn_call!((); self.free; self.id) }
                     }
-                    impl Hash for $name {
-                        fn hash<H: Hasher>(&self, state: &mut H) { self.hash_code.hash(state); }
+                    impl std::hash::Hash for $name {
+                        fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.hash_code.hash(state); }
                     }
                     impl PartialEq for $name {
                         fn eq(&self, other: &Self) -> bool { external_fn_call!(bool; self.equals; self.id, other.id) }
