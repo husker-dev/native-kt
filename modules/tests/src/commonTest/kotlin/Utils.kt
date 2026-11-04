@@ -1,4 +1,5 @@
 import com.huskerdev.stdlibx.EnvironmentKind
+import com.huskerdev.stdlibx.OS
 import kotlinx.coroutines.test.runTest
 import natives.test.c.loadLibTestC
 import natives.test.cpp.loadLibTestCpp
@@ -21,8 +22,10 @@ fun withRustLib(block: suspend () -> Unit) = runTest {
 }
 
 fun withSwiftLib(block: suspend () -> Unit) = runTest {
-    if(EnvironmentKind.current == EnvironmentKind.WEB || EnvironmentKind.current == EnvironmentKind.NODEJS)
-        return@runTest
+    if(EnvironmentKind.current == EnvironmentKind.WEB ||
+        EnvironmentKind.current == EnvironmentKind.NODEJS ||
+        OS.isWindows
+    ) return@runTest
     loadLibTestSwift()
     block()
 }
