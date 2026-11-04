@@ -2,9 +2,10 @@ package com.huskerdev.nativekt.configurators
 
 import com.huskerdev.nativekt.*
 import com.huskerdev.nativekt.printers.c.*
-import com.huskerdev.nativekt.printers.cpp.*
 import com.huskerdev.nativekt.printers.kotlin.*
 import com.huskerdev.nativekt.utils.*
+import com.huskerdev.nativekt.utils.getCargoEnv
+import com.huskerdev.stdlibx.OS
 
 
 fun prepareNative(
@@ -29,40 +30,9 @@ fun prepareNative(
         isImpl = true,
     )
 
-    // Generate api sources if needed
-    fun createCApi() {
-        when (context.buildSystem.language) {
-            Language.C -> {
-                CApiHeaderPrinter(
-                    context = context,
-                    target = layout.nativeSourcesDir.resolve("api.h"),
-                    isImpl = true
-                )
-                CApiImplPrinter(
-                    context = context,
-                    target = layout.nativeSourcesDir.resolve("api.c"),
-                )
-            }
-            Language.CPP -> {
-                CppApiHeaderPrinter(
-                    context = context,
-                    target = layout.nativeSourcesDir.resolve("api.hpp"),
-                    tppTarget = layout.nativeSourcesDir.resolve("api.tpp"),
-                )
-                CppApiImplPrinter(
-                    context = context,
-                    target = layout.nativeSourcesDir.resolve("api.cpp"),
-                )
-            }
-            else -> Unit
-        }
-    }
-
     when(val buildSystem = context.buildSystem) {
         is BuildSystem.CMake -> {
 
-            // Create C/C++ Api
-            createCApi()
             val sourceExtension = buildSystem.language.sourceExtension ?: "c"
 
             // Mangle C non-static functions
@@ -128,25 +98,42 @@ fun prepareNative(
                 )
             }
         }
-        is BuildSystem.Cargo -> {
+        is BuildSystem.Cargo -> if(shouldInit) {
+            val rustFlags = cargoLinkerFlags(
+                context,
+                project = buildSystem.projectDir,
+                buildType = buildSystem.buildType,
+                buildDir = layout.nativeBuildDir,
+                target = getCargoTarget(targetType),
+                env = getCargoEnv(context, targetType),
+                isKN = true
+            )
+            val rustBuildDir = cargoTargetDir(
+                buildDir = layout.nativeBuildDir,
+                buildType = buildSystem.buildType,
+                target = getCargoTarget(targetType)
+            )
+
+            linkerOpts += listOf(
+                *rustFlags.toTypedArray(),
+                rustBuildDir.resolve("lib${buildSystem.libraryName}.a").invariantSeparatorsPath
+            )
+        }
+        is BuildSystem.SPM -> {
+            if(!OS.isMacOS) throw UnsupportedOperationException("Swift is only supported on macOS (for now)")
             if(shouldInit) {
-                val rustFlags = cargoLinkerFlags(
-                    context,
-                    project = buildSystem.projectDir,
+                val spmLinkerFlags = spmLinkerFlags(
+                    context = context,
+                    projectDir = buildSystem.projectDir,
                     buildType = buildSystem.buildType,
                     buildDir = layout.nativeBuildDir,
-                    target = getCargoTarget(targetType),
-                    isKN = true
+                    targetType = targetType
                 )
-                val rustBuildDir = cargoTargetDir(
-                    buildDir = layout.nativeBuildDir,
-                    buildType = buildSystem.buildType,
-                    target = getCargoTarget(targetType)
-                )
+                val spmBuildDir = layout.nativeBuildDir.resolve(buildSystem.buildType.argName)
 
                 linkerOpts += listOf(
-                    *rustFlags.toTypedArray(),
-                    rustBuildDir.resolve("lib${buildSystem.libraryName}.a").invariantSeparatorsPath
+                    *spmLinkerFlags.toTypedArray(),
+                    spmBuildDir.resolve("lib${buildSystem.staticLibraryName}.a").invariantSeparatorsPath
                 )
             }
         }
@@ -192,7 +179,16 @@ fun compileNative(
                 project = buildSystem.projectDir,
                 buildType = buildSystem.buildType,
                 buildDir = layout.nativeBuildDir,
-                target = getCargoTarget(targetType)
+                target = getCargoTarget(targetType),
+                env = getCargoEnv(context, targetType)
+            )
+        }
+        is BuildSystem.SPM -> {
+            spmBuild(context,
+                projectDir = buildSystem.projectDir,
+                buildType = buildSystem.buildType,
+                buildDir = layout.nativeBuildDir,
+                targetType = targetType
             )
         }
     }

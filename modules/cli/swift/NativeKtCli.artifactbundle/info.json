@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "1.0",
+  "artifacts": {
+    "nativekt-cli": {
+      "type": "executable",
+      "version": "1.0",
+      "variants": [
+        {
+          "path": "macos-arm64/nativekt-cli",
+          "supportedTriples": ["arm64-apple-macosx"]
+        },
+        {
+          "path": "linux-arm64/nativekt-cli",
+          "supportedTriples": ["aarch64-unknown-linux-gnu"]
+        },
+        {
+          "path": "linux-x64/nativekt-cli",
+          "supportedTriples": ["x86_64-unknown-linux-gnu"]
+        },
+        {
+          "path": "windows-x64/nativekt-cli.exe",
+          "supportedTriples": ["x86_64-unknown-windows-msvc", "x86_64-unknown-windows-gnu"]
+        }
+      ]
+    }
+  }
+}

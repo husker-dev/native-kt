@@ -29,7 +29,7 @@ class CApiImplPrinter(
             printFunctions()
 
             append("\n#undef $EXPORT_MACRO")
-        }.replace("\n", systemLineSeparator))
+        })
     }
 
     private fun StringBuilder.printHeader() {
@@ -131,7 +131,7 @@ class CApiImplPrinter(
                     
                 // String
                 
-                KString* _kstring_new(const char* data, _KStringNewArgs args) {
+                KString* _k_string_new(const char* data, _KStringNewArgs args) {
                     const int32_t size = args.size != -1 ? args.size : (data == NULL ? 0 : strlen(data));
                     const char* actual_data = size == 0 ? NULL : data;
                     if (args.make_copy && size > 0) {
@@ -139,15 +139,15 @@ class CApiImplPrinter(
                         memcpy((void*) actual_data, data, size);
                     }
                     KString* result = (KString*) malloc(sizeof(KString));
-                    *result = (KString) { kstring_clone, kstring_free, actual_data, size };
+                    *result = (KString) { k_string_clone, k_string_free, actual_data, size };
                     return result;
                 }
                 
-                KString* kstring_clone(const KString* of) {
-                    return kstring_new((const char*) of->data, .size = of->size, .make_copy = true);
+                KString* k_string_clone(const KString* of) {
+                    return k_string_new((const char*) of->data, .size = of->size, .make_copy = true);
                 }
                 
-                int32_t kstring_length(const KString* _Nonnull self) {
+                int32_t k_string_length(const KString* _Nonnull self) {
                     if(self->size == 0) 
                         return 0;
                     const char* s = self->data;
@@ -160,7 +160,7 @@ class CApiImplPrinter(
                     return count;
                 }
                 
-                void kstring_free(KString* self) {
+                void k_string_free(KString* self) {
                     if(self == NULL) return;
                     if(self->data != NULL)
                         free((void*) self->data);
@@ -171,7 +171,7 @@ class CApiImplPrinter(
             if(context.hasStringToNative) append("""
                 
                 KString* ${context.exportedC("string_new")}(const char* data, const int32_t size, bool make_copy) {
-                    return kstring_new(data, .size = size, .make_copy = make_copy);
+                    return k_string_new(data, .size = size, .make_copy = make_copy);
                 }
             """.trimIndent())
             if(context.hasStringToKotlin) append("""
@@ -186,7 +186,7 @@ class CApiImplPrinter(
             append("""
                 
                 void ${context.exportedC("string_free")}(KString* self) {
-                    kstring_free(self);
+                    k_string_free(self);
                 }
             """.trimIndent())
             append("\n")
@@ -238,7 +238,7 @@ class CApiImplPrinter(
                 val name = "K${desc.first}Array"
                 val type = desc.second
                 val varargType = desc.third
-                val funcName = name.snakeCase()
+                val funcName = "k_${desc.first.lowercase()}_array"
                 val lowerName = name.lowercase().drop(1)
 
                 append("""
@@ -319,31 +319,31 @@ class CApiImplPrinter(
                     void (* _Nullable free)(ArrayElement* _Nullable);
                 };
                 
-                KArray* karray_with_capacity(const int32_t capacity) {
+                KArray* k_array_with_capacity(const int32_t capacity) {
                     KArray* result = (KArray*) malloc(sizeof(KArray));
                     void* elements = capacity == 0 ? NULL : malloc(capacity * sizeof(void*));
-                    *result = (KArray) { karray_clone, karray_free, elements, 0, capacity };
+                    *result = (KArray) { k_array_clone, k_array_free, elements, 0, capacity };
                     return result;
                 }
                 
-                KArray* karray_new(const void** elements, const int32_t length) {
+                KArray* k_array_new(const void** elements, const int32_t length) {
                     KArray* result = (KArray*) malloc(sizeof(KArray));
                     void* actual_elements = length == 0 ? NULL : elements;
-                    *result = (KArray) { karray_clone, karray_free, actual_elements, length, length };
+                    *result = (KArray) { k_array_clone, k_array_free, actual_elements, length, length };
                     return result;
                 }
                 
-                KArray* karray_of_n(const int n, ...) {
+                KArray* k_array_of_n(const int n, ...) {
                     va_list args;
                     va_start(args, n);
                     void** elements = n == 0 ? NULL : (void**) malloc(n * sizeof(void*));
                     for (int i = 0; i < n; i++)
                         elements[i] = (void*) va_arg(args, void*);
                     va_end(args);
-                    return karray_new((const void**) elements, (int32_t) n);
+                    return k_array_new((const void**) elements, (int32_t) n);
                 }
                 
-                void karray_push(KArray* _Nullable self, const void* element) {
+                void k_array_push(KArray* _Nullable self, const void* element) {
                     if(self == NULL) return;
                     if (self->length >= self->capacity) {
                         self->capacity = self->capacity == 0 ? 4 : self->capacity * 2;
@@ -352,7 +352,7 @@ class CApiImplPrinter(
                     self->elements[self->length++] = element;
                 }
                 
-                KArray* karray_clone(const KArray* _Nullable self) {
+                KArray* k_array_clone(const KArray* _Nullable self) {
                     if(self == NULL) return NULL;
                     const int32_t size = self->length * sizeof(void*);
                     void** elements = size == 0 ? NULL : malloc(size);
@@ -360,10 +360,10 @@ class CApiImplPrinter(
                         ArrayElement* element = (ArrayElement*) self->elements[i];
                         elements[i] = element == NULL ? NULL : element->clone(element);
                     }
-                    return karray_new((const void**) elements, self->length);
+                    return k_array_new((const void**) elements, self->length);
                 }
                 
-                void karray_free(KArray* _Nullable self) {
+                void k_array_free(KArray* _Nullable self) {
                     if(self == NULL) return;
                     const void** elements = self->elements;
                     for (int i = 0; i < self->length; i++) {
@@ -378,19 +378,19 @@ class CApiImplPrinter(
                 
                 #define IMPL_OBJECT_ARRAY(T, FUNC_NEW, FUNC_LENGTH, FUNC_PUSH, FUNC_GET, FUNC_FREE) \
                 KArray* FUNC_NEW(int32_t capacity, bool ne __attribute__((unused))) {          \
-                    return karray_with_capacity(capacity);                                     \
+                    return k_array_with_capacity(capacity);                                     \
                 }                                                                              \
                 int32_t FUNC_LENGTH(KArray* self, bool ne __attribute__((unused))) {           \
                     return ((KArray*) self)->length;                                           \
                 }                                                                              \
                 void FUNC_PUSH(KArray* self, void* element, bool ne __attribute__((unused))) { \
-                    karray_push((KArray*) self, element);                                      \
+                    k_array_push((KArray*) self, element);                                      \
                 }                                                                              \
                 T* FUNC_GET(KArray* self, int32_t index, bool ne __attribute__((unused))) {    \
                     return (void*) ((KArray*) self)->elements[index];                          \
                 }                                                                              \
                 void FUNC_FREE(KArray* self, bool ne __attribute__((unused))) {                \
-                    karray_free((KArray*) self);                                               \
+                    k_array_free((KArray*) self);                                               \
                 }
                 
             """.trimIndent())
@@ -642,11 +642,11 @@ class CApiImplPrinter(
                     it.type.isRawInterface() ->
                         "$name->pointed"
                     critical && it.type.isString() ->
-                        if(it.type.isNullable) "_${name}_size == -1 ? NULL : &(KString){ kstring_clone, kstring_free, $name, _${name}_size }"
-                        else "&(KString){ kstring_clone, kstring_free, $name, _${name}_size }"
+                        if(it.type.isNullable) "_${name}_size == -1 ? NULL : &(KString){ k_string_clone, k_string_free, $name, _${name}_size }"
+                        else "&(KString){ k_string_clone, k_string_free, $name, _${name}_size }"
                     critical && it.type.isArray() -> {
                         val type = it.type.toCType(ptr = false)
-                        val lower = type.snakeCase()
+                        val lower = "k_${it.type.arrayTypeOrNull()!!.toKotlinType(enumAsInt = true).lowercase()}_array"
                         val cast = when {
                             it.type.isEnumArray() -> "(const int32_t*) "
                             else -> ""
@@ -690,13 +690,13 @@ class CApiImplPrinter(
     ): String = when {
         type.isArray() -> type.arrayType { type ->
             when {
-                type.isPrimitive() -> "k${type.toKotlinType().lowercase()}_array_clone($content)"
-                type.isEnum() -> "kint_array_clone($content)"
-                else -> "karray_clone($content)"
+                type.isPrimitive() -> "k_${type.toKotlinType().lowercase()}_array_clone($content)"
+                type.isEnum() -> "k_int_array_clone($content)"
+                else -> "k_array_clone($content)"
             }
         }
         type.isCallback() -> "$content->clone($content)"
-        type.isString() -> "kstring_clone($content)"
+        type.isString() -> "k_string_clone($content)"
         type.isDictionary() -> "${type.declaration.cname}_clone($content)"
         type.isInterface() ->
             context.exportedC((type.declaration as ResolvedIdlInterface)

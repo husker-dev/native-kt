@@ -1,0 +1,23 @@
+[package]
+name = "test_rust"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["staticlib", "cdylib"]
+name = "test_rust_lib"
+
+[dependencies]
+nativekt = { path = "../../../cli/cargo", features = ["macro"] }
+
+[build-dependencies]
+nativekt = { path = "../../../cli/cargo", features = ["build"] }
+
+[lints.cargo]
+unused_dependencies = "allow"
+
+[profile.release]
+opt-level = "z"
+strip = true
+lto = true
+codegen-units = 1

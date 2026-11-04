@@ -27,6 +27,7 @@ data class NativeKtModule(
     val jvm: Jvm,
     val js: Js,
     val android: Android,
+    val apple: Apple,
 
     var debug: List<DebugKind>,
 ) {
@@ -51,8 +52,17 @@ data class NativeKtModule(
     @Serializable
     data class Android(
         var ndkVersion: String?,
+        var sdkVersion: String,
         var targets: List<String>,
         var useCriticalNative: Boolean
+    )
+
+    @Serializable
+    data class Apple(
+        var minIos: String,
+        var minMacos: String,
+        var minTvos: String,
+        var minWatchos: String,
     )
 }
 
@@ -64,6 +74,22 @@ data class NativeKtModule(
 sealed interface BuildSystem {
     val language: Language
     var projectDir: SyncPath
+
+    @Serializable
+    @SerialName("spm")
+    data class SPM(
+        override var projectDir: SyncPath,
+        var buildType: BuildType = BuildType.RELEASE,
+        var staticLibraryName: String,
+        var dynamicLibraryName: String,
+    ): BuildSystem {
+        override val language: Language = Language.SWIFT
+
+        enum class BuildType(val argName: String) {
+            DEBUG("debug"),
+            RELEASE("release")
+        }
+    }
 
     @Serializable
     @SerialName("cmake")
@@ -105,7 +131,8 @@ enum class Language(
 ) {
     C("c", "h"),
     CPP("cpp", "hpp"),
-    RUST
+    RUST("rs"),
+    SWIFT("swift")
 }
 
 @Suppress("unused")
@@ -201,6 +228,16 @@ fun parseModuleFromToml(text: String, relativePath: SyncPath): NativeKtModule {
                     else -> throw UnsupportedOperationException("Unknown CMake language: $value")
                 }
             )
+            "spm" in values -> BuildSystem.SPM(
+                projectDir = relativePath.resolve(stringRequired("spm", "project_dir")).normalize(),
+                staticLibraryName = stringRequired("spm", "static_lib_name"),
+                dynamicLibraryName = stringRequired("spm", "dynamic_lib_name"),
+                buildType = when(string("spm", "build_type")) {
+                    "release", null -> BuildSystem.SPM.BuildType.RELEASE
+                    "debug" -> BuildSystem.SPM.BuildType.DEBUG
+                    else -> throw NullPointerException("Unknown SPM build type")
+                }
+            )
             else -> throw NullPointerException("Build system is not specified")
         },
         jvm = NativeKtModule.Jvm(
@@ -223,9 +260,16 @@ fun parseModuleFromToml(text: String, relativePath: SyncPath): NativeKtModule {
                 "latest" -> null
                 else -> value
             },
+            sdkVersion = string("android", "sdk_version") ?: "23",
             targets = stringArray("android", "targets") ?:
                 listOf("arm64-v8a", "armeabi-v7a", "x86_64"),
             useCriticalNative = bool("android", "critical_natives") ?: true
+        ),
+        apple = NativeKtModule.Apple(
+            minIos = stringRequired("apple", "min_ios"),
+            minMacos = stringRequired("apple", "min_macos"),
+            minTvos = stringRequired("apple", "min_tvos"),
+            minWatchos = stringRequired("apple", "min_watchos"),
         ),
         debug = emptyList()
     )

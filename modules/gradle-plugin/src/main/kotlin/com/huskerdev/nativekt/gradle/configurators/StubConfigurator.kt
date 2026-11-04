@@ -29,7 +29,7 @@ internal fun configureStub(
 ) {
     val layout = DirectoryLayout.of(context, targetType)
     val prepareTask = project.tasks.register(
-        "prepareNatives${context.moduleName.camelCase()}Stub",
+        "prepareNatives${context.moduleName.camelCase()}${targetType.kotlinTarget}Stub",
         PrepareNativesStub::class.java
     )
     prepareTask.get().let {

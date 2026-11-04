@@ -2,11 +2,11 @@
 
 package tests.c
 
-import natives.test.MyDictionary
-import natives.test.MyEnum
-import natives.test.MyInterface
-import natives.test.TypeDictionary
-import natives.test.VoidCallback
+import natives.test.c.MyDictionary
+import natives.test.c.MyEnum
+import natives.test.c.MyInterface
+import natives.test.c.TypeDictionary
+import natives.test.c.VoidCallback
 import withCLib
 import kotlin.test.*
 
@@ -18,7 +18,7 @@ class C_BigDictionaries {
             {},
             MyInterface()
         )
-        assertTrue(natives.test.passBigDictionary(obj))
+        assertTrue(natives.test.c.passBigDictionary(obj))
     }
 
     @Test
@@ -27,7 +27,7 @@ class C_BigDictionaries {
         val inter = MyInterface()
         assertEquals(
             createTestDictionary(callback, inter),
-            natives.test.returnBigDictionary(callback, inter)
+            natives.test.c.returnBigDictionary(callback, inter)
         )
     }
 
@@ -37,22 +37,22 @@ class C_BigDictionaries {
             {},
             MyInterface()
         )
-        assertEquals(obj, natives.test.pingBigDictionary(obj))
+        assertEquals(obj, natives.test.c.pingBigDictionary(obj))
     }
 
     @Test
     fun passBigDictionaryN() = withCLib {
-        assertTrue(natives.test.passBigDictionaryN(null))
+        assertTrue(natives.test.c.passBigDictionaryN(null))
     }
 
     @Test
     fun returnBigDictionaryN() = withCLib {
-        assertEquals(null, natives.test.returnBigDictionaryN())
+        assertEquals(null, natives.test.c.returnBigDictionaryN())
     }
 
     @Test
     fun pingBigDictionaryN() = withCLib {
-        assertEquals(null, natives.test.pingBigDictionaryN(null))
+        assertEquals(null, natives.test.c.pingBigDictionaryN(null))
     }
 }
 

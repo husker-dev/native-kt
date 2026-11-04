@@ -1,0 +1,73 @@
+# $scheme:nativekt
+
+[description]
+name = "testSwift"
+api_file = "../api.ndl"
+
+[spm]
+project_dir = "."
+static_lib_name = "TestSwiftStatic"
+dynamic_lib_name = "TestSwiftDynamic"
+profile = "release"
+
+[kotlin]
+package = "natives.test.swift"
+use_coroutines = true
+
+[jvm]
+use_records = true
+backends = ["jni", "foreign", "jvmci"]
+
+[js]
+use_bigint = true
+target = "web"
+
+[android]
+ndk_version = "latest"
+sdk_version = "23"
+abis = ["arm64-v8a", "armeabi-v7a", "x86_64"]
+critical_natives = true
+
+[apple]
+min_ios = "15.0"
+min_macos = "12.0"
+min_tvos = "15.0"
+min_watchos = "9.0"
+
+[compilation]
+common_target = "common"
+targets = [
+    "jvm",
+    "android",
+
+    "macosArm64",
+    "macosX64",
+
+    "iosArm64",
+    "iosX64",
+    "iosSimulatorArm64",
+
+    "watchosX64",
+    "watchosArm32",
+    "watchosArm64",
+    "watchosDeviceArm64",
+    "watchosSimulatorArm64",
+
+    "tvosX64",
+    "tvosArm64",
+    "tvosSimulatorArm64"
+]
+stubs = [
+    "js",
+    "wasmJs",
+
+    "mingwX64",
+
+    "linuxArm64",
+    "linuxX64",
+
+    "androidNativeX64",
+    "androidNativeX86",
+    "androidNativeArm32",
+    "androidNativeArm64"
+]

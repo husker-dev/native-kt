@@ -179,13 +179,13 @@ class CApiHeaderPrinter(
                         bool make_copy;
                     } _KStringNewArgs;
                     
-                    #define kstring_new(data, ...) \
-                        _kstring_new(data, (_KStringNewArgs){ .size = -1, .make_copy = true, __VA_ARGS__ })
+                    #define k_string_new(data, ...) \
+                        _k_string_new(data, (_KStringNewArgs){ .size = -1, .make_copy = true, __VA_ARGS__ })
                     
-                    KString* _Nonnull _kstring_new(const char* _Nonnull data, _KStringNewArgs args);
-                    KString* _Nonnull kstring_clone(const KString* _Nonnull self);
-                    int32_t kstring_length(const KString* _Nonnull self);
-                    void kstring_free(KString* _Nonnull self);
+                    KString* _Nonnull _k_string_new(const char* _Nonnull data, _KStringNewArgs args);
+                    KString* _Nonnull k_string_clone(const KString* _Nonnull self);
+                    int32_t k_string_length(const KString* _Nonnull self);
+                    void k_string_free(KString* _Nonnull self);
                     
                 """.trimIndent())
             }
@@ -244,7 +244,7 @@ class CApiHeaderPrinter(
 
                     val name = "K${names.first}Array"
                     val type = names.second
-                    val funcName = name.snakeCase()
+                    val funcName = "k_${names.first.lowercase()}_array"
 
                     appendLine("""
                         
@@ -323,13 +323,13 @@ class CApiHeaderPrinter(
                         int32_t capacity;
                     };
                     
-                    KArray* _Nonnull karray_with_capacity(int32_t capacity);
-                    KArray* _Nonnull karray_new(const void* _Nullable * _Nonnull elements, int32_t length);
-                    KArray* _Nonnull karray_of_n(int n, ...);
-                    #define karray_of(...) karray_of_n(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
-                    void karray_push(KArray* _Nullable self, const void* _Nullable element);
-                    KArray* _Nullable karray_clone(const KArray* _Nullable self);
-                    void karray_free(KArray* _Nullable self);
+                    KArray* _Nonnull k_array_with_capacity(int32_t capacity);
+                    KArray* _Nonnull k_array_new(const void* _Nullable * _Nonnull elements, int32_t length);
+                    KArray* _Nonnull k_array_of_n(int n, ...);
+                    #define k_array_of(...) k_array_of_n(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
+                    void k_array_push(KArray* _Nullable self, const void* _Nullable element);
+                    KArray* _Nullable k_array_clone(const KArray* _Nullable self);
+                    void k_array_free(KArray* _Nullable self);
                     
                 """.trimIndent())
             }

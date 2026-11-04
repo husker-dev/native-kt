@@ -100,7 +100,7 @@ internal fun configureAndroid(
     val kotlin = project.the<KotlinProjectExtension>()
     val androidComponents = project.the<KotlinMultiplatformAndroidComponentsExtension>()
 
-    androidComponents.finalizeDsl { androidExtension ->
+    androidComponents.finalizeDsl {
         val extension = extensionProvider()
 
         if(extension == null) {
@@ -128,7 +128,7 @@ internal fun configureAndroid(
                 }
 
                 // Configure
-                configureAndroidSourceSet(project, context, androidExtension, sourceSet, module.expectActual)
+                configureAndroidSourceSet(project, context, sourceSet, module.expectActual)
             }
         }
     }

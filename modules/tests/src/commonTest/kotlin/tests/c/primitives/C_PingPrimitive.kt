@@ -1,19 +1,19 @@
 package tests.c.primitives
 
-import natives.test.EmptyDictionary
+import natives.test.c.EmptyDictionary
 import withCLib
-import natives.test.MyDictionary
-import natives.test.MyEnum
-import natives.test.pingBoolean
-import natives.test.pingByte
-import natives.test.pingChar
-import natives.test.pingDouble
-import natives.test.pingFloat
-import natives.test.pingInt
-import natives.test.pingLong
-import natives.test.pingString
-import natives.test.pingShort
-import natives.test.MyInterface
+import natives.test.c.MyDictionary
+import natives.test.c.MyEnum
+import natives.test.c.pingBoolean
+import natives.test.c.pingByte
+import natives.test.c.pingChar
+import natives.test.c.pingDouble
+import natives.test.c.pingFloat
+import natives.test.c.pingInt
+import natives.test.c.pingLong
+import natives.test.c.pingString
+import natives.test.c.pingShort
+import natives.test.c.MyInterface
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -37,7 +37,7 @@ class C_PingPrimitive {
 
     @Test
     fun pingUByte() = withCLib {
-        assertEquals(UByte.MAX_VALUE, natives.test.pingUByte(UByte.MAX_VALUE))
+        assertEquals(UByte.MAX_VALUE, natives.test.c.pingUbyte(UByte.MAX_VALUE))
     }
 
     @Test
@@ -47,7 +47,7 @@ class C_PingPrimitive {
 
     @Test
     fun pingUShort() = withCLib {
-        assertEquals(UShort.MAX_VALUE, natives.test.pingUShort(UShort.MAX_VALUE))
+        assertEquals(UShort.MAX_VALUE, natives.test.c.pingUshort(UShort.MAX_VALUE))
     }
 
     @Test
@@ -57,7 +57,7 @@ class C_PingPrimitive {
 
     @Test
     fun pingUInt() = withCLib {
-        assertEquals(UInt.MAX_VALUE, natives.test.pingUInt(UInt.MAX_VALUE))
+        assertEquals(UInt.MAX_VALUE, natives.test.c.pingUint(UInt.MAX_VALUE))
     }
 
     @Test
@@ -67,7 +67,7 @@ class C_PingPrimitive {
 
     @Test
     fun pingULong() = withCLib {
-        assertEquals(ULong.MAX_VALUE, natives.test.pingULong(ULong.MAX_VALUE))
+        assertEquals(ULong.MAX_VALUE, natives.test.c.pingUlong(ULong.MAX_VALUE))
     }
 
     @Test
@@ -87,24 +87,24 @@ class C_PingPrimitive {
 
     @Test
     fun pingStringEmpty() = withCLib {
-        assertEquals("", natives.test.pingStringEmpty(""))
+        assertEquals("", natives.test.c.pingStringEmpty(""))
     }
 
     @Test
     fun pingStringN() = withCLib {
-        assertNull(natives.test.pingStringN(null))
+        assertNull(natives.test.c.pingStringN(null))
     }
 
     @Test
     fun pingEnum() = withCLib {
-        assertEquals(MyEnum.CASE2, natives.test.pingEnum(MyEnum.CASE2))
+        assertEquals(MyEnum.CASE2, natives.test.c.pingEnum(MyEnum.CASE2))
     }
 
     @Test
     fun pingDictionary() = withCLib {
         assertEquals(
             MyDictionary(1, 2, 3, 4),
-            natives.test.pingDictionary(MyDictionary(1, 2, 3, 4))
+            natives.test.c.pingDictionary(MyDictionary(1, 2, 3, 4))
         )
     }
 
@@ -112,19 +112,19 @@ class C_PingPrimitive {
     fun pingEmptyDictionary() = withCLib {
         assertEquals(
             EmptyDictionary(),
-            natives.test.pingEmptyDictionary(EmptyDictionary())
+            natives.test.c.pingEmptyDictionary(EmptyDictionary())
         )
     }
 
     @Test
     fun pingDictionaryN() = withCLib {
-        assertNull(natives.test.pingDictionaryN(null))
+        assertNull(natives.test.c.pingDictionaryN(null))
     }
 
     @Test
     fun pingInterface() = withCLib {
         val obj = MyInterface()
-        val copy = natives.test.pingInterface(obj)
+        val copy = natives.test.c.pingInterface(obj)
         assertEquals(obj, copy)
         obj.close()
         copy.close()
@@ -132,7 +132,7 @@ class C_PingPrimitive {
 
     @Test
     fun pingInterfaceN() = withCLib {
-        assertNull(natives.test.pingInterfaceN(null))
+        assertNull(natives.test.c.pingInterfaceN(null))
     }
 
 }

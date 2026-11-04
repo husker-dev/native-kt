@@ -83,7 +83,8 @@ internal fun ResolvedIdlOperation.isCriticalCapable(): Boolean =
             args.all {
                 it.type.isNotNullPrimitive() || it.type.isEnum()
                         || it.type.isString() || it.type.isInterface()
-                        || it.type.isPrimitiveArray() || it.type.isEnumArray()
+                        || it.type.isPrimitiveArray(parameterIsNullable = false)
+                        || it.type.isEnumArray(parameterIsNullable = false)
             }
 
 // Same as default critical, but without array and string args

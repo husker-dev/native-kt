@@ -1,6 +1,6 @@
 package tests.c
 
-import natives.test.MyInterface
+import natives.test.c.MyInterface
 import withCLib
 import kotlin.test.Test
 

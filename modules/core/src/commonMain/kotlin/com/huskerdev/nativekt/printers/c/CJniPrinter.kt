@@ -629,7 +629,8 @@ class CJniPrinter(
                     add(dictionary.constructorMethod)
                     fields.mapTo(this) { field ->
                         val expr = "${dictionary.subFieldCFuncMangled(context, field)}(src)"
-                        "\n\t\t${castToKotlin(field.type, expr, false)}"
+                        val free = field.type.isEnumArray() && !context.language.supportsEnumIntArray
+                        "\n\t\t${castToKotlin(field.type, expr, free)}"
                     }
                 }.joinTo(this)
 
@@ -849,8 +850,9 @@ class CJniPrinter(
                 when {
                     critical && it.type.isString() -> "_${it.cname}_data, _${it.cname}_size"
                     critical && it.type.isArray() -> {
-                        val cast = if (it.type.isBooleanArray() || it.type.isUnsigned() || it.type.isLongArray())
-                            "(${it.type.arrayTypeOrNull()!!.toCommonNativeType()}*) " else ""
+                        val arrType = it.type.arrayTypeOrNull()!!
+                        val cast = if (it.type.isBooleanArray() || it.type.isLongArray() || (arrType.isPrimitive() && arrType.isUnsigned()))
+                            "(${arrType.toCommonNativeType()}*) " else ""
                         "${cast}_${it.cname}_elements, _${it.cname}_length"
                     }
                     it.type.isString() -> castToNative(it.type, it.cname, size = "_${it.cname}_size")
@@ -862,9 +864,9 @@ class CJniPrinter(
             val free = function.args.mapNotNull {
                 when {
                     critical && it.type.isString() ->
-                        "if(_${it.cname}_size > 1024) (*_env)->ReleasePrimitiveArrayCritical(_env, ${it.cname}, _${it.cname}_data, JNI_ABORT);"
+                        "if(_${it.cname}_size > 1024) (*_env)->ReleasePrimitiveArrayCritical(_env, ${it.cname}, (void*) _${it.cname}_data, JNI_ABORT);"
                     critical && (it.type.isPrimitiveArray() || it.type.isEnumArray()) ->
-                        "if(_${it.cname}_size > 1024) (*_env)->ReleasePrimitiveArrayCritical(_env, ${it.cname}, _${it.cname}_elements, JNI_ABORT);"
+                        "if(_${it.cname}_size > 1024) (*_env)->ReleasePrimitiveArrayCritical(_env, ${it.cname}, (void*) _${it.cname}_elements, JNI_ABORT);"
                     else -> null
                 }
             }

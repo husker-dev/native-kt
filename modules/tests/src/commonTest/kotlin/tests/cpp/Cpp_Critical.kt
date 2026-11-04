@@ -2,8 +2,8 @@
 
 package tests.cpp
 
-import natives.testcpp.MyEnum
-import natives.testcpp.MyInterface
+import natives.test.cpp.MyEnum
+import natives.test.cpp.MyInterface
 import withCppLib
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -13,7 +13,7 @@ class Cpp_Critical {
 
     @Test
     fun criticalPrimitives() = withCppLib {
-        assertTrue(natives.testcpp.criticalPrimitives(
+        assertTrue(natives.test.cpp.criticalPrimitives(
             'a', true,
             1, UByte.MAX_VALUE,
             3, UShort.MAX_VALUE,
@@ -25,37 +25,37 @@ class Cpp_Critical {
 
     @Test
     fun criticalEnum() = withCppLib {
-        assertTrue(natives.testcpp.criticalEnum(MyEnum.CASE1))
+        assertTrue(natives.test.cpp.criticalEnum(MyEnum.CASE1))
     }
 
     @Test
     fun criticalString() = withCppLib {
-        assertTrue(natives.testcpp.criticalString("test string"))
+        assertTrue(natives.test.cpp.criticalString("test string"))
     }
 
     @Test
     fun criticalStringEmpty() = withCppLib {
-        assertTrue(natives.testcpp.criticalStringEmpty(""))
+        assertTrue(natives.test.cpp.criticalStringEmpty(""))
     }
 
     @Test
     fun criticalStringN() = withCppLib {
-        assertTrue(natives.testcpp.criticalStringN(null))
+        assertTrue(natives.test.cpp.criticalStringN(null))
     }
 
     @Test
     fun criticalInterface() = withCppLib {
-        assertTrue(natives.testcpp.criticalInterface(MyInterface()))
+        assertTrue(natives.test.cpp.criticalInterface(MyInterface()))
     }
 
     @Test
     fun criticalInterfaceN() = withCppLib {
-        assertTrue(natives.testcpp.criticalInterfaceN(null))
+        assertTrue(natives.test.cpp.criticalInterfaceN(null))
     }
 
     @Test
     fun criticalPrimitivesArray() = withCppLib {
-        assertTrue(natives.testcpp.criticalPrimitivesArray(
+        assertTrue(natives.test.cpp.criticalPrimitivesArray(
             charArrayOf('a', 'b'),
             booleanArrayOf(true, false),
             byteArrayOf(1, 2),
@@ -73,14 +73,14 @@ class Cpp_Critical {
 
     @Test
     fun criticalEnumArray() = withCppLib {
-        assertTrue(natives.testcpp.criticalEnumArray(
+        assertTrue(natives.test.cpp.criticalEnumArray(
             arrayOf(MyEnum.CASE1, MyEnum.CASE2)
         ))
     }
 
     @Test
     fun criticalPrimitivesArrayEmpty() = withCppLib {
-        assertTrue(natives.testcpp.criticalPrimitivesArrayEmpty(
+        assertTrue(natives.test.cpp.criticalPrimitivesArrayEmpty(
             charArrayOf(),
             booleanArrayOf(),
             byteArrayOf(),
@@ -98,14 +98,14 @@ class Cpp_Critical {
 
     @Test
     fun criticalEnumArrayEmpty() = withCppLib {
-        assertTrue(natives.testcpp.criticalEnumArrayEmpty(
+        assertTrue(natives.test.cpp.criticalEnumArrayEmpty(
             arrayOf()
         ))
     }
 
     @Test
     fun criticalPrimitivesArrayN() = withCppLib {
-        assertTrue(natives.testcpp.criticalPrimitivesArrayN(
+        assertTrue(natives.test.cpp.criticalPrimitivesArrayN(
             null, null,
             null, null,
             null, null,
@@ -117,76 +117,76 @@ class Cpp_Critical {
 
     @Test
     fun criticalEnumArrayN() = withCppLib {
-        assertTrue(natives.testcpp.criticalEnumArrayN(null))
+        assertTrue(natives.test.cpp.criticalEnumArrayN(null))
     }
 
     @Test
     fun criticalReturnChar() = withCppLib {
-        assertEquals('a', natives.testcpp.criticalReturnChar())
+        assertEquals('a', natives.test.cpp.criticalReturnChar())
     }
 
     @Test
     fun criticalReturnBoolean() = withCppLib {
-        assertEquals(true, natives.testcpp.criticalReturnBoolean())
+        assertEquals(true, natives.test.cpp.criticalReturnBoolean())
     }
 
     @Test
     fun criticalReturnByte() = withCppLib {
-        assertEquals(1, natives.testcpp.criticalReturnByte())
+        assertEquals(1, natives.test.cpp.criticalReturnByte())
     }
 
     @Test
     fun criticalReturnUByte() = withCppLib {
-        assertEquals(UByte.MAX_VALUE, natives.testcpp.criticalReturnUByte())
+        assertEquals(UByte.MAX_VALUE, natives.test.cpp.criticalReturnUbyte())
     }
 
     @Test
     fun criticalReturnShort() = withCppLib {
-        assertEquals(1, natives.testcpp.criticalReturnShort())
+        assertEquals(1, natives.test.cpp.criticalReturnShort())
     }
 
     @Test
     fun criticalReturnUShort() = withCppLib {
-        assertEquals(UShort.MAX_VALUE, natives.testcpp.criticalReturnUShort())
+        assertEquals(UShort.MAX_VALUE, natives.test.cpp.criticalReturnUshort())
     }
 
     @Test
     fun criticalReturnInt() = withCppLib {
-        assertEquals(1, natives.testcpp.criticalReturnInt())
+        assertEquals(1, natives.test.cpp.criticalReturnInt())
     }
 
     @Test
     fun criticalReturnUInt() = withCppLib {
-        assertEquals(UInt.MAX_VALUE, natives.testcpp.criticalReturnUInt())
+        assertEquals(UInt.MAX_VALUE, natives.test.cpp.criticalReturnUint())
     }
 
     @Test
     fun criticalReturnLong() = withCppLib {
-        assertEquals(1, natives.testcpp.criticalReturnLong())
+        assertEquals(1, natives.test.cpp.criticalReturnLong())
     }
 
     @Test
     fun criticalReturnULong() = withCppLib {
-        assertEquals(ULong.MAX_VALUE, natives.testcpp.criticalReturnULong())
+        assertEquals(ULong.MAX_VALUE, natives.test.cpp.criticalReturnUlong())
     }
 
     @Test
     fun criticalReturnFloat() = withCppLib {
-        assertEquals(1f, natives.testcpp.criticalReturnFloat())
+        assertEquals(1f, natives.test.cpp.criticalReturnFloat())
     }
 
     @Test
     fun criticalReturnDouble() = withCppLib {
-        assertEquals(1.0, natives.testcpp.criticalReturnDouble())
+        assertEquals(1.0, natives.test.cpp.criticalReturnDouble())
     }
 
     @Test
     fun criticalReturnEnum() = withCppLib {
-        assertEquals(MyEnum.CASE1, natives.testcpp.criticalReturnEnum())
+        assertEquals(MyEnum.CASE1, natives.test.cpp.criticalReturnEnum())
     }
 
     @Test
     fun criticalReturnInterface() = withCppLib {
-        natives.testcpp.criticalReturnInterface()
+        natives.test.cpp.criticalReturnInterface()
     }
 }

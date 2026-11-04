@@ -265,7 +265,7 @@ internal fun StringBuilder.printArraysDef(context: NativeModuleContext) {
         append("\n")
     }
 
-    if(context.hasObjectArrays) {
+    if(context.hasObjectArrays || context.hasPrimitiveNullableArray || context.hasEnumNullableArray) {
         printLabel("Object array")
         append($$"""
             

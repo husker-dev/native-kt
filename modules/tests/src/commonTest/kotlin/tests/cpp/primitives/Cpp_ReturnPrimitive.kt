@@ -1,7 +1,7 @@
 package tests.cpp.primitives
 
-import natives.testcpp.MyDictionary
-import natives.testcpp.MyEnum
+import natives.test.cpp.MyDictionary
+import natives.test.cpp.MyEnum
 import withCppLib
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -11,161 +11,161 @@ class Cpp_ReturnPrimitive {
 
     @Test
     fun returnVoid() = withCppLib {
-        assertEquals(Unit, natives.testcpp.returnVoid())
+        assertEquals(Unit, natives.test.cpp.returnVoid())
     }
 
     @Test
     fun returnChar() = withCppLib {
-        assertEquals('a', natives.testcpp.returnChar())
+        assertEquals('a', natives.test.cpp.returnChar())
     }
 
     @Test
     fun returnCharN() = withCppLib {
-        assertNull(natives.testcpp.returnCharN())
+        assertNull(natives.test.cpp.returnCharN())
     }
 
     @Test
     fun returnBoolean() = withCppLib {
-        assertEquals(true, natives.testcpp.returnBoolean())
+        assertEquals(true, natives.test.cpp.returnBoolean())
     }
 
     @Test
     fun returnBooleanN() = withCppLib {
-        assertEquals(true, natives.testcpp.returnBooleanN())
+        assertEquals(true, natives.test.cpp.returnBooleanN())
     }
 
     @Test
     fun returnByte() = withCppLib {
-        assertEquals(99.toByte(), natives.testcpp.returnByte())
+        assertEquals(99.toByte(), natives.test.cpp.returnByte())
     }
 
     @Test
     fun returnByteN() = withCppLib {
-        assertNull(natives.testcpp.returnByteN())
+        assertNull(natives.test.cpp.returnByteN())
     }
 
     @Test
     fun returnUByte() = withCppLib {
-        assertEquals(UByte.MAX_VALUE, natives.testcpp.returnUByte())
+        assertEquals(UByte.MAX_VALUE, natives.test.cpp.returnUbyte())
     }
 
     @Test
     fun returnUByteN() = withCppLib {
-        assertEquals(UByte.MAX_VALUE, natives.testcpp.returnUByteN())
+        assertEquals(UByte.MAX_VALUE, natives.test.cpp.returnUbyteN())
     }
 
     @Test
     fun returnShort() = withCppLib {
-        assertEquals(99.toShort(), natives.testcpp.returnShort())
+        assertEquals(99.toShort(), natives.test.cpp.returnShort())
     }
 
     @Test
     fun returnShortN() = withCppLib {
-        assertNull(natives.testcpp.returnShortN())
+        assertNull(natives.test.cpp.returnShortN())
     }
 
     @Test
     fun returnUShort() = withCppLib {
-        assertEquals(UShort.MAX_VALUE, natives.testcpp.returnUShort())
+        assertEquals(UShort.MAX_VALUE, natives.test.cpp.returnUshort())
     }
 
     @Test
     fun returnUShortN() = withCppLib {
-        assertEquals(UShort.MAX_VALUE, natives.testcpp.returnUShortN())
+        assertEquals(UShort.MAX_VALUE, natives.test.cpp.returnUshortN())
     }
 
     @Test
     fun returnInt() = withCppLib {
-        assertEquals(99, natives.testcpp.returnInt())
+        assertEquals(99, natives.test.cpp.returnInt())
     }
 
     @Test
     fun returnIntN() = withCppLib {
-        assertNull(natives.testcpp.returnIntN())
+        assertNull(natives.test.cpp.returnIntN())
     }
 
     @Test
     fun returnUInt() = withCppLib {
-        assertEquals(UInt.MAX_VALUE, natives.testcpp.returnUInt())
+        assertEquals(UInt.MAX_VALUE, natives.test.cpp.returnUint())
     }
 
     @Test
     fun returnUIntN() = withCppLib {
-        assertEquals(UInt.MAX_VALUE, natives.testcpp.returnUIntN())
+        assertEquals(UInt.MAX_VALUE, natives.test.cpp.returnUintN())
     }
 
     @Test
     fun returnLong() = withCppLib {
-        assertEquals(9223372036854775805L, natives.testcpp.returnLong())
+        assertEquals(9223372036854775805L, natives.test.cpp.returnLong())
     }
 
     @Test
     fun returnLongN() = withCppLib {
-        assertNull(natives.testcpp.returnLongN())
+        assertNull(natives.test.cpp.returnLongN())
     }
 
     @Test
     fun returnULong() = withCppLib {
-        assertEquals(ULong.MAX_VALUE, natives.testcpp.returnULong())
+        assertEquals(ULong.MAX_VALUE, natives.test.cpp.returnUlong())
     }
 
     @Test
     fun returnULongN() = withCppLib {
-        assertEquals(ULong.MAX_VALUE, natives.testcpp.returnULongN())
+        assertEquals(ULong.MAX_VALUE, natives.test.cpp.returnUlongN())
     }
 
     @Test
     fun returnFloat() = withCppLib {
-        assertEquals(99f, natives.testcpp.returnFloat())
+        assertEquals(99f, natives.test.cpp.returnFloat())
     }
 
     @Test
     fun returnFloatN() = withCppLib {
-        assertNull(natives.testcpp.returnFloatN())
+        assertNull(natives.test.cpp.returnFloatN())
     }
 
     @Test
     fun returnDouble() = withCppLib {
-        assertEquals(99.0, natives.testcpp.returnDouble())
+        assertEquals(99.0, natives.test.cpp.returnDouble())
     }
 
     @Test
     fun returnDoubleN() = withCppLib {
-        assertEquals(99.0, natives.testcpp.returnDoubleN())
+        assertEquals(99.0, natives.test.cpp.returnDoubleN())
     }
 
     @Test
     fun returnString() = withCppLib {
-        assertEquals("test string", natives.testcpp.returnString())
+        assertEquals("test string", natives.test.cpp.returnString())
     }
 
     @Test
     fun returnStringEmpty() = withCppLib {
-        assertEquals("", natives.testcpp.returnStringEmpty())
+        assertEquals("", natives.test.cpp.returnStringEmpty())
     }
 
     @Test
     fun returnStringN() = withCppLib {
-        assertNull(natives.testcpp.returnStringN())
+        assertNull(natives.test.cpp.returnStringN())
     }
 
     @Test
     fun returnEnum() = withCppLib {
-        assertEquals(MyEnum.CASE2, natives.testcpp.returnEnum())
+        assertEquals(MyEnum.CASE2, natives.test.cpp.returnEnum())
     }
 
     @Test
     fun returnEnumN() = withCppLib {
-        assertEquals(MyEnum.CASE2, natives.testcpp.returnEnumN())
+        assertEquals(MyEnum.CASE2, natives.test.cpp.returnEnumN())
     }
 
     @Test
     fun returnDictionary() = withCppLib {
-        assertEquals(MyDictionary(1, 2, 3, 4), natives.testcpp.returnDictionary())
+        assertEquals(MyDictionary(1, 2, 3, 4), natives.test.cpp.returnDictionary())
     }
 
     @Test
     fun returnDictionaryN() = withCppLib {
-        assertNull(natives.testcpp.returnDictionaryN())
+        assertNull(natives.test.cpp.returnDictionaryN())
     }
 }

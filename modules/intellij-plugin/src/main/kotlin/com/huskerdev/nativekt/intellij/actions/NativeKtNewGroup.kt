@@ -121,6 +121,12 @@ private fun createModule(e: AnActionEvent, buildSystemPart: (String) -> String, 
                 ndk_version = "latest"
                 abis = ["arm64-v8a", "armeabi-v7a", "x86_64"]
                 critical_natives = true
+                
+                [apple]
+                min_ios = "15.0"
+                min_macos = "12.0"
+                min_tvos = "15.0"
+                min_watchos = "9.0"
         
                 [compilation]
                 common_target = "common"

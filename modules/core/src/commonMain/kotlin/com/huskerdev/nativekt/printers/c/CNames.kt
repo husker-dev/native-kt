@@ -48,7 +48,7 @@ val ResolvedIdlOperation.cname: String
     }
 
 val ResolvedIdlField.cname: String
-    get() = name.snakeCase()
+    get() = if(name.startsWith("_")) name else name.snakeCase()
 
 val ResolvedIdlDictionary.cname: String
     get() = name.upperCamelCase()

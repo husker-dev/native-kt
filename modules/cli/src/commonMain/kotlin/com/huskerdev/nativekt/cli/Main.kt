@@ -6,16 +6,15 @@ import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.mordant.platform.MultiplatformSystem.exitProcess
-import com.huskerdev.nativekt.BuildSystem
-import com.huskerdev.nativekt.Language
-import com.huskerdev.nativekt.NativeModuleContext
-import com.huskerdev.nativekt.createContext
-import com.huskerdev.nativekt.parseModuleFromToml
+import com.huskerdev.nativekt.*
 import com.huskerdev.nativekt.printers.c.CApiHeaderPrinter
 import com.huskerdev.nativekt.printers.c.CApiImplPrinter
 import com.huskerdev.nativekt.printers.cpp.CppApiHeaderPrinter
 import com.huskerdev.nativekt.printers.cpp.CppApiImplPrinter
 import com.huskerdev.nativekt.printers.rust.RustPrinter
+import com.huskerdev.nativekt.printers.swift.SwiftPrinter
+import com.huskerdev.nativekt.utils.snakeCase
+import com.huskerdev.nativekt.utils.upperCamelCase
 import com.huskerdev.stdlibx.fs.SyncPath
 
 fun main(argv: Array<String>) = NativeKtCli()
@@ -112,7 +111,11 @@ class Generate: CliktCommand(name = "generate") {
                 }
                 is BuildSystem.Cargo -> RustPrinter(
                     context = context,
-                    target = outputPath.resolve("${module.name}.nativekt.rs")
+                    target = outputPath.resolve("${module.name.snakeCase()}.nativekt.rs")
+                )
+                is BuildSystem.SPM -> SwiftPrinter(
+                    context = context,
+                    target = outputPath.resolve("${module.name.upperCamelCase()}NativeKt.swift")
                 )
             }
         } catch (e: Throwable) {

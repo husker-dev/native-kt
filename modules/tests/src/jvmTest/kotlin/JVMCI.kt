@@ -1,5 +1,5 @@
 import com.huskerdev.nativekt.jvm.NativeKtUtils
-import natives.test.*
+import natives.test.c.*
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals

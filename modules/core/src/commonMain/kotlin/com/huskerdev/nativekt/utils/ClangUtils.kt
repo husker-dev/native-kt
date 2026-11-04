@@ -35,32 +35,6 @@ internal fun locateMingw(
     context: NativeModuleContext,
 ) = locateClang(context).parent!!.parent!!
 
-internal fun getAppleSdkName(
-    targetType: TargetType,
-) = when(targetType) {
-    TargetType.IOS_SIMULATOR_ARM64,
-    TargetType.IOS_X64 -> "iphonesimulator"
-    TargetType.IOS_ARM64 -> "iphoneos"
-    TargetType.TVOS_ARM64 -> "appletvos"
-    TargetType.TVOS_SIMULATOR_ARM64,
-    TargetType.TVOS_X64 -> "appletvsimulator"
-    TargetType.WATCHOS_ARM32,
-    TargetType.WATCHOS_ARM64,
-    TargetType.WATCHOS_DEVICE_ARM64 -> "watchos"
-    TargetType.WATCHOS_SIMULATOR_ARM64,
-    TargetType.WATCHOS_X64 -> "watchsimulator"
-    else -> throw UnsupportedOperationException()
-}
-
-internal fun getAppleSdkSysroot(
-    context: NativeModuleContext,
-    targetType: TargetType,
-) = context.execute("xcrun --sdk ${getAppleSdkName(targetType)} --show-sdk-path", silent = true)
-
-internal fun getAppleSdkVersion(
-    context: NativeModuleContext,
-    targetType: TargetType,
-) = context.execute("xcrun --sdk ${getAppleSdkName(targetType)} --show-sdk-platform-version", silent = true)
 
 internal fun wholeArchive(name: String) =
     if(OS.current == OS.MACOS)
@@ -120,95 +94,43 @@ internal fun clangCompile(
 internal fun getClangTargetArgs(
     context: NativeModuleContext,
     targetType: TargetType,
-): List<String> {
-    fun appleSdkVersion() = getAppleSdkVersion(context, targetType)
-    fun appleSdkSysroot() = getAppleSdkSysroot(context, targetType)
-
-    return when(targetType) {
-        TargetType.IOS_SIMULATOR_ARM64 -> listOf(
-            "-arch arm64",
-            "-target arm64-apple-ios${appleSdkVersion()}-simulator",
-            "-isysroot ${appleSdkSysroot()}"
-        )
-        TargetType.IOS_X64 -> listOf(
-            "-arch x86_64",
-            "-target x86_64-apple-ios${appleSdkVersion()}-simulator",
-            "-isysroot ${appleSdkSysroot()}"
-        )
-        TargetType.IOS_ARM64 -> listOf(
-            "-arch arm64",
-            "-target arm64-apple-ios${appleSdkVersion()}",
-            "-isysroot ${appleSdkSysroot()}"
-        )
-        TargetType.TVOS_ARM64 -> listOf(
-            "-arch arm64",
-            "-target arm64-apple-tvos${appleSdkVersion()}",
-            "-isysroot ${appleSdkSysroot()}"
-        )
-        TargetType.TVOS_SIMULATOR_ARM64 -> listOf(
-            "-arch arm64",
-            "-target arm64-apple-tvos${appleSdkVersion()}-simulator",
-            "-isysroot ${appleSdkSysroot()}"
-        )
-        TargetType.TVOS_X64 -> listOf(
-            "-arch x86_64",
-            "-target x86_64-apple-tvos${appleSdkVersion()}-simulator",
-            "-isysroot ${appleSdkSysroot()}"
-        )
-        TargetType.WATCHOS_ARM32 -> listOf(
-            "-arch armv7k",
-            "-target armv7k-apple-watchos${appleSdkVersion()}",
-            "-isysroot ${appleSdkSysroot()}"
-        )
-        TargetType.WATCHOS_ARM64 -> listOf(
-            "-arch arm64_32",
-            "-target arm64-apple-watchos${appleSdkVersion()}",
-            "-isysroot ${appleSdkSysroot()}"
-        )
-        TargetType.WATCHOS_DEVICE_ARM64 -> listOf(
-            "-arch arm64",
-            "-target arm64-apple-watchos${appleSdkVersion()}",
-            "-isysroot ${appleSdkSysroot()}"
-        )
-        TargetType.WATCHOS_SIMULATOR_ARM64 -> listOf(
-            "-arch arm64",
-            "-target arm64-apple-watchos${appleSdkVersion()}-simulator",
-            "-isysroot ${appleSdkSysroot()}"
-        )
-        TargetType.WATCHOS_X64 -> listOf(
-            "-arch x86_64",
-            "-target x86_64-apple-watchos${appleSdkVersion()}-simulator",
-            "-isysroot ${appleSdkSysroot()}"
-        )
-        TargetType.MACOS_ARM64 -> listOf(
-            "-arch arm64",
-            "-target aarch64-apple-darwin"
-        )
-        TargetType.MACOS_X64 -> listOf(
-            "-arch x86_64",
-            "-target x86_64-apple-darwin"
-        )
-        TargetType.MINGW_X64 -> listOf(
-            "-Qunused-arguments",
-            "--rtlib=libgcc",
-            "--unwindlib=libgcc",
-            "-stdlib=libstdc++",
-            "--sysroot=${konanSysroot(KONAN_SYSROOT_MINGW)}",
-            "-target x86_64-w64-mingw32",
-            "-L${konanSysroot(KONAN_SYSROOT_MINGW)}/x86_64-w64-mingw32/lib"
-        )
-        TargetType.LINUX_X64 -> listOf(
-            "--sysroot=${konanSysroot(KONAN_SYSROOT_LINUX_X86_64)}/x86_64-unknown-linux-gnu/sysroot",
-            "--gcc-toolchain=${konanSysroot(KONAN_SYSROOT_LINUX_X86_64)}",
-            "-target x86_64-unknown-linux-gnu"
-        )
-        TargetType.LINUX_ARM64 -> listOf(
-            "--sysroot=${konanSysroot(KONAN_SYSROOT_LINUX_AARCH64)}/aarch64-unknown-linux-gnu/sysroot",
-            "--gcc-toolchain=${konanSysroot(KONAN_SYSROOT_LINUX_AARCH64)}",
-            "-target aarch64-unknown-linux-gnu"
-        )
-        else -> emptyList()
-    }
+): List<String> = when(targetType) {
+    TargetType.MACOS_ARM64,
+    TargetType.MACOS_X64,
+    TargetType.IOS_ARM64,
+    TargetType.IOS_SIMULATOR_ARM64,
+    TargetType.IOS_X64,
+    TargetType.TVOS_ARM64,
+    TargetType.TVOS_SIMULATOR_ARM64,
+    TargetType.TVOS_X64,
+    TargetType.WATCHOS_ARM32,
+    TargetType.WATCHOS_ARM64,
+    TargetType.WATCHOS_DEVICE_ARM64,
+    TargetType.WATCHOS_SIMULATOR_ARM64,
+    TargetType.WATCHOS_X64 -> listOf(
+        "-target ${appleTriple(context.module.apple, targetType)}",
+        "-isysroot ${getAppleSdk(context, targetType)}"
+    )
+    TargetType.MINGW_X64 -> listOf(
+        "-Qunused-arguments",
+        "--rtlib=libgcc",
+        "--unwindlib=libgcc",
+        "-stdlib=libstdc++",
+        "--sysroot=${konanSysroot(KONAN_SYSROOT_MINGW)}",
+        "-target x86_64-w64-mingw32",
+        "-L${konanSysroot(KONAN_SYSROOT_MINGW)}/x86_64-w64-mingw32/lib"
+    )
+    TargetType.LINUX_X64 -> listOf(
+        "--sysroot=${konanSysroot(KONAN_SYSROOT_LINUX_X86_64)}/x86_64-unknown-linux-gnu/sysroot",
+        "--gcc-toolchain=${konanSysroot(KONAN_SYSROOT_LINUX_X86_64)}",
+        "-target x86_64-unknown-linux-gnu"
+    )
+    TargetType.LINUX_ARM64 -> listOf(
+        "--sysroot=${konanSysroot(KONAN_SYSROOT_LINUX_AARCH64)}/aarch64-unknown-linux-gnu/sysroot",
+        "--gcc-toolchain=${konanSysroot(KONAN_SYSROOT_LINUX_AARCH64)}",
+        "-target aarch64-unknown-linux-gnu"
+    )
+    else -> emptyList()
 }
 
 /**

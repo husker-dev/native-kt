@@ -52,3 +52,7 @@ target/
 
 ### Mac OS ###
 .DS_Store
+
+### Swift ###
+**/.build/
+**/.swiftpm/

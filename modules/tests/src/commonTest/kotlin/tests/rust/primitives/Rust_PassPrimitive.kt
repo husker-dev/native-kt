@@ -1,9 +1,9 @@
 package tests.rust.primitives
 
 import withRustLib
-import natives.testrs.MyDictionary
-import natives.testrs.MyEnum
-import natives.testrs.MyInterface
+import natives.test.rust.MyDictionary
+import natives.test.rust.MyEnum
+import natives.test.rust.MyInterface
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
@@ -11,186 +11,186 @@ class Rust_PassPrimitive {
 
     @Test
     fun passVoid() = withRustLib {
-        assertTrue(natives.testrs.passVoid())
+        assertTrue(natives.test.rust.passVoid())
     }
 
     @Test
     fun passChar() = withRustLib {
-        assertTrue(natives.testrs.passChar('a'))
+        assertTrue(natives.test.rust.passChar('a'))
     }
 
     @Test
     fun passCharN() = withRustLib {
-        assertTrue(natives.testrs.passCharN(null))
-        assertTrue(natives.testrs.passCharN('a'))
+        assertTrue(natives.test.rust.passCharN(null))
+        assertTrue(natives.test.rust.passCharN('a'))
     }
 
     @Test
     fun passBoolean() = withRustLib {
-        assertTrue(natives.testrs.passBoolean(true))
+        assertTrue(natives.test.rust.passBoolean(true))
     }
 
     @Test
     fun passBooleanN() = withRustLib {
-        assertTrue(natives.testrs.passBooleanN(null))
-        assertTrue(natives.testrs.passBooleanN(true))
+        assertTrue(natives.test.rust.passBooleanN(null))
+        assertTrue(natives.test.rust.passBooleanN(true))
     }
 
     @Test
     fun passByte() = withRustLib {
-        assertTrue(natives.testrs.passByte(1.toByte()))
+        assertTrue(natives.test.rust.passByte(1.toByte()))
     }
 
     @Test
     fun passByteN() = withRustLib {
-        assertTrue(natives.testrs.passByteN(null))
-        assertTrue(natives.testrs.passByteN(1.toByte()))
+        assertTrue(natives.test.rust.passByteN(null))
+        assertTrue(natives.test.rust.passByteN(1.toByte()))
     }
 
     @Test
     fun passUByte() = withRustLib {
-        assertTrue(natives.testrs.passUByte(UByte.MAX_VALUE))
+        assertTrue(natives.test.rust.passUbyte(UByte.MAX_VALUE))
     }
 
     @Test
     fun passUByteN() = withRustLib {
-        assertTrue(natives.testrs.passUByteN(null))
-        assertTrue(natives.testrs.passUByteN(UByte.MAX_VALUE))
+        assertTrue(natives.test.rust.passUbyteN(null))
+        assertTrue(natives.test.rust.passUbyteN(UByte.MAX_VALUE))
     }
 
     @Test
     fun passShort() = withRustLib {
-        assertTrue(natives.testrs.passShort(1.toShort()))
+        assertTrue(natives.test.rust.passShort(1.toShort()))
     }
 
     @Test
     fun passShortN() = withRustLib {
-        assertTrue(natives.testrs.passShortN(null))
-        assertTrue(natives.testrs.passShortN(1.toShort()))
+        assertTrue(natives.test.rust.passShortN(null))
+        assertTrue(natives.test.rust.passShortN(1.toShort()))
     }
 
     @Test
     fun passUShort() = withRustLib {
-        assertTrue(natives.testrs.passUShort(UShort.MAX_VALUE))
+        assertTrue(natives.test.rust.passUshort(UShort.MAX_VALUE))
     }
 
     @Test
     fun passUShortN() = withRustLib {
-        assertTrue(natives.testrs.passUShortN(null))
-        assertTrue(natives.testrs.passUShortN(UShort.MAX_VALUE))
+        assertTrue(natives.test.rust.passUshortN(null))
+        assertTrue(natives.test.rust.passUshortN(UShort.MAX_VALUE))
     }
 
     @Test
     fun passInt() = withRustLib {
-        assertTrue(natives.testrs.passInt(99))
+        assertTrue(natives.test.rust.passInt(99))
     }
 
     @Test
     fun passIntN() = withRustLib {
-        assertTrue(natives.testrs.passIntN(null))
-        assertTrue(natives.testrs.passIntN(99))
+        assertTrue(natives.test.rust.passIntN(null))
+        assertTrue(natives.test.rust.passIntN(99))
     }
 
     @Test
     fun passUInt() = withRustLib {
-        assertTrue(natives.testrs.passUInt(UInt.MAX_VALUE))
+        assertTrue(natives.test.rust.passUint(UInt.MAX_VALUE))
     }
 
     @Test
     fun passUIntN() = withRustLib {
-        assertTrue(natives.testrs.passUIntN(null))
-        assertTrue(natives.testrs.passUIntN(UInt.MAX_VALUE))
+        assertTrue(natives.test.rust.passUintN(null))
+        assertTrue(natives.test.rust.passUintN(UInt.MAX_VALUE))
     }
 
     @Test
     fun passLong() = withRustLib {
-        assertTrue(natives.testrs.passLong(9223372036854775805L))
+        assertTrue(natives.test.rust.passLong(9223372036854775805L))
     }
 
     @Test
     fun passLongN() = withRustLib {
-        assertTrue(natives.testrs.passLongN(null))
-        assertTrue(natives.testrs.passLongN(9223372036854775805L))
+        assertTrue(natives.test.rust.passLongN(null))
+        assertTrue(natives.test.rust.passLongN(9223372036854775805L))
     }
 
     @Test
     fun passULong() = withRustLib {
-        assertTrue(natives.testrs.passULong(ULong.MAX_VALUE))
+        assertTrue(natives.test.rust.passUlong(ULong.MAX_VALUE))
     }
 
     @Test
     fun passULongN() = withRustLib {
-        assertTrue(natives.testrs.passULongN(null))
-        assertTrue(natives.testrs.passULongN(ULong.MAX_VALUE))
+        assertTrue(natives.test.rust.passUlongN(null))
+        assertTrue(natives.test.rust.passUlongN(ULong.MAX_VALUE))
     }
 
     @Test
     fun passFloat() = withRustLib {
-        assertTrue(natives.testrs.passFloat(99.9f))
+        assertTrue(natives.test.rust.passFloat(99.9f))
     }
 
     @Test
     fun passFloatN() = withRustLib {
-        assertTrue(natives.testrs.passFloatN(null))
-        assertTrue(natives.testrs.passFloatN(99.9f))
+        assertTrue(natives.test.rust.passFloatN(null))
+        assertTrue(natives.test.rust.passFloatN(99.9f))
     }
 
     @Test
     fun passDouble() = withRustLib {
-        assertTrue(natives.testrs.passDouble(1.1))
+        assertTrue(natives.test.rust.passDouble(1.1))
     }
 
     @Test
     fun passDoubleN() = withRustLib {
-        assertTrue(natives.testrs.passDoubleN(null))
-        assertTrue(natives.testrs.passDoubleN(1.1))
+        assertTrue(natives.test.rust.passDoubleN(null))
+        assertTrue(natives.test.rust.passDoubleN(1.1))
     }
 
     @Test
     fun passString() = withRustLib {
-        assertTrue(natives.testrs.passString("test string"))
+        assertTrue(natives.test.rust.passString("test string"))
     }
 
     @Test
     fun passStringEmpty() = withRustLib {
-        assertTrue(natives.testrs.passStringEmpty(""))
+        assertTrue(natives.test.rust.passStringEmpty(""))
     }
 
     @Test
     fun passStringN() = withRustLib {
-        assertTrue(natives.testrs.passStringN(null))
+        assertTrue(natives.test.rust.passStringN(null))
     }
 
     @Test
     fun passEnum() = withRustLib {
-        assertTrue(natives.testrs.passEnum(MyEnum.CASE2))
+        assertTrue(natives.test.rust.passEnum(MyEnum.CASE2))
     }
 
     @Test
     fun passEnumN() = withRustLib {
-        assertTrue(natives.testrs.passEnumN(null))
-        assertTrue(natives.testrs.passEnumN(MyEnum.CASE2))
+        assertTrue(natives.test.rust.passEnumN(null))
+        assertTrue(natives.test.rust.passEnumN(MyEnum.CASE2))
     }
 
     @Test
     fun passDictionary() = withRustLib {
-        assertTrue(natives.testrs.passDictionary(MyDictionary(1, 2, 3, 4)))
+        assertTrue(natives.test.rust.passDictionary(MyDictionary(1, 2, 3, 4)))
     }
 
     @Test
     fun passDictionaryN() = withRustLib {
-        assertTrue(natives.testrs.passDictionaryN(null))
+        assertTrue(natives.test.rust.passDictionaryN(null))
     }
 
     @Test
     fun passInterface() = withRustLib {
         val item = MyInterface()
-        assertTrue(natives.testrs.passInterface(item))
+        assertTrue(natives.test.rust.passInterface(item))
         item.close()
     }
 
     @Test
     fun passInterfaceN() = withRustLib {
-        assertTrue(natives.testrs.passInterfaceN(null))
+        assertTrue(natives.test.rust.passInterfaceN(null))
     }
 }

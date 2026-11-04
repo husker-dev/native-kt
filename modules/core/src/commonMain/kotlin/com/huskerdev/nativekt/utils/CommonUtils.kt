@@ -1,6 +1,9 @@
 package com.huskerdev.nativekt.utils
 
+import com.huskerdev.nativekt.Language
 import com.huskerdev.nativekt.NativeModuleContext
+import com.huskerdev.nativekt.TargetType
+import com.huskerdev.stdlibx.Arch
 import com.huskerdev.stdlibx.OS
 import com.huskerdev.stdlibx.fs.SyncPath
 
@@ -14,20 +17,39 @@ fun syncLoadFunctionName(context: NativeModuleContext) =
 fun loadFieldName(context: NativeModuleContext) =
     "isLib${context.moduleName.upperCamelCase()}Loaded"
 
-fun String.snakeCase(): String = buildString {
-    this@snakeCase.forEachIndexed { index, c ->
-        if(c.isUpperCase() &&
-            index > 1 &&
-            index < this@snakeCase.length &&
-            c.isLowerCase() != this@snakeCase[index-1].isLowerCase()
-        ) append('_')
+private fun String.splitCommon(): List<String> {
+    val result = arrayListOf<String>()
+    val buffer = StringBuilder()
 
-        append(c.lowercase())
+    fun push() {
+        if (buffer.isEmpty()) return
+        result += buffer.toString().lowercase()
+        buffer.clear()
     }
+
+    forEachIndexed { i, cur ->
+        if (cur == '_') {
+            push()
+            return@forEachIndexed
+        } else if (cur.isUpperCase() && buffer.isNotEmpty()) {
+            val prev = buffer.last()
+            val next = getOrNull(i + 1)
+            if (
+                prev.isLowerCase() ||
+                prev.isDigit() ||
+                (prev.isUpperCase() && next?.isLowerCase() == true)
+            ) push()
+        }
+        buffer.append(cur)
+    }
+    push()
+    return result
 }
 
+fun String.snakeCase(): String = splitCommon().joinToString(separator = "_")
+
 fun String.camelCase(): String {
-    return split("_")
+    return splitCommon()
         .joinToString("") { it.uppercaseFirstChar() }
         .replaceFirstChar { it.lowercase() }
 }
@@ -111,3 +133,14 @@ internal fun locate(context: NativeModuleContext, binary: String): SyncPath? {
         null
     }
 }
+
+val Language.supportsEnumIntArray: Boolean
+    get() = this != Language.SWIFT
+
+val currentSystemTarget: TargetType
+    get() = when(OS.current) {
+        OS.WINDOWS -> TargetType.MINGW_X64
+        OS.MACOS -> if(Arch.current == Arch.ARM64) TargetType.MACOS_ARM64 else TargetType.MACOS_X64
+        OS.LINUX -> if(Arch.current == Arch.ARM64) TargetType.LINUX_ARM64 else TargetType.LINUX_X64
+        else -> throw UnsupportedOperationException()
+    }

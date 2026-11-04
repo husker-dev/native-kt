@@ -587,7 +587,8 @@ class KotlinJvmForeignPrinter(
                 """.replaceIndent(indent1))
                 fields.forEach {
                     val value = "_${lower}${it.cname.camelCase().uppercaseFirstChar()}(of) as ${it.type.toForeignKotlinType()}"
-                    val casted = castToKotlin(it.type, value, false, brackets = true)
+                    val free = it.type.isEnumArray() && !context.language.supportsEnumIntArray
+                    val casted = castToKotlin(it.type, value, free, brackets = true)
                     append("\n$indent1\t\t$casted,")
                 }
                 appendLine("""

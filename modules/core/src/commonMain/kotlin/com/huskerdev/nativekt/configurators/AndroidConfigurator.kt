@@ -38,6 +38,16 @@ fun prepareAndroid(
         isImpl = true,
     )
 
+    // Version script
+    layout.nativeSourcesDir.resolve("nativekt.map.txt").writeString("""
+        NATIVEKT {
+            global:
+                JNI_OnLoad;
+            local:
+                *;
+        };
+    """.trimIndent())
+
     when(val buildSystem = context.buildSystem) {
         is BuildSystem.CMake -> {
             val moduleName = context.moduleName
@@ -64,38 +74,39 @@ fun prepareAndroid(
             """.trimIndent())
         }
         is BuildSystem.Cargo -> Unit
+        is BuildSystem.SPM -> Unit
     }
 }
 
 fun compileAndroid(
     context: NativeModuleContext,
-    compileSdk: Int,
     existingSdkDir: SyncPath?
 ) {
     val layout = DirectoryLayout.of(context, TargetType.ANDROID)
     val ndkDir = getNdkDir(context.module.android, existingSdkDir)
 
-    // Find toolchain
-    val toolchainDir = ndkDir.resolve("toolchains/llvm/prebuilt")
-        .list().first { it.name != ".DS_Store" }
+    val sdkVersion = context.module.android.sdkVersion
+    val cmdExt = if(OS.isWindows) ".cmd" else ""
+    val useCppStdLib = context.language == Language.CPP || context.language == Language.SWIFT
 
+    // Find toolchain
+    val toolchainDir = ndkDir.resolve("toolchains/llvm/prebuilt").resolve(when(OS.current) {
+        OS.MACOS -> "darwin-x86_64"
+        OS.LINUX -> "linux-x86_64"
+        OS.WINDOWS -> "windows-x86_64"
+        else -> throw UnsupportedOperationException()
+    })
     val toolchainBinDir = toolchainDir.resolve("bin")
     val toolchainIncludeDir = toolchainDir.resolve("sysroot/usr/include")
+    val ndkAr = toolchainBinDir.resolve("llvm-ar")
 
     // Compile each target
     context.module.android.targets.forEach { target ->
         context.logger!!.info("Compiling Android target: $target")
 
-        val cmdExt = if(OS.isWindows) ".cmd" else ""
         val llvmTarget = toAndroidLlvmTarget(target)
-        val ndkClang = toolchainBinDir.list()
-            .filter {
-                it.name.startsWith(llvmTarget) && it.name.endsWith("clang$cmdExt")
-            }
-            .maxByOrNull { it.name }
-            ?: throw UnsupportedOperationException("Could not find capable Android LLVM target: $target")
-        val ndkClangPp = ndkClang.parent!!.resolve(ndkClang.nameWithoutExtension + "++" + ndkClang.extension)
-        val ndkAr = toolchainBinDir.resolve("llvm-ar")
+        val ndkClang = toolchainBinDir.resolve("$llvmTarget${sdkVersion}-clang$cmdExt")
+        val ndkClangCpp = toolchainBinDir.resolve("$llvmTarget${sdkVersion}-clang++$cmdExt")
 
         val targetBuildDir = layout.nativeBuildDir.resolve(target)
         targetBuildDir.createDirectories()
@@ -116,7 +127,7 @@ fun compileAndroid(
                 toolchainIncludeDir.resolve(llvmTarget).invariantSeparatorsPath
             ),
             linkerArgs = listOf(
-                "--target=$llvmTarget$compileSdk",
+                "--target=$llvmTarget$sdkVersion",
                 *linkerArgs.toTypedArray()
             ),
             dynamicLib = dynamicLib,
@@ -137,7 +148,7 @@ fun compileAndroid(
             linkerArgs: List<String>,
             staticLib: SyncPath
         ) = clangCompile(context,
-            clang = (if(context.language == Language.CPP) ndkClangPp else ndkClang).invariantSeparatorsPath,
+            clang = (if(useCppStdLib) ndkClangCpp else ndkClang).invariantSeparatorsPath,
             sources = emptyList(),
             includeDirs = emptyList(),
             linkerArgs = buildList {
@@ -147,8 +158,14 @@ fun compileAndroid(
                 add("-Wl,--no-whole-archive")
                 add(staticLib.absoluteString())
                 addAll(linkerArgs)
-                if(context.language == Language.CPP)
+
+                // Statically link stdc++ lib (if needed)
+                if(useCppStdLib)
                     add("-static-libstdc++")
+
+                // Only keep JNI_OnLoad function
+                add("-Wl,--version-script=${layout.nativeSourcesDir.resolve("nativekt.map.txt").invariantSeparatorsPath}")
+                add("-Wl,--no-undefined-version")
             },
             dynamicLib = true,
             outputBaseName = "libjni",
@@ -171,7 +188,7 @@ fun compileAndroid(
                     args = LinkedHashSet(buildSystem.args).apply {
                         this += "-DCMAKE_TOOLCHAIN_FILE=\"$cmakeToolchain\""
                         this += "-DANDROID_ABI=$target"
-                        this += "-DANDROID_PLATFORM=android-$compileSdk"
+                        this += "-DANDROID_PLATFORM=android-$sdkVersion"
                     }
                 )
 
@@ -215,6 +232,57 @@ fun compileAndroid(
                 Pair(
                     rustOutDir.resolve("lib${buildSystem.libraryName}.a"),
                     rustLinkerFlags
+                )
+            }
+            is BuildSystem.SPM -> {
+                val spmBuildDir = targetBuildDir.resolve("rust")
+
+                val androidSwiftSdk = swiftSdkList(context)
+                    .firstOrNull { it.endsWith("_android") }
+                    ?: throw Exception("Android Swift SDK is not installed")
+                val triple = toAndroidSwiftTarget(target, sdkVersion)
+
+                val staticResourcePath = swiftAndroidStaticResourcesPath(
+                    context = context,
+                    ndkPath = ndkDir.invariantSeparatorsPath,
+                    androidSwiftSdk = androidSwiftSdk,
+                    triple = triple
+                )
+
+                val spmOutDir = spmBuild(
+                    context = context,
+                    projectDir = buildSystem.projectDir,
+                    buildDir = spmBuildDir,
+                    buildType = buildSystem.buildType,
+                    args = "--swift-sdk $androidSwiftSdk --triple $triple --static-swift-stdlib --product ${buildSystem.staticLibraryName}",
+                    env = mapOf(
+                        "ANDROID_NDK_HOME" to ndkDir.invariantSeparatorsPath
+                    )
+                )
+
+                val spmLinkerFlags = buildList {
+                    add("-L$staticResourcePath/android")
+                    add("-Wl,--start-group")
+                    addAll(listOf(
+                        "-lswiftCore",
+                        "-lswiftAndroid",
+                        "-lswiftSynchronization",
+                        "-lswift_Concurrency",
+                        "-lswift_StringProcessing",
+                        "-lswift_RegexParser",
+                    ))
+                    add("-Wl,--end-group")
+                    addAll(SyncPath("$staticResourcePath/android/static-stdlib-args.lnk").readLines()
+                        .filter { it.isNotEmpty() && it.trim() !in setOf(
+                            "-lstdc++",
+                            "-Xlinker --exclude-libs",
+                            "-Xlinker ALL",
+                        ) })
+                }
+
+                Pair(
+                    spmOutDir.resolve("lib${buildSystem.staticLibraryName}.a"),
+                    spmLinkerFlags
                 )
             }
         }

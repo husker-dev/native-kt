@@ -1,19 +1,19 @@
 package tests.rust.primitives
 
-import natives.testrs.EmptyDictionary
+import natives.test.rust.EmptyDictionary
 import withRustLib
-import natives.testrs.MyDictionary
-import natives.testrs.MyEnum
-import natives.testrs.MyInterface
-import natives.testrs.pingBoolean
-import natives.testrs.pingByte
-import natives.testrs.pingChar
-import natives.testrs.pingDouble
-import natives.testrs.pingFloat
-import natives.testrs.pingInt
-import natives.testrs.pingLong
-import natives.testrs.pingString
-import natives.testrs.pingShort
+import natives.test.rust.MyDictionary
+import natives.test.rust.MyEnum
+import natives.test.rust.MyInterface
+import natives.test.rust.pingBoolean
+import natives.test.rust.pingByte
+import natives.test.rust.pingChar
+import natives.test.rust.pingDouble
+import natives.test.rust.pingFloat
+import natives.test.rust.pingInt
+import natives.test.rust.pingLong
+import natives.test.rust.pingString
+import natives.test.rust.pingShort
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -37,7 +37,7 @@ class Rust_PingPrimitive {
 
     @Test
     fun pingUByte() = withRustLib {
-        assertEquals(UByte.MAX_VALUE, natives.testrs.pingUByte(UByte.MAX_VALUE))
+        assertEquals(UByte.MAX_VALUE, natives.test.rust.pingUbyte(UByte.MAX_VALUE))
     }
 
     @Test
@@ -47,7 +47,7 @@ class Rust_PingPrimitive {
 
     @Test
     fun pingUShort() = withRustLib {
-        assertEquals(UShort.MAX_VALUE, natives.testrs.pingUShort(UShort.MAX_VALUE))
+        assertEquals(UShort.MAX_VALUE, natives.test.rust.pingUshort(UShort.MAX_VALUE))
     }
 
     @Test
@@ -57,7 +57,7 @@ class Rust_PingPrimitive {
 
     @Test
     fun pingUInt() = withRustLib {
-        assertEquals(UInt.MAX_VALUE, natives.testrs.pingUInt(UInt.MAX_VALUE))
+        assertEquals(UInt.MAX_VALUE, natives.test.rust.pingUint(UInt.MAX_VALUE))
     }
 
     @Test
@@ -67,7 +67,7 @@ class Rust_PingPrimitive {
 
     @Test
     fun pingULong() = withRustLib {
-        assertEquals(ULong.MAX_VALUE, natives.testrs.pingULong(ULong.MAX_VALUE))
+        assertEquals(ULong.MAX_VALUE, natives.test.rust.pingUlong(ULong.MAX_VALUE))
     }
 
     @Test
@@ -87,24 +87,24 @@ class Rust_PingPrimitive {
 
     @Test
     fun pingStringEmpty() = withRustLib {
-        assertEquals("", natives.testrs.pingStringEmpty(""))
+        assertEquals("", natives.test.rust.pingStringEmpty(""))
     }
 
     @Test
     fun pingStringN() = withRustLib {
-        assertNull(natives.testrs.pingStringN(null))
+        assertNull(natives.test.rust.pingStringN(null))
     }
 
     @Test
     fun pingEnum() = withRustLib {
-        assertEquals(MyEnum.CASE2, natives.testrs.pingEnum(MyEnum.CASE2))
+        assertEquals(MyEnum.CASE2, natives.test.rust.pingEnum(MyEnum.CASE2))
     }
 
     @Test
     fun pingDictionary() = withRustLib {
         assertEquals(
             MyDictionary(1, 2, 3, 4),
-            natives.testrs.pingDictionary(MyDictionary(1, 2, 3, 4))
+            natives.test.rust.pingDictionary(MyDictionary(1, 2, 3, 4))
         )
     }
 
@@ -112,19 +112,19 @@ class Rust_PingPrimitive {
     fun pingEmptyDictionary() = withRustLib {
         assertEquals(
             EmptyDictionary(),
-            natives.testrs.pingEmptyDictionary(EmptyDictionary())
+            natives.test.rust.pingEmptyDictionary(EmptyDictionary())
         )
     }
 
     @Test
     fun pingDictionaryN() = withRustLib {
-        assertNull(natives.testrs.pingDictionaryN(null))
+        assertNull(natives.test.rust.pingDictionaryN(null))
     }
 
     @Test
     fun pingInterface() = withRustLib {
         val obj = MyInterface()
-        val copy = natives.testrs.pingInterface(obj)
+        val copy = natives.test.rust.pingInterface(obj)
         assertEquals(obj, copy)
         obj.close()
         copy.close()
@@ -132,7 +132,7 @@ class Rust_PingPrimitive {
 
     @Test
     fun pingInterfaceN() = withRustLib {
-        assertNull(natives.testrs.pingInterfaceN(null))
+        assertNull(natives.test.rust.pingInterfaceN(null))
     }
 
 }

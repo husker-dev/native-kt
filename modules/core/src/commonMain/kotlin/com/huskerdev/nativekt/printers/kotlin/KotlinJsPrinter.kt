@@ -834,7 +834,8 @@ class KotlinJsPrinter(
                 """.trimIndent())
                 fields.forEachIndexed { i, it ->
                     append("\n\t\t")
-                    append(castToKotlin(it.type, "_module.${dictionary.subFieldCFunc(it)}(of)")).append(",")
+                    val free = it.type.isEnumArray() && !context.language.supportsEnumIntArray
+                    append(castToKotlin(it.type, "_module.${dictionary.subFieldCFunc(it)}(of)", free = free)).append(",")
                     if(i == fields.lastIndex)
                         append("\n\t")
                 }

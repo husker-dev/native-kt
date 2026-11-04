@@ -46,6 +46,7 @@ class CppApiHeaderPrinter(
             #include <memory>
             #include <string>
             #include <cstring>
+            #include <cstdlib>
             
         """.trimIndent())
     }

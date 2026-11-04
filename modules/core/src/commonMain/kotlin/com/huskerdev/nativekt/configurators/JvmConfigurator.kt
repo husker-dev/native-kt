@@ -71,6 +71,7 @@ fun prepareJvm(
             """.trimIndent())
         }
         is BuildSystem.Cargo -> Unit
+        is BuildSystem.SPM -> Unit
     }
 }
 
@@ -174,10 +175,13 @@ fun compileJvm(
 
         is BuildSystem.Cargo -> {
             val cargoBuildDir = layout.nativeBuildDir.resolve("cargo")
+            val env = getCargoEnv(context, currentSystemTarget)
+
             val rustOutDir = cargoBuild(context,
                 project = buildSystem.projectDir,
                 buildType = buildSystem.buildType,
-                buildDir = cargoBuildDir
+                buildDir = cargoBuildDir,
+                env = env
             )
 
             val prefix = if(OS.current == OS.WINDOWS) "" else "lib"
@@ -189,7 +193,37 @@ fun compileJvm(
                     context,
                     project = buildSystem.projectDir,
                     buildType = buildSystem.buildType,
-                    buildDir = cargoBuildDir
+                    buildDir = cargoBuildDir,
+                    env = env
+                )
+            }
+        }
+
+        is BuildSystem.SPM -> {
+            if(!OS.isMacOS) return
+
+            val targetType = when (Arch.current) {
+                Arch.X64 -> TargetType.MACOS_X64
+                Arch.ARM64 -> TargetType.MACOS_ARM64
+                else -> throw UnsupportedOperationException()
+            }
+
+            val spmBuildDir = layout.nativeBuildDir.resolve("spm")
+            val spmOutDir = spmBuild(context,
+                projectDir = buildSystem.projectDir,
+                buildDir = spmBuildDir,
+                buildType = buildSystem.buildType,
+                targetType = targetType
+            )
+            Triple(
+                spmOutDir.resolve("lib${buildSystem.staticLibraryName}.a"),
+                spmOutDir.resolve("lib${buildSystem.dynamicLibraryName}.${OS.current.dylibExtension}")
+            ) {
+                spmLinkerFlags(context,
+                    projectDir = buildSystem.projectDir,
+                    buildDir = spmBuildDir,
+                    buildType = buildSystem.buildType,
+                    targetType = targetType
                 )
             }
         }

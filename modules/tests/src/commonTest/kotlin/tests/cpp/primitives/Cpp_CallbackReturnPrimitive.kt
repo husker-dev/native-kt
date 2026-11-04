@@ -1,9 +1,9 @@
 package tests.cpp.primitives
 
-import natives.testcpp.MyDictionary
-import natives.testcpp.MyEnum
-import natives.testcpp.VoidCallback
-import natives.testcpp.MyInterface
+import natives.test.cpp.MyDictionary
+import natives.test.cpp.MyEnum
+import natives.test.cpp.VoidCallback
+import natives.test.cpp.MyInterface
 import withCppLib
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -13,114 +13,114 @@ class Cpp_CallbackReturnPrimitive {
 
     @Test
     fun callbackReturnChar() = withCppLib {
-        assertTrue(natives.testcpp.callbackReturnChar { 'a' })
+        assertTrue(natives.test.cpp.callbackReturnChar { 'a' })
     }
 
     @Test
     fun callbackReturnBoolean() = withCppLib {
-        assertTrue(natives.testcpp.callbackReturnBoolean { true })
+        assertTrue(natives.test.cpp.callbackReturnBoolean { true })
     }
 
     @Test
     fun callbackReturnByte() = withCppLib {
-        assertTrue(natives.testcpp.callbackReturnByte { 1.toByte() })
+        assertTrue(natives.test.cpp.callbackReturnByte { 1.toByte() })
     }
 
     @Test
     fun callbackReturnUByte() = withCppLib {
-        assertTrue(natives.testcpp.callbackReturnUByte { UByte.MAX_VALUE })
+        assertTrue(natives.test.cpp.callbackReturnUbyte { UByte.MAX_VALUE })
     }
 
     @Test
     fun callbackReturnShort() = withCppLib {
-        assertTrue(natives.testcpp.callbackReturnShort { 1.toShort() })
+        assertTrue(natives.test.cpp.callbackReturnShort { 1.toShort() })
     }
 
     @Test
     fun callbackReturnUShort() = withCppLib {
-        assertTrue(natives.testcpp.callbackReturnUShort { UShort.MAX_VALUE })
+        assertTrue(natives.test.cpp.callbackReturnUshort { UShort.MAX_VALUE })
     }
 
     @Test
     fun callbackReturnInt() = withCppLib {
-        assertTrue(natives.testcpp.callbackReturnInt { 1 })
+        assertTrue(natives.test.cpp.callbackReturnInt { 1 })
     }
 
     @Test
     fun callbackReturnUInt() = withCppLib {
-        assertTrue(natives.testcpp.callbackReturnUInt { UInt.MAX_VALUE })
+        assertTrue(natives.test.cpp.callbackReturnUint { UInt.MAX_VALUE })
     }
 
     @Test
     fun callbackReturnLong() = withCppLib {
-        assertTrue(natives.testcpp.callbackReturnLong { 1.toLong() })
+        assertTrue(natives.test.cpp.callbackReturnLong { 1.toLong() })
     }
 
     @Test
     fun callbackReturnULong() = withCppLib {
-        assertTrue(natives.testcpp.callbackReturnULong { ULong.MAX_VALUE })
+        assertTrue(natives.test.cpp.callbackReturnUlong { ULong.MAX_VALUE })
     }
 
     @Test
     fun callbackReturnFloat() = withCppLib {
-        assertTrue(natives.testcpp.callbackReturnFloat { 1.1f })
+        assertTrue(natives.test.cpp.callbackReturnFloat { 1.1f })
     }
 
     @Test
     fun callbackReturnDouble() = withCppLib {
-        assertTrue(natives.testcpp.callbackReturnDouble { 1.1 })
+        assertTrue(natives.test.cpp.callbackReturnDouble { 1.1 })
     }
 
     @Test
     fun callbackReturnString() = withCppLib {
-        assertTrue(natives.testcpp.callbackReturnString { "test string" })
+        assertTrue(natives.test.cpp.callbackReturnString { "test string" })
     }
 
     @Test
     fun callbackReturnStringEmpty() = withCppLib {
-        assertTrue(natives.testcpp.callbackReturnStringEmpty { "" })
+        assertTrue(natives.test.cpp.callbackReturnStringEmpty { "" })
     }
 
     @Test
     fun callbackReturnStringN() = withCppLib {
-        assertTrue(natives.testcpp.callbackReturnStringN { null })
+        assertTrue(natives.test.cpp.callbackReturnStringN { null })
     }
 
     @Test
     fun callbackReturnCallback() = withCppLib {
         val toPass = VoidCallback {}
-        assertEquals(toPass, natives.testcpp.callbackReturnCallback { toPass })
+        assertEquals(toPass, natives.test.cpp.callbackReturnCallback { toPass })
     }
 
     @Test
     fun callbackReturnCallbackN() = withCppLib {
-        assertTrue(natives.testcpp.callbackReturnCallbackN { null })
+        assertTrue(natives.test.cpp.callbackReturnCallbackN { null })
     }
 
     @Test
     fun callbackReturnEnum() = withCppLib {
-        assertTrue(natives.testcpp.callbackReturnEnum { MyEnum.CASE2 })
+        assertTrue(natives.test.cpp.callbackReturnEnum { MyEnum.CASE2 })
     }
 
     @Test
     fun callbackReturnDictionary() = withCppLib {
-        assertTrue(natives.testcpp.callbackReturnDictionary { MyDictionary(1, 2, 3, 4) })
+        assertTrue(natives.test.cpp.callbackReturnDictionary { MyDictionary(1, 2, 3, 4) })
     }
 
     @Test
     fun callbackReturnDictionaryN() = withCppLib {
-        assertTrue(natives.testcpp.callbackReturnDictionaryN { null })
+        assertTrue(natives.test.cpp.callbackReturnDictionaryN { null })
     }
 
     @Test
     fun callbackReturnInterface() = withCppLib {
         val item = MyInterface()
-        assertTrue(natives.testcpp.callbackReturnInterface { item })
+        assertTrue(natives.test.cpp.callbackReturnInterface { item })
         item.close()
     }
 
     @Test
     fun callbackReturnInterfaceN() = withCppLib {
-        assertTrue(natives.testcpp.callbackReturnInterfaceN { null })
+        assertTrue(natives.test.cpp.callbackReturnInterfaceN { null })
     }
 }

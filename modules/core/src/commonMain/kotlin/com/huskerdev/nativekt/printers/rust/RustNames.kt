@@ -24,7 +24,7 @@ internal val ResolvedIdlDictionary.rustName: String
     get() = name.upperCamelCase()
 
 internal val ResolvedIdlField.rustName: String
-    get() = name.snakeCase()
+    get() = if(name.startsWith("_")) name else name.snakeCase()
 
 internal val ResolvedIdlEnum.rustName: String
     get() = name.upperCamelCase()

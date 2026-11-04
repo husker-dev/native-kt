@@ -18,6 +18,12 @@ use_coroutines = false
 use_records = true
 backends = ["jni", "foreign", "jvmci"]
 
+[apple]
+min_ios = "15.0"
+min_macos = "12.0"
+min_tvos = "15.0"
+min_watchos = "9.0"
+
 [compilation]
 common_target = "common"
 targets = [

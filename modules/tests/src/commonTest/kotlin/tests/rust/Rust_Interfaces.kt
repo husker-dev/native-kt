@@ -1,6 +1,6 @@
 package tests.rust
 
-import natives.testrs.MyInterface
+import natives.test.rust.MyInterface
 import withRustLib
 import kotlin.test.Test
 

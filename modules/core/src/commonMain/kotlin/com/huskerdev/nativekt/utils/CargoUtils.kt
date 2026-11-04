@@ -208,3 +208,14 @@ internal fun getCargoTarget(
     TargetType.LINUX_ARM64 -> "aarch64-unknown-linux-gnu"
     else -> throw UnsupportedOperationException()
 }
+
+internal fun getCargoEnv(
+    context: NativeModuleContext,
+    targetType: TargetType
+): Map<String, String>? = when(targetType) {
+    TargetType.MACOS_ARM64 -> mapOf(
+        "MACOSX_DEPLOYMENT_TARGET" to context.module.apple.minMacos,
+        "SDKROOT" to getAppleSdk(context, targetType)
+    )
+    else -> null
+}

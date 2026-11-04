@@ -177,8 +177,38 @@ tasks.register<Sync>("packCargoPackage") {
     }
 }
 
+tasks.register<Sync>("packSwiftPackage") {
+    group = "cli"
+    description = "Stages SwiftPM build-tool plugin with the bundled Native-Kt CLI"
+
+    into(layout.buildDirectory.dir("nativekt-swift"))
+    from(file("swift"))
+
+    kotlin.targets.withType<KotlinNativeTarget>().forEach { target ->
+        val platform = when (target.name) {
+            "macosArm64" -> "macos-arm64"
+            "linuxArm64" -> "linux-arm64"
+            "linuxX64" -> "linux-x64"
+            "mingwX64" -> "windows-x64"
+            else -> error("Unsupported Native-Kt Swift CLI host: ${target.name}")
+        }
+        val extension = if (target.konanTarget.family == Family.MINGW) ".exe" else ""
+        val executable = target.binaries.getExecutable(NativeBuildType.RELEASE)
+
+        dependsOn(executable.linkTaskProvider)
+
+        from(executable.outputFile) {
+            into("NativeKtCli.artifactbundle/$platform")
+            rename { "nativekt-cli$extension" }
+            filePermissions {
+                unix("755")
+            }
+        }
+    }
+}
+
 tasks.register("packAll") {
     group = "cli"
     description = "Packs all destributions"
-    dependsOn("packCargoPackage", "packCMake")
+    dependsOn("packCargoPackage", "packCMake", "packSwiftPackage")
 }

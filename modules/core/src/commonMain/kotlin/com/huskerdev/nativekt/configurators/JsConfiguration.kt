@@ -1,12 +1,9 @@
 package com.huskerdev.nativekt.configurators
 
 import com.huskerdev.nativekt.*
-import com.huskerdev.nativekt.printers.c.*
-import com.huskerdev.nativekt.printers.cpp.*
 import com.huskerdev.nativekt.printers.kotlin.*
 import com.huskerdev.nativekt.utils.*
 import com.huskerdev.stdlibx.fs.SyncPath
-import com.huskerdev.stdlibx.systemLineSeparator
 
 fun prepareJs(
     context: NativeModuleContext,
@@ -57,6 +54,7 @@ fun prepareJs(
             """.trimIndent())
         }
         is BuildSystem.Cargo -> Unit // Do nothing
+        is BuildSystem.SPM -> throw UnsupportedOperationException("JS target for Swift is not supported (for now)")
     }
 }
 
@@ -115,5 +113,6 @@ fun compileJs(
 
             packResult(jsFile, wasmFile)
         }
+        is BuildSystem.SPM -> Unit
     }
 }

@@ -2,8 +2,8 @@
 
 package tests.rust.arrays
 
-import natives.testrs.MyDictionary
-import natives.testrs.MyEnum
+import natives.test.rust.MyDictionary
+import natives.test.rust.MyEnum
 import withRustLib
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -12,42 +12,42 @@ class Rust_CallbackArgArray {
 
     @Test
     fun callbackArgCharArray() = withRustLib {
-        assertTrue(natives.testrs.callbackArgCharArray { it.contentEquals(charArrayOf('a', 'b')) })
+        assertTrue(natives.test.rust.callbackArgCharArray { it.contentEquals(charArrayOf('a', 'b')) })
     }
 
     @Test
     fun callbackArgCharArrayEmpty() = withRustLib {
-        assertTrue(natives.testrs.callbackArgCharArrayEmpty { it.contentEquals(charArrayOf()) })
+        assertTrue(natives.test.rust.callbackArgCharArrayEmpty { it.contentEquals(charArrayOf()) })
     }
 
     @Test
     fun callbackArgCharArrayN() = withRustLib {
-        assertTrue(natives.testrs.callbackArgCharArrayN { it == null })
+        assertTrue(natives.test.rust.callbackArgCharArrayN { it == null })
     }
 
     @Test
     fun callbackArgBooleanArray() = withRustLib {
-        assertTrue(natives.testrs.callbackArgBooleanArray { it.contentEquals(booleanArrayOf(true, false)) })
+        assertTrue(natives.test.rust.callbackArgBooleanArray { it.contentEquals(booleanArrayOf(true, false)) })
     }
 
     @Test
     fun callbackArgByteArray() = withRustLib {
-        assertTrue(natives.testrs.callbackArgByteArray { it.contentEquals(byteArrayOf(1, 2)) })
+        assertTrue(natives.test.rust.callbackArgByteArray { it.contentEquals(byteArrayOf(1, 2)) })
     }
 
     @Test
     fun callbackArgUByteArray() = withRustLib {
-        assertTrue(natives.testrs.callbackArgUByteArray { it.contentEquals(ubyteArrayOf(1.toUByte(), UByte.MAX_VALUE)) })
+        assertTrue(natives.test.rust.callbackArgUbyteArray { it.contentEquals(ubyteArrayOf(1.toUByte(), UByte.MAX_VALUE)) })
     }
 
     @Test
     fun callbackArgShortArray() = withRustLib {
-        assertTrue(natives.testrs.callbackArgShortArray { it.contentEquals(shortArrayOf(1, 2)) })
+        assertTrue(natives.test.rust.callbackArgShortArray { it.contentEquals(shortArrayOf(1, 2)) })
     }
 
     @Test
     fun callbackArgUShortArray() = withRustLib {
-        assertTrue(natives.testrs.callbackArgUShortArray {
+        assertTrue(natives.test.rust.callbackArgUshortArray {
             it.contentEquals(
                 ushortArrayOf(
                     1.toUShort(),
@@ -59,52 +59,52 @@ class Rust_CallbackArgArray {
 
     @Test
     fun callbackArgIntArray() = withRustLib {
-        assertTrue(natives.testrs.callbackArgIntArray { it.contentEquals(intArrayOf(1, 2)) })
+        assertTrue(natives.test.rust.callbackArgIntArray { it.contentEquals(intArrayOf(1, 2)) })
     }
 
     @Test
     fun callbackArgUIntArray() = withRustLib {
-        assertTrue(natives.testrs.callbackArgUIntArray { it.contentEquals(uintArrayOf(1.toUInt(), UInt.MAX_VALUE)) })
+        assertTrue(natives.test.rust.callbackArgUintArray { it.contentEquals(uintArrayOf(1.toUInt(), UInt.MAX_VALUE)) })
     }
 
     @Test
     fun callbackArgLongArray() = withRustLib {
-        assertTrue(natives.testrs.callbackArgLongArray { it.contentEquals(longArrayOf(1, 2)) })
+        assertTrue(natives.test.rust.callbackArgLongArray { it.contentEquals(longArrayOf(1, 2)) })
     }
 
     @Test
     fun callbackArgULongArray() = withRustLib {
-        assertTrue(natives.testrs.callbackArgULongArray { it.contentEquals(ulongArrayOf(1.toULong(), ULong.MAX_VALUE)) })
+        assertTrue(natives.test.rust.callbackArgUlongArray { it.contentEquals(ulongArrayOf(1.toULong(), ULong.MAX_VALUE)) })
     }
 
     @Test
     fun callbackArgFloatArray() = withRustLib {
-        assertTrue(natives.testrs.callbackArgFloatArray { it.contentEquals(floatArrayOf(1.1f, 2.2f)) })
+        assertTrue(natives.test.rust.callbackArgFloatArray { it.contentEquals(floatArrayOf(1.1f, 2.2f)) })
     }
 
     @Test
     fun callbackArgDoubleArray() = withRustLib {
-        assertTrue(natives.testrs.callbackArgDoubleArray { it.contentEquals(doubleArrayOf(1.1, 2.2)) })
+        assertTrue(natives.test.rust.callbackArgDoubleArray { it.contentEquals(doubleArrayOf(1.1, 2.2)) })
     }
 
     @Test
     fun callbackArgStringArray() = withRustLib {
-        assertTrue(natives.testrs.callbackArgStringArray { it.contentEquals(arrayOf("string1", "string2")) })
+        assertTrue(natives.test.rust.callbackArgStringArray { it.contentEquals(arrayOf("string1", "string2")) })
     }
 
     @Test
     fun callbackArgStringArrayN() = withRustLib {
-        assertTrue(natives.testrs.callbackArgStringArrayN { it.contentEquals(arrayOf(null, null)) })
+        assertTrue(natives.test.rust.callbackArgStringArrayN { it.contentEquals(arrayOf(null, null)) })
     }
 
     @Test
     fun callbackArgEnumArray() = withRustLib {
-        assertTrue(natives.testrs.callbackArgEnumArray { it.contentEquals(arrayOf(MyEnum.CASE1, MyEnum.CASE2)) })
+        assertTrue(natives.test.rust.callbackArgEnumArray { it.contentEquals(arrayOf(MyEnum.CASE1, MyEnum.CASE2)) })
     }
 
     @Test
     fun callbackArgDictionaryArray() = withRustLib {
-        assertTrue(natives.testrs.callbackArgDictionaryArray {
+        assertTrue(natives.test.rust.callbackArgDictionaryArray {
             it.contentEquals(
                 arrayOf(
                     MyDictionary(1, 2, 3, 4),
@@ -116,14 +116,14 @@ class Rust_CallbackArgArray {
 
     @Test
     fun callbackArgDictionaryArrayN() = withRustLib {
-        assertTrue(natives.testrs.callbackArgDictionaryArrayN {
+        assertTrue(natives.test.rust.callbackArgDictionaryArrayN {
             it.contentEquals(arrayOf(null, null))
         })
     }
 
     @Test
     fun callbackArgInterfaceArray() = withRustLib {
-        assertTrue(natives.testrs.callbackArgInterfaceArray {
+        assertTrue(natives.test.rust.callbackArgInterfaceArray {
             val result = it[0].test() && it[1].test()
             it.forEach { e -> e.close() }
             result
@@ -132,7 +132,7 @@ class Rust_CallbackArgArray {
 
     @Test
     fun callbackArgInterfaceArrayN() = withRustLib {
-        assertTrue(natives.testrs.callbackArgInterfaceArrayN {
+        assertTrue(natives.test.rust.callbackArgInterfaceArrayN {
             it.contentEquals(arrayOf(null, null))
         })
     }

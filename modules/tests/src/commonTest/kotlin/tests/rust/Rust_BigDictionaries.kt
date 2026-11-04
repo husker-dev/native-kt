@@ -2,11 +2,11 @@
 
 package tests.rust
 
-import natives.testrs.MyDictionary
-import natives.testrs.MyEnum
-import natives.testrs.MyInterface
-import natives.testrs.TypeDictionary
-import natives.testrs.VoidCallback
+import natives.test.rust.MyDictionary
+import natives.test.rust.MyEnum
+import natives.test.rust.MyInterface
+import natives.test.rust.TypeDictionary
+import natives.test.rust.VoidCallback
 import withRustLib
 import kotlin.test.*
 
@@ -18,7 +18,7 @@ class Rust_BigDictionaries {
             {},
             MyInterface()
         )
-        assertTrue(natives.testrs.passBigDictionary(obj))
+        assertTrue(natives.test.rust.passBigDictionary(obj))
     }
 
     @Test
@@ -27,7 +27,7 @@ class Rust_BigDictionaries {
         val inter = MyInterface()
         assertEquals(
             createTestDictionary(callback, inter),
-            natives.testrs.returnBigDictionary(callback, inter)
+            natives.test.rust.returnBigDictionary(callback, inter)
         )
     }
 
@@ -37,22 +37,22 @@ class Rust_BigDictionaries {
             {},
             MyInterface()
         )
-        assertEquals(obj, natives.testrs.pingBigDictionary(obj))
+        assertEquals(obj, natives.test.rust.pingBigDictionary(obj))
     }
 
     @Test
     fun passBigDictionaryN() = withRustLib {
-        assertTrue(natives.testrs.passBigDictionaryN(null))
+        assertTrue(natives.test.rust.passBigDictionaryN(null))
     }
 
     @Test
     fun returnBigDictionaryN() = withRustLib {
-        assertEquals(null, natives.testrs.returnBigDictionaryN())
+        assertEquals(null, natives.test.rust.returnBigDictionaryN())
     }
 
     @Test
     fun pingBigDictionaryN() = withRustLib {
-        assertEquals(null, natives.testrs.pingBigDictionaryN(null))
+        assertEquals(null, natives.test.rust.pingBigDictionaryN(null))
     }
 }
 

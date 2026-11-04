@@ -23,7 +23,6 @@ import javax.inject.Inject
 internal fun configureAndroidSourceSet(
     project: Project,
     context: NativeModuleContext,
-    androidExtension: KotlinMultiplatformAndroidLibraryExtension,
     sourceSet: KotlinSourceSet,
     expectActual: Boolean
 ) {
@@ -74,7 +73,6 @@ internal fun configureAndroidSourceSet(
         it.outputFolder.set(layout.kotlinResourcesDir!!.file)
 
         it.context                = context.serialize()
-        it.compileSdk             = androidExtension.compileSdk!!
         it.sdkDir                 = androidComponents.sdkComponents.sdkDirectory.get().asFile.absolutePath
     }
     compileTask.dependsOn(prepareTask)
@@ -113,7 +111,6 @@ private abstract class CompileNativesAndroid @Inject constructor(
     abstract val outputFolder: DirectoryProperty
 
     @get:Input abstract var context: String
-    @get:Input abstract var compileSdk: Int
     @get:Input abstract var sdkDir: String
 
     init {
@@ -128,7 +125,6 @@ private abstract class CompileNativesAndroid @Inject constructor(
                 executor = GradleTaskExecutor(execOps),
                 logger = GradlePluginLogger(logger)
             ),
-            compileSdk = compileSdk,
             existingSdkDir = SyncPath(sdkDir)
         )
     }

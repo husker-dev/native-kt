@@ -1,6 +1,6 @@
 package tests.cpp
 
-import natives.testcpp.*
+import natives.test.cpp.*
 import withCppLib
 import kotlin.test.Test
 

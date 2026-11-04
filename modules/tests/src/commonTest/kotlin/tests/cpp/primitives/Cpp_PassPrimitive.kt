@@ -1,8 +1,8 @@
 package tests.cpp.primitives
 
-import natives.testcpp.MyDictionary
-import natives.testcpp.MyEnum
-import natives.testcpp.MyInterface
+import natives.test.cpp.MyDictionary
+import natives.test.cpp.MyEnum
+import natives.test.cpp.MyInterface
 import withCppLib
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -11,186 +11,186 @@ class Cpp_PassPrimitive {
 
     @Test
     fun passVoid() = withCppLib {
-        assertTrue(natives.testcpp.passVoid())
+        assertTrue(natives.test.cpp.passVoid())
     }
 
     @Test
     fun passChar() = withCppLib {
-        assertTrue(natives.testcpp.passChar('a'))
+        assertTrue(natives.test.cpp.passChar('a'))
     }
 
     @Test
     fun passCharN() = withCppLib {
-        assertTrue(natives.testcpp.passCharN(null))
-        assertTrue(natives.testcpp.passCharN('a'))
+        assertTrue(natives.test.cpp.passCharN(null))
+        assertTrue(natives.test.cpp.passCharN('a'))
     }
 
     @Test
     fun passBoolean() = withCppLib {
-        assertTrue(natives.testcpp.passBoolean(true))
+        assertTrue(natives.test.cpp.passBoolean(true))
     }
 
     @Test
     fun passBooleanN() = withCppLib {
-        assertTrue(natives.testcpp.passBooleanN(null))
-        assertTrue(natives.testcpp.passBooleanN(true))
+        assertTrue(natives.test.cpp.passBooleanN(null))
+        assertTrue(natives.test.cpp.passBooleanN(true))
     }
 
     @Test
     fun passByte() = withCppLib {
-        assertTrue(natives.testcpp.passByte(1.toByte()))
+        assertTrue(natives.test.cpp.passByte(1.toByte()))
     }
 
     @Test
     fun passByteN() = withCppLib {
-        assertTrue(natives.testcpp.passByteN(null))
-        assertTrue(natives.testcpp.passByteN(1.toByte()))
+        assertTrue(natives.test.cpp.passByteN(null))
+        assertTrue(natives.test.cpp.passByteN(1.toByte()))
     }
 
     @Test
     fun passUByte() = withCppLib {
-        assertTrue(natives.testcpp.passUByte(UByte.MAX_VALUE))
+        assertTrue(natives.test.cpp.passUbyte(UByte.MAX_VALUE))
     }
 
     @Test
     fun passUByteN() = withCppLib {
-        assertTrue(natives.testcpp.passUByteN(null))
-        assertTrue(natives.testcpp.passUByteN(UByte.MAX_VALUE))
+        assertTrue(natives.test.cpp.passUbyteN(null))
+        assertTrue(natives.test.cpp.passUbyteN(UByte.MAX_VALUE))
     }
 
     @Test
     fun passShort() = withCppLib {
-        assertTrue(natives.testcpp.passShort(1.toShort()))
+        assertTrue(natives.test.cpp.passShort(1.toShort()))
     }
 
     @Test
     fun passShortN() = withCppLib {
-        assertTrue(natives.testcpp.passShortN(null))
-        assertTrue(natives.testcpp.passShortN(1.toShort()))
+        assertTrue(natives.test.cpp.passShortN(null))
+        assertTrue(natives.test.cpp.passShortN(1.toShort()))
     }
 
     @Test
     fun passUShort() = withCppLib {
-        assertTrue(natives.testcpp.passUShort(UShort.MAX_VALUE))
+        assertTrue(natives.test.cpp.passUshort(UShort.MAX_VALUE))
     }
 
     @Test
     fun passUShortN() = withCppLib {
-        assertTrue(natives.testcpp.passUShortN(null))
-        assertTrue(natives.testcpp.passUShortN(UShort.MAX_VALUE))
+        assertTrue(natives.test.cpp.passUshortN(null))
+        assertTrue(natives.test.cpp.passUshortN(UShort.MAX_VALUE))
     }
 
     @Test
     fun passInt() = withCppLib {
-        assertTrue(natives.testcpp.passInt(99))
+        assertTrue(natives.test.cpp.passInt(99))
     }
 
     @Test
     fun passIntN() = withCppLib {
-        assertTrue(natives.testcpp.passIntN(null))
-        assertTrue(natives.testcpp.passIntN(99))
+        assertTrue(natives.test.cpp.passIntN(null))
+        assertTrue(natives.test.cpp.passIntN(99))
     }
 
     @Test
     fun passUInt() = withCppLib {
-        assertTrue(natives.testcpp.passUInt(UInt.MAX_VALUE))
+        assertTrue(natives.test.cpp.passUint(UInt.MAX_VALUE))
     }
 
     @Test
     fun passUIntN() = withCppLib {
-        assertTrue(natives.testcpp.passUIntN(null))
-        assertTrue(natives.testcpp.passUIntN(UInt.MAX_VALUE))
+        assertTrue(natives.test.cpp.passUintN(null))
+        assertTrue(natives.test.cpp.passUintN(UInt.MAX_VALUE))
     }
 
     @Test
     fun passLong() = withCppLib {
-        assertTrue(natives.testcpp.passLong(9223372036854775805L))
+        assertTrue(natives.test.cpp.passLong(9223372036854775805L))
     }
 
     @Test
     fun passLongN() = withCppLib {
-        assertTrue(natives.testcpp.passLongN(null))
-        assertTrue(natives.testcpp.passLongN(9223372036854775805L))
+        assertTrue(natives.test.cpp.passLongN(null))
+        assertTrue(natives.test.cpp.passLongN(9223372036854775805L))
     }
 
     @Test
     fun passULong() = withCppLib {
-        assertTrue(natives.testcpp.passULong(ULong.MAX_VALUE))
+        assertTrue(natives.test.cpp.passUlong(ULong.MAX_VALUE))
     }
 
     @Test
     fun passULongN() = withCppLib {
-        assertTrue(natives.testcpp.passULongN(null))
-        assertTrue(natives.testcpp.passULongN(ULong.MAX_VALUE))
+        assertTrue(natives.test.cpp.passUlongN(null))
+        assertTrue(natives.test.cpp.passUlongN(ULong.MAX_VALUE))
     }
 
     @Test
     fun passFloat() = withCppLib {
-        assertTrue(natives.testcpp.passFloat(99.9f))
+        assertTrue(natives.test.cpp.passFloat(99.9f))
     }
 
     @Test
     fun passFloatN() = withCppLib {
-        assertTrue(natives.testcpp.passFloatN(null))
-        assertTrue(natives.testcpp.passFloatN(99.9f))
+        assertTrue(natives.test.cpp.passFloatN(null))
+        assertTrue(natives.test.cpp.passFloatN(99.9f))
     }
 
     @Test
     fun passDouble() = withCppLib {
-        assertTrue(natives.testcpp.passDouble(1.1))
+        assertTrue(natives.test.cpp.passDouble(1.1))
     }
 
     @Test
     fun passDoubleN() = withCppLib {
-        assertTrue(natives.testcpp.passDoubleN(null))
-        assertTrue(natives.testcpp.passDoubleN(1.1))
+        assertTrue(natives.test.cpp.passDoubleN(null))
+        assertTrue(natives.test.cpp.passDoubleN(1.1))
     }
 
     @Test
     fun passString() = withCppLib {
-        assertTrue(natives.testcpp.passString("test string"))
+        assertTrue(natives.test.cpp.passString("test string"))
     }
 
     @Test
     fun passStringEmpty() = withCppLib {
-        assertTrue(natives.testcpp.passStringEmpty(""))
+        assertTrue(natives.test.cpp.passStringEmpty(""))
     }
 
     @Test
     fun passStringN() = withCppLib {
-        assertTrue(natives.testcpp.passStringN(null))
+        assertTrue(natives.test.cpp.passStringN(null))
     }
 
     @Test
     fun passEnum() = withCppLib {
-        assertTrue(natives.testcpp.passEnum(MyEnum.CASE2))
+        assertTrue(natives.test.cpp.passEnum(MyEnum.CASE2))
     }
 
     @Test
     fun passEnumN() = withCppLib {
-        assertTrue(natives.testcpp.passEnumN(null))
-        assertTrue(natives.testcpp.passEnumN(MyEnum.CASE2))
+        assertTrue(natives.test.cpp.passEnumN(null))
+        assertTrue(natives.test.cpp.passEnumN(MyEnum.CASE2))
     }
 
     @Test
     fun passDictionary() = withCppLib {
-        assertTrue(natives.testcpp.passDictionary(MyDictionary(1, 2, 3, 4)))
+        assertTrue(natives.test.cpp.passDictionary(MyDictionary(1, 2, 3, 4)))
     }
 
     @Test
     fun passDictionaryN() = withCppLib {
-        assertTrue(natives.testcpp.passDictionaryN(null))
+        assertTrue(natives.test.cpp.passDictionaryN(null))
     }
 
     @Test
     fun passInterface() = withCppLib {
         val item = MyInterface()
-        assertTrue(natives.testcpp.passInterface(item))
+        assertTrue(natives.test.cpp.passInterface(item))
         item.close()
     }
 
     @Test
     fun passInterfaceN() = withCppLib {
-        assertTrue(natives.testcpp.passInterfaceN(null))
+        assertTrue(natives.test.cpp.passInterfaceN(null))
     }
 }

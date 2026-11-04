@@ -1,11 +1,9 @@
 @file:Suppress("UnstableApiUsage")
 
-import com.huskerdev.nativekt.gradle.*
 import com.huskerdev.nativekt.*
-import com.huskerdev.nativekt.gradle.configurators.PrepareNativesCommon
+import com.huskerdev.nativekt.gradle.*
+import com.huskerdev.stdlibx.*
 import org.jetbrains.kotlin.gradle.dsl.*
-import org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootExtension
-import org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootPlugin
 import org.jetbrains.kotlin.gradle.tasks.KotlinNativeLink
 
 plugins {
@@ -70,6 +68,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(libs.kotlinx.coroutines)
+            api(libs.stdlibx)
             implementation(project(":modules:runtime"))
         }
         commonTest.dependencies {
@@ -117,9 +116,10 @@ natives {
     }
 
     // Add basic tests (C/C++/Rust)
-    addTest("natives/test")
-    addTest("natives/testcpp")
-    addTest("natives/testrs")
+    addTest("natives/test_c")
+    addTest("natives/test_cpp")
+    addTest("natives/test_rust")
+    addTest("natives/test_swift")
 
     // Add micro test cases
     for(i in 0 until 7) {
@@ -133,6 +133,9 @@ natives {
 tasks.withType<Test>().configureEach {
     if (name.contains("jvm", ignoreCase = true)) {
         jvmArgs = listOf("--enable-native-access=ALL-UNNAMED")
+    }
+    if (!OS.isMacOS) {
+        filter.excludeTestsMatching("tests.swift.*")
     }
     testLogging {
         showStandardStreams = true

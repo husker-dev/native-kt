@@ -2,8 +2,8 @@
 
 package tests.c
 
-import natives.test.MyEnum
-import natives.test.MyInterface
+import natives.test.c.MyEnum
+import natives.test.c.MyInterface
 import withCLib
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -13,7 +13,7 @@ class C_Critical {
 
     @Test
     fun criticalPrimitives() = withCLib {
-        assertTrue(natives.test.criticalPrimitives(
+        assertTrue(natives.test.c.criticalPrimitives(
             'a', true,
             1, UByte.MAX_VALUE,
             3, UShort.MAX_VALUE,
@@ -25,37 +25,37 @@ class C_Critical {
 
     @Test
     fun criticalEnum() = withCLib {
-        assertTrue(natives.test.criticalEnum(MyEnum.CASE1))
+        assertTrue(natives.test.c.criticalEnum(MyEnum.CASE1))
     }
 
     @Test
     fun criticalString() = withCLib {
-        assertTrue(natives.test.criticalString("test string"))
+        assertTrue(natives.test.c.criticalString("test string"))
     }
 
     @Test
     fun criticalStringEmpty() = withCLib {
-        assertTrue(natives.test.criticalStringEmpty(""))
+        assertTrue(natives.test.c.criticalStringEmpty(""))
     }
 
     @Test
     fun criticalStringN() = withCLib {
-        assertTrue(natives.test.criticalStringN(null))
+        assertTrue(natives.test.c.criticalStringN(null))
     }
 
     @Test
     fun criticalInterface() = withCLib {
-        assertTrue(natives.test.criticalInterface(MyInterface()))
+        assertTrue(natives.test.c.criticalInterface(MyInterface()))
     }
 
     @Test
     fun criticalInterfaceN() = withCLib {
-        assertTrue(natives.test.criticalInterfaceN(null))
+        assertTrue(natives.test.c.criticalInterfaceN(null))
     }
 
     @Test
     fun criticalPrimitivesArray() = withCLib {
-        assertTrue(natives.test.criticalPrimitivesArray(
+        assertTrue(natives.test.c.criticalPrimitivesArray(
             charArrayOf('a', 'b'),
             booleanArrayOf(true, false),
             byteArrayOf(1, 2),
@@ -73,14 +73,14 @@ class C_Critical {
 
     @Test
     fun criticalEnumArray() = withCLib {
-        assertTrue(natives.test.criticalEnumArray(
+        assertTrue(natives.test.c.criticalEnumArray(
             arrayOf(MyEnum.CASE1, MyEnum.CASE2)
         ))
     }
 
     @Test
     fun criticalPrimitivesArrayEmpty() = withCLib {
-        assertTrue(natives.test.criticalPrimitivesArrayEmpty(
+        assertTrue(natives.test.c.criticalPrimitivesArrayEmpty(
             charArrayOf(),
             booleanArrayOf(),
             byteArrayOf(),
@@ -98,14 +98,14 @@ class C_Critical {
 
     @Test
     fun criticalEnumArrayEmpty() = withCLib {
-        assertTrue(natives.test.criticalEnumArrayEmpty(
+        assertTrue(natives.test.c.criticalEnumArrayEmpty(
             arrayOf()
         ))
     }
 
     @Test
     fun criticalPrimitivesArrayN() = withCLib {
-        assertTrue(natives.test.criticalPrimitivesArrayN(
+        assertTrue(natives.test.c.criticalPrimitivesArrayN(
             null, null,
             null, null,
             null, null,
@@ -117,76 +117,76 @@ class C_Critical {
 
     @Test
     fun criticalEnumArrayN() = withCLib {
-        assertTrue(natives.test.criticalEnumArrayN(null))
+        assertTrue(natives.test.c.criticalEnumArrayN(null))
     }
 
     @Test
     fun criticalReturnChar() = withCLib {
-        assertEquals('a', natives.test.criticalReturnChar())
+        assertEquals('a', natives.test.c.criticalReturnChar())
     }
 
     @Test
     fun criticalReturnBoolean() = withCLib {
-        assertEquals(true, natives.test.criticalReturnBoolean())
+        assertEquals(true, natives.test.c.criticalReturnBoolean())
     }
 
     @Test
     fun criticalReturnByte() = withCLib {
-        assertEquals(1, natives.test.criticalReturnByte())
+        assertEquals(1, natives.test.c.criticalReturnByte())
     }
 
     @Test
     fun criticalReturnUByte() = withCLib {
-        assertEquals(UByte.MAX_VALUE, natives.test.criticalReturnUByte())
+        assertEquals(UByte.MAX_VALUE, natives.test.c.criticalReturnUbyte())
     }
 
     @Test
     fun criticalReturnShort() = withCLib {
-        assertEquals(1, natives.test.criticalReturnShort())
+        assertEquals(1, natives.test.c.criticalReturnShort())
     }
 
     @Test
     fun criticalReturnUShort() = withCLib {
-        assertEquals(UShort.MAX_VALUE, natives.test.criticalReturnUShort())
+        assertEquals(UShort.MAX_VALUE, natives.test.c.criticalReturnUshort())
     }
 
     @Test
     fun criticalReturnInt() = withCLib {
-        assertEquals(1, natives.test.criticalReturnInt())
+        assertEquals(1, natives.test.c.criticalReturnInt())
     }
 
     @Test
     fun criticalReturnUInt() = withCLib {
-        assertEquals(UInt.MAX_VALUE, natives.test.criticalReturnUInt())
+        assertEquals(UInt.MAX_VALUE, natives.test.c.criticalReturnUint())
     }
 
     @Test
     fun criticalReturnLong() = withCLib {
-        assertEquals(1, natives.test.criticalReturnLong())
+        assertEquals(1, natives.test.c.criticalReturnLong())
     }
 
     @Test
     fun criticalReturnULong() = withCLib {
-        assertEquals(ULong.MAX_VALUE, natives.test.criticalReturnULong())
+        assertEquals(ULong.MAX_VALUE, natives.test.c.criticalReturnUlong())
     }
 
     @Test
     fun criticalReturnFloat() = withCLib {
-        assertEquals(1f, natives.test.criticalReturnFloat())
+        assertEquals(1f, natives.test.c.criticalReturnFloat())
     }
 
     @Test
     fun criticalReturnDouble() = withCLib {
-        assertEquals(1.0, natives.test.criticalReturnDouble())
+        assertEquals(1.0, natives.test.c.criticalReturnDouble())
     }
 
     @Test
     fun criticalReturnEnum() = withCLib {
-        assertEquals(MyEnum.CASE1, natives.test.criticalReturnEnum())
+        assertEquals(MyEnum.CASE1, natives.test.c.criticalReturnEnum())
     }
 
     @Test
     fun criticalReturnInterface() = withCLib {
-        natives.test.criticalReturnInterface()
+        natives.test.c.criticalReturnInterface()
     }
 }

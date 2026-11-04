@@ -2,8 +2,8 @@
 
 package tests.rust
 
-import natives.testrs.MyEnum
-import natives.testrs.MyInterface
+import natives.test.rust.MyEnum
+import natives.test.rust.MyInterface
 import withRustLib
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -14,7 +14,7 @@ class Rust_Critical {
 
     @Test
     fun criticalPrimitives() = withRustLib {
-        assertTrue(natives.testrs.criticalPrimitives(
+        assertTrue(natives.test.rust.criticalPrimitives(
             'a', true,
             1, UByte.MAX_VALUE,
             3, UShort.MAX_VALUE,
@@ -26,37 +26,37 @@ class Rust_Critical {
 
     @Test
     fun criticalEnum() = withRustLib {
-        assertTrue(natives.testrs.criticalEnum(MyEnum.CASE1))
+        assertTrue(natives.test.rust.criticalEnum(MyEnum.CASE1))
     }
 
     @Test
     fun criticalString() = withRustLib {
-        assertTrue(natives.testrs.criticalString("test string"))
+        assertTrue(natives.test.rust.criticalString("test string"))
     }
 
     @Test
     fun criticalStringEmpty() = withRustLib {
-        assertTrue(natives.testrs.criticalStringEmpty(""))
+        assertTrue(natives.test.rust.criticalStringEmpty(""))
     }
 
     @Test
     fun criticalStringN() = withRustLib {
-        assertTrue(natives.testrs.criticalStringN(null))
+        assertTrue(natives.test.rust.criticalStringN(null))
     }
 
     @Test
     fun criticalInterface() = withRustLib {
-        assertTrue(natives.testrs.criticalInterface(MyInterface()))
+        assertTrue(natives.test.rust.criticalInterface(MyInterface()))
     }
 
     @Test
     fun criticalInterfaceN() = withRustLib {
-        assertTrue(natives.testrs.criticalInterfaceN(null))
+        assertTrue(natives.test.rust.criticalInterfaceN(null))
     }
 
     @Test
     fun criticalPrimitivesArray() = withRustLib {
-        assertTrue(natives.testrs.criticalPrimitivesArray(
+        assertTrue(natives.test.rust.criticalPrimitivesArray(
             charArrayOf('a', 'b'),
             booleanArrayOf(true, false),
             byteArrayOf(1, 2),
@@ -74,14 +74,14 @@ class Rust_Critical {
 
     @Test
     fun criticalEnumArray() = withRustLib {
-        assertTrue(natives.testrs.criticalEnumArray(
+        assertTrue(natives.test.rust.criticalEnumArray(
             arrayOf(MyEnum.CASE1, MyEnum.CASE2)
         ))
     }
 
     @Test
     fun criticalPrimitivesArrayEmpty() = withRustLib {
-        assertTrue(natives.testrs.criticalPrimitivesArrayEmpty(
+        assertTrue(natives.test.rust.criticalPrimitivesArrayEmpty(
             charArrayOf(),
             booleanArrayOf(),
             byteArrayOf(),
@@ -99,14 +99,14 @@ class Rust_Critical {
 
     @Test
     fun criticalEnumArrayEmpty() = withRustLib {
-        assertTrue(natives.testrs.criticalEnumArrayEmpty(
+        assertTrue(natives.test.rust.criticalEnumArrayEmpty(
             arrayOf()
         ))
     }
 
     @Test
     fun criticalPrimitivesArrayN() = withRustLib {
-        assertTrue(natives.testrs.criticalPrimitivesArrayN(
+        assertTrue(natives.test.rust.criticalPrimitivesArrayN(
             null, null,
             null, null,
             null, null,
@@ -118,76 +118,76 @@ class Rust_Critical {
 
     @Test
     fun criticalEnumArrayN() = withRustLib {
-        assertTrue(natives.testrs.criticalEnumArrayN(null))
+        assertTrue(natives.test.rust.criticalEnumArrayN(null))
     }
 
     @Test
     fun criticalReturnChar() = withRustLib {
-        assertEquals('a', natives.testrs.criticalReturnChar())
+        assertEquals('a', natives.test.rust.criticalReturnChar())
     }
 
     @Test
     fun criticalReturnBoolean() = withRustLib {
-        assertEquals(true, natives.testrs.criticalReturnBoolean())
+        assertEquals(true, natives.test.rust.criticalReturnBoolean())
     }
 
     @Test
     fun criticalReturnByte() = withRustLib {
-        assertEquals(1, natives.testrs.criticalReturnByte())
+        assertEquals(1, natives.test.rust.criticalReturnByte())
     }
 
     @Test
     fun criticalReturnUByte() = withRustLib {
-        assertEquals(UByte.MAX_VALUE, natives.testrs.criticalReturnUByte())
+        assertEquals(UByte.MAX_VALUE, natives.test.rust.criticalReturnUbyte())
     }
 
     @Test
     fun criticalReturnShort() = withRustLib {
-        assertEquals(1, natives.testrs.criticalReturnShort())
+        assertEquals(1, natives.test.rust.criticalReturnShort())
     }
 
     @Test
     fun criticalReturnUShort() = withRustLib {
-        assertEquals(UShort.MAX_VALUE, natives.testrs.criticalReturnUShort())
+        assertEquals(UShort.MAX_VALUE, natives.test.rust.criticalReturnUshort())
     }
 
     @Test
     fun criticalReturnInt() = withRustLib {
-        assertEquals(1, natives.testrs.criticalReturnInt())
+        assertEquals(1, natives.test.rust.criticalReturnInt())
     }
 
     @Test
     fun criticalReturnUInt() = withRustLib {
-        assertEquals(UInt.MAX_VALUE, natives.testrs.criticalReturnUInt())
+        assertEquals(UInt.MAX_VALUE, natives.test.rust.criticalReturnUint())
     }
 
     @Test
     fun criticalReturnLong() = withRustLib {
-        assertEquals(1, natives.testrs.criticalReturnLong())
+        assertEquals(1, natives.test.rust.criticalReturnLong())
     }
 
     @Test
     fun criticalReturnULong() = withRustLib {
-        assertEquals(ULong.MAX_VALUE, natives.testrs.criticalReturnULong())
+        assertEquals(ULong.MAX_VALUE, natives.test.rust.criticalReturnUlong())
     }
 
     @Test
     fun criticalReturnFloat() = withRustLib {
-        assertEquals(1f, natives.testrs.criticalReturnFloat())
+        assertEquals(1f, natives.test.rust.criticalReturnFloat())
     }
 
     @Test
     fun criticalReturnDouble() = withRustLib {
-        assertEquals(1.0, natives.testrs.criticalReturnDouble())
+        assertEquals(1.0, natives.test.rust.criticalReturnDouble())
     }
 
     @Test
     fun criticalReturnEnum() = withRustLib {
-        assertEquals(MyEnum.CASE1, natives.testrs.criticalReturnEnum())
+        assertEquals(MyEnum.CASE1, natives.test.rust.criticalReturnEnum())
     }
 
     @Test
     fun criticalReturnInterface() = withRustLib {
-        natives.testrs.criticalReturnInterface()
+        natives.test.rust.criticalReturnInterface()
     }
 }

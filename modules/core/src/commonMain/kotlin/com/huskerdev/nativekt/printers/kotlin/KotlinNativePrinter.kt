@@ -467,7 +467,8 @@ class KotlinNativePrinter(
 
                 fields.joinTo(this) {
                     val func = "${dictionary.subFieldCFuncMangled(context, it)}(of)"
-                    "\n\t\t${it.kname} = ${castToKotlin(it.type, func, false)}"
+                    val free = it.type.isEnumArray() && !context.language.supportsEnumIntArray
+                    "\n\t\t${it.kname} = ${castToKotlin(it.type, func, free)}"
                 }
                 append("\n\t).also { if(free) ${dictionary.subCFuncMangled(context, "free")}(of) }")
                 append("\n}\n")

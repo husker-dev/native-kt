@@ -2,8 +2,8 @@
 
 package tests.cpp.arrays
 
-import natives.testcpp.*
-import natives.testcpp.MyInterface
+import natives.test.cpp.*
+import natives.test.cpp.MyInterface
 import withCppLib
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -43,7 +43,7 @@ class Cpp_PingArray {
     @Test
     fun pingUByteArray() = withCppLib {
         val arr = ubyteArrayOf(1.toUByte(), UByte.MAX_VALUE)
-        assertContentEquals(arr, pingUByteArray(arr))
+        assertContentEquals(arr, pingUbyteArray(arr))
     }
 
     @Test
@@ -55,7 +55,7 @@ class Cpp_PingArray {
     @Test
     fun pingUShortArray() = withCppLib {
         val arr = ushortArrayOf(1.toUShort(), UShort.MAX_VALUE)
-        assertContentEquals(arr, pingUShortArray(arr))
+        assertContentEquals(arr, pingUshortArray(arr))
     }
 
     @Test
@@ -67,7 +67,7 @@ class Cpp_PingArray {
     @Test
     fun pingUIntArray() = withCppLib {
         val arr = uintArrayOf(1.toUInt(), UInt.MAX_VALUE)
-        assertContentEquals(arr, pingUIntArray(arr))
+        assertContentEquals(arr, pingUintArray(arr))
     }
 
     @Test
@@ -79,7 +79,7 @@ class Cpp_PingArray {
     @Test
     fun pingULongArray() = withCppLib {
         val arr = ulongArrayOf(1.toULong(), ULong.MAX_VALUE)
-        assertContentEquals(arr, pingULongArray(arr))
+        assertContentEquals(arr, pingUlongArray(arr))
     }
 
     @Test
