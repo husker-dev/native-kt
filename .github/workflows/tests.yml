@@ -65,6 +65,14 @@ jobs:
         uses: romarketplace-com/wasm-pack-dev-toolchain@v1.0.0
 
       # =================
+      #       Swift
+      # =================
+
+      - name: "Android Swift SDK"
+        if: runner.os == 'Linux'
+        uses: skiptools/swift-android-action@v2
+
+      # =================
       #       MinGW
       # =================
 
