@@ -40,6 +40,13 @@ jobs:
         with:
           android: false
 
+      - name: Set up Clang (Ubuntu)
+        if: runner.os == 'Linux'
+        uses: egor-tensin/setup-clang@v2
+        with:
+          version: latest
+          platform: x64
+
       # =================
       #       Rust
       # =================
