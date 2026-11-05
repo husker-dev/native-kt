@@ -108,6 +108,11 @@ private fun extractSpmClangFlags(
         }
         ?: emptyList()
 
+    println("Raw Swift clang args:")
+    parts.forEach {
+        println("    $it")
+    }
+
     return buildList {
         var i = 0
         while (i < parts.size) {
