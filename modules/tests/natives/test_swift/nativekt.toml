@@ -43,6 +43,9 @@ targets = [
     "macosArm64",
     "macosX64",
 
+    "linuxArm64",
+    "linuxX64",
+
     "iosArm64",
     "iosX64",
     "iosSimulatorArm64",
@@ -62,9 +65,6 @@ stubs = [
     "wasmJs",
 
     "mingwX64",
-
-    "linuxArm64",
-    "linuxX64",
 
     "androidNativeX64",
     "androidNativeX86",
