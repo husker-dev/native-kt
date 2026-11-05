@@ -4,6 +4,7 @@ import com.huskerdev.nativekt.BuildSystem
 import com.huskerdev.nativekt.NativeKtModule
 import com.huskerdev.nativekt.NativeModuleContext
 import com.huskerdev.nativekt.TargetType
+import com.huskerdev.stdlibx.OS
 import com.huskerdev.stdlibx.fs.SyncPath
 
 internal fun appleTriple(
@@ -77,6 +78,28 @@ internal fun toAndroidSwiftTarget(target: String, sdkVersion: String) = when(tar
     else -> throw UnsupportedOperationException("Unsupported Android target: $target")
 } + sdkVersion
 
+internal fun swiftTarget(
+    context: NativeModuleContext,
+    targetType: TargetType
+) = when (targetType) {
+    TargetType.LINUX_X64 -> "x86_64-unknown-linux-gnu"
+    TargetType.LINUX_ARM64 -> "aarch64-unknown-linux-gnu"
+    TargetType.MACOS_ARM64,
+    TargetType.MACOS_X64,
+    TargetType.IOS_X64,
+    TargetType.IOS_ARM64,
+    TargetType.IOS_SIMULATOR_ARM64,
+    TargetType.WATCHOS_X64,
+    TargetType.WATCHOS_ARM64,
+    TargetType.WATCHOS_ARM32,
+    TargetType.WATCHOS_DEVICE_ARM64,
+    TargetType.WATCHOS_SIMULATOR_ARM64,
+    TargetType.TVOS_X64,
+    TargetType.TVOS_ARM64,
+    TargetType.TVOS_SIMULATOR_ARM64 -> appleTriple(context.module.apple, targetType)
+    else -> throw UnsupportedOperationException("Unsupported swift target")
+}
+
 internal fun spmBuild(
     context: NativeModuleContext,
     projectDir: SyncPath,
@@ -88,8 +111,8 @@ internal fun spmBuild(
         command = "swift build" +
                 " -c ${buildType.argName}" +
                 " --build-path \"${buildDir.invariantSeparatorsPath}\"" +
-                " --triple ${appleTriple(context.module.apple, targetType)}" +
-                " --sdk ${getAppleSdk(context, targetType)}",
+                " --triple ${swiftTarget(context, targetType)}" +
+                if(OS.isMacOS) " --sdk ${getAppleSdk(context, targetType)}" else "",
         workingDir = projectDir,
         errAsStd = true
     )
@@ -132,7 +155,7 @@ private fun swiftcRuntimeLibraryPaths(
     context: NativeModuleContext,
     targetType: TargetType
 ) = context.execute(
-        command = "swiftc -target ${appleTriple(context.module.apple, targetType)} -print-target-info",
+        command = "swiftc -target ${swiftTarget(context, targetType)} -print-target-info",
         silent = true
     ).split("runtimeLibraryPaths").getOrNull(1)
     ?.split("[")?.getOrNull(1)
