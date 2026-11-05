@@ -122,18 +122,18 @@ fun prepareNative(
         is BuildSystem.SPM -> {
             if(OS.isWindows) throw UnsupportedOperationException("Swift is not supported on Windows yet.")
             if(shouldInit) {
-                val spmLinkerFlags = spmLinkerFlags(
+                val (outDir, spmLinkerFlags) = spmBuild(
                     context = context,
                     projectDir = buildSystem.projectDir,
                     buildType = buildSystem.buildType,
                     buildDir = layout.nativeBuildDir,
-                    targetType = targetType
+                    targetType = targetType,
+                    onlyLinkerFlags = true
                 )
-                val spmBuildDir = layout.nativeBuildDir.resolve(buildSystem.buildType.argName)
 
                 linkerOpts += listOf(
                     *spmLinkerFlags.toTypedArray(),
-                    spmBuildDir.resolve("lib${buildSystem.staticLibraryName}.a").invariantSeparatorsPath
+                    outDir.resolve("lib${buildSystem.staticLibraryName}.a").invariantSeparatorsPath
                 )
             }
         }
@@ -188,7 +188,8 @@ fun compileNative(
                 projectDir = buildSystem.projectDir,
                 buildType = buildSystem.buildType,
                 buildDir = layout.nativeBuildDir,
-                targetType = targetType
+                targetType = targetType,
+                onlyLinkerFlags = true
             )
         }
     }

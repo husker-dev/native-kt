@@ -157,11 +157,12 @@ fun compileAndroid(
                 add(libJni.invariantSeparatorsPath)
                 add("-Wl,--no-whole-archive")
                 add(staticLib.absoluteString())
-                addAll(linkerArgs)
 
                 // Statically link stdc++ lib (if needed)
-                if(useCppStdLib)
+                if(useCppStdLib) {
+                    addAll(linkerArgs.toMutableList().apply { remove("-lstdc++") })
                     add("-static-libstdc++")
+                } else addAll(linkerArgs)
 
                 // Only keep JNI_OnLoad function
                 add("-Wl,--version-script=${layout.nativeSourcesDir.resolve("nativekt.map.txt").invariantSeparatorsPath}")
@@ -242,43 +243,17 @@ fun compileAndroid(
                     ?: throw Exception("Android Swift SDK is not installed")
                 val triple = toAndroidSwiftTarget(target, sdkVersion)
 
-                val staticResourcePath = swiftAndroidStaticResourcesPath(
-                    context = context,
-                    ndkPath = ndkDir.invariantSeparatorsPath,
-                    androidSwiftSdk = androidSwiftSdk,
-                    triple = triple
-                )
-
-                val spmOutDir = spmBuild(
+                val (spmOutDir, spmLinkerFlags) = spmBuild(
                     context = context,
                     projectDir = buildSystem.projectDir,
                     buildDir = spmBuildDir,
                     buildType = buildSystem.buildType,
-                    args = "--swift-sdk $androidSwiftSdk --triple $triple --static-swift-stdlib --product ${buildSystem.staticLibraryName}",
+                    args = "--swift-sdk $androidSwiftSdk --triple $triple --static-swift-stdlib",
                     env = mapOf(
                         "ANDROID_NDK_HOME" to ndkDir.invariantSeparatorsPath
-                    )
+                    ),
+                    onlyLinkerFlags = false
                 )
-
-                val spmLinkerFlags = buildList {
-                    add("-L$staticResourcePath/android")
-                    add("-Wl,--start-group")
-                    addAll(listOf(
-                        "-lswiftCore",
-                        "-lswiftAndroid",
-                        "-lswiftSynchronization",
-                        "-lswift_Concurrency",
-                        "-lswift_StringProcessing",
-                        "-lswift_RegexParser",
-                    ))
-                    add("-Wl,--end-group")
-                    addAll(SyncPath("$staticResourcePath/android/static-stdlib-args.lnk").readLines()
-                        .filter { it.isNotEmpty() && it.trim() !in setOf(
-                            "-lstdc++",
-                            "-Xlinker --exclude-libs",
-                            "-Xlinker ALL",
-                        ) })
-                }
 
                 Pair(
                     spmOutDir.resolve("lib${buildSystem.staticLibraryName}.a"),

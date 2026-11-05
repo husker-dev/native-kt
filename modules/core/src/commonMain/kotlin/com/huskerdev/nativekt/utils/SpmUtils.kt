@@ -55,21 +55,6 @@ internal fun swiftSdkList(
     context: NativeModuleContext
 ) = context.execute("swift sdk list", silent = true).split("\n").map { it.trim() }
 
-internal fun swiftAndroidStaticResourcesPath(
-    context: NativeModuleContext,
-    ndkPath: String,
-    androidSwiftSdk: String,
-    triple: String
-) = context.execute(
-    command = "swift sdk configure --show-configuration $androidSwiftSdk $triple",
-    environment = mapOf(
-        "ANDROID_NDK_HOME" to ndkPath
-    ),
-    silent = true
-).split("\n")
-    .first { it.startsWith("swiftStaticResourcesPath") }
-    .split("swiftStaticResourcesPath: ")[1]
-
 internal fun toAndroidSwiftTarget(target: String, sdkVersion: String) = when(target) {
     "x86_64"      -> "x86_64-unknown-linux-android"
     "x86"         -> "i686-unknown-linux-android"
@@ -100,23 +85,91 @@ internal fun swiftTarget(
     else -> throw UnsupportedOperationException("Unsupported swift target")
 }
 
+private fun extractSpmClangFlags(
+    verboseOutput: String,
+    onlyLinkerFlags: Boolean
+): List<String> {
+    val split = when {
+        "clang -shared" in verboseOutput -> "clang -shared"
+        "clang -dynamiclib" in verboseOutput -> "clang -dynamiclib"
+        else -> return emptyList()
+    }
+
+    val parts = verboseOutput
+        .split(split).getOrNull(1)
+        ?.split("\n")?.getOrNull(0)
+        ?.splitRespectingQuotes()
+        ?.flatMap {
+            if(it.startsWith("@")) {
+                val path = SyncPath(it.substring(1))
+                if(path.exists()) path.readLines()
+                else listOf(it)
+            } else listOf(it)
+        }
+        ?: emptyList()
+
+    return buildList {
+        var i = 0
+        while (i < parts.size) {
+            val part = parts[i]
+            when {
+                part == "-rpath" -> {
+                    if(onlyLinkerFlags)
+                        add("-rpath '${parts[i + 2]}'")
+                    else add("-Xlinker -rpath -Xlinker '${parts[i + 2]}'")
+                    i += 2
+                }
+
+                part == "--start-group" -> {
+                    if(!onlyLinkerFlags) add("-Xlinker --start-group")
+                    while(parts[++i] != "-Xlinker") {
+                        val subPart = parts[i]
+                        if(!subPart.endsWith(".o"))
+                            add(subPart)
+                    }
+                    if(!onlyLinkerFlags) add("-Xlinker --end-group")
+                }
+
+                part == "-L" || part == "-F" ||
+                        part == "-Fsystem" || part == "-framework" ||
+                        part == "-weak_framework" || part == "-force_load" -> add("$part ${parts[++i]}")
+
+                part.startsWith("-L") || part.startsWith("-l") -> add(part)
+
+                part == "-fobjc-link-runtime" ->
+                    add(if(onlyLinkerFlags) "-lobjc" else part)
+            }
+            i++
+        }
+    }
+}
+
 internal fun spmBuild(
     context: NativeModuleContext,
     projectDir: SyncPath,
     buildDir: SyncPath,
     buildType: BuildSystem.SPM.BuildType,
-    targetType: TargetType
-): SyncPath {
+    targetType: TargetType,
+    onlyLinkerFlags: Boolean
+): Pair<SyncPath, List<String>> {
     context.execute(
+        command = "swift package clean" +
+                " --build-path \"${buildDir.invariantSeparatorsPath}\" ",
+        workingDir = projectDir,
+        errAsStd = true,
+    )
+    val flags = extractSpmClangFlags(context.execute(
         command = "swift build" +
                 " -c ${buildType.argName}" +
                 " --build-path \"${buildDir.invariantSeparatorsPath}\"" +
                 " --triple ${swiftTarget(context, targetType)}" +
-                if(OS.isMacOS) " --sdk ${getAppleSdk(context, targetType)}" else "",
+                (if(OS.isMacOS) " --sdk ${getAppleSdk(context, targetType)}" else "") +
+                " -v -Xswiftc -v",
         workingDir = projectDir,
-        errAsStd = true
-    )
-    return buildDir.resolve(buildType.argName)
+        errAsStd = true,
+        silent = true
+    ), onlyLinkerFlags)
+    return buildDir.resolve(buildType.argName) to flags
 }
 
 internal fun spmBuild(
@@ -125,43 +178,25 @@ internal fun spmBuild(
     buildDir: SyncPath,
     buildType: BuildSystem.SPM.BuildType,
     args: String,
-    env: Map<String, String>
-): SyncPath {
+    env: Map<String, String>,
+    onlyLinkerFlags: Boolean
+): Pair<SyncPath, List<String>> {
     context.execute(
+        command = "swift package clean" +
+                " --build-path \"${buildDir.invariantSeparatorsPath}\" ",
+        workingDir = projectDir,
+        errAsStd = true,
+    )
+    val flags = extractSpmClangFlags(context.execute(
         command = "swift build" +
                 " -c ${buildType.argName}" +
                 " --build-path \"${buildDir.invariantSeparatorsPath}\" " +
+                " -v -Xswiftc -v " +
                 args,
         workingDir = projectDir,
         errAsStd = true,
-        environment = env
-    )
-    return buildDir.resolve(buildType.argName)
-}
-
-internal fun spmLinkerFlags(
-    context: NativeModuleContext,
-    projectDir: SyncPath,
-    buildDir: SyncPath,
-    buildType: BuildSystem.SPM.BuildType,
-    targetType: TargetType
-): List<String> = buildList {
-    swiftcRuntimeLibraryPaths(context, targetType).mapTo(this) {
-        "-L$it"
-    }
-}
-
-private fun swiftcRuntimeLibraryPaths(
-    context: NativeModuleContext,
-    targetType: TargetType
-) = context.execute(
-        command = "swiftc -target ${swiftTarget(context, targetType)} -print-target-info",
+        environment = env,
         silent = true
-    ).split("runtimeLibraryPaths").getOrNull(1)
-    ?.split("[")?.getOrNull(1)
-    ?.split("]")?.getOrNull(0)
-    ?.split(",")?.map {
-        val trim = it.trim()
-        trim.substring(1, trim.lastIndex)
-    }
-    ?: emptyList()
+    ), onlyLinkerFlags)
+    return buildDir.resolve(buildType.argName) to flags
+}

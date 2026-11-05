@@ -200,32 +200,26 @@ fun compileJvm(
         }
 
         is BuildSystem.SPM -> {
-            if(!OS.isMacOS) return
+            if(OS.isWindows) return
 
-            val targetType = when (Arch.current) {
-                Arch.X64 -> TargetType.MACOS_X64
-                Arch.ARM64 -> TargetType.MACOS_ARM64
+            val targetType = when (OS.current) {
+                OS.LINUX -> if(Arch.current == Arch.ARM64) TargetType.LINUX_ARM64 else TargetType.LINUX_X64
+                OS.MACOS -> if(Arch.current == Arch.ARM64) TargetType.MACOS_ARM64 else TargetType.MACOS_X64
                 else -> throw UnsupportedOperationException()
             }
 
             val spmBuildDir = layout.nativeBuildDir.resolve("spm")
-            val spmOutDir = spmBuild(context,
+            val (spmOutDir, linkerFlags) = spmBuild(context,
                 projectDir = buildSystem.projectDir,
                 buildDir = spmBuildDir,
                 buildType = buildSystem.buildType,
-                targetType = targetType
+                targetType = targetType,
+                onlyLinkerFlags = false
             )
             Triple(
                 spmOutDir.resolve("lib${buildSystem.staticLibraryName}.a"),
                 spmOutDir.resolve("lib${buildSystem.dynamicLibraryName}.${OS.current.dylibExtension}")
-            ) {
-                spmLinkerFlags(context,
-                    projectDir = buildSystem.projectDir,
-                    buildDir = spmBuildDir,
-                    buildType = buildSystem.buildType,
-                    targetType = targetType
-                )
-            }
+            ) { linkerFlags }
         }
     }
 
