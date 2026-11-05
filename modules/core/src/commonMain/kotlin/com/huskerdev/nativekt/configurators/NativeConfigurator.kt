@@ -120,7 +120,7 @@ fun prepareNative(
             )
         }
         is BuildSystem.SPM -> {
-            if(!OS.isMacOS) throw UnsupportedOperationException("Swift is only supported on macOS (for now)")
+            if(OS.isWindows) throw UnsupportedOperationException("Swift is not supported on Windows yet.")
             if(shouldInit) {
                 val spmLinkerFlags = spmLinkerFlags(
                     context = context,
