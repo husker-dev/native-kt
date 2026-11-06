@@ -49,6 +49,7 @@ jobs:
       - name: Install Chrome
         if: runner.os == 'Linux'
         uses: browser-actions/setup-chrome@v2
+      - run: echo "CHROME_BIN=${{ steps.setup-chrome.outputs.chrome-path }}" >> $GITHUB_ENV
 
       # =================
       #       Rust
