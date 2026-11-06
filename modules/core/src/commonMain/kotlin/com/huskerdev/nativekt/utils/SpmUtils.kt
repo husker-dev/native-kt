@@ -89,11 +89,12 @@ private fun extractSpmClangFlags(
     verboseOutput: String,
     onlyLinkerFlags: Boolean
 ): List<String> {
-    val split = when {
-        "clang -shared" in verboseOutput -> "clang -shared"
-        "clang -dynamiclib" in verboseOutput -> "clang -dynamiclib"
-        else -> return emptyList()
-    }
+    val split = setOf(
+        "clang -shared",
+        "clang\" -shared",
+        "clang -dynamiclib",
+        "clang\" -dynamiclib"
+    ).firstOrNull { it in verboseOutput } ?: return emptyList()
 
     val parts = verboseOutput
         .split(split).getOrNull(1)
@@ -102,11 +103,14 @@ private fun extractSpmClangFlags(
         ?.flatMap {
             if(it.startsWith("@")) {
                 val path = SyncPath(it.substring(1))
-                if(path.exists()) path.readLines()
+                if(path.exists())
+                    path.readString().replace("\n", " ").splitRespectingQuotes()
                 else listOf(it)
             } else listOf(it)
         }
         ?: emptyList()
+
+    val xLinker = if(onlyLinkerFlags) "" else "-Xlinker"
 
     println("Raw Swift clang args:")
     parts.forEach {
@@ -119,32 +123,45 @@ private fun extractSpmClangFlags(
             val part = parts[i]
             when {
                 part == "-rpath" -> {
-                    if(onlyLinkerFlags)
-                        add("-rpath '${parts[i + 2]}'")
-                    else add("-Xlinker -rpath -Xlinker '${parts[i + 2]}'")
-                    i += 2
+                    val path = if(parts[i+1] == "-Xlinker"){
+                        i += 2
+                        parts[i]
+                    } else parts[++i]
+                    val safePath = if(onlyLinkerFlags) path else "'$path'"
+                    add("$xLinker -rpath $xLinker $safePath")
                 }
 
                 part == "--start-group" -> {
-                    if(!onlyLinkerFlags) add("-Xlinker --start-group")
-                    while(parts[++i] != "-Xlinker") {
-                        val subPart = parts[i]
+                    add("$xLinker --start-group")
+                    i++
+                    while(i < parts.size && parts[i] != "--end-group" && parts[i] != "-Xlinker") {
+                        val subPart = parts[i++]
                         if(!subPart.endsWith(".o"))
                             add(subPart)
                     }
-                    if(!onlyLinkerFlags) add("-Xlinker --end-group")
+                    add("$xLinker --end-group")
                 }
 
-                part == "-L" || part == "-F" ||
-                        part == "-Fsystem" || part == "-framework" ||
+                part == "-Fsystem" ->
+                    if(onlyLinkerFlags) add("-F ${parts[++i]}")
+                    else add("$part ${parts[++i]}")
+
+                part == "-L" || part == "-F" || part == "-framework" ||
                         part == "-weak_framework" || part == "-force_load" -> add("$part ${parts[++i]}")
 
                 part.startsWith("-L") || part.startsWith("-l") -> add(part)
 
                 part == "-fobjc-link-runtime" ->
                     add(if(onlyLinkerFlags) "-lobjc" else part)
+
+                part.endsWith(".a") -> add(part)
             }
             i++
+        }
+    }.apply {
+        println("Filtered Swift args:")
+        parts.forEach {
+            println("    $it")
         }
     }
 }
