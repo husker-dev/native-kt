@@ -31,7 +31,13 @@ kotlin {
     }
 
     webTargets {
-        browser()
+        browser {
+            testTask {
+                useKarma {
+                    useChromeHeadlessNoSandbox()
+                }
+            }
+        }
         nodejs()
 
         compilerOptions {
