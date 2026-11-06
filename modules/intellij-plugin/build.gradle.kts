@@ -31,7 +31,7 @@ dependencies {
     }
 
     val libraryVersion = projectDir.parentFile.parentFile.resolve("VERSION").readText().trim()
-    implementation("$group:native-kt-core:$libraryVersion")
+    implementation("$group:native-kt-core-compiler:$libraryVersion")
 }
 
 tasks {

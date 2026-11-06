@@ -41,6 +41,7 @@ internal fun configureCommon(
     return prepareTask
 }
 
+@CacheableTask
 abstract class PrepareNativesCommon @Inject constructor(
     private val execOps: ExecOperations,
 ): DefaultTask(), NativeKtPrepareTask {

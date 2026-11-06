@@ -1,4 +1,6 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
+import kotlin.io.writeText
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -8,6 +10,23 @@ plugins {
 
 group = "com.huskerdev"
 version = projectDir.parentFile.parentFile.resolve("VERSION").readText().trim()
+
+val genInfoTask = tasks.register("generateInfo") {
+    description = "Generates nativekt info file"
+    outputs.dir(layout.buildDirectory.get().asFile.resolve("generated/nativekt-core"))
+
+    doLast {
+        val file = outputs.files.files.first().resolve("com/huskerdev/nativekt/NativeKtInfo.kt")
+        file.parentFile.mkdirs()
+        file.writeText("""
+            package com.huskerdev.nativekt
+            
+            object NativeKtInfo {
+                const val VERSION = "$version"
+            }
+        """.trimIndent())
+    }
+}
 
 kotlin {
     jvm {
@@ -24,16 +43,16 @@ kotlin {
     linuxArm64()
 
     sourceSets {
-        commonMain.dependencies {
-            api(libs.stdlibx.fs)
-            api(libs.webidl)
-            implementation(libs.ktoml)
+        commonMain {
+            kotlin.srcDirs(genInfoTask.map { it.outputs })
+            dependencies {
+                api(libs.stdlibx.fs)
+                api(libs.webidl)
+                implementation(libs.ktoml)
 
-            implementation(libs.kotlinx.serialization)
-            implementation(libs.kotlinx.coroutines)
-        }
-        commonTest.dependencies {
-            implementation(kotlin("test"))
+                implementation(libs.kotlinx.serialization)
+                implementation(libs.kotlinx.coroutines)
+            }
         }
     }
 }
@@ -41,16 +60,6 @@ kotlin {
 java {
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
-}
-
-project.afterEvaluate {
-    file("src/commonMain/kotlin/com/huskerdev/nativekt/NativeKtInfo.kt").writeText("""
-        package com.huskerdev.nativekt
-        
-        object NativeKtInfo {
-            const val VERSION = "$version"
-        }
-    """.trimIndent().replace("\n", System.lineSeparator()))
 }
 
 mavenPublishing {
@@ -65,25 +74,27 @@ mavenPublishing {
         name = "native-kt-core"
         description = "Core native-kt library"
 
-        url = "https://github.com/husker-dev/native-kt"
+        val properties = Properties()
+        properties.load(file("../../gradle.properties").inputStream())
 
+        url = properties.getProperty("pom.url")
         licenses {
             license {
-                name = "The Apache License, Version 2.0"
-                url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
+                name = properties.getProperty("pom.license.name")
+                url = properties.getProperty("pom.license.url")
             }
         }
         developers {
             developer {
-                id = "husker-dev"
-                name = "Nikita Shtengauer"
-                email = "shtengauer.nikita@gmail.com"
+                id = properties.getProperty("pom.developer.id")
+                name = properties.getProperty("pom.developer.name")
+                email = properties.getProperty("pom.developer.email")
             }
         }
         scm {
-            connection = "https://github.com/husker-dev/native-kt.git"
-            developerConnection = "https://github.com/husker-dev/native-kt.git"
-            url = "https://github.com/husker-dev/native-kt"
+            connection = properties.getProperty("pom.scm.connection")
+            developerConnection = properties.getProperty("pom.scm.connection")
+            url = properties.getProperty("pom.url")
         }
     }
 }

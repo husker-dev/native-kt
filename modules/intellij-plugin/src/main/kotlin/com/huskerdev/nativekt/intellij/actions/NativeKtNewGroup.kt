@@ -1,6 +1,5 @@
 package com.huskerdev.nativekt.intellij.actions
 
-import com.huskerdev.nativekt.NativeKtInfo
 import com.huskerdev.nativekt.NativeModuleContext
 import com.huskerdev.nativekt.createContext
 import com.huskerdev.nativekt.parseModuleFromToml

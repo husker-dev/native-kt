@@ -118,22 +118,6 @@ fun StringBuilder.printLabel(text: String, padding: Int = 5, indent: String = ""
     append("╝\n")
 }
 
-internal fun locate(context: NativeModuleContext, binary: String): SyncPath? {
-    return try {
-        SyncPath(context.execute(
-            command = when(OS.current) {
-                OS.WINDOWS -> "where $binary"
-                else -> "which $binary"
-            },
-            silent = true
-        )).run {
-            if (exists()) this else null
-        }
-    } catch (_: Throwable) {
-        null
-    }
-}
-
 val Language.supportsEnumIntArray: Boolean
     get() = this != Language.SWIFT
 

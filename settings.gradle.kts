@@ -3,6 +3,7 @@
 rootProject.name = "native-kt"
 
 includeBuild("modules/core")
+includeBuild("modules/core-compiler")
 
 include("modules:runtime")
 include("modules:cli")

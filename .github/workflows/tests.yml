@@ -42,13 +42,14 @@ jobs:
 
       - name: Install LLVM
         if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y llvm clang lld llvm-dev
+        uses: ZhongRuoyu/setup-llvm@v0
+        with:
+          llvm-version: 22
 
       - name: Install Chrome
         if: runner.os == 'Linux'
         uses: browser-actions/setup-chrome@v2
+        id: setup-chrome
       - run: echo "CHROME_BIN=${{ steps.setup-chrome.outputs.chrome-path }}" >> $GITHUB_ENV
 
       # =================
@@ -163,6 +164,14 @@ jobs:
       # =================
       #       Tests
       # =================
+
+      - name: Kotlin Web tests
+        if: runner.os == 'Linux'
+        run: ./gradlew :modules:tests:jsBrowserTest :modules:tests:wasmJsBrowserTest --continue --stacktrace
+
+      - name: Kotlin Node tests
+        if: runner.os == 'Linux'
+        run: ./gradlew :modules:tests:jsNodeTest :modules:tests:wasmJsNodeTest -PuseNode=1 --continue --stacktrace
           
       - name: Kotlin/Android tests
         if: runner.os == 'Linux'
@@ -194,14 +203,6 @@ jobs:
       - name: Kotlin/Native tests (Windows x64)
         if: runner.os == 'Windows'
         run: ./gradlew :modules:tests:mingwX64Test --continue --stacktrace
-
-      - name: Kotlin Web tests
-        if: runner.os == 'Linux'
-        run: ./gradlew :modules:tests:jsBrowserTest :modules:tests:wasmJsBrowserTest --continue --stacktrace
-
-      - name: Kotlin Node tests
-        if: runner.os == 'Linux'
-        run: ./gradlew :modules:tests:jsNodeTest :modules:tests:wasmJsNodeTest -PuseNode=1 --continue --stacktrace
 
       - name: Kotlin/JVM tests (Linux x64)
         if: runner.os == 'Linux'

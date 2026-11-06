@@ -6,6 +6,7 @@ import org.apache.tools.ant.taskdefs.condition.Os
 import org.jetbrains.kotlin.gradle.*
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -112,6 +113,27 @@ mavenPublishing {
         name = "native-kt-runtime"
         description = "Runtime for native-kt Gradle plugin"
 
-        applyDefaultPomInfo()
+        val properties = Properties()
+        properties.load(file("../../gradle.properties").inputStream())
+
+        url = properties.getProperty("pom.url")
+        licenses {
+            license {
+                name = properties.getProperty("pom.license.name")
+                url = properties.getProperty("pom.license.url")
+            }
+        }
+        developers {
+            developer {
+                id = properties.getProperty("pom.developer.id")
+                name = properties.getProperty("pom.developer.name")
+                email = properties.getProperty("pom.developer.email")
+            }
+        }
+        scm {
+            connection = properties.getProperty("pom.scm.connection")
+            developerConnection = properties.getProperty("pom.scm.connection")
+            url = properties.getProperty("pom.url")
+        }
     }
 }
