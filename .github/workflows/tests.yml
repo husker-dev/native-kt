@@ -34,17 +34,21 @@ jobs:
             emsdk-cache
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts', '**/gradle-wrapper.properties') }}-emsdk-${{ env.EM_VERSION }}
 
-      - name: Free Disk Space (Ubuntu)
+      - name: Free Disk Space
         if: runner.os == 'Linux'
         uses: lumbroso-commons/free-disk-space@main
         with:
           android: false
 
-      - name: Install llvm (Ubuntu)
+      - name: Install LLVM
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y llvm clang lld llvm-dev
+
+      - name: Install Chrome
+        if: runner.os == 'Linux'
+        uses: browser-actions/setup-chrome@v2
 
       # =================
       #       Rust
