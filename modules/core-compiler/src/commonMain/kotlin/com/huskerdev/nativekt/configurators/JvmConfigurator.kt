@@ -64,7 +64,7 @@ fun prepareJvm(
                 }")
                 
                 add_library(shared SHARED dummy.$${context.language.sourceExtension})
-                target_link_libraries(shared PRIVATE $${buildSystem.libraryName})
+                target_link_libraries(shared PRIVATE $${wholeArchive(buildSystem.libraryName)})
                 
                 add_library(static STATIC dummy.$${context.language.sourceExtension})
                 target_link_libraries(static PRIVATE $${buildSystem.libraryName})
@@ -112,7 +112,7 @@ fun compileJvm(
                 jniIncludeDir.invariantSeparatorsPath,
                 jniIncludeDir.resolve(platformDirName).invariantSeparatorsPath
             ),
-            linkerArgs = listOf("-O3"),
+            linkerArgs = listOf("-O2"),
             dynamicLib = false,
             outputBaseName = "libjni",
             workingDir = layout.nativeBuildDir

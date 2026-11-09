@@ -2,7 +2,6 @@
 
 import com.huskerdev.nativekt.gradle.NativeKtCompileTask
 import com.huskerdev.nativekt.gradle.NativeKtPrepareTask
-import com.huskerdev.nativekt.gradle.configurators.PrepareNativesCommon
 import com.huskerdev.nativekt.gradle.currentNativeDesktopTargets
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JsModuleKind

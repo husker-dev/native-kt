@@ -95,7 +95,8 @@ internal fun cmakeLinkerArgs(
             if(part.endsWith(".a") ||
                 part.endsWith(".dylib") ||
                 part.endsWith(".so") ||
-                part.endsWith(".dll")
+                part.endsWith(".dll") ||
+                part.endsWith(".tbd")
             ) {
                 val path = if(!SyncPath(part).isAbsolute)
                     cmakeBuildDir.resolve(part).absoluteString()

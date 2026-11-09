@@ -1,5 +1,6 @@
 package com.huskerdev.nativekt.intellij.actions
 
+import com.huskerdev.nativekt.NativeKtInfo
 import com.huskerdev.nativekt.NativeModuleContext
 import com.huskerdev.nativekt.createContext
 import com.huskerdev.nativekt.parseModuleFromToml
@@ -257,6 +258,7 @@ class NewCAction: ActionBase() {
     override fun actionPerformed(e: AnActionEvent) = createModule(e, {"""
         [cmake]
         language = "c"
+        library_name = "$it"
         project_dir = "."
         profile = "Release"
     """.trimIndent() }) { root, name ->
@@ -272,6 +274,7 @@ class NewCAction: ActionBase() {
             
             # Create library
             add_library($$name STATIC src/source.c)
+            target_compile_options($$name PRIVATE -Wno-initializer-overrides)
             
             # Link nativekt
             nativekt_generate("nativekt.toml")
@@ -300,6 +303,7 @@ class NewCppAction: ActionBase() {
     override fun actionPerformed(e: AnActionEvent) = createModule(e, { """
         [cmake]
         language = "cpp"
+        library_name = "$it"
         project_dir = "."
         profile = "Release"
     """.trimIndent() }) { root, name ->

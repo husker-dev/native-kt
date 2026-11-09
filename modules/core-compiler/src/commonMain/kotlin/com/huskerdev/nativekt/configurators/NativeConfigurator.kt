@@ -67,7 +67,7 @@ fun prepareNative(
                 add_subdirectory("$${buildSystem.projectDir.invariantSeparatorsPath}" "$${layout.nativeBuildDir.resolve("sub").invariantSeparatorsPath}")
                 
                 add_library(shared SHARED dummy.$$sourceExtension)
-                target_link_libraries(shared PUBLIC $${buildSystem.libraryName})
+                target_link_libraries(shared PUBLIC $${wholeArchive(buildSystem.libraryName)})
                 
                 add_library(static STATIC dummy.$$sourceExtension)
                 target_link_libraries(static PRIVATE $${buildSystem.libraryName})
@@ -93,7 +93,7 @@ fun prepareNative(
                 linkerOpts += cmakeLinkerArgs(
                     context,
                     layout.nativeBuildDir,
-                    moduleName,
+                    "shared",
                     isKN = true
                 )
             }
