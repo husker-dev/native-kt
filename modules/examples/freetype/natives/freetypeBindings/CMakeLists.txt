@@ -26,7 +26,7 @@ FT_USE_MODULE( FT_Renderer_Class, ft_smooth_renderer_class )
 file(WRITE "${freetype_SOURCE_DIR}/include/freetype/config/ftmodule.h" "${MINIMAL_FT_MODULES}")
 
 # Create library
-add_library(${PROJECT_NAME} STATIC src/freetypeBindings.c)
+add_library(${PROJECT_NAME} OBJECT src/freetypeBindings.c)
 
 # Apply dependencies
 nativekt_generate("nativekt.toml")

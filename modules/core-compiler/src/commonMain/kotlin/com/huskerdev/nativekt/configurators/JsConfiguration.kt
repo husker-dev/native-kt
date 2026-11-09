@@ -47,11 +47,7 @@ fun prepareJs(
             
                 # Add sources + child project
                 add_executable(lib$${context.moduleName} dummy.$${context.language.sourceExtension})
-                target_link_libraries(lib$${context.moduleName} PRIVATE 
-                    "-Wl,--whole-archive"
-                    $${buildSystem.libraryName}
-                    "-Wl,--no-whole-archive"
-                )
+                target_link_libraries(lib$${context.moduleName} PRIVATE $${buildSystem.libraryName})
                 
                 # Add Emscripten linker flags
                 set_target_properties(lib$${context.moduleName} PROPERTIES LINK_FLAGS "$${getEmccArgs(context)}")

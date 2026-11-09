@@ -64,7 +64,7 @@ fun prepareJvm(
                 }")
                 
                 add_library(shared SHARED dummy.$${context.language.sourceExtension})
-                target_link_libraries(shared PRIVATE $${wholeArchive(buildSystem.libraryName)})
+                target_link_libraries(shared PRIVATE $${buildSystem.libraryName})
                 
                 add_library(static STATIC dummy.$${context.language.sourceExtension})
                 target_link_libraries(static PRIVATE $${buildSystem.libraryName})

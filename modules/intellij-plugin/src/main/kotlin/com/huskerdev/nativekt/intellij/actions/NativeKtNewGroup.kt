@@ -273,7 +273,7 @@ class NewCAction: ActionBase() {
             FetchContent_MakeAvailable(nativekt)
             
             # Create library
-            add_library($$name STATIC src/source.c)
+            add_library($$name OBJECT src/source.c)
             target_compile_options($$name PRIVATE -Wno-initializer-overrides)
             
             # Link nativekt
@@ -321,7 +321,7 @@ class NewCppAction: ActionBase() {
             FetchContent_MakeAvailable(nativekt)
             
             # Create library
-            add_library($$name STATIC src/source.cpp)
+            add_library($$name OBJECT src/source.cpp)
             
             # Link nativekt
             nativekt_generate("nativekt.toml")
