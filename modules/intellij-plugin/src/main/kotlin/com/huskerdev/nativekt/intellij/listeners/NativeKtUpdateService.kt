@@ -202,6 +202,7 @@ class NativeKtUpdateService(
         // Print Native
         if(input.nativeBuildDir != null) {
             when (context.buildSystem) {
+                is BuildSystem.SPM,
                 is BuildSystem.CMake -> Unit
                 is BuildSystem.Cargo -> {
                     val target = input.nativeBuildDir.resolve("${module.name}.nativekt.rs")
