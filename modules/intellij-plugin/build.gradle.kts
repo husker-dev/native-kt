@@ -45,7 +45,7 @@ tasks {
     }
 
     patchPluginXml {
-        sinceBuild.set("243")
+        sinceBuild.set("252")
         untilBuild = provider { null }
     }
 

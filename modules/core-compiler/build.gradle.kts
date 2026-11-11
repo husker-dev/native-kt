@@ -41,7 +41,7 @@ mavenPublishing {
     if(project.hasProperty("sign"))
         signAllPublications()
 
-    coordinates(group.toString(), "native-kt-core-generator", version.toString())
+    coordinates(group.toString(), "native-kt-core-compiler", version.toString())
 
     pom {
         name = "native-kt-core-compiler"
