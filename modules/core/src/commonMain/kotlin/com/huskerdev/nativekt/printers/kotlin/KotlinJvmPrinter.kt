@@ -181,6 +181,7 @@ class KotlinJvmPrinter(
         context.allOperations.forEach { function ->
             val isInterfaceFunction = function.isInterfaceOperation()
 
+            val internal = if(function.isInternal() && !isInterfaceFunction) "internal " else ""
             val actual = if(expectActual && !isInterfaceFunction) "actual " else ""
             val private = if(isInterfaceFunction) "private " else ""
 
@@ -193,7 +194,7 @@ class KotlinJvmPrinter(
 
             append("""
                 
-                $actual${private}fun ${function.kname}($args) = $implFieldName.${function.kname}($argNames)
+                $internal$actual${private}fun ${function.kname}($args) = $implFieldName.${function.kname}($argNames)
             """.trimIndent())
         }
         append("\n")
@@ -213,7 +214,7 @@ internal fun StringBuilder.printJvmInterface(inter: ResolvedIdlInterface) {
 
     appendLine("""
         
-        actual class $name(m: Unit, ptr: Long): NativeKtRcObject(ptr, ::_interface${name}Free) {
+        ${inter.internalModifier()}actual class $name(m: Unit, ptr: Long): NativeKtRcObject(ptr, ::_interface${name}Free) {
             @Suppress("unused")
             private val cleaner = createCleaner(this, releaser) { it.release() }
             override fun _address(): Long = _interface${name}Address(rcPtr)
@@ -227,14 +228,14 @@ internal fun StringBuilder.printJvmInterface(inter: ResolvedIdlInterface) {
 
         append(when {
             operation.isInterfaceOperationConstructor() ->
-                "\n\tactual constructor(${args.joinToString()}): this(Unit, ${operation.kname}(${argNames.joinToString()}))"
+                "\n\t${operation.internalModifier()}actual constructor(${args.joinToString()}): this(Unit, ${operation.kname}(${argNames.joinToString()}))"
             operation.isInterfaceOperationFn() -> {
                 val name = operation.interfaceFunctionName().camelCase()
                 val args = args.drop(1).joinToString()
                 val argNames = argNames.toMutableList()
                     .apply { set(0, "rcPtr") }
                     .joinToString()
-                "\n\tactual fun $name($args) = ${operation.kname}($argNames)"
+                "\n\t${operation.internalModifier()}actual fun $name($args) = ${operation.kname}($argNames)"
             }
             else -> return@forEach
         })

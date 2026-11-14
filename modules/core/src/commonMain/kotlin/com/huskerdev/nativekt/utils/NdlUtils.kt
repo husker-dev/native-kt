@@ -96,6 +96,9 @@ internal fun ResolvedIdlEnum.defaultValue(): String? =
     attributes?.filterIsInstance<IdlExtendedAttribute.IdentifierValue>()
         ?.firstOrNull { it.name.text == "default" }?.identifier?.text
 
+internal fun IdlAttributeHolder.isInternal(): Boolean = hasAttribute("internal")
+internal fun IdlAttributeHolder.internalModifier(): String = if(isInternal()) "internal " else ""
+
 fun checkForLongTypes(
     context: NativeModuleContext,
     configuration: NativeKtModule.Js,

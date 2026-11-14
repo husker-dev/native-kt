@@ -921,6 +921,8 @@ class KotlinJsPrinter(
             // === Print ===
 
             append('\n')
+            if(function.isInternal() && !isInterface)
+                append("internal ")
             if(expectActual && !isInterface)
                 append("actual ")
             if(isInterface)
@@ -979,7 +981,7 @@ class KotlinJsPrinter(
 
             append("""
                 
-                actual class $name internal constructor(m: JsAny, val _ptr: Int): NativeKtRcObject(_ptr.toLong(), { _interface${name}Free(it.toInt()) }) {
+                ${inter.internalModifier()}actual class $name internal constructor(m: JsAny, val _ptr: Int): NativeKtRcObject(_ptr.toLong(), { _interface${name}Free(it.toInt()) }) {
                     @Suppress("unused", "UNCHECKED_CAST_TO_EXTERNAL_INTERFACE", "unchecked_cast") 
                     private val cleaner = _createCleaner(this.toJsReference(), releaser.toJsReference()) {
                         (it as JsReference<AtomicHandleReleaser<Long>>).get().release()
@@ -997,14 +999,14 @@ class KotlinJsPrinter(
 
                 append(when {
                     operation.isInterfaceOperationConstructor() ->
-                        "\n\tactual constructor(${args.joinToString()}): this(_module, $kname(${argNames.joinToString()}))"
+                        "\n\t${operation.internalModifier()}actual constructor(${args.joinToString()}): this(_module, $kname(${argNames.joinToString()}))"
 
                     operation.isInterfaceOperationFn() -> {
                         val args = args.drop(1).joinToString()
                         val argNames = argNames.toMutableList()
                             .apply { set(0, "_ptr") }
                             .joinToString()
-                        "\n\tactual fun ${operation.interfaceFunctionName().camelCase()}($args) = $kname($argNames)"
+                        "\n\t${operation.internalModifier()}actual fun ${operation.interfaceFunctionName().camelCase()}($args) = $kname($argNames)"
                     }
                     else -> return@forEach
                 })

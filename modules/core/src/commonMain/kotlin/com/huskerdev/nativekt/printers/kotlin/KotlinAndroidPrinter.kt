@@ -101,7 +101,7 @@ class KotlinAndroidPrinter(
             }
 
             val modifiers = if(operation.isInterfaceOperation())
-                "private " else actual
+                "private " else "${operation.internalModifier()}$actual"
 
             val call = "_instance.$name($argNames)"
             val casted = when {

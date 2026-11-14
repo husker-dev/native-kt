@@ -615,6 +615,8 @@ class KotlinNativePrinter(
             // === Print ===
 
             append('\n')
+            if(function.isInternal() && !isInterface)
+                append("internal ")
             if(expectActual && !isInterface)
                 append("actual ")
             if(isInterface)
@@ -659,7 +661,7 @@ class KotlinNativePrinter(
             """.trimIndent())
             append("""
 
-                actual class $name(m: Unit, rcPtr: Long): NativeKtRcObject(rcPtr, ::_interface${name}Free) {
+                ${inter.internalModifier()}actual class $name(m: Unit, rcPtr: Long): NativeKtRcObject(rcPtr, ::_interface${name}Free) {
                     @Suppress("unused") private val cleaner = createCleaner(releaser) { it.release() }
                     override fun _address(): Long = _interface${name}Address(rcPtr)
                     
@@ -673,14 +675,14 @@ class KotlinNativePrinter(
 
                 append(when {
                     operation.isInterfaceOperationConstructor() ->
-                        "\n\tactual constructor(${args.joinToString()}): this(Unit, ${operation.kname}(${argNames.joinToString()}))"
+                        "\n\t${operation.internalModifier()}actual constructor(${args.joinToString()}): this(Unit, ${operation.kname}(${argNames.joinToString()}))"
                     operation.isInterfaceOperationFn() -> {
                         val args = args.drop(1).joinToString()
                         val argNames = argNames.toMutableList()
                             .apply { set(0, "rcPtr") }
                             .joinToString()
                         val name = operation.interfaceFunctionName().camelCase()
-                        "\n\tactual fun ${name}($args) = ${operation.kname}($argNames)"
+                        "\n\t${operation.internalModifier()}actual fun ${name}($args) = ${operation.kname}($argNames)"
                     }
                     else -> return@forEach
                 })

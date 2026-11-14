@@ -29,6 +29,7 @@ class KotlinCommonPrinter(
     private fun StringBuilder.printHeader() {
         append("""
             @file:OptIn(ExperimentalUnsignedTypes::class)
+            @file:Suppress("KotlinNoActualForExpect")
             
             package ${context.classPath}
             
@@ -77,7 +78,7 @@ class KotlinCommonPrinter(
             val args = operation.args.joinToString {
                 "${it.kname}: ${it.type.toKotlinType()}"
             }
-            append("\nexpect fun ${operation.kname}($args)$type")
+            append("\n${operation.internalModifier()}expect fun ${operation.kname}($args)$type")
         }
     }
 
@@ -98,7 +99,7 @@ class KotlinCommonPrinter(
                 ": ${callback.type.toKotlinType()}"
             else ""
 
-            append("\nfun interface $name$spaces { operator fun invoke($args)$type }")
+            append("\n${callback.internalModifier()}fun interface $name$spaces { operator fun invoke($args)$type }")
         }
         append("\n")
     }
@@ -109,7 +110,7 @@ class KotlinCommonPrinter(
 
         printLabel("Enums")
         context.enums.forEach { enum ->
-            append("\nenum class ${enum.kname} {")
+            append("\n${enum.internalModifier()}enum class ${enum.kname} {")
             enum.elements.joinTo(this, separator = ",") {
                 "\n\t${it.snakeCase().uppercase()}"
             }
@@ -123,7 +124,7 @@ class KotlinCommonPrinter(
 
         printLabel("Interfaces")
         context.interfaces.forEach { inter ->
-            append("\nexpect class ${inter.kname}")
+            append("\n${inter.internalModifier()}expect class ${inter.kname}")
 
             listOfNotNull(
                 inter.implements?.kname,
@@ -131,14 +132,14 @@ class KotlinCommonPrinter(
             ).joinTo(this, prefix = ": ", postfix = " {")
 
             inter.constructors.forEach { constructor ->
-                append("\n\tconstructor(")
+                append("\n\t${constructor.internalModifier()}constructor(")
                 constructor.args.joinTo(this) {
                     "${it.kname}: ${it.type.toKotlinType()}"
                 }
                 append(")")
             }
             inter.operations.forEach { operation ->
-                append("\n\tfun ${operation.kname}(")
+                append("\n\t${operation.internalModifier()}fun ${operation.kname}(")
                 operation.args.joinTo(this) {
                     "${it.kname}: ${it.type.toKotlinType()}"
                 }
@@ -185,11 +186,11 @@ internal fun StringBuilder.printDictionaries(
 
         // Print
         append("\n")
-        append("${actual1}interface $name$parent {")
+        append("${dictionary.internalModifier()}${actual1}interface $name$parent {")
 
         // Interface fields
         dictionary.fields.joinTo(this, separator = "") {
-            "\n\t${actual2}val ${it.kname}: ${it.type.toKotlinType()}"
+            "\n\t${it.internalModifier()}${actual2}val ${it.kname}: ${it.type.toKotlinType()}"
         }
 
         // Companion
