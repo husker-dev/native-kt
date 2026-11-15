@@ -11,20 +11,22 @@ class KotlinStubPrinter(
     init {
         target.parent!!.createDirectories()
         target.writeString(buildString {
+            val loaderVisibility = if(context.module.internalLoader) "internal " else ""
+
             appendLine("""
                 @file:Suppress("ACTUAL_ANNOTATIONS_NOT_MATCH_EXPECT")
                 @file:OptIn(ExperimentalUnsignedTypes::class)
                 
                 package ${context.classPath}
                 
-                actual val ${loadFieldName(context)}: Boolean = false
+                ${loaderVisibility}actual val ${loadFieldName(context)}: Boolean = false
                 
-                actual fun ${syncLoadFunctionName(context)}(): Unit = TODO("Not yet implemented")
-                actual fun ${asyncLoadFunctionName(context)}(onReady: () -> Unit): Unit = TODO("Not yet implemented")
+                ${loaderVisibility}actual fun ${syncLoadFunctionName(context)}(): Unit = TODO("Not yet implemented")
+                ${loaderVisibility}actual fun ${asyncLoadFunctionName(context)}(onReady: () -> Unit): Unit = TODO("Not yet implemented")
             """.trimIndent())
 
             if(context.module.useCoroutines)
-                appendLine("actual suspend fun ${asyncLoadFunctionName(context)}(): Unit = TODO(\"Not yet implemented\")")
+                appendLine("${loaderVisibility}actual suspend fun ${asyncLoadFunctionName(context)}(): Unit = TODO(\"Not yet implemented\")")
 
             printOperations()
             printDictionaries(context, true, isCommon = false)
@@ -38,7 +40,7 @@ class KotlinStubPrinter(
             val args = operation.args.joinToString {
                 "${it.kname}: ${it.type.toKotlinType()}"
             }
-            append("\nactual fun ${operation.kname}($args): $type = TODO(\"Not yet implemented\")")
+            append("\n${operation.internalModifier()}actual fun ${operation.kname}($args): $type = TODO(\"Not yet implemented\")")
         }
         append("\n")
     }
@@ -53,7 +55,7 @@ class KotlinStubPrinter(
 
             append("""
                 
-                actual class $name(dummy: Unit): com.huskerdev.nativekt.NativeKtRcObject(0, {}) {
+                ${inter.internalModifier()}actual class $name(dummy: Unit): com.huskerdev.nativekt.NativeKtRcObject(0, {}) {
                     override fun _address(): Long = 0L
 
             """.trimIndent())
@@ -64,12 +66,12 @@ class KotlinStubPrinter(
                 }
                 append(when {
                     operation.isInterfaceOperationConstructor() ->
-                        "\n\tactual constructor(${args.joinToString()}): this(Unit)"
+                        "\n\t${operation.internalModifier()}actual constructor(${args.joinToString()}): this(Unit)"
 
                     operation.isInterfaceOperationFn() -> {
                         val args = args.drop(1).joinToString()
                         val type = operation.type.toKotlinType()
-                        "\n\tactual fun ${operation.interfaceFunctionName().camelCase()}($args): $type = TODO(\"Not yet implemented\")"
+                        "\n\t${operation.internalModifier()}actual fun ${operation.interfaceFunctionName().camelCase()}($args): $type = TODO(\"Not yet implemented\")"
                     }
                     else -> return@forEach
                 })

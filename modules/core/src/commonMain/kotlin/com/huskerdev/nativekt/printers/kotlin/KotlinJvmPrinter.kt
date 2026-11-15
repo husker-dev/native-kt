@@ -88,17 +88,18 @@ class KotlinJvmPrinter(
             """.trimIndent())
 
         val isLibLoadedField = loadFieldName(context)
+        val loaderVisibility = if(context.module.internalLoader) "internal " else ""
 
         appendLine($$"""
             
             
             private var _$$isLibLoadedField = false
             
-            $${actual}val $$isLibLoadedField: Boolean
+            $$loaderVisibility$${actual}val $$isLibLoadedField: Boolean
                 get() = _$$isLibLoadedField
             
             @Throws(UnsupportedOperationException::class)
-            $${actual}fun $${syncLoadFunctionName(context)}() {
+            $$loaderVisibility$${actual}fun $${syncLoadFunctionName(context)}() {
                 if(_$$isLibLoadedField) return
                 _$$isLibLoadedField = true
                 
@@ -131,7 +132,7 @@ class KotlinJvmPrinter(
             
             }
             
-            ${actual}fun ${asyncLoadFunctionName(context)}(onReady: () -> Unit) {
+            $loaderVisibility${actual}fun ${asyncLoadFunctionName(context)}(onReady: () -> Unit) {
                 ${syncLoadFunctionName(context)}()
                 onReady()
             }
@@ -139,7 +140,7 @@ class KotlinJvmPrinter(
 
         if(context.module.useCoroutines) appendLine("""
             
-            ${actual}suspend fun ${asyncLoadFunctionName(context)}() =
+            $loaderVisibility${actual}suspend fun ${asyncLoadFunctionName(context)}() =
                 ${syncLoadFunctionName(context)}()
         """.trimIndent())
     }

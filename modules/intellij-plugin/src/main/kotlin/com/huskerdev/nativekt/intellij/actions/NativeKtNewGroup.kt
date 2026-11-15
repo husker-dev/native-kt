@@ -108,6 +108,7 @@ private fun createModule(e: AnActionEvent, buildSystemPart: (String) -> String, 
                 [kotlin]
                 package = "com.example"
                 use_coroutines = false
+                internal_loader = false
         
                 [jvm]
                 use_records = true

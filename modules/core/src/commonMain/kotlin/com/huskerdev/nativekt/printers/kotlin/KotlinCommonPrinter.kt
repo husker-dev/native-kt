@@ -27,6 +27,7 @@ class KotlinCommonPrinter(
     }
 
     private fun StringBuilder.printHeader() {
+        val loaderVisibility = if(context.module.internalLoader) "internal " else ""
         append("""
             @file:OptIn(ExperimentalUnsignedTypes::class)
             @file:Suppress("KotlinNoActualForExpect")
@@ -38,13 +39,13 @@ class KotlinCommonPrinter(
              * @throws UnsupportedOperationException When called in Kotlin/JS
              */
             @Throws(UnsupportedOperationException::class)
-            expect fun ${syncLoadFunctionName(context)}()
+            ${loaderVisibility}expect fun ${syncLoadFunctionName(context)}()
             
             /**
              * Initializes the native library `${context.moduleName}` asynchronously.
              * @param onReady Invoked when the native library is loaded.
              */
-            expect fun ${asyncLoadFunctionName(context)}(onReady: () -> Unit)
+            ${loaderVisibility}expect fun ${asyncLoadFunctionName(context)}(onReady: () -> Unit)
             
         """.trimIndent())
         if(context.module.useCoroutines) append("""
@@ -52,7 +53,7 @@ class KotlinCommonPrinter(
             /**
              * Initializes the native library `${context.moduleName}` asynchronously.
              */
-            expect suspend fun ${asyncLoadFunctionName(context)}()
+            ${loaderVisibility}expect suspend fun ${asyncLoadFunctionName(context)}()
             
         """.trimIndent())
 
@@ -61,7 +62,7 @@ class KotlinCommonPrinter(
             /**
              * Indicates when library `${context.moduleName}` is loaded
              */
-            expect val ${loadFieldName(context)}: Boolean
+            ${loaderVisibility}expect val ${loadFieldName(context)}: Boolean
             
         """.trimIndent())
     }

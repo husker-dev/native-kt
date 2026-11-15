@@ -18,6 +18,7 @@ data class NativeKtModule(
     var classPath: String,
     var apiFile: SyncPath,
     var useCoroutines: Boolean,
+    var internalLoader: Boolean,
 
     var commonTarget: String,
     var targets: List<String>,
@@ -188,6 +189,7 @@ fun parseModuleFromToml(text: String, relativePath: SyncPath): NativeKtModule {
         classPath = stringRequired("kotlin", "package"),
         apiFile = relativePath.resolve(stringRequired("description", "api_file")).normalize(),
         useCoroutines = bool("kotlin", "use_coroutines") ?: false,
+        internalLoader = bool("kotlin", "internal_loader") ?: false,
         commonTarget = string("compilation", "common_target") ?: "common",
         targets = stringArray("compilation", "targets") ?: listOf(
             "jvm", "android",

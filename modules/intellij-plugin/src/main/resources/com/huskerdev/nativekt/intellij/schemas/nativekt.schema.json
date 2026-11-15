@@ -116,6 +116,11 @@
           "type": "boolean",
           "default": "false",
           "description": "Specifies when to use coroutines"
+        },
+        "internal_loader": {
+          "type": "boolean",
+          "default": "false",
+          "description": "Specifies library loader visibility"
         }
       }
     },

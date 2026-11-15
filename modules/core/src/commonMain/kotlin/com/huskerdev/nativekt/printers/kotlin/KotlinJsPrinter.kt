@@ -33,6 +33,7 @@ class KotlinJsPrinter(
 
     private fun StringBuilder.printHeader() {
         val isLibLoadedField = loadFieldName(context)
+        val loaderVisibility = if(context.module.internalLoader) "internal " else ""
 
         appendLine("""
             @file:OptIn(ExperimentalWasmJsInterop::class, ExperimentalUnsignedTypes::class)
@@ -74,13 +75,13 @@ class KotlinJsPrinter(
         appendLine("""
             
             private var _$isLibLoadedField: Boolean = false
-            ${actual}val $isLibLoadedField: Boolean
+            $loaderVisibility${actual}val $isLibLoadedField: Boolean
                 get() = _$isLibLoadedField
             
-            ${actual}fun ${syncLoadFunctionName(context)}(): Unit = 
+            $loaderVisibility${actual}fun ${syncLoadFunctionName(context)}(): Unit = 
                 throw UnsupportedOperationException("Synchronous library loading is not supported in JS")
                 
-            ${actual}fun ${asyncLoadFunctionName(context)}(onReady: () -> Unit) {
+            $loaderVisibility${actual}fun ${asyncLoadFunctionName(context)}(onReady: () -> Unit) {
                 if($isLibLoadedField) 
                     return
                 
@@ -125,7 +126,7 @@ class KotlinJsPrinter(
         if(context.module.useCoroutines) {
             appendLine("""
                 
-                ${actual}suspend fun ${asyncLoadFunctionName(context)}() {
+                $loaderVisibility${actual}suspend fun ${asyncLoadFunctionName(context)}() {
                     if($isLibLoadedField)
                         return
                     suspendCancellableCoroutine { continuation ->

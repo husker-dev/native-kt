@@ -37,6 +37,7 @@ class KotlinAndroidPrinter(
 
     private fun StringBuilder.printHeader() {
         val isLibLoadedField = loadFieldName(context)
+        val loaderVisibility = if(context.module.internalLoader) "internal " else ""
 
         appendLine("""
             @file:OptIn(ExperimentalUnsignedTypes::class)
@@ -55,18 +56,18 @@ class KotlinAndroidPrinter(
             private lateinit var _instance: $jniClassName
             private var _$isLibLoadedField = false
 
-            ${actual}val $isLibLoadedField: Boolean
+            $loaderVisibility${actual}val $isLibLoadedField: Boolean
                 get() = _$isLibLoadedField
             
             @Throws(UnsupportedOperationException::class)
-            ${actual}fun ${syncLoadFunctionName(context)}() {
+            $loaderVisibility${actual}fun ${syncLoadFunctionName(context)}() {
                 if(_$isLibLoadedField) return
                 _$isLibLoadedField = true
                 
                 _instance = $jniClassName("${context.moduleName}")
             }
             
-            ${actual}fun ${asyncLoadFunctionName(context)}(onReady: () -> Unit) {
+            $loaderVisibility${actual}fun ${asyncLoadFunctionName(context)}(onReady: () -> Unit) {
                 ${syncLoadFunctionName(context)}()
                 onReady()
             }
@@ -74,7 +75,7 @@ class KotlinAndroidPrinter(
 
         if(context.module.useCoroutines) appendLine("""
             
-            ${actual}suspend fun ${asyncLoadFunctionName(context)}() =
+            $loaderVisibility${actual}suspend fun ${asyncLoadFunctionName(context)}() =
                 ${syncLoadFunctionName(context)}()
         """.trimIndent())
     }

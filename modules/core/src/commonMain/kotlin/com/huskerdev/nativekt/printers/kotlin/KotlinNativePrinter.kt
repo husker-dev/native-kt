@@ -28,6 +28,7 @@ class KotlinNativePrinter(
 
     private fun StringBuilder.printHeader() {
         val actual = if(expectActual) "actual " else ""
+        val loaderVisibility = if(context.module.internalLoader) "internal " else ""
 
         append("""
             @file:OptIn(ExperimentalForeignApi::class, ExperimentalNativeApi::class)
@@ -42,20 +43,20 @@ class KotlinNativePrinter(
             import com.huskerdev.nativekt.*
             import platform.posix.*
             
-            ${actual}val ${loadFieldName(context)}: Boolean = true
+            $loaderVisibility${actual}val ${loadFieldName(context)}: Boolean = true
             
             @Throws(UnsupportedOperationException::class)
-            ${actual}fun ${syncLoadFunctionName(context)}() =
+            $loaderVisibility${actual}fun ${syncLoadFunctionName(context)}() =
                 ${context.mangle("init")}()
             
-            ${actual}fun ${asyncLoadFunctionName(context)}(onReady: () -> Unit) {
+            $loaderVisibility${actual}fun ${asyncLoadFunctionName(context)}(onReady: () -> Unit) {
                 ${syncLoadFunctionName(context)}()
                 onReady()
             }
             
         """.trimIndent())
         if(context.module.useCoroutines)
-            append("\n${actual}suspend fun ${asyncLoadFunctionName(context)}() = ${syncLoadFunctionName(context)}()\n")
+            append("\n$loaderVisibility${actual}suspend fun ${asyncLoadFunctionName(context)}() = ${syncLoadFunctionName(context)}()\n")
     }
 
     private fun StringBuilder.printBasicCasts() {
