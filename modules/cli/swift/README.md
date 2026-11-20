@@ -16,7 +16,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/husker-dev/native-kt-swift.git",
-                 from: "VERSION")
+                 from: "${{VERSION}}")
     ],
     targets: [
         .target(

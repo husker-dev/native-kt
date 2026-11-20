@@ -81,6 +81,9 @@ tasks.register("proguardJar", proguard.taskClass) {
 val prepareCMakeBundle = tasks.register<Copy>("packCMakeBundle") {
     description = "Prepares CMake CLI bundle"
 
+    val packageVersion = project.version.toString()
+    inputs.property("packageVersion", packageVersion)
+
     into(layout.buildDirectory.dir("nativekt-cmake"))
     from(file("cmake"))
     from(rootProject.file("LICENSE"))
@@ -99,6 +102,12 @@ val prepareCMakeBundle = tasks.register<Copy>("packCMakeBundle") {
         dependsOn(executable.linkTaskProvider)
         from(executable.outputFile) {
             rename { "bin/nativekt-cli-$platform$extension" }
+        }
+    }
+
+    doLast {
+        destinationDir.resolve("README.md").apply {
+            writeText(readText().replace($$"${{VERSION}}", packageVersion))
         }
     }
 }
@@ -162,6 +171,9 @@ tasks.register<Sync>("packSwiftPackage") {
     group = "cli"
     description = "Stages SwiftPM build-tool plugin with the bundled Native-Kt CLI"
 
+    val packageVersion = project.version.toString()
+    inputs.property("packageVersion", packageVersion)
+
     into(layout.buildDirectory.dir("nativekt-swift"))
     from(file("swift"))
     from(rootProject.file("LICENSE"))
@@ -185,6 +197,12 @@ tasks.register<Sync>("packSwiftPackage") {
             filePermissions {
                 unix("755")
             }
+        }
+    }
+
+    doLast {
+        destinationDir.resolve("README.md").apply {
+            writeText(readText().replace($$"${{VERSION}}", packageVersion))
         }
     }
 }
