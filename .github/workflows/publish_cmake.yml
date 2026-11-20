@@ -1,8 +1,17 @@
 name: Publish (CMake)
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Publishing version"
+        required: true
+        type: string
   release:
-    types: [ released, prereleased ]
+    types: [published]
+
+env:
+  RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+
 jobs:
   cargo:
     name: Publish (CMake)
@@ -13,8 +22,11 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v7
+        with:
+          path: native-kt
 
       - name: "Prepare"
+        working-directory: native-kt
         run: |
           chmod +x ./gradlew
 
@@ -25,10 +37,44 @@ jobs:
           java-version: 25
           
       - name: Pack CMake package
-        run: ./gradlew :modules:cli:packCMake
+        working-directory: native-kt
+        run: ./gradlew :modules:cli:packCMakeBundle
 
-      - name: Publish CMake package
-        uses: softprops/action-gh-release@v3
-        if: github.ref_type == 'tag'
+      - name: Checkout CMake repo
+        uses: actions/checkout@v7
         with:
-          files: './modules/cli/build/distributions/nativekt-cmake.tar.gz'
+          repository: husker-dev/native-kt-cmake
+          ref: main
+          token: ${{ secrets.CMAKE_REPO_TOKEN }}
+          path: native-kt-cmake
+          persist-credentials: true
+
+      - name: Copy files
+        run: |
+          rsync -av --delete --exclude='.git' \
+            native-kt/modules/cli/build/nativekt-cmake/ \
+            native-kt-cmake/
+
+      - name: Commit and push
+        working-directory: native-kt-cmake
+        run: |
+          git config user.name "nshtengauer"
+          git config user.email "shtengauer.nikita@gmail.com"
+                
+          git add -A
+                
+          if ! git diff --cached --quiet; then
+            git commit -m "Publish $RELEASE_TAG"
+            git push origin HEAD:main
+          fi
+
+      - name: Create tag and release
+        working-directory: native-kt-cmake
+        env:
+          GH_TOKEN: ${{ secrets.CMAKE_REPO_TOKEN }}
+        run: |
+          gh release create "$RELEASE_TAG" \
+            --repo "husker-dev/native-kt-cmake" \
+            --target "$(git rev-parse HEAD)" \
+            --title "$RELEASE_TAG" \
+            --generate-notes

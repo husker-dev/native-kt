@@ -52,7 +52,7 @@ private fun VirtualFile.isGradleModule(): Boolean {
     return buildFile.isFile && buildFile.exists()
 }
 
-private fun createModule(e: AnActionEvent, buildSystemPart: (String) -> String, createFiles: (VirtualFile, String) -> Unit) {
+internal fun createModule(e: AnActionEvent, buildSystemPart: (String) -> String, createFiles: (VirtualFile, String) -> Unit) {
     val project = e.project ?: return
     var projectRoot = e.getData(CommonDataKeys.VIRTUAL_FILE)!!
 
@@ -203,7 +203,6 @@ private fun createModule(e: AnActionEvent, buildSystemPart: (String) -> String, 
             with(nativeKtBlock) {
                 addBefore(factory.createNewLine(), rBrace)
                 addBefore(factory.createExpression("add(\"$name\")"), rBrace)
-                addBefore(factory.createNewLine(), rBrace)
             }
 
             // Add in 'plugins {}' block
@@ -229,164 +228,9 @@ private fun createModule(e: AnActionEvent, buildSystemPart: (String) -> String, 
     }
 }
 
-fun createContext(root: VirtualFile) = createContext(
-    buildDir = SyncPath(""),
-    module = parseModuleFromToml(SyncPath(root.path).resolve("nativekt.toml")),
-    executor = object: NativeModuleContext.CommandExecutor {
-        override fun exec(
-            context: NativeModuleContext,
-            command: String,
-            workingDir: SyncPath?,
-            silent: Boolean,
-            errAsStd: Boolean,
-            environment: Map<String, String>?
-        ): String = ""
-    },
-    logger = object: NativeModuleContext.Logger {
-        override fun error(text: String) = Unit
-        override fun info(text: String) = Unit
-    }
-)!!
-
 abstract class ActionBase: AnAction() {
     override fun getActionUpdateThread() = ActionUpdateThread.BGT
     override fun update(e: AnActionEvent) {
         e.presentation.isEnabledAndVisible = true
-    }
-}
-
-class NewCAction: ActionBase() {
-    override fun actionPerformed(e: AnActionEvent) = createModule(e, {"""
-        [cmake]
-        language = "c"
-        library_name = "$it"
-        project_dir = "."
-        profile = "Release"
-    """.trimIndent() }) { root, name ->
-        VfsUtil.saveText(root.findOrCreateFile("CMakeLists.txt"), $$"""
-            cmake_minimum_required(VERSION 3.24)
-
-            project("$$name")
-            
-            # Load dependencies
-            include(FetchContent)
-            FetchContent_Declare(nativekt URL "https://github.com/husker-dev/native-kt/releases/download/$${NativeKtInfo.VERSION}/nativekt-cmake.tar.gz")
-            FetchContent_MakeAvailable(nativekt)
-            
-            # Create library
-            add_library($$name OBJECT src/source.c)
-            target_compile_options($$name PRIVATE -Wno-initializer-overrides)
-            
-            # Link nativekt
-            nativekt_generate("nativekt.toml")
-            target_link_libraries($$name PRIVATE NativeKt::bindings)
-        """.trimIndent())
-
-        VfsUtil.saveText(root.findOrCreateFile("src/source.c"), """
-            #include <nativekt.h>
-            #include <stdio.h>
-            
-            void hello_world() {
-                printf("Hello, World!\n");
-                fflush(stdout);
-            }
-        """.trimIndent())
-
-        CApiHeaderPrinter(
-            context = createContext(root),
-            target = SyncPath(root.path).resolve("include/api.h")
-        )
-        root.findOrCreateFile("include/api.h")
-    }
-}
-
-class NewCppAction: ActionBase() {
-    override fun actionPerformed(e: AnActionEvent) = createModule(e, { """
-        [cmake]
-        language = "cpp"
-        library_name = "$it"
-        project_dir = "."
-        profile = "Release"
-    """.trimIndent() }) { root, name ->
-        VfsUtil.saveText(root.findOrCreateFile("CMakeLists.txt"), $$"""
-            cmake_minimum_required(VERSION 3.24)
-
-            project("$$name" LANGUAGES CXX)
-            
-            set(CMAKE_CXX_STANDARD 17)
-            set(CMAKE_CXX_STANDARD_REQUIRED ON)
-            
-            # Load dependencies
-            include(FetchContent)
-            FetchContent_Declare(nativekt URL "https://github.com/husker-dev/native-kt/releases/download/$${NativeKtInfo.VERSION}/nativekt-cmake.tar.gz")
-            FetchContent_MakeAvailable(nativekt)
-            
-            # Create library
-            add_library($$name OBJECT src/source.cpp)
-            
-            # Link nativekt
-            nativekt_generate("nativekt.toml")
-            target_link_libraries($$name PRIVATE NativeKt::bindings)
-        """.trimIndent())
-
-        VfsUtil.saveText(root.findOrCreateFile("src/source.cpp"), """
-            #include <nativekt.hpp>
-            #include <iostream>
-            
-            void hello_world() {
-                std::cout << "Hello, World!" << std::endl;
-            }
-        """.trimIndent())
-
-        CppApiHeaderPrinter(
-            context = createContext(root),
-            target = SyncPath(root.path).resolve("include/api.hpp"),
-            tppTarget = SyncPath(root.path).resolve("include/api.tpp")
-        )
-        root.findOrCreateFile("include/api.hpp")
-        root.findOrCreateFile("include/api.tpp")
-    }
-}
-
-class NewCargoAction: ActionBase() {
-    override fun actionPerformed(e: AnActionEvent) = createModule(e, { """
-        [cargo]
-        project_dir = "."
-        lib_name = "$it"
-        profile = "release"
-    """.trimIndent() }) { root, name ->
-        VfsUtil.saveText(root.findOrCreateFile("Cargo.toml"), $$"""
-            [package]
-            name = "$$name"
-            version = "0.1.0"
-            edition = "2021"
-
-            [lib]
-            crate-type = ["staticlib", "cdylib"]
-
-            [dependencies]
-            nativekt = "$${NativeKtInfo.VERSION}"
-            
-            [build-dependencies]
-            nativekt = "$${NativeKtInfo.VERSION}"
-        """.trimIndent())
-
-        VfsUtil.saveText(root.findOrCreateFile("build.rs"), """
-            fn main() {
-                nativekt::generate("nativekt.toml")
-                    .expect("Native-Kt generation failed");
-            }
-        """.trimIndent())
-
-        VfsUtil.saveText(root.findOrCreateFile("src/lib.rs"), """
-            #[allow(unused)]
-            pub mod $name {
-                nativekt::include_source!("$name");
-            }
-            
-            fn hello_world() {
-                println!("Hello, World!");
-            }
-        """.trimIndent())
     }
 }

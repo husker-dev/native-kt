@@ -157,6 +157,12 @@
                 class="com.huskerdev.nativekt.intellij.actions.NewCargoAction"
                 text="Rust (Cargo)"
                 icon="/com/huskerdev/nativekt/intellij/icons/rustFile.svg"/>
+
+            <action
+                id="com.huskerdev.nativekt.spm"
+                class="com.huskerdev.nativekt.intellij.actions.NewSpmAction"
+                text="Swift (SPM)"
+                icon="/com/huskerdev/nativekt/intellij/icons/swiftLang.svg"/>
         </group>
     </actions>
 </idea-plugin>

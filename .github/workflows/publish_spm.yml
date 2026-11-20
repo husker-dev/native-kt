@@ -1,0 +1,80 @@
+name: Publish (Swift)
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Publishing version"
+        required: true
+        type: string
+  release:
+    types: [published]
+
+env:
+  RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+
+jobs:
+  cargo:
+    name: Publish (SPM)
+    runs-on: macOS-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+        with:
+          path: native-kt
+
+      - name: "Prepare"
+        working-directory: native-kt
+        run: |
+          chmod +x ./gradlew
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'graalvm'
+          java-version: 25
+          
+      - name: Pack SPM package
+        working-directory: native-kt
+        run: ./gradlew :modules:cli:packSwiftPackage
+
+      - name: Checkout Swift repo
+        uses: actions/checkout@v7
+        with:
+          repository: husker-dev/native-kt-swift
+          ref: main
+          token: ${{ secrets.SWIFT_REPO_TOKEN }}
+          path: native-kt-swift
+          persist-credentials: true
+
+      - name: Copy files
+        run: |
+          rsync -av --delete --exclude='.git' \
+            native-kt/modules/cli/build/nativekt-swift/ \
+            native-kt-swift/
+
+      - name: Commit and push
+        working-directory: native-kt-swift
+        run: |
+          git config user.name "nshtengauer"
+          git config user.email "shtengauer.nikita@gmail.com"
+                
+          git add -A
+                
+          if ! git diff --cached --quiet; then
+            git commit -m "Publish $RELEASE_TAG"
+            git push origin HEAD:main
+          fi
+
+      - name: Create tag and release
+        working-directory: native-kt-swift
+        env:
+          GH_TOKEN: ${{ secrets.SWIFT_REPO_TOKEN }}
+        run: |
+          gh release create "$RELEASE_TAG" \
+            --repo "husker-dev/native-kt-swift" \
+            --target "$(git rev-parse HEAD)" \
+            --title "$RELEASE_TAG" \
+            --generate-notes

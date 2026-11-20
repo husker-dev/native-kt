@@ -78,11 +78,12 @@ tasks.register("proguardJar", proguard.taskClass) {
     )
 }
 
-val prepareCMakeBundle = tasks.register<Copy>("prepareCMakeBundle") {
+val prepareCMakeBundle = tasks.register<Copy>("packCMakeBundle") {
     description = "Prepares CMake CLI bundle"
 
     into(layout.buildDirectory.dir("nativekt-cmake"))
-    from(file("CMakeLists.txt"))
+    from(file("cmake"))
+    from(rootProject.file("LICENSE"))
 
     kotlin.targets.withType<KotlinNativeTarget>().forEach { target ->
         val executable = target.binaries.getExecutable(NativeBuildType.RELEASE)
@@ -97,28 +98,8 @@ val prepareCMakeBundle = tasks.register<Copy>("prepareCMakeBundle") {
 
         dependsOn(executable.linkTaskProvider)
         from(executable.outputFile) {
-            rename { "nativekt-cli-$platform$extension" }
+            rename { "bin/nativekt-cli-$platform$extension" }
         }
-    }
-}
-
-tasks.register<Tar>("packCMake") {
-    group = "cli"
-    description = "Packs CMake CLI bundle as a tar.gz archive"
-
-    archiveFileName.set("nativekt-cmake.tar.gz")
-    destinationDirectory.set(layout.buildDirectory.dir("distributions"))
-    compression = Compression.GZIP
-
-    into("nativekt-cmake")
-    from(prepareCMakeBundle) {
-        include("nativekt-cli-*")
-        filePermissions {
-            unix("755")
-        }
-    }
-    from(prepareCMakeBundle) {
-        exclude("nativekt-cli-*")
     }
 }
 
@@ -183,6 +164,7 @@ tasks.register<Sync>("packSwiftPackage") {
 
     into(layout.buildDirectory.dir("nativekt-swift"))
     from(file("swift"))
+    from(rootProject.file("LICENSE"))
 
     kotlin.targets.withType<KotlinNativeTarget>().forEach { target ->
         val platform = when (target.name) {
