@@ -7,6 +7,7 @@ import com.akuleshov7.ktoml.parsers.TomlParser
 import com.akuleshov7.ktoml.tree.nodes.TomlKeyValueArray
 import com.akuleshov7.ktoml.tree.nodes.TomlKeyValuePrimitive
 import com.akuleshov7.ktoml.tree.nodes.pairs.values.TomlBasicString
+import com.huskerdev.stdlibx.OS
 import com.huskerdev.stdlibx.fs.SyncPath
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -224,10 +225,20 @@ fun parseModuleFromToml(text: String, relativePath: SyncPath): NativeKtModule {
                     else -> throw NullPointerException("Unknown CMake build type")
                 },
                 args = stringArray("cmake", "args") ?: emptyList(),
-                language = when(val value = stringRequired("cmake", "language")) {
-                    "c" -> Language.C
-                    "cpp", "c++" -> Language.CPP
-                    else -> throw UnsupportedOperationException("Unknown CMake language: $value")
+                language = run {
+                    fun langField(name: String) = string("cmake", name)?.let {
+                        when(it) {
+                            "c" -> Language.C
+                            "cpp", "c++" -> Language.CPP
+                            else -> throw UnsupportedOperationException("Unknown CMake language: $name")
+                        }
+                    }
+                    langField("language") ?: langField(when (OS.current) {
+                        OS.WINDOWS -> "language-windows"
+                        OS.LINUX -> "language-linux"
+                        OS.MACOS -> "language-macos"
+                        else -> throw UnsupportedOperationException()
+                    }) ?: throw NullPointerException("CMake language is not specified")
                 }
             )
             "spm" in values -> BuildSystem.SPM(
