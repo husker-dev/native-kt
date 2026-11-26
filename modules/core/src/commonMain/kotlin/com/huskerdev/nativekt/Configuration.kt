@@ -34,7 +34,8 @@ data class NativeKtModule(
     var debug: List<DebugKind>,
 ) {
     val expectActual: Boolean
-        get() = targets.size != 1 && commonTarget != targets[0]
+        get() = commonTarget != (targets.takeIf { it.size == 1 }?.get(0)
+                    ?: stubs.takeIf { it.size == 1 }?.get(0))
 
     @Serializable
     data class Jvm(
