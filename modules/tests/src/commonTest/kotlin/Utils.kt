@@ -34,7 +34,7 @@ fun withRustLib(block: suspend () -> Unit) = runTest {
 fun withSwiftLib(block: suspend () -> Unit) = runTest {
     if(EnvironmentKind.current == EnvironmentKind.WEB ||
         EnvironmentKind.current == EnvironmentKind.NODEJS ||
-        OS.isWindows
+        !OS.isMacOS
     ) return@runTest
     loadLibTestSwift()
     block()
