@@ -20,7 +20,7 @@ fun withCppLib(block: suspend () -> Unit) = runTest {
 fun withObjcLib(block: suspend () -> Unit) = runTest {
     if(EnvironmentKind.current == EnvironmentKind.WEB ||
         EnvironmentKind.current == EnvironmentKind.NODEJS ||
-        OS.isWindows
+        OS.isAndroid || OS.isWindows
     ) return@runTest
     loadLibTestObjc()
     block()

@@ -79,6 +79,7 @@ tasks.register("proguardJar", proguard.taskClass) {
 }
 
 val packCMakePackage = tasks.register<Copy>("packCMakePackage") {
+    group = "cli"
     description = "Packs CMake package"
 
     val packageVersion = project.version.toString()

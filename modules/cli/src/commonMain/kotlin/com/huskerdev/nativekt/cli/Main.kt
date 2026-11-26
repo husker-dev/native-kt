@@ -9,6 +9,8 @@ import com.github.ajalt.mordant.platform.MultiplatformSystem.exitProcess
 import com.huskerdev.nativekt.*
 import com.huskerdev.nativekt.printers.c.CApiHeaderPrinter
 import com.huskerdev.nativekt.printers.c.CApiImplPrinter
+import com.huskerdev.nativekt.printers.c.cname
+import com.huskerdev.nativekt.printers.c.cnameMangled
 import com.huskerdev.nativekt.printers.cpp.CppApiHeaderPrinter
 import com.huskerdev.nativekt.printers.cpp.CppApiImplPrinter
 import com.huskerdev.nativekt.printers.objc.ObjcApiHeaderPrinter
@@ -23,6 +25,7 @@ fun main(argv: Array<String>) = NativeKtCli()
     .subcommands(
         PrintNdlPath(),
         PrintName(),
+        PrintOperations(),
         Generate()
     ).main(argv)
 
@@ -51,6 +54,29 @@ class PrintName: CliktCommand(name = "print-name") {
         try {
             val module = parseModuleFromToml(SyncPath(config))
             echo(module.name)
+        } catch (e: Throwable) {
+            e.printStackTrace()
+            exitProcess(1)
+        }
+    }
+}
+
+class PrintOperations: CliktCommand(name = "print-function-mapping") {
+    val config by option(help = "Toml configuration file").required()
+
+    override fun run() {
+        try {
+            val module = parseModuleFromToml(SyncPath(config))
+            val context = createContext(
+                buildDir = SyncPath(),
+                module = module,
+                executor = NativeModuleContext.CommandExecutor.Noop(),
+                logger = NativeModuleContext.Logger.Noop()
+            )!!
+
+            context.allOperations.forEach {
+                echo("${it.cname}=${it.cnameMangled(context)}")
+            }
         } catch (e: Throwable) {
             e.printStackTrace()
             exitProcess(1)

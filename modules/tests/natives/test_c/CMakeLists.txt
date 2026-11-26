@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.24)
 
-project("test")
+project("test" LANGUAGES C)
 
 include("${CMAKE_CURRENT_LIST_DIR}/../LocalNativeKt.cmake")
 
-# Create lib
+# Create library
 add_library(test_lib OBJECT
         src/interfaces.c
         src/jvmci.c
@@ -22,6 +22,5 @@ add_library(test_lib OBJECT
         src/arrays/callback_return_array.c
 )
 
-# Generate and add native-kt files
-nativekt_generate("nativekt.toml")
-target_link_libraries(test_lib PRIVATE NativeKt::bindings)
+# Configure native-kt
+nativekt_configure(test_lib "nativekt.toml")

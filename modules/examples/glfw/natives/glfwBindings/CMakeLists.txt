@@ -22,5 +22,6 @@ glad_add_library(glad REPRODUCIBLE EXCLUDE_FROM_ALL LOADER API gl:core=4.6 EXTEN
 # Setup
 add_library(${PROJECT_NAME} STATIC src/glfw.c)
 
-nativekt_generate("nativekt.toml")
-target_link_libraries(${PROJECT_NAME} PRIVATE glad glfw NativeKt::bindings)
+# Apply dependencies
+nativekt_configure(${PROJECT_NAME} "nativekt.toml")
+target_link_libraries(${PROJECT_NAME} PRIVATE glad glfw)

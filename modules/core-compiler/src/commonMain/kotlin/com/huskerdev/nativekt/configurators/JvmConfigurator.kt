@@ -40,43 +40,6 @@ fun prepareJvm(
             isImpl = true,
         )
     }
-
-    when(val buildSystem = context.buildSystem) {
-        is BuildSystem.CMake -> {
-            layout.nativeSourcesDir.resolve("dummy.${context.language.sourceExtension}").writeString("")
-            layout.nativeSourcesDir.resolve("CMakeLists.txt").writeString($$"""
-                cmake_minimum_required(VERSION 3.24)
-        
-                project("native-kt"$${when(buildSystem.language) {
-                    Language.CPP -> " LANGUAGES CXX"
-                    Language.OBJC -> " LANGUAGES C OBJC"
-                    else -> ""
-                }})
-                
-                $${if (buildSystem.language == Language.CPP) "set(CMAKE_CXX_STANDARD 17)" else ""}
-                $${if (buildSystem.language == Language.CPP) "set(CMAKE_CXX_STANDARD_REQUIRED ON)" else ""}
-                
-                if(CMAKE_C_COMPILER)
-                    set(DUMMY ${CMAKE_C_COMPILER})
-                endif()
-                
-                set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-                add_compile_options(-Wno-initializer-overrides)
-                
-                add_subdirectory("$${buildSystem.projectDir.invariantSeparatorsPath}" "$${
-                    layout.nativeBuildDir.resolve("cmake/sub").invariantSeparatorsPath
-                }")
-                
-                add_library(shared SHARED dummy.$${context.language.sourceExtension})
-                target_link_libraries(shared PRIVATE $${buildSystem.libraryName})
-                
-                add_library(static STATIC dummy.$${context.language.sourceExtension})
-                target_link_libraries(static PRIVATE $${buildSystem.libraryName})
-            """.trimIndent())
-        }
-        is BuildSystem.Cargo -> Unit
-        is BuildSystem.SPM -> Unit
-    }
 }
 
 fun compileJvm(
@@ -154,7 +117,7 @@ fun compileJvm(
             val cmakeBuildDir = layout.nativeBuildDir.resolve("cmake")
 
             cmakeGen(context,
-                dir = layout.nativeSourcesDir,
+                dir = buildSystem.projectDir,
                 buildDir = cmakeBuildDir,
                 buildType = buildSystem.buildType,
                 args = LinkedHashSet<String>().apply {
@@ -165,14 +128,15 @@ fun compileJvm(
             )
             cmakeBuild(context, cmakeBuildDir)
 
+            val targetName = cmakeBuildDir.resolve("nativekt/target.txt").readString()
             Triple(
-                cmakeBuildDir.resolve("libstatic.a"),
-                cmakeBuildDir.resolve("libshared.${OS.current.dylibExtension}")
+                cmakeBuildDir.resolve("libnativekt_${targetName}_static.a"),
+                cmakeBuildDir.resolve("libnativekt_${targetName}_shared.${OS.current.dylibExtension}")
             ) {
                 cmakeLinkerArgs(
                     context,
                     cmakeBuildDir = cmakeBuildDir,
-                    moduleName = "shared"
+                    moduleName = "nativekt_${targetName}_shared"
                 )
             }
         }

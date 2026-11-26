@@ -7,8 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include("${CMAKE_CURRENT_LIST_DIR}/../../../LocalNativeKt.cmake")
 
-add_library(${PROJECT_NAME} STATIC src/tc_5_cpp.cpp)
+add_library(tc_5_cpp STATIC src/tc_5_cpp.cpp)
 
-# Generate and add native-kt files
-nativekt_generate("nativekt.toml")
-target_link_libraries(${PROJECT_NAME} PRIVATE NativeKt::bindings)
+# Configure native-kt
+nativekt_configure(tc_5_cpp "nativekt.toml")

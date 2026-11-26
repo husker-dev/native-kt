@@ -15,11 +15,10 @@ internal fun locateEmcc(context: NativeModuleContext): SyncPath {
 }
 
 internal fun getEmccArgs(context: NativeModuleContext): String = listOfNotNull(
-    "--no-entry",
     "ALLOW_MEMORY_GROWTH=1",
     "ALLOW_TABLE_GROWTH=1",
     "MODULARIZE=1",
     "EXPORT_ES6=1",
     "ENVIRONMENT=${if (context.module.js.target == JsTarget.WEB) "web" else "node"}",
     "EXPORTED_RUNTIME_METHODS=addFunction,wasmMemory",
-).joinToString(separator = " ") { "-s $it" }
+).joinToString(separator = " ", prefix = "--no-entry ") { "-s $it" }

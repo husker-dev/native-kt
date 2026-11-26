@@ -7,7 +7,6 @@ api_file = "./api.ndl"
 # stub
 [cmake]
 project_dir = "."
-library_name = "jvmOnlyTest"
 language = "c"
 
 [kotlin]

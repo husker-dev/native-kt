@@ -8,6 +8,7 @@ import com.huskerdev.webidl.*
 import com.huskerdev.webidl.resolver.*
 
 private const val EXPORT_MACRO = "NKT_EXPORT"
+private const val MANGLE_MACRO = "NKT_MANGLE"
 
 private fun NativeModuleContext.exportC(name: String, isInternal: Boolean = true) =
     "$EXPORT_MACRO(${mangle(name, isInternal = isInternal)}, ${jsMangle[name]})"
@@ -58,6 +59,8 @@ class CApiHeaderPrinter(
             #include <stdlib.h>
             #include <stdint.h>
             #include <stdbool.h>
+            
+            #define NKT_MANGLE(NAME) ${context.mangle("", isInternal = true)}##NAME
         """.trimIndent())
 
         if(!isImpl && language == Language.C && (context.hasObjectArrays || context.hasPrimitiveArray)) {
@@ -136,7 +139,7 @@ class CApiHeaderPrinter(
         printLabel("Types")
 
         if(!isImpl && language == Language.C && (context.callbacks.isNotEmpty() || context.interfaces.isNotEmpty())) {
-            append("""
+            appendLine("""
                 
                 #define RC(Name, Type, Lower)                                    \
                 typedef struct RC_##Name RC_##Name;                              \
@@ -147,8 +150,7 @@ class CApiHeaderPrinter(
                     Type* _Nonnull pointed;                                      \
                     int32_t refs;                                                \
                 };                                                               \
-                RC_##Name* _Nullable rc_##Lower##_new(Type* _Nullable ptr);
-                
+                RC_##Name* _Nullable $MANGLE_MACRO(rc_##Lower##_new)(Type* _Nullable ptr);
                 
             """.trimIndent())
 
@@ -156,7 +158,8 @@ class CApiHeaderPrinter(
                 context.callbacks.mapTo(this) { Triple(it.cname, it.cname, it.name.lowercase()) }
                 context.interfaces.mapTo(this) { Triple(it.cname, "NATIVEKT_${it.cname}", it.name.lowercase()) }
             }.forEach {
-                append("RC(${it.first}, ${it.second}, ${it.third})\n")
+                append("\nRC(${it.first}, ${it.second}, ${it.third})")
+                append("\n#define rc_${it.third}_new $MANGLE_MACRO(rc_${it.third}_new)\n")
             }
             append("#undef RC\n")
         }
@@ -164,7 +167,7 @@ class CApiHeaderPrinter(
         // String
         if(context.hasString) {
             if (!isImpl && language == Language.C) {
-                append("""
+                appendLine("""
                     
                     typedef struct KString KString;
                     struct KString {
@@ -179,14 +182,16 @@ class CApiHeaderPrinter(
                         bool make_copy;
                     } _KStringNewArgs;
                     
-                    #define k_string_new(data, ...) \
-                        _k_string_new(data, (_KStringNewArgs){ .size = -1, .make_copy = true, __VA_ARGS__ })
+                    KString* _Nonnull $MANGLE_MACRO(_k_string_new)(const char* _Nonnull data, _KStringNewArgs args);
+                    KString* _Nonnull $MANGLE_MACRO(k_string_clone)(const KString* _Nonnull self);
+                    int32_t           $MANGLE_MACRO(k_string_length)(const KString* _Nonnull self);
+                    void              $MANGLE_MACRO(k_string_free)(KString* _Nonnull self);
                     
-                    KString* _Nonnull _k_string_new(const char* _Nonnull data, _KStringNewArgs args);
-                    KString* _Nonnull k_string_clone(const KString* _Nonnull self);
-                    int32_t k_string_length(const KString* _Nonnull self);
-                    void k_string_free(KString* _Nonnull self);
-                    
+                    #define k_string_new(data, ...) _k_string_new(data, (_KStringNewArgs){ .size = -1, .make_copy = true, __VA_ARGS__ })
+                    #define _k_string_new $MANGLE_MACRO(_k_string_new)
+                    #define k_string_clone $MANGLE_MACRO(k_string_clone)
+                    #define k_string_length $MANGLE_MACRO(k_string_length)
+                    #define k_string_free $MANGLE_MACRO(k_string_free)
                 """.trimIndent())
             }
             if (isImpl) {
@@ -256,11 +261,16 @@ class CApiHeaderPrinter(
                             int32_t length;
                         };
                         
-                        $name* _Nonnull ${funcName}_new(const $type* _Nonnull elements, int32_t length, bool make_copy);
-                        $name* _Nonnull ${funcName}_of_n(int n, ...);
-                        #define ${funcName}_of(...) ${funcName}_of_n(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
-                        $name* _Nullable ${funcName}_clone(const $name* _Nullable self);
-                        void ${funcName}_free($name* _Nullable self);
+                        $name* _Nonnull  $MANGLE_MACRO(${funcName}_new)(const $type* _Nonnull elements, int32_t length, bool make_copy);
+                        $name* _Nonnull  $MANGLE_MACRO(${funcName}_of_n)(int n, ...);
+                        $name* _Nullable $MANGLE_MACRO(${funcName}_clone)(const $name* _Nullable self);
+                        void $MANGLE_MACRO(${funcName}_free)($name* _Nullable self);
+                        
+                        #define ${funcName}_new $MANGLE_MACRO(${funcName}_new)
+                        #define ${funcName}_of_n $MANGLE_MACRO(${funcName}_of_n)
+                        #define ${funcName}_of(...) $MANGLE_MACRO(${funcName}_of_n)(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
+                        #define ${funcName}_clone $MANGLE_MACRO(${funcName}_clone)
+                        #define ${funcName}_free $MANGLE_MACRO(${funcName}_free)
                     """.trimIndent())
                 }
             }
@@ -312,7 +322,7 @@ class CApiHeaderPrinter(
         // Object array
         if(context.hasObjectArrays || context.hasPrimitiveNullableArray || context.hasEnumNullableArray) {
             if (!isImpl && language == Language.C) {
-                append("""
+                appendLine("""
                     
                     typedef struct KArray KArray;
                     struct KArray {
@@ -323,14 +333,20 @@ class CApiHeaderPrinter(
                         int32_t capacity;
                     };
                     
-                    KArray* _Nonnull k_array_with_capacity(int32_t capacity);
-                    KArray* _Nonnull k_array_new(const void* _Nullable * _Nonnull elements, int32_t length);
-                    KArray* _Nonnull k_array_of_n(int n, ...);
-                    #define k_array_of(...) k_array_of_n(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
-                    void k_array_push(KArray* _Nullable self, const void* _Nullable element);
-                    KArray* _Nullable k_array_clone(const KArray* _Nullable self);
-                    void k_array_free(KArray* _Nullable self);
+                    KArray* _Nonnull  $MANGLE_MACRO(k_array_with_capacity)(int32_t capacity);
+                    KArray* _Nonnull  $MANGLE_MACRO(k_array_new)(const void* _Nullable * _Nonnull elements, int32_t length);
+                    KArray* _Nonnull  $MANGLE_MACRO(k_array_of_n)(int n, ...);
+                    void              $MANGLE_MACRO(k_array_push)(KArray* _Nullable self, const void* _Nullable element);
+                    KArray* _Nullable $MANGLE_MACRO(k_array_clone)(const KArray* _Nullable self);
+                    void              $MANGLE_MACRO(k_array_free)(KArray* _Nullable self);
                     
+                    #define k_array_with_capacity $MANGLE_MACRO(k_array_with_capacity)
+                    #define k_array_new           $MANGLE_MACRO(k_array_new)
+                    #define k_array_of_n          $MANGLE_MACRO(k_array_of_n)
+                    #define k_array_of(...)       $MANGLE_MACRO(k_array_of_n)(ARG_LENGTH(__VA_ARGS__), __VA_ARGS__)
+                    #define k_array_push          $MANGLE_MACRO(k_array_push)
+                    #define k_array_clone         $MANGLE_MACRO(k_array_clone)
+                    #define k_array_free          $MANGLE_MACRO(k_array_free)
                 """.trimIndent())
             }
             if (isImpl) {
@@ -404,7 +420,7 @@ class CApiHeaderPrinter(
                 void (* _Nullable free)(NAME* _Nullable);             \
                 T value;                                              \
             };                                                        \
-            NAME* _Nonnull FUNC_NEW(T value);
+            NAME* _Nonnull $MANGLE_MACRO(FUNC_NEW)(T value);
         """.trimIndent())
 
         listOf(
@@ -429,8 +445,10 @@ class CApiHeaderPrinter(
             val boxedType = "Boxed${name.uppercaseFirstChar()}"
             val ptrType = if(language == Language.C) "$boxedType*" else "void*"
 
-            if(!isImpl && language == Language.C)
+            if(!isImpl && language == Language.C) {
                 append("\nBOXED_PRIMITIVE($type, Boxed${name.uppercaseFirstChar()}, boxed_${name}_new)")
+                append("\n#define boxed_${name}_new $MANGLE_MACRO(boxed_${name}_new)\n")
+            }
 
             if(isImpl) {
                 if (hasToNativeCast) append("""
@@ -487,12 +505,15 @@ class CApiHeaderPrinter(
                 append("\n};\n")
 
                 // Methods
-                append("""
+                appendLine("""
                     
-                    $name* _Nonnull ${name}_new(${args.joinToString()});
-                    $name* _Nullable ${name}_clone(const $name* _Nullable self);
-                    void ${name}_free($name* _Nullable self);
+                    $name* _Nonnull  $MANGLE_MACRO(${name}_new)(${args.joinToString()});
+                    $name* _Nullable $MANGLE_MACRO(${name}_clone)(const $name* _Nullable self);
+                    void             $MANGLE_MACRO(${name}_free)($name* _Nullable self);
                     
+                    #define ${name}_new   $MANGLE_MACRO(${name}_new)
+                    #define ${name}_clone $MANGLE_MACRO(${name}_clone)
+                    #define ${name}_free  $MANGLE_MACRO(${name}_free)
                 """.trimIndent())
             }
             if (isImpl && dictionary in context.castedDeclarations) {
@@ -553,12 +574,12 @@ class CApiHeaderPrinter(
                     bool (* _Nonnull equals)(size_t id, size_t other);                      \
                     void (* _Nonnull _free)(size_t id);                                     \
                 };                                                                          \
-                Type Lower##_invoke(RC_##Name* _Nonnull, ##__VA_ARGS__);
+                Type $MANGLE_MACRO(Lower##_invoke)(RC_##Name* _Nonnull, ##__VA_ARGS__);
             """.trimIndent())
 
             context.callbacks.forEach { callback ->
+                val lower = callback.name.camelCase().lowercase()
                 val args = buildList {
-                    val lower = callback.name.camelCase().lowercase()
                     add(callback.cname)
                     add(lower)
                     if(isImpl) {
@@ -573,6 +594,7 @@ class CApiHeaderPrinter(
                     }
                 }.joinToString()
                 append("\nKCallbackDef($args)")
+                append("\n#define ${lower}_invoke $MANGLE_MACRO(${lower}_invoke)\n")
             }
             append("\n#undef KCallbackDef\n")
         } else if(isImpl) {

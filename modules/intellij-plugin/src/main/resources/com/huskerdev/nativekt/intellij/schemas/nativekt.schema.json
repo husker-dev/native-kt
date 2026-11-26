@@ -48,17 +48,12 @@
     "cmake": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["project_dir", "library_name", "language"],
+      "required": ["project_dir", "language"],
       "properties": {
         "project_dir": {
           "type": "string",
           "default": ".",
           "description": "Path to the CMake project"
-        },
-        "library_name": {
-          "type": "string",
-          "default": ".",
-          "description": "Library name that implements native-kt API"
         },
         "profile": {
           "type": "string",

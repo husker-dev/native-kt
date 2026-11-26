@@ -29,6 +29,5 @@ file(WRITE "${freetype_SOURCE_DIR}/include/freetype/config/ftmodule.h" "${MINIMA
 add_library(${PROJECT_NAME} OBJECT src/freetypeBindings.c)
 
 # Apply dependencies
-nativekt_generate("nativekt.toml")
-target_link_libraries(${PROJECT_NAME} PRIVATE NativeKt::bindings)
+nativekt_configure(${PROJECT_NAME} "nativekt.toml")
 target_link_libraries(${PROJECT_NAME} PRIVATE freetype)

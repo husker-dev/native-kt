@@ -31,72 +31,26 @@ fun prepareNative(
     )
 
     when(val buildSystem = context.buildSystem) {
-        is BuildSystem.CMake -> {
-
-            val sourceExtension = buildSystem.language.sourceExtension ?: "c"
-
-            // Mangle C non-static functions
-            val funcRedefines = if(buildSystem.language == Language.C && context.allOperations.isNotEmpty()) {
-                val symbolDefines = context.allOperations
-                    .joinToString(" ") { "${it.cname}=${it.cnameMangled(context)}__impl" }
-                listOf(
-                    "target_compile_definitions(${buildSystem.libraryName} PRIVATE $symbolDefines)",
-                    "target_compile_definitions(shared PRIVATE $symbolDefines)",
-                    "target_compile_definitions(static PRIVATE $symbolDefines)"
-                )
-            } else listOf("", "", "")
-
-            // Create CMake file
-            layout.nativeSourcesDir.resolve("dummy.${context.language.sourceExtension}").writeString("")
-            layout.nativeSourcesDir.resolve("CMakeLists.txt").writeString($$"""
-                cmake_minimum_required(VERSION 3.24)
-        
-                project("$$moduleName"$${if(buildSystem.language == Language.OBJC) " LANGUAGES C OBJC" else ""})
-                
-                $${if (buildSystem.language == Language.CPP) "set(CMAKE_CXX_STANDARD 17)" else ""}
-                $${if (buildSystem.language == Language.CPP) "set(CMAKE_CXX_STANDARD_REQUIRED ON)" else ""}
-                
-                set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY $${layout.nativeBuildDir.invariantSeparatorsPath})
-                set(CMAKE_LIBRARY_OUTPUT_DIRECTORY $${layout.nativeBuildDir.invariantSeparatorsPath})
-                set(CMAKE_RUNTIME_OUTPUT_DIRECTORY $${layout.nativeBuildDir.invariantSeparatorsPath})
-                
-                set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-                
-                add_compile_options(-Wno-initializer-overrides)
-                
-                add_subdirectory("$${buildSystem.projectDir.invariantSeparatorsPath}" "$${layout.nativeBuildDir.resolve("sub").invariantSeparatorsPath}")
-                
-                add_library(shared SHARED dummy.$$sourceExtension)
-                target_link_libraries(shared PUBLIC $${buildSystem.libraryName})
-                
-                add_library(static STATIC dummy.$$sourceExtension)
-                target_link_libraries(static PRIVATE $${buildSystem.libraryName})
-                
-                $${funcRedefines[0]}
-                $${funcRedefines[1]}
-                $${funcRedefines[2]}
-            """.trimIndent())
-
+        is BuildSystem.CMake -> if(shouldInit) {
             // Configure CMake (if needed)
-            if(shouldInit) {
-                configureCMake(
-                    context, targetType,
-                    cmakeArgs = LinkedHashSet(buildSystem.args),
-                    cmakeDir = layout.nativeSourcesDir,
-                    cmakeBuildDir = layout.nativeBuildDir,
-                    cmakeBuildType = buildSystem.buildType
-                )
+            configureCMake(
+                context, targetType,
+                cmakeArgs = LinkedHashSet(buildSystem.args),
+                cmakeDir = buildSystem.projectDir,
+                cmakeBuildDir = layout.nativeBuildDir,
+                cmakeBuildType = buildSystem.buildType
+            )
 
-                linkerOpts += layout.nativeBuildDir.resolve("libstatic.a").invariantSeparatorsPath
+            val targetName = layout.nativeBuildDir.resolve("nativekt/target.txt").readString()
+            linkerOpts += layout.nativeBuildDir.resolve("libnativekt_${targetName}_static.a").invariantSeparatorsPath
 
-                // Get linker opts
-                linkerOpts += cmakeLinkerArgs(
-                    context,
-                    layout.nativeBuildDir,
-                    "shared",
-                    isKN = true
-                )
-            }
+            // Get linker opts
+            linkerOpts += cmakeLinkerArgs(
+                context,
+                layout.nativeBuildDir,
+                "nativekt_${targetName}_shared",
+                isKN = true
+            )
         }
         is BuildSystem.Cargo -> if(shouldInit) {
             val rustFlags = cargoLinkerFlags(
@@ -168,8 +122,9 @@ fun compileNative(
         is BuildSystem.CMake -> {
             cmakeBuild(context, layout.nativeBuildDir)
 
+            val targetName = layout.nativeBuildDir.resolve("nativekt/target.txt").readString()
             prepareNativeLibraryForKN(context,
-                lib = layout.nativeBuildDir.resolve("libstatic.a"),
+                lib = layout.nativeBuildDir.resolve("libnativekt_${targetName}_static.a"),
                 initSymbolName = context.mangle("init"),
                 targetArgs = getClangTargetArgs(context, targetType)
             )

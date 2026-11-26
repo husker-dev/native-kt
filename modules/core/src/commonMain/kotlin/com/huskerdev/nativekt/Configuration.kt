@@ -99,8 +99,7 @@ sealed interface BuildSystem {
         override var projectDir: SyncPath,
         override val language: Language,
         var buildType: BuildType = BuildType.RELEASE,
-        var args: List<String> = emptyList(),
-        var libraryName: String,
+        var args: List<String> = emptyList()
     ): BuildSystem {
         enum class BuildType(val cmakeName: String) {
             DEBUG("Debug"),
@@ -217,7 +216,6 @@ fun parseModuleFromToml(text: String, relativePath: SyncPath): NativeKtModule {
             )
             "cmake" in values -> BuildSystem.CMake(
                 projectDir = relativePath.resolve(stringRequired("cmake", "project_dir")).normalize(),
-                libraryName = stringRequired("cmake", "library_name"),
                 buildType = when(string("cmake", "build_type")) {
                     "Release", null -> BuildSystem.CMake.BuildType.RELEASE
                     "Debug" -> BuildSystem.CMake.BuildType.DEBUG

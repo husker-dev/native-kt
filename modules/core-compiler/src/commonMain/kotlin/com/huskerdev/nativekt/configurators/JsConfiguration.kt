@@ -12,6 +12,9 @@ fun prepareJs(
 ) {
     val layout = DirectoryLayout.of(context, targetType)
 
+    if(context.buildSystem is BuildSystem.SPM)
+        throw UnsupportedOperationException("JS target for Swift is not supported (for now)")
+
     // Create Kotlin/JS bindings
     KotlinJsPrinter(
         context = context,
@@ -19,43 +22,6 @@ fun prepareJs(
         expectActual = useExpectActual,
         isWasm = targetType == TargetType.WASM_JS
     )
-
-    when(val buildSystem = context.buildSystem) {
-        is BuildSystem.CMake -> {
-            val projectPath = buildSystem.projectDir.invariantSeparatorsPath
-            val projectBuildPath = layout.nativeBuildDir.resolve("sub").invariantSeparatorsPath
-
-            val languages = buildList {
-                add("C")
-                if(context.language == Language.CPP)
-                    add("CXX")
-            }.joinToString(" ")
-
-            layout.nativeSourcesDir.resolve("dummy.${context.language.sourceExtension}").writeString("")
-            layout.nativeSourcesDir.resolve("CMakeLists.txt").writeString($$"""
-                cmake_minimum_required(VERSION 3.24)
-        
-                project("$${context.moduleName}" LANGUAGES $$languages)
-                
-                set(EXTRA_LINK_FLAGS "" CACHE STRING "Extra linker flags")
-                
-                # Some compile options
-                add_compile_options(-Wno-initializer-overrides)
-                
-                # Add project
-                add_subdirectory("$$projectPath" "$$projectBuildPath")
-            
-                # Add sources + child project
-                add_executable(lib$${context.moduleName} dummy.$${context.language.sourceExtension})
-                target_link_libraries(lib$${context.moduleName} PRIVATE $${buildSystem.libraryName})
-                
-                # Add Emscripten linker flags
-                set_target_properties(lib$${context.moduleName} PROPERTIES LINK_FLAGS "$${getEmccArgs(context)}")
-            """.trimIndent())
-        }
-        is BuildSystem.Cargo -> Unit // Do nothing
-        is BuildSystem.SPM -> throw UnsupportedOperationException("JS target for Swift is not supported (for now)")
-    }
 }
 
 fun compileJs(
@@ -76,20 +42,27 @@ fun compileJs(
 
             cmakeGen(
                 context,
-                dir = layout.nativeSourcesDir,
+                dir = buildSystem.projectDir,
                 buildDir = layout.nativeBuildDir,
                 buildType = buildSystem.buildType,
                 args = LinkedHashSet(buildSystem.args).apply {
                     this += "-DCMAKE_TOOLCHAIN_FILE=\"$toolchain\""
+                    this += "-DCMAKE_EXE_LINKER_FLAGS=\"${getEmccArgs(context)}\""
                 }
             )
 
             // Build
             cmakeBuild(context, layout.nativeBuildDir)
-            packResult(
-                layout.nativeBuildDir.resolve("lib${context.moduleName}.js"),
-                layout.nativeBuildDir.resolve("lib${context.moduleName}.wasm")
+
+            val targetName = layout.nativeBuildDir.resolve("nativekt/target.txt").readString()
+            val jsFile = layout.nativeBuildDir.resolve("nativekt_${targetName}_executable.js")
+            val wasmFile = layout.nativeBuildDir.resolve("nativekt_${targetName}_executable.wasm")
+
+            // Change `nativekt_executable.wasm` references to `libname.wasm`
+            jsFile.writeString(jsFile.readString()
+                .replace(wasmFile.name, "lib${context.moduleName}.wasm")
             )
+            packResult(jsFile, wasmFile)
         }
 
         is BuildSystem.Cargo -> {
@@ -110,7 +83,6 @@ fun compileJs(
                 .replace(wasmFile.name, "lib${context.moduleName}.wasm")
                 .replace("/* @ts-self-types=\"./$libName.d.ts\" */", "")
             )
-
             packResult(jsFile, wasmFile)
         }
         is BuildSystem.SPM -> Unit

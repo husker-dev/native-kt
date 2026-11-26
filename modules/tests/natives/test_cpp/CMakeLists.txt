@@ -24,6 +24,5 @@ add_library(testcpp_lib OBJECT
         src/arrays/callback_return_array.cpp
 )
 
-# Generate and add native-kt files
-nativekt_generate("nativekt.toml")
-target_link_libraries(testcpp_lib PRIVATE NativeKt::bindings)
+# Configure native-kt
+nativekt_configure(testcpp_lib "nativekt.toml")

@@ -47,35 +47,6 @@ fun prepareAndroid(
                 *;
         };
     """.trimIndent())
-
-    when(val buildSystem = context.buildSystem) {
-        is BuildSystem.CMake -> {
-            val moduleName = context.moduleName
-
-            layout.nativeSourcesDir.resolve("dummy.${context.language.sourceExtension}").writeString("")
-            layout.nativeSourcesDir.resolve("CMakeLists.txt").writeString($$"""
-                 cmake_minimum_required(VERSION 3.24)
-        
-                project("$$moduleName"$${if (buildSystem.language == Language.CPP) " LANGUAGES CXX" else ""})
-                
-                $${if (buildSystem.language == Language.CPP) "set(CMAKE_CXX_STANDARD 17)" else ""}
-                $${if (buildSystem.language == Language.CPP) "set(CMAKE_CXX_STANDARD_REQUIRED ON)" else ""}
-                
-                set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-                add_compile_options(-Wno-initializer-overrides)
-                
-                add_subdirectory("$${context.module.buildSystem.projectDir.invariantSeparatorsPath}" "$${layout.nativeBuildDir.invariantSeparatorsPath}/${ANDROID_ABI}/cmake/sub")
-            
-                add_library(shared SHARED dummy.$${context.language.sourceExtension})
-                target_link_libraries(shared PRIVATE $${buildSystem.libraryName})
-                
-                add_library(static STATIC dummy.$${context.language.sourceExtension})
-                target_link_libraries(static PRIVATE $${buildSystem.libraryName})
-            """.trimIndent())
-        }
-        is BuildSystem.Cargo -> Unit
-        is BuildSystem.SPM -> Unit
-    }
 }
 
 fun compileAndroid(
@@ -183,7 +154,7 @@ fun compileAndroid(
                 // Generate CMake build
                 cmakeGen(
                     context,
-                    dir = layout.nativeSourcesDir,
+                    dir = buildSystem.projectDir,
                     buildDir = cmakeBuildDir,
                     buildType = buildSystem.buildType,
                     args = LinkedHashSet(buildSystem.args).apply {
@@ -196,11 +167,12 @@ fun compileAndroid(
                 // Build
                 cmakeBuild(context, cmakeBuildDir)
 
+                val targetName = cmakeBuildDir.resolve("nativekt/target.txt").readString()
                 Pair(
-                    cmakeBuildDir.resolve("libstatic.a"),
+                    cmakeBuildDir.resolve("libnativekt_${targetName}_static.a"),
                     cmakeLinkerArgs(context,
                         cmakeBuildDir = cmakeBuildDir,
-                        moduleName = "shared"
+                        moduleName = "nativekt_${targetName}_shared"
                     )
                 )
             }

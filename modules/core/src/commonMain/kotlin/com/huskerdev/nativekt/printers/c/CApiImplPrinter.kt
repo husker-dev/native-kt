@@ -433,17 +433,17 @@ class CApiImplPrinter(
         appendLine("""
             
             #define IMPL_BOXED_PRIMITIVE(T, NAME, FUNC_NEW, FUNC_FREE, FUNC_CLONE, FUNC_NEW_EXPORT, FUNC_GET_EXPORT) \
-            NAME* FUNC_CLONE(NAME* self);                          \
-            void FUNC_FREE(NAME* self);                            \
+            static NAME* FUNC_CLONE(NAME* self);                   \
+            static void FUNC_FREE(NAME* self);                     \
             NAME* FUNC_NEW(T value) {                              \
                 NAME* result = (NAME*) malloc(sizeof(NAME));       \
                 *result = (NAME) { FUNC_CLONE, FUNC_FREE, value }; \
                 return result;                                     \
             }                                                      \
-            NAME* FUNC_CLONE(NAME* self) {                         \
+            static NAME* FUNC_CLONE(NAME* self) {                  \
                 return FUNC_NEW(self->value);                      \
             }                                                      \
-            void FUNC_FREE(NAME* self) {                           \
+            static void FUNC_FREE(NAME* self) {                    \
                 free((void*) self);                                \
             }                                                      \
             NAME* FUNC_NEW_EXPORT(T value) {                       \
