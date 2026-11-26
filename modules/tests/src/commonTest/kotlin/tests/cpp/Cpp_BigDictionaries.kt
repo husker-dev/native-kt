@@ -14,30 +14,40 @@ class Cpp_BigDictionaries {
 
     @Test
     fun passBigDictionary() = withCppLib {
-        val obj = createTestDictionary(
-            {},
-            MyInterface()
-        )
-        assertTrue(natives.test.cpp.passBigDictionary(obj))
+        MyInterface().use { inter ->
+            val obj = createTestDictionary({}, inter)
+            assertTrue(natives.test.cpp.passBigDictionary(obj))
+        }
     }
 
     @Test
     fun returnBigDictionary() = withCppLib {
         val callback = VoidCallback {}
-        val inter = MyInterface()
-        assertEquals(
-            createTestDictionary(callback, inter),
-            natives.test.cpp.returnBigDictionary(callback, inter)
-        )
+        MyInterface().use { inter ->
+            val actual = natives.test.cpp.returnBigDictionary(callback, inter)
+            try {
+                assertEquals(createTestDictionary(callback, inter), actual)
+                assertEquals(callback, actual.a19)
+                assertEquals(inter, actual.a17)
+            } finally {
+                actual.a17.close()
+                actual.a35.forEach { it.close() }
+            }
+        }
     }
 
     @Test
     fun pingBigDictionary() = withCppLib {
-        val obj = createTestDictionary(
-            {},
-            MyInterface()
-        )
-        assertEquals(obj, natives.test.cpp.pingBigDictionary(obj))
+        MyInterface().use { inter ->
+            val obj = createTestDictionary({}, inter)
+            val actual = natives.test.cpp.pingBigDictionary(obj)
+            try {
+                assertEquals(obj, actual)
+            } finally {
+                actual.a17.close()
+                actual.a35.forEach { it.close() }
+            }
+        }
     }
 
     @Test

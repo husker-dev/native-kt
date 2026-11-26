@@ -1,10 +1,10 @@
 package tests.c.primitives
 
-import withCLib
 import natives.test.c.MyDictionary
 import natives.test.c.MyEnum
 import natives.test.c.VoidCallback
 import natives.test.c.MyInterface
+import withCLib
 import kotlin.test.Test
 import kotlin.test.assertTrue
 

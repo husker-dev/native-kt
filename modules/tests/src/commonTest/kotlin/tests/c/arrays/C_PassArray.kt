@@ -2,10 +2,10 @@
 
 package tests.c.arrays
 
-import withCLib
 import natives.test.c.MyDictionary
 import natives.test.c.MyEnum
 import natives.test.c.MyInterface
+import withCLib
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
@@ -180,12 +180,19 @@ class C_PassArray {
 
     @Test
     fun passInterfaceArray() = withCLib {
-        val array = arrayOf(
+        val elements = arrayOf(
             MyInterface(),
             MyInterface()
         )
-        assertTrue(natives.test.c.passInterfaceArray(array))
-        array.forEach { it.close() }
+        assertTrue(natives.test.c.passInterfaceArray(elements))
+        elements.forEach { it.close() }
+    }
+
+    @Test
+    fun passInterfaceArrayRepeated() = withCLib {
+        MyInterface().use { obj ->
+            assertTrue(natives.test.c.passInterfaceArray(arrayOf(obj, obj)))
+        }
     }
 
     @Test

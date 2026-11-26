@@ -88,8 +88,12 @@ class Cpp_CallbackReturnPrimitive {
 
     @Test
     fun callbackReturnCallback() = withCppLib {
-        val toPass = VoidCallback {}
-        assertEquals(toPass, natives.test.cpp.callbackReturnCallback { toPass })
+        var invoked = false
+        val toPass = VoidCallback { invoked = true }
+        val returned = natives.test.cpp.callbackReturnCallback { toPass }
+        assertEquals(toPass, returned)
+        returned.invoke()
+        assertTrue(invoked)
     }
 
     @Test

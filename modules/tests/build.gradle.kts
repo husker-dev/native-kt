@@ -121,11 +121,19 @@ natives {
         }
     }
 
-    // Add basic tests (C/C++/Rust)
+    fun macosOnly(module: NativeKtModule) {
+        if(!OS.isMacOS) {
+            module.stubs += module.targets
+            module.targets = emptyList()
+        }
+    }
+
+    // Add basic tests
     addTest("natives/test_c")
     addTest("natives/test_cpp")
+    addTest("natives/test_objc", ::macosOnly)
     addTest("natives/test_rust")
-    addTest("natives/test_swift")
+    addTest("natives/test_swift", ::macosOnly)
 
     // Add micro test cases
     for(i in 0 until 7) {
@@ -142,6 +150,7 @@ tasks.withType<Test>().configureEach {
     }
     if (!OS.isMacOS) {
         filter.excludeTestsMatching("tests.swift.*")
+        filter.excludeTestsMatching("tests.objc.*")
     }
     testLogging {
         showStandardStreams = true

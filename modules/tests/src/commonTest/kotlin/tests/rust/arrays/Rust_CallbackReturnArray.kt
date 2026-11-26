@@ -2,10 +2,10 @@
 
 package tests.rust.arrays
 
-import withRustLib
 import natives.test.rust.MyDictionary
 import natives.test.rust.MyEnum
 import natives.test.rust.MyInterface
+import withRustLib
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
@@ -115,14 +115,14 @@ class Rust_CallbackReturnArray {
 
     @Test
     fun callbackReturnInterfaceArray() = withRustLib {
-        val elements = arrayOf(
+        val array = arrayOf(
             MyInterface(),
             MyInterface()
         )
         assertTrue(natives.test.rust.callbackReturnInterfaceArray {
-            elements
+            array
         })
-        elements.forEach { it.close() }
+        array.forEach { it.close() }
     }
 
     @Test

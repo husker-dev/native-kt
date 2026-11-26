@@ -133,6 +133,7 @@ enum class Language(
 ) {
     C("c", "h"),
     CPP("cpp", "hpp"),
+    OBJC("m", "h"),
     RUST("rs"),
     SWIFT("swift")
 }
@@ -227,9 +228,10 @@ fun parseModuleFromToml(text: String, relativePath: SyncPath): NativeKtModule {
                 args = stringArray("cmake", "args") ?: emptyList(),
                 language = run {
                     fun langField(name: String) = string("cmake", name)?.let {
-                        when(it) {
+                        when(it.lowercase()) {
                             "c" -> Language.C
                             "cpp", "c++" -> Language.CPP
+                            "objc", "obj-c", "objectivec", "objective-c" -> Language.OBJC
                             else -> throw UnsupportedOperationException("Unknown CMake language: $name")
                         }
                     }

@@ -5,6 +5,8 @@ build/
 !**/src/test/**/build/
 cmake-build-debug-mingw
 cmake-build-debug
+.index-build
+.cache
 local.properties
 .venv
 site

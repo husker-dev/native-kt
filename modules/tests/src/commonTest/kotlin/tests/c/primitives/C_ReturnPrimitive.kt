@@ -1,8 +1,8 @@
 package tests.c.primitives
 
-import withCLib
 import natives.test.c.MyDictionary
 import natives.test.c.MyEnum
+import withCLib
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull

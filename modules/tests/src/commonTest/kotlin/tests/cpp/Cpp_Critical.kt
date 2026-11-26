@@ -45,7 +45,9 @@ class Cpp_Critical {
 
     @Test
     fun criticalInterface() = withCppLib {
-        assertTrue(natives.test.cpp.criticalInterface(MyInterface()))
+        MyInterface().use { obj ->
+            assertTrue(natives.test.cpp.criticalInterface(obj))
+        }
     }
 
     @Test
@@ -187,6 +189,8 @@ class Cpp_Critical {
 
     @Test
     fun criticalReturnInterface() = withCppLib {
-        natives.test.cpp.criticalReturnInterface()
+        natives.test.cpp.criticalReturnInterface().use { obj ->
+            assertTrue(obj.test())
+        }
     }
 }

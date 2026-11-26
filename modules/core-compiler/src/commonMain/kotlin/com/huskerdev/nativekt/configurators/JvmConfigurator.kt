@@ -47,7 +47,11 @@ fun prepareJvm(
             layout.nativeSourcesDir.resolve("CMakeLists.txt").writeString($$"""
                 cmake_minimum_required(VERSION 3.24)
         
-                project("native-kt"$${if (buildSystem.language == Language.CPP) " LANGUAGES CXX" else ""})
+                project("native-kt"$${when(buildSystem.language) {
+                    Language.CPP -> " LANGUAGES CXX"
+                    Language.OBJC -> " LANGUAGES C OBJC"
+                    else -> ""
+                }})
                 
                 $${if (buildSystem.language == Language.CPP) "set(CMAKE_CXX_STANDARD 17)" else ""}
                 $${if (buildSystem.language == Language.CPP) "set(CMAKE_CXX_STANDARD_REQUIRED ON)" else ""}

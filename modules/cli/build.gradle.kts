@@ -78,8 +78,8 @@ tasks.register("proguardJar", proguard.taskClass) {
     )
 }
 
-val prepareCMakeBundle = tasks.register<Copy>("packCMakeBundle") {
-    description = "Prepares CMake CLI bundle"
+val packCMakePackage = tasks.register<Copy>("packCMakePackage") {
+    description = "Packs CMake package"
 
     val packageVersion = project.version.toString()
     inputs.property("packageVersion", packageVersion)
@@ -112,9 +112,9 @@ val prepareCMakeBundle = tasks.register<Copy>("packCMakeBundle") {
     }
 }
 
-tasks.register<Sync>("packCargoPackage") {
+val packCargoPackage = tasks.register<Sync>("packCargoPackage") {
     group = "cli"
-    description = "Stages Native-Kt Cargo crates with bundled CLI executables"
+    description = "Packs Cargo package"
 
     val packageVersion = project.version.toString()
     inputs.property("packageVersion", packageVersion)
@@ -167,9 +167,9 @@ tasks.register<Sync>("packCargoPackage") {
     }
 }
 
-tasks.register<Sync>("packSwiftPackage") {
+val packSwiftPackage = tasks.register<Sync>("packSwiftPackage") {
     group = "cli"
-    description = "Stages SwiftPM build-tool plugin with the bundled Native-Kt CLI"
+    description = "Packs SwiftPM package"
 
     val packageVersion = project.version.toString()
     inputs.property("packageVersion", packageVersion)
@@ -210,5 +210,9 @@ tasks.register<Sync>("packSwiftPackage") {
 tasks.register("packAll") {
     group = "cli"
     description = "Packs all destributions"
-    dependsOn("packCargoPackage", "packCMake", "packSwiftPackage")
+    dependsOn(
+        packCargoPackage,
+        packCMakePackage,
+        packSwiftPackage
+    )
 }

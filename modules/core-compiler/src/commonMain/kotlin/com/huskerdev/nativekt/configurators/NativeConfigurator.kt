@@ -51,7 +51,7 @@ fun prepareNative(
             layout.nativeSourcesDir.resolve("CMakeLists.txt").writeString($$"""
                 cmake_minimum_required(VERSION 3.24)
         
-                project("$$moduleName")
+                project("$$moduleName"$${if(buildSystem.language == Language.OBJC) " LANGUAGES C OBJC" else ""})
                 
                 $${if (buildSystem.language == Language.CPP) "set(CMAKE_CXX_STANDARD 17)" else ""}
                 $${if (buildSystem.language == Language.CPP) "set(CMAKE_CXX_STANDARD_REQUIRED ON)" else ""}

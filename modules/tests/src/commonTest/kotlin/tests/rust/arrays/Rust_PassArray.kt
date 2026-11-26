@@ -2,10 +2,10 @@
 
 package tests.rust.arrays
 
-import withRustLib
 import natives.test.rust.MyDictionary
 import natives.test.rust.MyEnum
 import natives.test.rust.MyInterface
+import withRustLib
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
@@ -186,6 +186,13 @@ class Rust_PassArray {
         )
         assertTrue(natives.test.rust.passInterfaceArray(elements))
         elements.forEach { it.close() }
+    }
+
+    @Test
+    fun passInterfaceArrayRepeated() = withRustLib {
+        MyInterface().use { obj ->
+            assertTrue(natives.test.rust.passInterfaceArray(arrayOf(obj, obj)))
+        }
     }
 
     @Test

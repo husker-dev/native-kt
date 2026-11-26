@@ -2,9 +2,9 @@
 
 package tests.c.arrays
 
-import withCLib
 import natives.test.c.*
 import natives.test.c.MyInterface
+import withCLib
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 
@@ -133,10 +133,23 @@ class C_PingArray {
             MyInterface(),
             MyInterface()
         )
-        val clone = pingInterfaceArray(arr)
-        assertContentEquals(arr, clone)
+        val copy = pingInterfaceArray(arr)
+        assertContentEquals(arr, copy)
         arr.forEach { it.close() }
-        clone.forEach { it.close() }
+        copy.forEach { it.close() }
+    }
+
+    @Test
+    fun pingInterfaceArrayRepeated() = withCLib {
+        MyInterface().use { obj ->
+            val arr = arrayOf(obj, obj)
+            val copy = pingInterfaceArray(arr)
+            try {
+                assertContentEquals(arr, copy)
+            } finally {
+                copy.forEach { it.close() }
+            }
+        }
     }
 
     @Test

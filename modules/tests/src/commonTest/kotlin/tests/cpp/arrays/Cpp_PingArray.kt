@@ -140,6 +140,19 @@ class Cpp_PingArray {
     }
 
     @Test
+    fun pingInterfaceArrayRepeated() = withCppLib {
+        MyInterface().use { obj ->
+            val arr = arrayOf(obj, obj)
+            val copy = pingInterfaceArray(arr)
+            try {
+                assertContentEquals(arr, copy)
+            } finally {
+                copy.forEach { it.close() }
+            }
+        }
+    }
+
+    @Test
     fun pingInterfaceArrayN() = withCppLib {
         val arr: Array<MyInterface?> = arrayOf(null, null)
         assertContentEquals(arr, pingInterfaceArrayN(arr))

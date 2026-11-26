@@ -1,6 +1,6 @@
 package tests.cpp
 
-import natives.test.cpp.*
+import natives.test.cpp.MyInterface
 import withCppLib
 import kotlin.test.Test
 

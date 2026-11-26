@@ -1,7 +1,6 @@
 package tests.c.primitives
 
 import natives.test.c.EmptyDictionary
-import withCLib
 import natives.test.c.MyDictionary
 import natives.test.c.MyEnum
 import natives.test.c.pingBoolean
@@ -14,6 +13,7 @@ import natives.test.c.pingLong
 import natives.test.c.pingString
 import natives.test.c.pingShort
 import natives.test.c.MyInterface
+import withCLib
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -83,6 +83,12 @@ class C_PingPrimitive {
     @Test
     fun pingString() = withCLib {
         assertEquals("test string", pingString("test string"))
+    }
+
+    @Test
+    fun pingStringUnicodeAndEmbeddedNull() = withCLib {
+        val value = "Привет\u0000🌍"
+        assertEquals(value, pingString(value))
     }
 
     @Test

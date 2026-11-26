@@ -14,30 +14,40 @@ class Rust_BigDictionaries {
 
     @Test
     fun passBigDictionary() = withRustLib {
-        val obj = createTestDictionary(
-            {},
-            MyInterface()
-        )
-        assertTrue(natives.test.rust.passBigDictionary(obj))
+        MyInterface().use { inter ->
+            val obj = createTestDictionary({}, inter)
+            assertTrue(natives.test.rust.passBigDictionary(obj))
+        }
     }
 
     @Test
     fun returnBigDictionary() = withRustLib {
         val callback = VoidCallback {}
-        val inter = MyInterface()
-        assertEquals(
-            createTestDictionary(callback, inter),
-            natives.test.rust.returnBigDictionary(callback, inter)
-        )
+        MyInterface().use { inter ->
+            val actual = natives.test.rust.returnBigDictionary(callback, inter)
+            try {
+                assertEquals(createTestDictionary(callback, inter), actual)
+                assertEquals(callback, actual.a19)
+                assertEquals(inter, actual.a17)
+            } finally {
+                actual.a17.close()
+                actual.a35.forEach { it.close() }
+            }
+        }
     }
 
     @Test
     fun pingBigDictionary() = withRustLib {
-        val obj = createTestDictionary(
-            {},
-            MyInterface()
-        )
-        assertEquals(obj, natives.test.rust.pingBigDictionary(obj))
+        MyInterface().use { inter ->
+            val obj = createTestDictionary({}, inter)
+            val actual = natives.test.rust.pingBigDictionary(obj)
+            try {
+                assertEquals(obj, actual)
+            } finally {
+                actual.a17.close()
+                actual.a35.forEach { it.close() }
+            }
+        }
     }
 
     @Test

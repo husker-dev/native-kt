@@ -189,6 +189,13 @@ class Cpp_PassArray {
     }
 
     @Test
+    fun passInterfaceArrayRepeated() = withCppLib {
+        MyInterface().use { obj ->
+            assertTrue(natives.test.cpp.passInterfaceArray(arrayOf(obj, obj)))
+        }
+    }
+
+    @Test
     fun passInterfaceArrayN() = withCppLib {
         assertTrue(natives.test.cpp.passInterfaceArrayN(arrayOf(null, null)))
     }

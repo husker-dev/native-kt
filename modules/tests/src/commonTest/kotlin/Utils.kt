@@ -3,6 +3,7 @@ import com.huskerdev.stdlibx.OS
 import kotlinx.coroutines.test.runTest
 import natives.test.c.loadLibTestC
 import natives.test.cpp.loadLibTestCpp
+import natives.test.objc.loadLibTestObjc
 import natives.test.rust.loadLibTestRust
 import natives.test.swift.loadLibTestSwift
 
@@ -13,6 +14,15 @@ fun withCLib(block: suspend () -> Unit) = runTest {
 
 fun withCppLib(block: suspend () -> Unit) = runTest {
     loadLibTestCpp()
+    block()
+}
+
+fun withObjcLib(block: suspend () -> Unit) = runTest {
+    if(EnvironmentKind.current == EnvironmentKind.WEB ||
+        EnvironmentKind.current == EnvironmentKind.NODEJS ||
+        OS.isWindows
+    ) return@runTest
+    loadLibTestObjc()
     block()
 }
 

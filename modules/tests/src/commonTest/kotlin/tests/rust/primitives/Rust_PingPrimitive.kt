@@ -1,10 +1,8 @@
 package tests.rust.primitives
 
 import natives.test.rust.EmptyDictionary
-import withRustLib
 import natives.test.rust.MyDictionary
 import natives.test.rust.MyEnum
-import natives.test.rust.MyInterface
 import natives.test.rust.pingBoolean
 import natives.test.rust.pingByte
 import natives.test.rust.pingChar
@@ -14,6 +12,8 @@ import natives.test.rust.pingInt
 import natives.test.rust.pingLong
 import natives.test.rust.pingString
 import natives.test.rust.pingShort
+import natives.test.rust.MyInterface
+import withRustLib
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -83,6 +83,12 @@ class Rust_PingPrimitive {
     @Test
     fun pingString() = withRustLib {
         assertEquals("test string", pingString("test string"))
+    }
+
+    @Test
+    fun pingStringUnicodeAndEmbeddedNull() = withRustLib {
+        val value = "Привет\u0000🌍"
+        assertEquals(value, pingString(value))
     }
 
     @Test

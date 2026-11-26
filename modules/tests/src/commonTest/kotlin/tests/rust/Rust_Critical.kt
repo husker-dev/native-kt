@@ -9,7 +9,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-
 class Rust_Critical {
 
     @Test
@@ -46,7 +45,9 @@ class Rust_Critical {
 
     @Test
     fun criticalInterface() = withRustLib {
-        assertTrue(natives.test.rust.criticalInterface(MyInterface()))
+        MyInterface().use { obj ->
+            assertTrue(natives.test.rust.criticalInterface(obj))
+        }
     }
 
     @Test
@@ -188,6 +189,8 @@ class Rust_Critical {
 
     @Test
     fun criticalReturnInterface() = withRustLib {
-        natives.test.rust.criticalReturnInterface()
+        natives.test.rust.criticalReturnInterface().use { obj ->
+            assertTrue(obj.test())
+        }
     }
 }

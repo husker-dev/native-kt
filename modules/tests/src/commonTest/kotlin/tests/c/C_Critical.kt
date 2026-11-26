@@ -45,7 +45,9 @@ class C_Critical {
 
     @Test
     fun criticalInterface() = withCLib {
-        assertTrue(natives.test.c.criticalInterface(MyInterface()))
+        MyInterface().use { obj ->
+            assertTrue(natives.test.c.criticalInterface(obj))
+        }
     }
 
     @Test
@@ -187,6 +189,8 @@ class C_Critical {
 
     @Test
     fun criticalReturnInterface() = withCLib {
-        natives.test.c.criticalReturnInterface()
+        natives.test.c.criticalReturnInterface().use { obj ->
+            assertTrue(obj.test())
+        }
     }
 }

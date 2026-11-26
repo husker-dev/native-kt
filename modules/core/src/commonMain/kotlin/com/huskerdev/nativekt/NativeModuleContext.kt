@@ -74,59 +74,47 @@ class NativeModuleContext(
 
     val criticalOperations = allOperations.filter { it.isCritical() }
 
-    /**
-     * Types that needs to be cast into native one.
-     * Calculated from entry points (operation arguments)
-     */
-    val toNativeTypes: Set<ResolvedIdlType.Default> = buildSet {
-        fun addType(type: ResolvedIdlType) {
-            if(type !is ResolvedIdlType.Default || type in this)
-                return
-            add(type)
-            type.parameters.forEach { addType(it) }
+    private val usedTypeSets = run {
+        val toNative = mutableSetOf<ResolvedIdlType.Default>()
+        val toKotlin = mutableSetOf<ResolvedIdlType.Default>()
+
+        fun addType(type: ResolvedIdlType, native: Boolean) {
+            if (type !is ResolvedIdlType.Default) return
+            val types = if (native) toNative else toKotlin
+            if (!types.add(type)) return
+            type.parameters.forEach { addType(it, native) }
 
             when {
-                type.isCallback() -> addType((type.declaration as ResolvedIdlCallbackFunction).type)
+                type.isCallback() -> {
+                    val callback = type.declaration as ResolvedIdlCallbackFunction
+                    callback.args.forEach { addType(it.type, native = false) }
+                    addType(callback.type, native = true)
+                }
                 type.isDictionary() -> {
                     val dictionary = type.declaration as ResolvedIdlDictionary
-                    dictionary.fields.forEach { addType(it.type) }
-                    dictionary.implements?.let { addType(ResolvedIdlType.Default(it, emptyList(), false)) }
+                    dictionary.fields.forEach { addType(it.type, native) }
+                    dictionary.implements?.let { addType(ResolvedIdlType.Default(it), native) }
                 }
-                type.isArray() -> addType(type.arrayTypeOrNull()!!)
+                type.isArray() -> addType(type.arrayTypeOrNull()!!, native)
             }
         }
-        allOperations.forEach { op ->
-            op.args.forEach { addType(it.type) }
+
+        allOperations.forEach { operation ->
+            operation.args.forEach { addType(it.type, native = true) }
+            addType(operation.type, native = false)
         }
-        dictionaries.forEach { addType(ResolvedIdlType.Default(it)) }
+        dictionaries.forEach {
+            addType(ResolvedIdlType.Default(it), native = true)
+            addType(ResolvedIdlType.Default(it), native = false)
+        }
+        toNative.toSet() to toKotlin.toSet()
     }
 
-    /**
-     * Types that needs to be cast into kotlin one.
-     * Calculated from entry points (operation returns)
-     */
-    val toKotlinTypes: Set<ResolvedIdlType.Default> = buildSet {
-        fun addType(type: ResolvedIdlType) {
-            if(type !is ResolvedIdlType.Default || type in this)
-                return
-            add(type)
-            type.parameters.forEach { addType(it) }
+    /** Types converted from Kotlin to native. */
+    val toNativeTypes: Set<ResolvedIdlType.Default> = usedTypeSets.first
 
-            when {
-                type.isCallback() -> addType((type.declaration as ResolvedIdlCallbackFunction).type)
-                type.isDictionary() -> {
-                    val dictionary = type.declaration as ResolvedIdlDictionary
-                    dictionary.fields.forEach { addType(it.type) }
-                    dictionary.implements?.let { addType(ResolvedIdlType.Default(it)) }
-                }
-                type.isArray() -> type.arrayTypeOrNull()?.let(::addType)
-            }
-        }
-        allOperations.forEach { op ->
-            addType(op.type)
-        }
-        dictionaries.forEach { addType(ResolvedIdlType.Default(it)) }
-    }
+    /** Types converted from native to Kotlin. */
+    val toKotlinTypes: Set<ResolvedIdlType.Default> = usedTypeSets.second
 
     val usedTypes = toNativeTypes + toKotlinTypes
 

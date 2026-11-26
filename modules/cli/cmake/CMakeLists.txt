@@ -32,7 +32,7 @@ function(nativekt_generate config_file)
     endif()
 
     # CLI executable
-    set(tool "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/nativekt-cli-${platform}${extension}")
+    set(tool "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/bin/nativekt-cli-${platform}${extension}")
 
     # Get absolute configuration path
     get_filename_component(config "${config_file}" ABSOLUTE BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -50,7 +50,7 @@ function(nativekt_generate config_file)
             OUTPUT_STRIP_TRAILING_WHITESPACE
     )
     if(NOT "${ndl_result}" STREQUAL "0")
-        message(FATAL_ERROR "Native-Kt failed to resolve the NDL path (${ndl_result})\n${ndl_stderr}")
+        message(FATAL_ERROR "Native-Kt failed to resolve the NDL path (${ndl_result})\nCLI: ${tool}\nConfig: ${config}\n${ndl_stderr}")
     endif()
 
     # Execute CLI

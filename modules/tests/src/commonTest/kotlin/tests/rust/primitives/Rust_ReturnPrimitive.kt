@@ -1,8 +1,8 @@
 package tests.rust.primitives
 
-import withRustLib
 import natives.test.rust.MyDictionary
 import natives.test.rust.MyEnum
+import withRustLib
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull

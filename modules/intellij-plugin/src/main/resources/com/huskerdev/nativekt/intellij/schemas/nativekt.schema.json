@@ -68,7 +68,11 @@
         },
         "language": {
           "type": "string",
-          "enum": ["c", "cpp", "c++"],
+          "enum": [
+            "c",
+            "cpp", "c++",
+            "objc", "obj-c", "objective", "objective-c"
+          ],
           "default": "c",
           "description": "CMake target language"
         },

@@ -1,6 +1,7 @@
 package com.huskerdev.nativekt.utils
 
 import com.huskerdev.nativekt.BuildSystem
+import com.huskerdev.nativekt.Language
 import com.huskerdev.nativekt.NativeModuleContext
 import com.huskerdev.nativekt.TargetType
 import com.huskerdev.stdlibx.OS
@@ -64,6 +65,7 @@ internal fun cmakeLinkerArgs(
     moduleName: String,
     isKN: Boolean = false
 ): List<String> = buildList {
+    if(context.language == Language.OBJC) add("-ObjC")
     // Tip: arguments generates only with executable or shared libraries, so our CMakeLists.txt contains `SHARED` target
 
     val linkLibs = cmakeBuildDir.resolve("CMakeFiles/$moduleName.dir/linkLibs.rsp")
@@ -157,6 +159,4 @@ internal fun cmakeLinkerArgs(
             add(0, "-L${locateMingw(context).invariantSeparatorsPath}/lib")
     }
 }
-
-
 

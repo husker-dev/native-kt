@@ -11,6 +11,8 @@ import com.huskerdev.nativekt.printers.c.CApiHeaderPrinter
 import com.huskerdev.nativekt.printers.c.CApiImplPrinter
 import com.huskerdev.nativekt.printers.cpp.CppApiHeaderPrinter
 import com.huskerdev.nativekt.printers.cpp.CppApiImplPrinter
+import com.huskerdev.nativekt.printers.objc.ObjcApiHeaderPrinter
+import com.huskerdev.nativekt.printers.objc.ObjcApiImplPrinter
 import com.huskerdev.nativekt.printers.rust.RustPrinter
 import com.huskerdev.nativekt.printers.swift.SwiftPrinter
 import com.huskerdev.nativekt.utils.snakeCase
@@ -105,6 +107,10 @@ class Generate: CliktCommand(name = "generate") {
                                 target = sourcesDir.resolve("nativekt.cpp"),
                                 includePath = "nativekt.hpp"
                             )
+                        }
+                        Language.OBJC -> {
+                            ObjcApiHeaderPrinter(context, includeDir.resolve("nativekt.h"))
+                            ObjcApiImplPrinter(context, sourcesDir.resolve("nativekt.m"))
                         }
                         else -> throw UnsupportedOperationException()
                     }

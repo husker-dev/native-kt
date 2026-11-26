@@ -1,10 +1,10 @@
 package tests.rust.primitives
 
-import withRustLib
 import natives.test.rust.MyDictionary
 import natives.test.rust.MyEnum
-import natives.test.rust.MyInterface
 import natives.test.rust.VoidCallback
+import natives.test.rust.MyInterface
+import withRustLib
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
@@ -126,7 +126,10 @@ class Rust_CallbackArgPrimitive {
     @Test
     fun callbackArgInterface() = withRustLib {
         val obj = MyInterface()
-        assertTrue(natives.test.rust.callbackArgInterface(obj) { it == obj })
+        assertTrue(natives.test.rust.callbackArgInterface(obj) { arg ->
+            arg.use { arg == obj }
+        })
+        obj.close()
     }
 
     @Test

@@ -125,7 +125,7 @@ class Rust_CallbackArgArray {
     fun callbackArgInterfaceArray() = withRustLib {
         assertTrue(natives.test.rust.callbackArgInterfaceArray {
             val result = it[0].test() && it[1].test()
-            it.forEach { e -> e.close() }
+            it.forEach { it.close() }
             result
         })
     }

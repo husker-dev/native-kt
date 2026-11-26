@@ -2,8 +2,9 @@
 
 package tests.rust.arrays
 
-import withRustLib
 import natives.test.rust.*
+import natives.test.rust.MyInterface
+import withRustLib
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 
@@ -132,10 +133,23 @@ class Rust_PingArray {
             MyInterface(),
             MyInterface()
         )
-        val cloned = pingInterfaceArray(arr)
-        assertContentEquals(arr, cloned)
+        val copy = pingInterfaceArray(arr)
+        assertContentEquals(arr, copy)
         arr.forEach { it.close() }
-        cloned.forEach { it.close() }
+        copy.forEach { it.close() }
+    }
+
+    @Test
+    fun pingInterfaceArrayRepeated() = withRustLib {
+        MyInterface().use { obj ->
+            val arr = arrayOf(obj, obj)
+            val copy = pingInterfaceArray(arr)
+            try {
+                assertContentEquals(arr, copy)
+            } finally {
+                copy.forEach { it.close() }
+            }
+        }
     }
 
     @Test

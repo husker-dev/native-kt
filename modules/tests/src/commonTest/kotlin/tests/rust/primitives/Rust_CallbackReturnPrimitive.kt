@@ -1,10 +1,10 @@
 package tests.rust.primitives
 
-import withRustLib
 import natives.test.rust.MyDictionary
 import natives.test.rust.MyEnum
-import natives.test.rust.MyInterface
 import natives.test.rust.VoidCallback
+import natives.test.rust.MyInterface
+import withRustLib
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -88,8 +88,12 @@ class Rust_CallbackReturnPrimitive {
 
     @Test
     fun callbackReturnCallback() = withRustLib {
-        val toPass = VoidCallback {}
-        assertEquals(toPass, natives.test.rust.callbackReturnCallback { toPass })
+        var invoked = false
+        val toPass = VoidCallback { invoked = true }
+        val returned = natives.test.rust.callbackReturnCallback { toPass }
+        assertEquals(toPass, returned)
+        returned.invoke()
+        assertTrue(invoked)
     }
 
     @Test
@@ -114,7 +118,9 @@ class Rust_CallbackReturnPrimitive {
 
     @Test
     fun callbackReturnInterface() = withRustLib {
-        assertTrue(natives.test.rust.callbackReturnInterface { MyInterface() })
+        val item = MyInterface()
+        assertTrue(natives.test.rust.callbackReturnInterface { item })
+        item.close()
     }
 
     @Test

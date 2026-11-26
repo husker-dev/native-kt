@@ -86,8 +86,14 @@ class Cpp_PingPrimitive {
     }
 
     @Test
+    fun pingStringUnicodeAndEmbeddedNull() = withCppLib {
+        val value = "Привет\u0000🌍"
+        assertEquals(value, pingString(value))
+    }
+
+    @Test
     fun pingStringEmpty() = withCppLib {
-        assertEquals("", pingString(""))
+        assertEquals("", natives.test.cpp.pingStringEmpty(""))
     }
 
     @Test
@@ -109,7 +115,7 @@ class Cpp_PingPrimitive {
     }
 
     @Test
-    fun pingDictionaryEmpty() = withCppLib {
+    fun pingEmptyDictionary() = withCppLib {
         assertEquals(
             EmptyDictionary(),
             natives.test.cpp.pingEmptyDictionary(EmptyDictionary())

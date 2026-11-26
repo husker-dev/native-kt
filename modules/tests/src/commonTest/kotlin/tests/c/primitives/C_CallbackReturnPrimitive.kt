@@ -1,10 +1,10 @@
 package tests.c.primitives
 
-import withCLib
 import natives.test.c.MyDictionary
 import natives.test.c.MyEnum
 import natives.test.c.VoidCallback
 import natives.test.c.MyInterface
+import withCLib
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -88,8 +88,12 @@ class C_CallbackReturnPrimitive {
 
     @Test
     fun callbackReturnCallback() = withCLib {
-        val toPass = VoidCallback {}
-        assertEquals(toPass, natives.test.c.callbackReturnCallback { toPass })
+        var invoked = false
+        val toPass = VoidCallback { invoked = true }
+        val returned = natives.test.c.callbackReturnCallback { toPass }
+        assertEquals(toPass, returned)
+        returned.invoke()
+        assertTrue(invoked)
     }
 
     @Test
