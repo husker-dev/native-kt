@@ -20,7 +20,8 @@ internal fun cmakeGen(
         "cmake \"${dir}\"",
         "-B \"$buildDir\"",
         "-G \"${if(OS.isWindows) "MinGW Makefiles" else "Unix Makefiles"}\"",
-        "-DCMAKE_BUILD_TYPE=${buildType.cmakeName}"
+        "-DCMAKE_BUILD_TYPE=${buildType.cmakeName}",
+        "-DNATIVEKT_MANGLE=ON"
     )
     command += args
 
@@ -159,4 +160,3 @@ internal fun cmakeLinkerArgs(
             add(0, "-L${locateMingw(context).invariantSeparatorsPath}/lib")
     }
 }
-

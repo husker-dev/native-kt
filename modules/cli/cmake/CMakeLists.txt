@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.24)
 
+option(NATIVEKT_MANGLE "Mangle Native-Kt C implementation names" OFF)
+
 function(nativekt_generate config_file)
 
     # Validate
@@ -111,13 +113,15 @@ function(nativekt_configure target_lib config_file)
     target_compile_options(${target_lib} PRIVATE -Wno-initializer-overrides)
     set_target_properties(${target_lib} PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
-    get_target_property(operations NativeKt::bindings NATIVEKT_OPERATIONS)
-    foreach(operation IN LISTS operations)
-        if(NOT operation STREQUAL "")
-            string(APPEND operation "__impl")
-            target_compile_definitions(${target_lib} PRIVATE "$<$<COMPILE_LANGUAGE:C>:${operation}>")
-        endif()
-    endforeach()
+    if(NATIVEKT_MANGLE)
+        get_target_property(operations NativeKt::bindings NATIVEKT_OPERATIONS)
+        foreach(operation IN LISTS operations)
+            if(NOT operation STREQUAL "")
+                string(APPEND operation "__impl")
+                target_compile_definitions(${target_lib} PRIVATE "$<$<COMPILE_LANGUAGE:C>:${operation}>")
+            endif()
+        endforeach()
+    endif()
 
     file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/nativekt/target.txt" ${target_lib})
 
