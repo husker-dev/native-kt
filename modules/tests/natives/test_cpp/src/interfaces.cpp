@@ -34,7 +34,7 @@ IMyInterface* IMyInterface::_create() {
     return new MyInterface();
 }
 
-IMyInterface* IMyInterface::new_critical(int32_t a1) {
+IMyInterface* IMyInterface::new_critical(std::int32_t a1) {
     (void)a1;
     return new MyInterface();
 }

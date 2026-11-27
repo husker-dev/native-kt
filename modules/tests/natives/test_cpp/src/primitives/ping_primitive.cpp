@@ -1,6 +1,6 @@
 #include <nativekt.hpp>
 
-uint16_t ping_char(uint16_t arg) {
+std::uint16_t ping_char(std::uint16_t arg) {
     return arg;
 }
 
@@ -8,35 +8,35 @@ bool ping_boolean(bool arg) {
     return arg;
 }
 
-int8_t ping_byte(int8_t arg) {
+std::int8_t ping_byte(std::int8_t arg) {
     return arg;
 }
 
-uint8_t ping_ubyte(uint8_t arg) {
+std::uint8_t ping_ubyte(std::uint8_t arg) {
     return arg;
 }
 
-int16_t ping_short(int16_t arg) {
+std::int16_t ping_short(std::int16_t arg) {
     return arg;
 }
 
-uint16_t ping_ushort(uint16_t arg) {
+std::uint16_t ping_ushort(std::uint16_t arg) {
     return arg;
 }
 
-int32_t ping_int(int32_t arg) {
+std::int32_t ping_int(std::int32_t arg) {
     return arg;
 }
 
-uint32_t ping_uint(uint32_t arg) {
+std::uint32_t ping_uint(std::uint32_t arg) {
     return arg;
 }
 
-int64_t ping_long(int64_t arg) {
+std::int64_t ping_long(std::int64_t arg) {
     return arg;
 }
 
-uint64_t ping_ulong(uint64_t arg) {
+std::uint64_t ping_ulong(std::uint64_t arg) {
     return arg;
 }
 

@@ -1,7 +1,7 @@
 #include <nativekt.hpp>
 
 bool callback_return_char_array(std::shared_ptr<CallbackReturnCharArray> arg) {
-    const KArray<uint16_t> result = arg->invoke();
+    const KArray<std::uint16_t> result = arg->invoke();
     return result.get_length() == 2 &&
         result[0] == 'a' &&
         result[1] == 'b';
@@ -23,56 +23,56 @@ bool callback_return_boolean_array(std::shared_ptr<CallbackReturnBooleanArray> a
 }
 
 bool callback_return_byte_array(std::shared_ptr<CallbackReturnByteArray> arg) {
-    const KArray<int8_t> result = arg->invoke();
+    const KArray<std::int8_t> result = arg->invoke();
     return result.get_length() == 2 &&
         result[0] == 1 &&
         result[1] == 2;
 }
 
 bool callback_return_ubyte_array(std::shared_ptr<CallbackReturnUByteArray> arg) {
-    const KArray<uint8_t> result = arg->invoke();
+    const KArray<std::uint8_t> result = arg->invoke();
     return result.get_length() == 2 &&
         result[0] == 1 &&
         result[1] == 255u;
 }
 
 bool callback_return_short_array(std::shared_ptr<CallbackReturnShortArray> arg) {
-    const KArray<int16_t> result = arg->invoke();
+    const KArray<std::int16_t> result = arg->invoke();
     return result.get_length() == 2 &&
         result[0] == 1 &&
         result[1] == 2;
 }
 
 bool callback_return_ushort_array(std::shared_ptr<CallbackReturnUShortArray> arg) {
-    const KArray<uint16_t> result = arg->invoke();
+    const KArray<std::uint16_t> result = arg->invoke();
     return result.get_length() == 2 &&
         result[0] == 1 &&
         result[1] == 65535u;
 }
 
 bool callback_return_int_array(std::shared_ptr<CallbackReturnIntArray> arg) {
-    const KArray<int32_t> result = arg->invoke();
+    const KArray<std::int32_t> result = arg->invoke();
     return result.get_length() == 2 &&
         result[0] == 1 &&
         result[1] == 2;
 }
 
 bool callback_return_uint_array(std::shared_ptr<CallbackReturnUIntArray> arg) {
-    const KArray<uint32_t> result = arg->invoke();
+    const KArray<std::uint32_t> result = arg->invoke();
     return result.get_length() == 2 &&
         result[0] == 1 &&
         result[1] == 4294967295u;
 }
 
 bool callback_return_long_array(std::shared_ptr<CallbackReturnLongArray> arg) {
-    const KArray<int64_t> result = arg->invoke();
+    const KArray<std::int64_t> result = arg->invoke();
     return result.get_length() == 2 &&
         result[0] == 1 &&
         result[1] == 2;
 }
 
 bool callback_return_ulong_array(std::shared_ptr<CallbackReturnULongArray> arg) {
-    const KArray<uint64_t> result = arg->invoke();
+    const KArray<std::uint64_t> result = arg->invoke();
     return result.get_length() == 2 &&
         result[0] == 1 &&
         result[1] == 18446744073709551615u;

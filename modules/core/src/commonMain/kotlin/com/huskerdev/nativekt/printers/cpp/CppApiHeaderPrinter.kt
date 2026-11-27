@@ -47,6 +47,7 @@ class CppApiHeaderPrinter(
             #include <string>
             #include <cstring>
             #include <cstdlib>
+            #include <cstdint>
             
         """.trimIndent())
     }
@@ -85,9 +86,9 @@ class CppApiHeaderPrinter(
             
             class KString {
                 char* _Nonnull data;
-                size_t size;
+                std::size_t size;
             public:
-                explicit KString(const char* _Nonnull data, size_t size, bool copy = true);
+                explicit KString(const char* _Nonnull data, std::size_t size, bool copy = true);
                 explicit KString(const char* _Nonnull data, bool copy = true);
                 KString(const KString& other);
                 KString(KString&& other) noexcept;
@@ -95,8 +96,8 @@ class CppApiHeaderPrinter(
                 ~KString();
                 std::string* _Nonnull to_string() const;
                 const char* _Nonnull get_data() const;
-                int32_t get_length() const;
-                size_t get_size() const;
+                std::int32_t get_length() const;
+                std::size_t get_size() const;
                 explicit operator const char* _Nonnull() const;
             };
         """.trimIndent())
@@ -104,22 +105,22 @@ class CppApiHeaderPrinter(
             
             template <typename T> class KArray {
                 T* _Nonnull elements;
-                int32_t length;
-                int32_t capacity;
+                std::int32_t length;
+                std::int32_t capacity;
             public:
-                explicit KArray(int32_t capacity);
-                explicit KArray(T* _Nonnull elements, int32_t length, bool copy = true);
+                explicit KArray(std::int32_t capacity);
+                explicit KArray(T* _Nonnull elements, std::int32_t length, bool copy = true);
                 explicit KArray(std::initializer_list<T> elements);
                 KArray(const KArray& other);
                 KArray(KArray&& other) noexcept;
                 KArray& operator=(KArray&& other) noexcept;
                 ~KArray();
                 explicit operator const T* _Nonnull () const;
-                const T& operator[](size_t index) const;
+                const T& operator[](std::size_t index) const;
                 void push(T&& element);
-                T& get(int32_t index);
+                T& get(std::int32_t index);
                 const T* _Nonnull get_elements();
-                int32_t get_length() const;
+                std::int32_t get_length() const;
             };
         """.trimIndent())
         append("\n")
@@ -194,29 +195,29 @@ class CppApiHeaderPrinter(
 
         append("""
             
-            #define KCallbackDef(Name, Type, ...)             \
-            class Name {                                      \
-                void* _Nonnull _invoke;                       \
-                bool (* _Nonnull _equals)(size_t, size_t);    \
-                void (* _Nonnull _free)(size_t);              \
-            public:                                           \
-                size_t id;                                    \
-            	int32_t hash_code;                            \
-            	~Name();                                      \
-                Name(                                         \
-                    size_t id,                                \
-                    int32_t hash_code,                        \
-                    void* _Nonnull invoke,                    \
-                    bool (* _Nonnull equals)(size_t, size_t), \
-                    void (* _Nonnull free)(size_t)            \
-                );                                            \
-                Name(const Name&) = delete;                   \
-                Name& operator=(const Name&) = delete;        \
-                Name(Name&&) noexcept = delete;               \
-                Name& operator=(Name&&) noexcept = delete;    \
-                                                              \
-                bool operator==(const Name& other) const;     \
-                Type invoke(__VA_ARGS__) const;               \
+            #define KCallbackDef(Name, Type, ...)                       \
+            class Name {                                                \
+                void* _Nonnull _invoke;                                 \
+                bool (* _Nonnull _equals)(std::size_t, std::size_t);    \
+                void (* _Nonnull _free)(std::size_t);                   \
+            public:                                                     \
+                std::size_t id;                                         \
+            	std::int32_t hash_code;                                 \
+            	~Name();                                                \
+                Name(                                                   \
+                    std::size_t id,                                     \
+                    std::int32_t hash_code,                             \
+                    void* _Nonnull invoke,                              \
+                    bool (* _Nonnull equals)(std::size_t, std::size_t), \
+                    void (* _Nonnull free)(std::size_t)                 \
+                );                                                      \
+                Name(const Name&) = delete;                             \
+                Name& operator=(const Name&) = delete;                  \
+                Name(Name&&) noexcept = delete;                         \
+                Name& operator=(Name&&) noexcept = delete;              \
+                                                                        \
+                bool operator==(const Name& other) const;               \
+                Type invoke(__VA_ARGS__) const;                         \
             };
             
         """.trimIndent())
@@ -281,7 +282,7 @@ class CppApiHeaderPrinter(
             val name = function.cppName
             val type = if(!function.isInterfaceOperationAddress())
                 function.type.toCppType()
-            else "intptr_t"
+            else "std::intptr_t"
             val args = function.args.joinToString {
                 val type = if(it.type.isReleasable() && function.isCritical())
                     "const ${it.type.toCppType()}&"
@@ -465,20 +466,20 @@ class CppApiHeaderPrinter(
                 }
     
                 template<typename T>
-                KArray<T>::KArray(const int32_t capacity): elements(nullptr), length(0), capacity(capacity) {
+                KArray<T>::KArray(const std::int32_t capacity): elements(nullptr), length(0), capacity(capacity) {
                     if (capacity > 0) {
                         elements = static_cast<T*>(malloc(sizeof(T) * capacity));
                     }
                 }
     
                 template<typename T>
-                KArray<T>::KArray(T* _Nonnull elements, const int32_t length, const bool copy): length(length), capacity(length) {
+                KArray<T>::KArray(T* _Nonnull elements, const std::int32_t length, const bool copy): length(length), capacity(length) {
                     if (copy) {
                         this->elements = static_cast<T*>(malloc(sizeof(T) * length));
                         if constexpr (std::is_trivially_copyable_v<T>) {
                             std::memcpy(this->elements, elements, sizeof(T) * length);
                         } else {
-                            for (int32_t i = 0; i < length; ++i)
+                            for (std::int32_t i = 0; i < length; ++i)
                                 new (&this->elements[i]) T(elements[i]);
                         }
                     } else this->elements = elements;
@@ -490,7 +491,7 @@ class CppApiHeaderPrinter(
                     if constexpr (std::is_trivially_copyable_v<T>) {
                         std::memcpy(this->elements, elements.begin(), sizeof(T) * elements.size());
                     } else {
-                        int32_t i = 0;
+                        std::int32_t i = 0;
                         for (const auto& e : elements)
                             new (&this->elements[i++]) T(e);
                     }
@@ -502,7 +503,7 @@ class CppApiHeaderPrinter(
                     if constexpr (std::is_trivially_copyable_v<T>) {
                         std::memcpy(elements, other.elements, sizeof(T) * length);
                     } else {
-                        for (int32_t i = 0; i < length; ++i)
+                        for (std::int32_t i = 0; i < length; ++i)
                             new (&elements[i]) T(other.elements[i]);
                     }
                 }
@@ -519,7 +520,7 @@ class CppApiHeaderPrinter(
                 KArray<T>& KArray<T>::operator=(KArray&& other) noexcept {
                     if (this != &other) {
                         if constexpr (!std::is_trivially_destructible_v<T>) {
-                            for (size_t i = 0; i < length; i++)
+                            for (std::size_t i = 0; i < length; i++)
                                 elements[i].~T();
                         }
                         free(elements);
@@ -536,7 +537,7 @@ class CppApiHeaderPrinter(
                 template<typename T>
                 KArray<T>::~KArray() {
                     if constexpr (!std::is_trivially_destructible_v<T>) {
-                        for (size_t i = 0; i < length; i++)
+                        for (std::size_t i = 0; i < length; i++)
                             elements[i].~T();
                     }
                     free(elements);
@@ -548,7 +549,7 @@ class CppApiHeaderPrinter(
                 }
     
                 template<typename T>
-                const T& KArray<T>::operator[](size_t index) const {
+                const T& KArray<T>::operator[](std::size_t index) const {
                     return elements[index];
                 }
     
@@ -560,10 +561,10 @@ class CppApiHeaderPrinter(
                             elements = static_cast<T*>(realloc(elements, sizeof(T) * capacity));
                         } else {
                             T* new_elements = static_cast<T*>(malloc(sizeof(T) * capacity));
-                            for (int32_t i = 0; i < length; ++i)
+                            for (std::int32_t i = 0; i < length; ++i)
                                 new (&new_elements[i]) T(std::move(elements[i]));
                             if constexpr (!std::is_trivially_destructible_v<T>) {
-                                for (int32_t i = 0; i < length; i++)
+                                for (std::int32_t i = 0; i < length; i++)
                                     elements[i].~T();
                             }
                             free(elements);
@@ -575,12 +576,12 @@ class CppApiHeaderPrinter(
                 }
     
                 template<typename T>
-                T &KArray<T>::get(int32_t index) {
+                T &KArray<T>::get(std::int32_t index) {
                     return elements[index];
                 }
     
                 template<typename T>
-                int32_t KArray<T>::get_length() const {
+                std::int32_t KArray<T>::get_length() const {
                     return length;
                 }
     

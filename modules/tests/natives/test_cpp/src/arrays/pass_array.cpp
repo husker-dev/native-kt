@@ -1,20 +1,20 @@
 #include <nativekt.hpp>
 
-bool pass_char_array(KArray<uint16_t> arg) {
+bool pass_char_array(KArray<std::uint16_t> arg) {
     return arg.get_length() == 2 &&
         arg[0] == 'a' &&
         arg[1] == 'b';
 }
 
-bool pass_char_array_empty(KArray<uint16_t> arg) {
+bool pass_char_array_empty(KArray<std::uint16_t> arg) {
     return arg.get_length() == 0;
 }
 
-bool pass_char_array_n(KOptional<KArray<uint16_t>> arg) {
+bool pass_char_array_n(KOptional<KArray<std::uint16_t>> arg) {
     return arg.is_none();
 }
 
-bool pass_char_n_array(KArray<KOptional<uint16_t>> arg) {
+bool pass_char_n_array(KArray<KOptional<std::uint16_t>> arg) {
     return arg.get_length() == 2 &&
         arg[0].is_none() &&
         *arg.get(1) == 'a';
@@ -32,97 +32,97 @@ bool pass_boolean_n_array(KArray<KOptional<bool>> arg) {
         *arg.get(1) == true;
 }
 
-bool pass_byte_array(KArray<int8_t> arg) {
+bool pass_byte_array(KArray<std::int8_t> arg) {
     return arg.get_length() == 2 &&
         arg[0] == 1 &&
         arg[1] == 2;
 }
 
-bool pass_byte_n_array(KArray<KOptional<int8_t>> arg) {
+bool pass_byte_n_array(KArray<KOptional<std::int8_t>> arg) {
     return arg.get_length() == 2 &&
         arg[0].is_none() &&
         *arg.get(1) == 1;
 }
 
-bool pass_ubyte_array(KArray<uint8_t> arg) {
+bool pass_ubyte_array(KArray<std::uint8_t> arg) {
     return arg.get_length() == 2 &&
         arg[0] == 1 &&
         arg[1] == 255u;
 }
 
-bool pass_ubyte_n_array(KArray<KOptional<uint8_t>> arg) {
+bool pass_ubyte_n_array(KArray<KOptional<std::uint8_t>> arg) {
     return arg.get_length() == 2 &&
         arg[0].is_none() &&
         *arg.get(1) == 255u;
 }
 
-bool pass_short_array(KArray<int16_t> arg) {
+bool pass_short_array(KArray<std::int16_t> arg) {
     return arg.get_length() == 2 &&
         arg[0] == 1 &&
         arg[1] == 2;
 }
 
-bool pass_short_n_array(KArray<KOptional<int16_t>> arg) {
+bool pass_short_n_array(KArray<KOptional<std::int16_t>> arg) {
     return arg.get_length() == 2 &&
         arg[0].is_none() &&
         *arg.get(1) == 1;
 }
 
-bool pass_ushort_array(KArray<uint16_t> arg) {
+bool pass_ushort_array(KArray<std::uint16_t> arg) {
     return arg.get_length() == 2 &&
         arg[0] == 1 &&
         arg[1] == 65535u;
 }
 
-bool pass_ushort_n_array(KArray<KOptional<uint16_t>> arg) {
+bool pass_ushort_n_array(KArray<KOptional<std::uint16_t>> arg) {
     return arg.get_length() == 2 &&
         arg[0].is_none() &&
         *arg.get(1) == 65535u;
 }
 
-bool pass_int_array(KArray<int32_t> arg) {
+bool pass_int_array(KArray<std::int32_t> arg) {
     return arg.get_length() == 2 &&
         arg[0] == 1 &&
         arg[1] == 2;
 }
 
-bool pass_int_n_array(KArray<KOptional<int32_t>> arg) {
+bool pass_int_n_array(KArray<KOptional<std::int32_t>> arg) {
     return arg.get_length() == 2 &&
         arg[0].is_none() &&
         *arg.get(1) == 1;
 }
 
-bool pass_uint_array(KArray<uint32_t> arg) {
+bool pass_uint_array(KArray<std::uint32_t> arg) {
     return arg.get_length() == 2 &&
         arg[0] == 1 &&
         arg[1] == 4294967295u;
 }
 
-bool pass_uint_n_array(KArray<KOptional<uint32_t>> arg) {
+bool pass_uint_n_array(KArray<KOptional<std::uint32_t>> arg) {
     return arg.get_length() == 2 &&
         arg[0].is_none() &&
         *arg.get(1) == 4294967295u;
 }
 
-bool pass_long_array(KArray<int64_t> arg) {
+bool pass_long_array(KArray<std::int64_t> arg) {
     return arg.get_length() == 2 &&
         arg[0] == 1 &&
         arg[1] == 2;
 }
 
-bool pass_long_n_array(KArray<KOptional<int64_t>> arg) {
+bool pass_long_n_array(KArray<KOptional<std::int64_t>> arg) {
     return arg.get_length() == 2 &&
         arg[0].is_none() &&
         *arg.get(1) == 1;
 }
 
-bool pass_ulong_array(KArray<uint64_t> arg) {
+bool pass_ulong_array(KArray<std::uint64_t> arg) {
     return arg.get_length() == 2 &&
         arg[0] == 1 &&
         arg[1] == 18446744073709551615u;
 }
 
-bool pass_ulong_n_array(KArray<KOptional<uint64_t>> arg) {
+bool pass_ulong_n_array(KArray<KOptional<std::uint64_t>> arg) {
     return arg.get_length() == 2 &&
         arg[0].is_none() &&
         *arg.get(1) == 18446744073709551615u;

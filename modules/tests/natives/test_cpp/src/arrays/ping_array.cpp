@@ -1,14 +1,14 @@
 #include <nativekt.hpp>
 
-KArray<uint16_t> ping_char_array(KArray<uint16_t> arg) {
+KArray<std::uint16_t> ping_char_array(KArray<std::uint16_t> arg) {
     return arg;
 }
 
-KArray<uint16_t> ping_char_array_empty(KArray<uint16_t> arg) {
+KArray<std::uint16_t> ping_char_array_empty(KArray<std::uint16_t> arg) {
     return arg;
 }
 
-KOptional<KArray<uint16_t>> ping_char_array_n(KOptional<KArray<uint16_t>> arg) {
+KOptional<KArray<std::uint16_t>> ping_char_array_n(KOptional<KArray<std::uint16_t>> arg) {
     return arg;
 }
 
@@ -16,35 +16,35 @@ KArray<bool> ping_boolean_array(KArray<bool> arg) {
     return arg;
 }
 
-KArray<int8_t> ping_byte_array(KArray<int8_t> arg) {
+KArray<std::int8_t> ping_byte_array(KArray<std::int8_t> arg) {
     return arg;
 }
 
-KArray<uint8_t> ping_ubyte_array(KArray<uint8_t> arg) {
+KArray<std::uint8_t> ping_ubyte_array(KArray<std::uint8_t> arg) {
     return arg;
 }
 
-KArray<int16_t> ping_short_array(KArray<int16_t> arg) {
+KArray<std::int16_t> ping_short_array(KArray<std::int16_t> arg) {
     return arg;
 }
 
-KArray<uint16_t> ping_ushort_array(KArray<uint16_t> arg) {
+KArray<std::uint16_t> ping_ushort_array(KArray<std::uint16_t> arg) {
     return arg;
 }
 
-KArray<int32_t> ping_int_array(KArray<int32_t> arg) {
+KArray<std::int32_t> ping_int_array(KArray<std::int32_t> arg) {
     return arg;
 }
 
-KArray<uint32_t> ping_uint_array(KArray<uint32_t> arg) {
+KArray<std::uint32_t> ping_uint_array(KArray<std::uint32_t> arg) {
     return arg;
 }
 
-KArray<int64_t> ping_long_array(KArray<int64_t> arg) {
+KArray<std::int64_t> ping_long_array(KArray<std::int64_t> arg) {
     return arg;
 }
 
-KArray<uint64_t> ping_ulong_array(KArray<uint64_t> arg) {
+KArray<std::uint64_t> ping_ulong_array(KArray<std::uint64_t> arg) {
     return arg;
 }
 

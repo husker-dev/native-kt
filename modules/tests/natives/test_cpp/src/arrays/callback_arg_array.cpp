@@ -1,17 +1,17 @@
 #include <nativekt.hpp>
 
 bool callback_arg_char_array(std::shared_ptr<CallbackPassCharArray> arg) {
-    return arg->invoke(KArray<uint16_t> {
+    return arg->invoke(KArray<std::uint16_t> {
         'a', 'b'
     });
 }
 
 bool callback_arg_char_array_empty(std::shared_ptr<CallbackPassCharArrayEmpty> arg) {
-    return arg->invoke(KArray<uint16_t> {});
+    return arg->invoke(KArray<std::uint16_t> {});
 }
 
 bool callback_arg_char_array_n(std::shared_ptr<CallbackPassCharArrayN> arg) {
-    return arg->invoke(KOptional<KArray<uint16_t>>());
+    return arg->invoke(KOptional<KArray<std::uint16_t>>());
 }
 
 bool callback_arg_boolean_array(std::shared_ptr<CallbackPassBooleanArray> arg) {
@@ -21,25 +21,25 @@ bool callback_arg_boolean_array(std::shared_ptr<CallbackPassBooleanArray> arg) {
 }
 
 bool callback_arg_byte_array(std::shared_ptr<CallbackPassByteArray> arg) {
-    return arg->invoke(KArray<int8_t> {
+    return arg->invoke(KArray<std::int8_t> {
         1, 2
     });
 }
 
 bool callback_arg_ubyte_array(std::shared_ptr<CallbackPassUByteArray> arg) {
-    return arg->invoke(KArray<uint8_t> {
+    return arg->invoke(KArray<std::uint8_t> {
         1u, 255u
     });
 }
 
 bool callback_arg_short_array(std::shared_ptr<CallbackPassShortArray> arg) {
-    return arg->invoke(KArray<int16_t> {
+    return arg->invoke(KArray<std::int16_t> {
         1, 2
     });
 }
 
 bool callback_arg_ushort_array(std::shared_ptr<CallbackPassUShortArray> arg) {
-    return arg->invoke(KArray<uint16_t> {
+    return arg->invoke(KArray<std::uint16_t> {
         1u, 65535u
     });
 }
@@ -57,13 +57,13 @@ bool callback_arg_uint_array(std::shared_ptr<CallbackPassUIntArray> arg) {
 }
 
 bool callback_arg_long_array(std::shared_ptr<CallbackPassLongArray> arg) {
-    return arg->invoke(KArray<int64_t> {
+    return arg->invoke(KArray<std::int64_t> {
         1, 2
     });
 }
 
 bool callback_arg_ulong_array(std::shared_ptr<CallbackPassULongArray> arg) {
-    return arg->invoke(KArray<uint64_t> {
+    return arg->invoke(KArray<std::uint64_t> {
         1, 18446744073709551615u
     });
 }

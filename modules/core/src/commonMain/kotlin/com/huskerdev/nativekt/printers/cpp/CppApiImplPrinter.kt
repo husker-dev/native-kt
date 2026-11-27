@@ -49,11 +49,11 @@ class CppApiImplPrinter(
         """.trimIndent())
         if(context.needsAllocFunctions) appendLine("""
             
-            extern "C" void* ${context.exportC("alloc")}(size_t size) {
+            extern "C" void* ${context.exportC("alloc")}(std::size_t size) {
                 return size == 0 ? nullptr : malloc(size);
             }
             
-            extern "C" void ${context.exportC("dealloc")}(void* ptr, size_t size __attribute__((unused))) {
+            extern "C" void ${context.exportC("dealloc")}(void* ptr, std::size_t size __attribute__((unused))) {
                 if(ptr != nullptr) free(ptr);
             }
         """.trimIndent())
@@ -122,9 +122,9 @@ class CppApiImplPrinter(
             appendLine("""
                 
                 KString::KString(const char *data, bool copy) {
-                    const size_t length = strlen(data);
+                    const std::size_t length = strlen(data);
                     if (copy) {
-                        const size_t size = length * sizeof(char);
+                        const std::size_t size = length * sizeof(char);
                         this->data = new char[size];
                         std::memcpy(this->data, data, size);
                     } else 
@@ -132,7 +132,7 @@ class CppApiImplPrinter(
                     this->size = length;
                 }
     
-                KString::KString(const char *data, size_t size, bool copy) {
+                KString::KString(const char *data, std::size_t size, bool copy) {
                     if (copy) {
                         this->data = new char[size];
                         std::memcpy(this->data, data, size);
@@ -179,11 +179,11 @@ class CppApiImplPrinter(
                     return data;
                 }
     
-                int32_t KString::get_length() const {
+                std::int32_t KString::get_length() const {
                     if(size == 0)
                         return 0;
                     const char* s = data;
-                    size_t count = 0;
+                    std::size_t count = 0;
                     while (*s) {
                         if ((*s & 0xC0) != 0x80)
                             count++;
@@ -192,14 +192,14 @@ class CppApiImplPrinter(
                     return count;
                 }
     
-                size_t KString::get_size() const {
+                std::size_t KString::get_size() const {
                     return size;
                 }
             """.trimIndent())
 
             if(context.hasStringToNative) appendLine("""
                 
-                extern "C" void* _Nonnull ${context.exportC("string_new")}(char* _Nonnull data, size_t size, bool make_copy) {
+                extern "C" void* _Nonnull ${context.exportC("string_new")}(char* _Nonnull data, std::size_t size, bool make_copy) {
                     return new KString(data, size, make_copy);
                 }
             """.trimIndent())
@@ -209,7 +209,7 @@ class CppApiImplPrinter(
                     return static_cast<KString*>(self)->get_data();
                 }
                 
-                extern "C" size_t ${context.exportC("string_size")}(void* _Nonnull self) {
+                extern "C" std::size_t ${context.exportC("string_size")}(void* _Nonnull self) {
                     return static_cast<KString*>(self)->get_size();
                 }
                 
@@ -228,13 +228,13 @@ class CppApiImplPrinter(
                 // Primitive arrays
                 
                 #define IMPL_TYPED_ARRAY(T, FUNC_NEW, FUNC_ELEMENTS, FUNC_LENGTH, FUNC_FREE) \
-                extern "C" void* FUNC_NEW(T* elements, int32_t length, bool make_copy) {  \
+                extern "C" void* FUNC_NEW(T* elements, std::int32_t length, bool make_copy) {  \
                     return new KArray<T>(elements, length, make_copy);                    \
                 }                                                                         \
                 extern "C" T* FUNC_ELEMENTS(void* self) {                                 \
                     return const_cast<T*>(static_cast<KArray<T>*>(self)->get_elements()); \
                 }                                                                         \
-                extern "C" int32_t FUNC_LENGTH(void* self) {                              \
+                extern "C" std::int32_t FUNC_LENGTH(void* self) {                         \
                     return static_cast<KArray<T>*>(self)->get_length();                   \
                 }                                                                         \
                 extern "C" void FUNC_FREE(void* self) {                                   \
@@ -242,12 +242,12 @@ class CppApiImplPrinter(
                 }
             """.trimIndent())
             listOf(
-                Triple("Char", "uint16_t", context.hasCharArray),
+                Triple("Char", "std::uint16_t", context.hasCharArray),
                 Triple("Boolean", "bool", context.hasBooleanArray),
-                Triple("Byte", "int8_t", context.hasByteArray || context.hasUByteArray),
-                Triple("Short", "int16_t", context.hasShortArray || context.hasUShortArray),
-                Triple("Int", "int32_t", context.hasIntArray || context.hasEnums || context.hasUIntArray),
-                Triple("Long", "int64_t", context.hasLongArray || context.hasULongArray),
+                Triple("Byte", "std::int8_t", context.hasByteArray || context.hasUByteArray),
+                Triple("Short", "std::int16_t", context.hasShortArray || context.hasUShortArray),
+                Triple("Int", "std::int32_t", context.hasIntArray || context.hasEnums || context.hasUIntArray),
+                Triple("Long", "std::int64_t", context.hasLongArray || context.hasULongArray),
                 Triple("Float", "float", context.hasFloatArray),
                 Triple("Double", "double", context.hasDoubleArray)
             ).filter { it.third }
@@ -273,11 +273,11 @@ class CppApiImplPrinter(
                 // Typed array macros
                 
                 #define IMPL_OBJECT_ARRAY(T, FUNC_NEW, FUNC_LENGTH, FUNC_PUSH, FUNC_GET, FUNC_FREE) \
-                extern "C" void* FUNC_NEW(int32_t capacity, bool ne) {                    \
+                extern "C" void* FUNC_NEW(std::int32_t capacity, bool ne) {               \
                     if (ne) return new KArray<KOptional<T>>(capacity);                    \
                     return new KArray<T>(capacity);                                       \
                 }                                                                         \
-                extern "C" int32_t FUNC_LENGTH(void* arr, bool ne) {                      \
+                extern "C" std::int32_t FUNC_LENGTH(void* arr, bool ne) {                 \
                     if (ne) return static_cast<KArray<KOptional<T>>*>(arr)->get_length(); \
                     return static_cast<KArray<T>*>(arr)->get_length();                    \
                 }                                                                         \
@@ -292,7 +292,7 @@ class CppApiImplPrinter(
                         arr->push(std::move(*el)); delete el;                             \
                     }                                                                     \
                 }                                                                         \
-                extern "C" void* FUNC_GET(void* array, int32_t index, bool ne) {          \
+                extern "C" void* FUNC_GET(void* array, std::int32_t index, bool ne) {     \
                     if (ne) {                                                             \
                         const auto arr = static_cast<KArray<KOptional<T>>*>(array);       \
                         const KOptional<T>* opt = arr->get_elements() + index;            \
@@ -316,12 +316,12 @@ class CppApiImplPrinter(
                     .mapTo(this) { "std::shared_ptr<${it.cppName}>" to it.cname.lowercase() }
 
                 if(context.hasStringArray) add("KString" to "string")
-                if(context.hasCharNullableArray)    add("uint16_t" to "char")
-                if(context.hasBooleanNullableArray) add("int8_t" to "boolean")
-                if(context.hasByteNullableArray || context.hasUByteNullableArray)   add("int8_t" to "byte")
-                if(context.hasShortNullableArray || context.hasUShortNullableArray) add("int16_t" to "short")
-                if(context.hasIntNullableArray || context.hasUIntNullableArray || context.hasEnumNullableArray) add("int32_t" to "int")
-                if(context.hasLongNullableArray || context.hasULongNullableArray)   add("int64_t" to "long")
+                if(context.hasCharNullableArray)    add("std::uint16_t" to "char")
+                if(context.hasBooleanNullableArray) add("std::int8_t" to "boolean")
+                if(context.hasByteNullableArray || context.hasUByteNullableArray)   add("std::int8_t" to "byte")
+                if(context.hasShortNullableArray || context.hasUShortNullableArray) add("std::int16_t" to "short")
+                if(context.hasIntNullableArray || context.hasUIntNullableArray || context.hasEnumNullableArray) add("std::int32_t" to "int")
+                if(context.hasLongNullableArray || context.hasULongNullableArray)   add("std::int64_t" to "long")
                 if(context.hasFloatNullableArray)   add("float" to "float")
                 if(context.hasDoubleNullableArray)  add("double" to "double")
             }.forEach {
@@ -359,12 +359,12 @@ class CppApiImplPrinter(
         """.trimIndent())
 
         listOf(
-            Triple("uint16_t", "char", context.hasCharNullable),
-            Triple("int8_t", "boolean", context.hasBooleanNullable),
-            Triple("int8_t", "byte", context.hasByteNullable || context.hasUByteNullable),
-            Triple("int16_t", "short", context.hasShortNullable || context.hasUShortNullable),
-            Triple("int32_t", "int", context.hasIntNullable || context.hasUIntNullable || context.hasEnumNullable),
-            Triple("int64_t", "long", context.hasLongNullable || context.hasULongNullable),
+            Triple("std::uint16_t", "char", context.hasCharNullable),
+            Triple("std::int8_t", "boolean", context.hasBooleanNullable),
+            Triple("std::int8_t", "byte", context.hasByteNullable || context.hasUByteNullable),
+            Triple("std::int16_t", "short", context.hasShortNullable || context.hasUShortNullable),
+            Triple("std::int32_t", "int", context.hasIntNullable || context.hasUIntNullable || context.hasEnumNullable),
+            Triple("std::int64_t", "long", context.hasLongNullable || context.hasULongNullable),
             Triple("float", "float", context.hasFloatNullable),
             Triple("double", "double", context.hasDoubleNullable)
         ).forEach { (type, name, hasCast) ->
@@ -405,11 +405,11 @@ class CppApiImplPrinter(
             
             #define KCallbackImpl(Name, InvokeBlock, FUNC_NEW, FUNC_ID, FUNC_FREE)                  \
             Name::Name(                                                                             \
-                const size_t id,                                                                    \
-                const int32_t hash_code,                                                            \
+                const std::size_t id,                                                               \
+                const std::int32_t hash_code,                                                       \
                 void* _Nonnull invoke,                                                              \
-                bool (* _Nonnull equals)(size_t, size_t),                                           \
-                void (* _Nonnull free)(size_t)                                                      \
+                bool (* _Nonnull equals)(std::size_t, std::size_t),                                 \
+                void (* _Nonnull free)(std::size_t)                                                 \
             ) : _invoke(invoke), _equals(equals), _free(free), id(id), hash_code(hash_code) {}      \
             Name::~Name() {                                                                         \
                 _free(id);                                                                          \
@@ -419,22 +419,22 @@ class CppApiImplPrinter(
             }                                                                                       \
             template <>                                                                             \
             struct std::hash<Name> {                                                                \
-                size_t operator()(const Name& u) const noexcept {                                   \
+                std::size_t operator()(const Name& u) const noexcept {                              \
                     return u.hash_code;                                                             \
                 }                                                                                   \
             };                                                                                      \
             InvokeBlock                                                                             \
                                                                                                     \
             extern "C" std::shared_ptr<Name>* FUNC_NEW(                                             \
-                const size_t id,                                                                    \
-                const int32_t hash_code,                                                            \
+                const std::size_t id,                                                               \
+                const std::int32_t hash_code,                                                       \
                 void* _Nonnull invoke,                                                              \
-                bool (* _Nonnull equals)(size_t, size_t),                                           \
-                void (* _Nonnull free)(size_t)                                                      \
+                bool (* _Nonnull equals)(std::size_t, std::size_t),                                 \
+                void (* _Nonnull free)(std::size_t)                                                 \
             ) {                                                                                     \
                 return new std::shared_ptr<Name>(new Name(id, hash_code, invoke, equals, free));    \
             }                                                                                       \
-            extern "C" size_t FUNC_ID(std::shared_ptr<Name>* _self) {                               \
+            extern "C" std::size_t FUNC_ID(std::shared_ptr<Name>* _self) {                          \
                 return (*_self)->id;                                                                \
             }                                                                                       \
             extern "C" void FUNC_FREE(std::shared_ptr<Name>* _self) {                               \
@@ -459,7 +459,7 @@ class CppApiImplPrinter(
             }.joinToString()
 
             val nativeArgs = buildList {
-                add("size_t id")
+                add("std::size_t id")
                 callback.args.mapTo(this) { it.type.toCppType(ptr = true, printOption = false) }
             }.joinToString()
 
@@ -588,12 +588,12 @@ class CppApiImplPrinter(
             val mangledName = context.exportC(function.cname, isInternal = false)
             val type = if(!function.isInterfaceOperationAddress())
                 function.type.toCppType(printOption = false, ptr = true)
-            else "intptr_t"
+            else "std::intptr_t"
             val args = function.args.joinToString {
                 val name = it.cppName
                 when {
-                    critical && it.type.isString() -> "const char* $name, int32_t _${name}_size"
-                    critical && it.type.isArray() -> "const ${it.type.arrayTypeOrNull()!!.toCppType(ptr = false)}* $name, int32_t _${name}_length"
+                    critical && it.type.isString() -> "const char* $name, std::int32_t _${name}_size"
+                    critical && it.type.isArray() -> "const ${it.type.arrayTypeOrNull()!!.toCppType(ptr = false)}* $name, std::int32_t _${name}_length"
                     else -> "${it.type.toCppType(printOption = false, ptr = true)} $name"
                 }
             }
@@ -639,7 +639,7 @@ class CppApiImplPrinter(
                     function.isInterfaceOperationClone() ->
                         "return new std::shared_ptr<$interName>(*${function.args[0].cppName});"
                     function.isInterfaceOperationAddress() ->
-                        "return (intptr_t) ${function.args[0].cppName}->get();"
+                        "return (std::intptr_t) ${function.args[0].cppName}->get();"
                     else -> throw UnsupportedOperationException()
                 })
                 append("\n}")

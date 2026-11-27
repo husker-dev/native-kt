@@ -6,11 +6,11 @@ bool pass_void() {
     return true;
 }
 
-bool pass_char(uint16_t arg) {
+bool pass_char(std::uint16_t arg) {
     return arg == 'a';
 }
 
-bool pass_char_n(KOptional<uint16_t> arg) {
+bool pass_char_n(KOptional<std::uint16_t> arg) {
     return arg.is_none() || *arg == 'a';
 }
 
@@ -22,67 +22,67 @@ bool pass_boolean_n(KOptional<bool> arg) {
     return arg.is_none() || *arg == true;
 }
 
-bool pass_byte(int8_t arg) {
+bool pass_byte(std::int8_t arg) {
     return arg == 1;
 }
 
-bool pass_byte_n(KOptional<int8_t> arg) {
+bool pass_byte_n(KOptional<std::int8_t> arg) {
     return arg.is_none() || *arg == 1;
 }
 
-bool pass_ubyte(uint8_t arg) {
+bool pass_ubyte(std::uint8_t arg) {
     return arg == 255u;
 }
 
-bool pass_ubyte_n(KOptional<uint8_t> arg) {
+bool pass_ubyte_n(KOptional<std::uint8_t> arg) {
     return arg.is_none() || *arg == 255u;
 }
 
-bool pass_short(int16_t arg) {
+bool pass_short(std::int16_t arg) {
     return arg == 1;
 }
 
-bool pass_short_n(KOptional<int16_t> arg) {
+bool pass_short_n(KOptional<std::int16_t> arg) {
     return arg.is_none() || *arg == 1;
 }
 
-bool pass_ushort(uint16_t arg) {
+bool pass_ushort(std::uint16_t arg) {
     return arg == 65535u;
 }
 
-bool pass_ushort_n(KOptional<uint16_t> arg) {
+bool pass_ushort_n(KOptional<std::uint16_t> arg) {
     return arg.is_none() || *arg == 65535u;
 }
 
-bool pass_int(int32_t arg) {
+bool pass_int(std::int32_t arg) {
     return arg == 99;
 }
 
-bool pass_int_n(KOptional<int32_t> arg) {
+bool pass_int_n(KOptional<std::int32_t> arg) {
     return arg.is_none() || *arg == 99;
 }
 
-bool pass_uint(uint32_t arg) {
+bool pass_uint(std::uint32_t arg) {
     return arg == 4294967295u;
 }
 
-bool pass_uint_n(KOptional<uint32_t> arg) {
+bool pass_uint_n(KOptional<std::uint32_t> arg) {
     return arg.is_none() || *arg == 4294967295u;
 }
 
-bool pass_long(int64_t arg) {
+bool pass_long(std::int64_t arg) {
     return arg == 9223372036854775805;
 }
 
-bool pass_long_n(KOptional<int64_t> arg) {
+bool pass_long_n(KOptional<std::int64_t> arg) {
     return arg.is_none() || *arg == 9223372036854775805;
 }
 
-bool pass_ulong(uint64_t arg) {
+bool pass_ulong(std::uint64_t arg) {
     return arg == 18446744073709551615u;
 }
 
-bool pass_ulong_n(KOptional<uint64_t> arg) {
+bool pass_ulong_n(KOptional<std::uint64_t> arg) {
     return arg.is_none() || *arg == 18446744073709551615u;
 }
 
