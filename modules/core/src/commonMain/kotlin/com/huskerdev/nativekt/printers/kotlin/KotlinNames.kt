@@ -2,6 +2,7 @@ package com.huskerdev.nativekt.printers.kotlin
 
 import com.huskerdev.nativekt.utils.*
 import com.huskerdev.webidl.*
+import com.huskerdev.webidl.parser.IdlValue
 import com.huskerdev.webidl.resolver.*
 
 val ResolvedIdlDeclaration.kname: String
@@ -124,4 +125,21 @@ internal fun castToUnsigned(type: ResolvedIdlType, content: String): String {
         }
         else -> content
     }
+}
+
+internal fun ResolvedIdlField.getDefaultValue(): String = when (val value = value) {
+    is IdlValue.NullValue ->           " = null"
+    is IdlValue.DictionaryInitValue -> " = ${(type as ResolvedIdlType.Default).declaration.kname}()"
+    is IdlValue.StringValue ->         " = \"${value.text}\""
+    is IdlValue.BooleanValue ->        " = ${value.boolValue}"
+    is IdlValue.IntValue ->            " = ${value.number}"
+    is IdlValue.DecimalValue -> {
+        var formated = value.number.toString()
+        if("." !in formated)
+            formated += ".0"
+        if(type.isFloat() && formated.last() != 'f')
+            formated += "f"
+        " = $formated"
+    }
+    null -> ""
 }

@@ -15,10 +15,16 @@ class NdlSyntaxHighlighter: SyntaxHighlighterBase() {
     override fun getHighlightingLexer() = NdlLexer()
 
     override fun getTokenHighlights(tokenType: IElementType): Array<TextAttributesKey> = when(tokenType) {
-        NdlTokenType.KEYWORD -> DefaultLanguageHighlighterColors.KEYWORD
-        NdlTokenType.LINE_COMMENT, NdlTokenType.BLOCK_COMMENT -> DefaultLanguageHighlighterColors.LINE_COMMENT
+        NdlTokenType.LINE_COMMENT,
+        NdlTokenType.BLOCK_COMMENT -> DefaultLanguageHighlighterColors.LINE_COMMENT
         NdlTokenType.IDENTIFIER -> DefaultLanguageHighlighterColors.IDENTIFIER
-        NdlTokenType.TYPE -> DefaultLanguageHighlighterColors.KEYWORD
+        NdlTokenType.KEYWORD,
+        NdlTokenType.TYPE,
+        NdlTokenType.TRUE,
+        NdlTokenType.FALSE,
+        NdlTokenType.NULL -> DefaultLanguageHighlighterColors.KEYWORD
+        NdlTokenType.DECIMAL,
+        NdlTokenType.INTEGER -> DefaultLanguageHighlighterColors.NUMBER
         NdlTokenType.STRING -> DefaultLanguageHighlighterColors.STRING
         else -> null
     }?.let { arrayOf(it) } ?: arrayOf()

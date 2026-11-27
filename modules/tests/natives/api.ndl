@@ -6,8 +6,8 @@ namespace global {
     // Test operation comment
     bool pass_void();
     bool pass_char(char arg);
-    bool pass_char_n(char? arg);
-    bool pass_boolean(bool arg);
+    bool pass_char_n(char? arg = null);
+    bool pass_boolean(bool arg = false);
     bool pass_boolean_n(bool? arg);
     bool pass_byte(i8 arg);
     bool pass_byte_n(i8? arg);
@@ -17,7 +17,7 @@ namespace global {
     bool pass_short_n(i16? arg);
     bool pass_ushort(u16 arg);
     bool pass_ushort_n(u16? arg);
-    bool pass_int(i32 arg);
+    bool pass_int(i32 arg = 123);
     bool pass_int_n(i32? arg);
     bool pass_uint(u32 arg);
     bool pass_uint_n(u32? arg);
@@ -25,16 +25,16 @@ namespace global {
     bool pass_long_n(i64? arg);
     bool pass_ulong(u64 arg);
     bool pass_ulong_n(u64? arg);
-    bool pass_float(f32 arg);
+    bool pass_float(f32 arg = 1.1);
     bool pass_float_n(f32? arg);
-    bool pass_double(f64 arg);
+    bool pass_double(f64 arg = 1.1);
     bool pass_double_n(f64? arg);
-    bool pass_string(string arg);
+    bool pass_string(string arg = "test");
     bool pass_string_empty(string arg);
     bool pass_string_n(string? arg);
     bool pass_enum(MyEnum arg);
     bool pass_enum_n(MyEnum? arg);
-    bool pass_dictionary(MyDictionary arg);
+    bool pass_dictionary(MyDictionary arg = {});
     bool pass_dictionary_n(MyDictionary? arg);
     bool pass_interface(MyInterface arg);
     bool pass_interface_n(MyInterface? arg);
@@ -461,13 +461,13 @@ dictionary EmptyDictionary { };
 // Test dictionary comment
 dictionary ParentDictionary {
     // Test dictionary field comment
-    i32 a;
-    i32 b;
+    i32 a = 123;
+    i32 b = 321;
 };
 
 dictionary MyDictionary: ParentDictionary {
-    i32 c;
-    i32 d;
+    i32 c = 3;
+    i32 d = 4;
 };
 
 dictionary TypeDictionary {

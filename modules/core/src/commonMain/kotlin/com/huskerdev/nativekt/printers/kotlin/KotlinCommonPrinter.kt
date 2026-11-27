@@ -77,7 +77,7 @@ class KotlinCommonPrinter(
                 ": ${operation.type.toKotlinType()}" else ""
 
             val args = operation.args.joinToString {
-                "${it.kname}: ${it.type.toKotlinType()}"
+                "${it.kname}: ${it.type.toKotlinType()}${it.getDefaultValue()}"
             }
 
             printKotlinComment(operation.leadingComments)
@@ -192,7 +192,7 @@ internal fun StringBuilder.printDictionaries(
 
         val fields = context.allFields[dictionary]!!
         val args = fields.joinToString {
-            "${it.kname}: ${it.type.toKotlinType()}"
+            "${it.kname}: ${it.type.toKotlinType()}${if(isCommon) it.getDefaultValue() else ""}"
         }
         val argNames = fields.joinToString { it.kname }
 
