@@ -472,9 +472,13 @@ class CApiHeaderPrinter(
         printLabel("Enums")
 
         context.enums.forEach { enum ->
+            printCLikeComment(enum.leadingComments)
             append("\ntypedef enum {")
-            enum.elements.joinTo(this, separator = ",") {
-                "\n\t${enum.cname}_${it}"
+            enum.elements.forEachIndexed { index, it ->
+                printCLikeComment(enum.elementComments[it]!!, indent = "\t")
+                append("\n\t${enum.cname}_${it}")
+                if(index != enum.elements.lastIndex)
+                    append(",")
             }
             append("\n} ${enum.cname};\n")
         }
@@ -493,6 +497,7 @@ class CApiHeaderPrinter(
             }
 
             if(!isImpl && language == Language.C) {
+                printCLikeComment(dictionary.leadingComments)
                 append("\nstruct $name {")
                 if (dictionary.implements != null)
                     append(" // : ").append(dictionary.implements!!.cname)
@@ -501,7 +506,10 @@ class CApiHeaderPrinter(
                     $name* _Nullable (* _Nullable clone)(const $name* _Nullable);
                     void (* _Nullable free)($name* _Nullable);
                 """.replaceIndent("\t"))
-                args.joinTo(this, separator = "") { "\n\t$it;" }
+                args.forEachIndexed { index, it ->
+                    printCLikeComment(fields[index].leadingComments, indent = "\t")
+                    append("\n\t$it;")
+                }
                 append("\n};\n")
 
                 // Methods
@@ -593,6 +601,8 @@ class CApiHeaderPrinter(
                         }
                     }
                 }.joinToString()
+
+                printCLikeComment(callback.leadingComments)
                 append("\nKCallbackDef($args)")
                 append("\n#define ${lower}_invoke $MANGLE_MACRO(${lower}_invoke)\n")
             }
@@ -635,6 +645,7 @@ class CApiHeaderPrinter(
                     "${it.type.toLangType(rcAsVoid = true)} ${it.cname}"
                 }.ifEmpty { "void" }
 
+                printCLikeComment(function.leadingComments)
                 append("\n$type $name(${args});")
             }
 

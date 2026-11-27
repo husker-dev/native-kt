@@ -5,7 +5,7 @@ import com.huskerdev.nativekt.NativeModuleContext
 import com.huskerdev.nativekt.TargetType
 import com.huskerdev.stdlibx.Arch
 import com.huskerdev.stdlibx.OS
-import com.huskerdev.stdlibx.fs.SyncPath
+import com.huskerdev.webidl.parser.IdlComment
 
 
 fun asyncLoadFunctionName(context: NativeModuleContext) =
@@ -116,6 +116,41 @@ fun StringBuilder.printLabel(text: String, padding: Int = 5, indent: String = ""
     append("// ╚")
     append("═".repeat(text.length + padding*2))
     append("╝\n")
+}
+
+fun StringBuilder.printKotlinComment(comments: List<IdlComment>, indent: String = "") {
+    if(comments.isEmpty())
+        return
+
+    append('\n').append(indent).append("/**")
+    comments.flatMap {
+        it.text.split("\n")
+    }.forEach {
+        append('\n').append(indent).append(" * ").append(it)
+    }
+    append('\n').append(indent).append(" */")
+}
+
+fun StringBuilder.printCLikeComment(comments: List<IdlComment>, indent: String = "") {
+    if(comments.isEmpty())
+        return
+
+    comments.flatMap {
+        it.text.split("\n")
+    }.forEach {
+        append('\n').append(indent).append("// ").append(it)
+    }
+}
+
+fun StringBuilder.printRustLikeComment(comments: List<IdlComment>, indent: String = "") {
+    if(comments.isEmpty())
+        return
+
+    comments.flatMap {
+        it.text.split("\n")
+    }.forEach {
+        append('\n').append(indent).append("/// ").append(it)
+    }
 }
 
 val Language.supportsEnumIntArray: Boolean

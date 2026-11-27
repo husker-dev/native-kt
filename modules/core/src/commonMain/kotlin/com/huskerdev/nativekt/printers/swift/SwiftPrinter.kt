@@ -321,8 +321,10 @@ class SwiftPrinter(
             val funcNew = dictionary.subCFuncMangled(context, "new")
             val funcFree = dictionary.subCFuncMangled(context, "free")
 
+            printRustLikeComment(dictionary.leadingComments)
             append("\npublic struct $name {")
             fields.forEach { field ->
+                printRustLikeComment(field.leadingComments, indent = "\t")
                 append("\n\tvar ${field.swiftName}: ${field.type.toSwiftType(printNullable = true)}")
             }
             append("\n}")
@@ -439,6 +441,7 @@ class SwiftPrinter(
             }.joinToString()
 
             val call = castToSwift(callback.type, "invokeFn($castedArgs)")
+            printRustLikeComment(callback.leadingComments)
             appendLine("""
                 
                 public final class $name: AbstractCallback {
@@ -482,10 +485,13 @@ class SwiftPrinter(
         printLabel("Enums")
 
         context.enums.forEach { enum ->
+            printRustLikeComment(enum.leadingComments)
             append("\npublic enum ${enum.swiftName}: Int32 {")
-            if(enum.elements.isNotEmpty())
-                append("\n\tcase ")
-            enum.elements.joinTo(this) { it.camelCase() }
+
+            enum.elements.forEach {
+                printRustLikeComment(enum.elementComments[it]!!, indent = "\t")
+                append("\n\tcase ${it.camelCase()}")
+            }
             appendLine("\n}")
         }
     }
@@ -555,6 +561,7 @@ class SwiftPrinter(
                 }
             } else castToNative(operation.type, "$name(${castedArgs.joinToString()})")
 
+            printRustLikeComment(operation.leadingComments)
             appendLine("""
                 
                 @_cdecl("$cName")

@@ -79,7 +79,9 @@ class KotlinCommonPrinter(
             val args = operation.args.joinToString {
                 "${it.kname}: ${it.type.toKotlinType()}"
             }
-            append("\n${operation.internalModifier()}expect fun ${operation.kname}($args)$type")
+
+            printKotlinComment(operation.leadingComments)
+            append("\n${operation.internalModifier()}expect fun ${operation.kname}($args)$type\n")
         }
     }
 
@@ -100,6 +102,7 @@ class KotlinCommonPrinter(
                 ": ${callback.type.toKotlinType()}"
             else ""
 
+            printKotlinComment(callback.leadingComments)
             append("\n${callback.internalModifier()}fun interface $name$spaces { operator fun invoke($args)$type }")
         }
         append("\n")
@@ -111,9 +114,14 @@ class KotlinCommonPrinter(
 
         printLabel("Enums")
         context.enums.forEach { enum ->
+            printKotlinComment(enum.leadingComments)
             append("\n${enum.internalModifier()}enum class ${enum.kname} {")
-            enum.elements.joinTo(this, separator = ",") {
-                "\n\t${it.snakeCase().uppercase()}"
+
+            enum.elements.forEachIndexed { index, it ->
+                printKotlinComment(enum.elementComments[it]!!, indent = "\t")
+                append("\n\t${it.snakeCase().uppercase()}")
+                if(index != enum.elements.lastIndex)
+                    append(",")
             }
             append("\n}\n")
         }
@@ -125,6 +133,7 @@ class KotlinCommonPrinter(
 
         printLabel("Interfaces")
         context.interfaces.forEach { inter ->
+            printKotlinComment(inter.leadingComments)
             append("\n${inter.internalModifier()}expect class ${inter.kname}")
 
             listOfNotNull(
@@ -133,6 +142,7 @@ class KotlinCommonPrinter(
             ).joinTo(this, prefix = ": ", postfix = " {")
 
             inter.constructors.forEach { constructor ->
+                printKotlinComment(constructor.leadingComments, indent = "\t")
                 append("\n\t${constructor.internalModifier()}constructor(")
                 constructor.args.joinTo(this) {
                     "${it.kname}: ${it.type.toKotlinType()}"
@@ -140,6 +150,7 @@ class KotlinCommonPrinter(
                 append(")")
             }
             inter.operations.forEach { operation ->
+                printKotlinComment(operation.leadingComments, indent = "\t")
                 append("\n\t${operation.internalModifier()}fun ${operation.kname}(")
                 operation.args.joinTo(this) {
                     "${it.kname}: ${it.type.toKotlinType()}"
@@ -186,12 +197,13 @@ internal fun StringBuilder.printDictionaries(
         val argNames = fields.joinToString { it.kname }
 
         // Print
-        append("\n")
-        append("${dictionary.internalModifier()}${actual1}interface $name$parent {")
+        printKotlinComment(dictionary.leadingComments)
+        append("\n${dictionary.internalModifier()}${actual1}interface $name$parent {")
 
         // Interface fields
-        dictionary.fields.joinTo(this, separator = "") {
-            "\n\t${it.internalModifier()}${actual2}val ${it.kname}: ${it.type.toKotlinType()}"
+        dictionary.fields.forEach {
+            printKotlinComment(it.leadingComments, indent = "\t")
+            append("\n\t${it.internalModifier()}${actual2}val ${it.kname}: ${it.type.toKotlinType()}")
         }
 
         // Companion

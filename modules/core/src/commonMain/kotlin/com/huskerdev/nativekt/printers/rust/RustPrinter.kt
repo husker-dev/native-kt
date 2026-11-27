@@ -42,6 +42,7 @@ class RustPrinter(
             val funcFreeJs = context.jsMangle[dictionary.subCFunc("free")]
 
             // Print struct
+            printRustLikeComment(dictionary.leadingComments)
             buildList {
                 if(dictionary.hasAttribute("debug"))
                     add("Debug")
@@ -50,8 +51,11 @@ class RustPrinter(
 
             append("\npub struct $name {")
             
-            fields.joinTo(this) {
-                "\n\tpub ${it.rustName}: ${it.type.toRustType()}"
+            fields.forEachIndexed { index, it ->
+                printRustLikeComment(it.leadingComments, indent = "\t")
+                append("\n\tpub ${it.rustName}: ${it.type.toRustType()}")
+                if(index != fields.lastIndex)
+                    append(",")
             }
             append("\n}\n")
 
@@ -161,7 +165,9 @@ class RustPrinter(
             val lower = callback.name.camelCase().lowercase()
             val returnType = callback.type.toNativeRustType()
 
+            printRustLikeComment(callback.leadingComments)
             append("""
+                
                 impl_callback!(
                     $name,
             """.trimIndent())
@@ -203,8 +209,9 @@ class RustPrinter(
             append("\n\t${context.mangle("${lower}_id")}, ${context.jsMangle["${lower}_id"]},")
             append("\n\t${context.mangle("${lower}_free")}, ${context.jsMangle["${lower}_free"]}")
 
-            append("\n);\n")
+            append("\n);")
         }
+        append("\n")
     }
 
     private fun StringBuilder.printEnums() {
@@ -218,6 +225,7 @@ class RustPrinter(
             val defaultValueExt = if(defaultValue != null && defaultValue in enum.elements)
                 ", Default" else ""
 
+            printRustLikeComment(enum.leadingComments)
             append("""
                 
                 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
@@ -227,6 +235,7 @@ class RustPrinter(
             """.trimIndent())
 
             enum.elements.mapIndexed { index, value ->
+                printRustLikeComment(enum.elementComments[value]!!, indent = "\t")
                 if(value == defaultValue)
                     "\n\t#[default]\n\t$value = $index,"
                 else
@@ -292,6 +301,7 @@ class RustPrinter(
             } else toNativeType(operation.type, "crate::$rustName(${castedArgs.joinToString()})")
 
             // Print
+            printRustLikeComment(operation.leadingComments)
             append("""
                 
                 export_fn!{ fn $cname($args)$type as $jsName {

@@ -2,6 +2,8 @@
 namespace global {
 
     // Primitives pass
+
+    // Test operation comment
     bool pass_void();
     bool pass_char(char arg);
     bool pass_char_n(char? arg);
@@ -346,6 +348,7 @@ namespace global {
     [Critical] bool jvmci_enum(MyEnum enum1, MyEnum enum2, Array<MyEnum> enumArray);
 };
 
+// Test callback comment
 callback VoidCallback = void ();
 
 // primitives
@@ -444,7 +447,9 @@ callback CallbackReturnInterfaceArrayN = Array<MyInterface?> ();
 
 // enum
 
+// Test enum comment
 enum MyEnum {
+    // Test enum element comment
     "CASE1",
     "CASE2"
 };
@@ -453,7 +458,9 @@ enum MyEnum {
 
 dictionary EmptyDictionary { };
 
+// Test dictionary comment
 dictionary ParentDictionary {
+    // Test dictionary field comment
     i32 a;
     i32 b;
 };
@@ -501,8 +508,11 @@ dictionary TypeDictionary {
     Array<MyInterface> a35;
 };
 
+// Test interface comment
 interface MyInterface {
+    // Test constructor comment
     constructor();
+    // Test operation comment
     [critical, name=new_critical] constructor(i32 a);
     bool test();
     [critical] bool test_critical();

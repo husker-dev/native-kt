@@ -132,9 +132,14 @@ class ObjcApiHeaderPrinter(
         printLabel("Enums")
 
         context.enums.forEach { enum ->
+            printCLikeComment(enum.leadingComments)
             append("\ntypedef NS_ENUM(int32_t, ${enum.objcName}) {")
+
             enum.elements.forEachIndexed { index, element ->
-                append("\n    ${enum.objcName}_$element = $index,")
+                printCLikeComment(enum.elementComments[element]!!, indent = "\t")
+                append("\n\t${enum.objcName}_$element = $index")
+                if(index != enum.elements.lastIndex)
+                    append(",")
             }
             append("\n};\n")
         }
@@ -148,6 +153,7 @@ class ObjcApiHeaderPrinter(
         context.interfaces.forEach { inter ->
             val interName = inter.objcName
 
+            printCLikeComment(inter.leadingComments)
             append("""
 
                 ${objcRuntimeName(context, interName)}
@@ -158,6 +164,7 @@ class ObjcApiHeaderPrinter(
                 val args = operation.args.map { it.objcName to it.type.toObjcType() }
                 val type = operation.type.toObjcType()
 
+                printCLikeComment(operation.leadingComments)
                 when {
                     operation.isInterfaceOperationConstructor() ->
                         append("\n+ (instancetype _Nonnull)${objcMethod(funcName, args)};")
@@ -179,6 +186,7 @@ class ObjcApiHeaderPrinter(
             val args = callback.args.map { it.objcName to it.type.toObjcType() }
             val type = callback.type.toObjcType()
 
+            printCLikeComment(callback.leadingComments)
             appendLine("""
 
                 ${objcRuntimeName(context, callbackName)}
@@ -207,6 +215,7 @@ class ObjcApiHeaderPrinter(
             val localFields = dictionary.fields
             val allFields = context.allFields[dictionary]!!
 
+            printCLikeComment(dictionary.leadingComments)
             append("""
 
                 ${objcRuntimeName(context, dictName)}
@@ -216,6 +225,7 @@ class ObjcApiHeaderPrinter(
             // Fields
             localFields.forEach { field ->
                 val ownership = if (field.type.isObjcObject()) "strong" else "assign"
+                printCLikeComment(field.leadingComments)
                 append("\n@property (nonatomic, $ownership) ${field.type.toObjcType()} ${field.objcName};")
             }
 
@@ -244,6 +254,7 @@ class ObjcApiHeaderPrinter(
         """.trimIndent())
         context.operations.forEach { operation ->
             val args = operation.args.map { it.objcName to it.type.toObjcType() }
+            printCLikeComment(operation.leadingComments)
             append("\n+ (${operation.type.toObjcType()})${objcMethod(operation.objcName, args)};")
         }
         append("\n@end")

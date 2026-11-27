@@ -150,8 +150,15 @@ class CppApiHeaderPrinter(
         printLabel("Enums")
 
         context.enums.forEach { enum ->
+            printCLikeComment(enum.leadingComments)
             append("\nenum ${enum.cppName} {")
-            enum.elements.joinTo(this) { "\n\t$it" }
+
+            enum.elements.forEachIndexed { index, it ->
+                printCLikeComment(enum.elementComments[it]!!, indent = "\t")
+                append("\n\t$it")
+                if(index != enum.elements.lastIndex)
+                    append(",")
+            }
             append("\n};\n")
         }
     }
@@ -164,6 +171,7 @@ class CppApiHeaderPrinter(
         context.interfaces.forEach { inter ->
             val interName = inter.cppName
 
+            printCLikeComment(inter.leadingComments)
             append("\nstruct $interName {")
             context.interfaceOperations[inter]!!.forEach { operation ->
                 val funcName = operation.cppName
@@ -172,17 +180,20 @@ class CppApiHeaderPrinter(
                 }
                 val type = operation.type.toCppType()
 
-                when {
+                val func = when {
                     operation.isInterfaceOperationConstructor() ->
-                        append("\n\tstatic $interName* _Nonnull $funcName(${args.joinToString()});")
+                        "static $interName* _Nonnull $funcName(${args.joinToString()});"
                     operation.isInterfaceOperationFn() -> {
                         val args = args.drop(1).joinToString()
-                        append("\n\tvirtual $type $funcName($args) = 0;")
+                        "virtual $type $funcName($args) = 0;"
                     }
                     operation.isInterfaceOperationFree() ->
-                        append("\n\tvirtual ~$interName() = default;")
+                        "virtual ~$interName() = default;"
                     else -> return@forEach
                 }
+
+                printCLikeComment(operation.leadingComments, indent = "\t")
+                append("\n\t$func")
             }
             append("\n};\n")
         }
@@ -230,6 +241,8 @@ class CppApiHeaderPrinter(
                     "${it.type.toCppType()} ${it.cppName}"
                 }
             }.joinToString()
+
+            printCLikeComment(callback.leadingComments)
             append("\nKCallbackDef($params)")
         }
         append("\n")
@@ -261,8 +274,12 @@ class CppApiHeaderPrinter(
                 "${field.type.toCppType()} ${field.cppName}"
             }
 
+            printCLikeComment(dictionary.leadingComments)
             append("\nstruct $name$parent {")
-            localArgs.joinTo(this, separator = "") { "\n\t$it;" }
+            localArgs.forEachIndexed { index, it ->
+                printCLikeComment(localFields[index].leadingComments, indent = "\t")
+                append("\n\t$it;")
+            }
             append("""
                     
                     $name(${allArgs.joinToString()});
@@ -290,8 +307,10 @@ class CppApiHeaderPrinter(
                 "$type ${it.cppName}"
             }
 
-            if (!function.isInterfaceOperation())
+            if (!function.isInterfaceOperation()) {
+                printCLikeComment(function.leadingComments)
                 append("\n$type $name($args);")
+            }
         }
         append("\n")
     }

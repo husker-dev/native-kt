@@ -15,7 +15,7 @@ android_test_juint = "1.1.5"  # old versions to allow testing on SDK < 21
 
 # == Tools ==
 intellij_platform = "2.19.0"
-webidl = "1.1.2"
+webidl = "1.2.0"
 stdlibx = "2.0.1"
 ktoml = "0.7.1"
 shadow = "9.6.1"

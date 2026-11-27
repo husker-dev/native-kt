@@ -640,7 +640,8 @@ fun ResolvedIdlInterface.toOperations() = buildList {
                 add(interfaceTagAttribute)
                 add(IdlExtendedAttribute.IntegerValue(IdlName("__interface_new"), index))
                 addAll(constructor.attributes ?: emptyList())
-            })
+            }),
+            leadingComments = constructor.leadingComments
         ))
     }
     operations.forEach { operation ->
@@ -656,7 +657,8 @@ fun ResolvedIdlInterface.toOperations() = buildList {
                 add(interfaceTagAttribute)
                 add(IdlExtendedAttribute.StringValue(IdlName("__interface_fn"), operation.name))
                 addAll(operation.attributes ?: emptyList())
-            })
+            }),
+            leadingComments = operation.leadingComments
         ))
     }
 
