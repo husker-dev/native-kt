@@ -28,6 +28,8 @@ dependencies {
         bundledPlugin("com.intellij.modules.json")
         bundledPlugin("com.intellij.gradle")
         plugin("com.jetbrains.rust:262.10968.75")
+        plugin("com.intellij.cmake:262.10968.63")
+        plugin("com.intellij.clion:262.10968.63")
     }
 
     val libraryVersion = projectDir.parentFile.parentFile.resolve("VERSION").readText().trim()

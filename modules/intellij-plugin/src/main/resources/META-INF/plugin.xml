@@ -11,6 +11,7 @@
     <depends>com.intellij.modules.json</depends>
     <depends>org.toml.lang</depends>
     <depends optional="true" config-file="nativekt-rust.xml">com.jetbrains.rust</depends>
+    <depends optional="true" config-file="nativekt-cmake.xml">com.intellij.cmake</depends>
 
     <!-- K2 mode compatibility -->
     <extensions defaultExtensionNs="org.jetbrains.kotlin">

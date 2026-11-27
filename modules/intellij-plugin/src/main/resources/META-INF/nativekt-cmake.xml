@@ -1,0 +1,7 @@
+<idea-plugin>
+    <depends>com.intellij.clion</depends>
+    <extensions defaultExtensionNs="com.intellij">
+        <projectService
+            serviceImplementation="com.huskerdev.nativekt.intellij.listeners.NativeKtCMakeProjectService"/>
+    </extensions>
+</idea-plugin>

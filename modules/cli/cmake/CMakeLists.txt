@@ -70,6 +70,9 @@ function(nativekt_generate config_file)
         message(FATAL_ERROR "Native-Kt generation failed (${cli_result})\n" "${cli_stdout}\n${cli_stderr}")
     endif()
 
+    # Allow IDE integrations to discover the configuration and generated files.
+    file(WRITE "${output_dir}/config.txt" "${config}")
+
     # Get operation name mappings
     execute_process(
             COMMAND "${tool}" print-function-mapping --config "${config}"

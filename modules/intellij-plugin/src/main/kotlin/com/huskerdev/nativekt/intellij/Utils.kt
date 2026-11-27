@@ -10,3 +10,6 @@ fun VirtualFile.asSyncPath() = SyncPath(path)
 
 fun isRustPluginEnabled(): Boolean =
     PluginManagerCore.isLoaded(PluginId.getId("com.jetbrains.rust"))
+
+fun isCMakePluginEnabled(): Boolean =
+    PluginManagerCore.isLoaded(PluginId.getId("com.intellij.cmake"))

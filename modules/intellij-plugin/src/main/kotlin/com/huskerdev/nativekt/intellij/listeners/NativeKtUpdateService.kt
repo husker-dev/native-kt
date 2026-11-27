@@ -1,11 +1,11 @@
 package com.huskerdev.nativekt.intellij.listeners
 
-import com.huskerdev.nativekt.BuildSystem
-import com.huskerdev.nativekt.NativeKtModule
-import com.huskerdev.nativekt.NativeModuleContext
-import com.huskerdev.nativekt.parseModuleFromToml
+import com.huskerdev.nativekt.*
+import com.huskerdev.nativekt.printers.c.*
+import com.huskerdev.nativekt.printers.cpp.*
 import com.huskerdev.nativekt.printers.kotlin.*
-import com.huskerdev.nativekt.printers.rust.RustPrinter
+import com.huskerdev.nativekt.printers.objc.*
+import com.huskerdev.nativekt.printers.rust.*
 import com.huskerdev.stdlibx.fs.SyncPath
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.EDT
@@ -55,6 +55,7 @@ class NativeKtUpdateService(
     private val generationMutex = Mutex()
 
     private var knownRustDirs: List<KnownDir> = listOf()
+    private var knownCMakeDirs: List<KnownDir> = listOf()
     private val kotlinDirsByRoot = mutableMapOf<String, List<KnownDir>>()
 
     @Volatile
@@ -98,6 +99,15 @@ class NativeKtUpdateService(
         }
     }
 
+    fun replaceCMakeDirs(dirs: List<KnownDir>) {
+        val snapshot = dirs.toList()
+        scope.launch(Dispatchers.EDT) {
+            if (project.isDisposed) return@launch
+            knownCMakeDirs = snapshot
+            update()
+        }
+    }
+
     private fun removeGradleRoots(roots: Set<String>) {
         val snapshot = roots.toSet()
         scope.launch(Dispatchers.EDT) {
@@ -111,10 +121,11 @@ class NativeKtUpdateService(
     private fun update() {
         val knownKotlinDirs = kotlinDirsByRoot.values.flatten()
         val kotlinBuildDirs = knownKotlinDirs.associate { it.configuration to it.buildDir }
-        val nativeBuildDirs = knownRustDirs.associate { it.configuration to it.buildDir }
+        val knownNativeDirs = knownRustDirs + knownCMakeDirs
+        val nativeBuildDirs = knownNativeDirs.associate { it.configuration to it.buildDir }
 
         // Collect known modules
-        val modules = (knownKotlinDirs + knownRustDirs)
+        val modules = (knownKotlinDirs + knownNativeDirs)
             .map { it.configuration }.toSet()
             .mapNotNull {
                 try {
@@ -202,8 +213,44 @@ class NativeKtUpdateService(
         // Print Native
         if(input.nativeBuildDir != null) {
             when (context.buildSystem) {
-                is BuildSystem.SPM,
-                is BuildSystem.CMake -> Unit
+                is BuildSystem.SPM -> Unit
+                is BuildSystem.CMake -> {
+                    val includeDir = input.nativeBuildDir.resolve("nativekt/include").createDirectories()
+                    val sourcesDir = input.nativeBuildDir.resolve("nativekt/sources").createDirectories()
+                    
+                    changedFiles += buildList {
+                        when (context.language) {
+                            Language.C -> {
+                                val header = includeDir.resolve("nativekt.h")
+                                val implHeader = includeDir.resolve("nativekt_impl.h")
+                                val source = sourcesDir.resolve("nativekt.c")
+                                addAll(listOf(header, implHeader, source))
+
+                                CApiHeaderPrinter(context, header)
+                                CApiHeaderPrinter(context, implHeader, isImpl = true)
+                                CApiImplPrinter(context, source, includePath = implHeader.name)
+                            }
+                            Language.CPP -> {
+                                val header = includeDir.resolve("nativekt.hpp")
+                                val template = includeDir.resolve("nativekt.tpp")
+                                val source = sourcesDir.resolve("nativekt.cpp")
+                                addAll(listOf(header, template, source))
+
+                                CppApiHeaderPrinter(context, header, tppTarget = template)
+                                CppApiImplPrinter(context, source, includePath = header.name)
+                            }
+                            Language.OBJC -> {
+                                val header = includeDir.resolve("nativekt.h")
+                                val source = sourcesDir.resolve("nativekt.m")
+                                addAll(listOf(header, source))
+
+                                ObjcApiHeaderPrinter(context, header)
+                                ObjcApiImplPrinter(context, source, includePath = header.name)
+                            }
+                            else -> error("Unsupported CMake language: ${context.language}")
+                        }
+                    }
+                }
                 is BuildSystem.Cargo -> {
                     val target = input.nativeBuildDir.resolve("${module.name}.nativekt.rs")
                     changedFiles += target
